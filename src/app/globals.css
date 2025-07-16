@@ -4,10 +4,13 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Border radius */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  
+  /* shadcn/ui compatibility colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -39,10 +42,77 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* MoneyMap Custom Colors - Primary (Teal) */
+  --color-primary-50: oklch(0.985 0.012 187.5);
+  --color-primary-100: oklch(0.968 0.024 187.5);
+  --color-primary-200: oklch(0.934 0.048 187.5);
+  --color-primary-300: oklch(0.885 0.072 187.5);
+  --color-primary-400: oklch(0.803 0.096 187.5);
+  --color-primary-500: oklch(0.637 0.121 187.5);
+  --color-primary-600: oklch(0.547 0.108 187.5);
+  --color-primary-700: oklch(0.447 0.087 187.5);
+  --color-primary-800: oklch(0.367 0.066 187.5);
+  --color-primary-900: oklch(0.307 0.045 187.5);
+  --color-primary-950: oklch(0.207 0.024 187.5);
+
+  /* MoneyMap Custom Colors - Secondary (Slate) */
+  --color-secondary-50: oklch(0.985 0.002 236.8);
+  --color-secondary-100: oklch(0.968 0.003 236.8);
+  --color-secondary-200: oklch(0.926 0.006 236.8);
+  --color-secondary-300: oklch(0.854 0.009 236.8);
+  --color-secondary-400: oklch(0.667 0.012 236.8);
+  --color-secondary-500: oklch(0.367 0.015 236.8);
+  --color-secondary-600: oklch(0.347 0.014 236.8);
+  --color-secondary-700: oklch(0.277 0.012 236.8);
+  --color-secondary-800: oklch(0.197 0.009 236.8);
+  --color-secondary-900: oklch(0.127 0.006 236.8);
+  --color-secondary-950: oklch(0.067 0.003 236.8);
+
+  /* MoneyMap Custom Colors - Accent (Gold) */
+  --color-accent-50: oklch(0.995 0.014 90.8);
+  --color-accent-100: oklch(0.988 0.028 90.8);
+  --color-accent-200: oklch(0.964 0.055 90.8);
+  --color-accent-300: oklch(0.907 0.083 90.8);
+  --color-accent-400: oklch(0.821 0.110 90.8);
+  --color-accent-500: oklch(0.878 0.138 90.8);
+  --color-accent-600: oklch(0.587 0.124 90.8);
+  --color-accent-700: oklch(0.447 0.100 90.8);
+  --color-accent-800: oklch(0.347 0.076 90.8);
+  --color-accent-900: oklch(0.277 0.055 90.8);
+  --color-accent-950: oklch(0.167 0.028 90.8);
+
+  /* MoneyMap Custom Colors - Success (Green) */
+  --color-success-50: oklch(0.985 0.014 142.5);
+  --color-success-100: oklch(0.968 0.029 142.5);
+  --color-success-200: oklch(0.934 0.057 142.5);
+  --color-success-300: oklch(0.885 0.086 142.5);
+  --color-success-400: oklch(0.803 0.114 142.5);
+  --color-success-500: oklch(0.686 0.143 142.5);
+  --color-success-600: oklch(0.607 0.129 142.5);
+  --color-success-700: oklch(0.497 0.100 142.5);
+  --color-success-800: oklch(0.397 0.071 142.5);
+  --color-success-900: oklch(0.327 0.057 142.5);
+  --color-success-950: oklch(0.177 0.029 142.5);
+
+  /* MoneyMap Custom Colors - Error (Red) */
+  --color-error-50: oklch(0.985 0.026 27.3);
+  --color-error-100: oklch(0.968 0.051 27.3);
+  --color-error-200: oklch(0.934 0.077 27.3);
+  --color-error-300: oklch(0.885 0.103 27.3);
+  --color-error-400: oklch(0.803 0.129 27.3);
+  --color-error-500: oklch(0.627 0.257 27.3);
+  --color-error-600: oklch(0.567 0.231 27.3);
+  --color-error-700: oklch(0.457 0.180 27.3);
+  --color-error-800: oklch(0.377 0.129 27.3);
+  --color-error-900: oklch(0.307 0.103 27.3);
+  --color-error-950: oklch(0.177 0.051 27.3);
 }
 
 :root {
   --radius: 0.625rem;
+  
+  /* Light theme - these won't be used since we're dark-only */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -77,37 +147,38 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* MoneyMap Dark Theme - Updated with your colors */
+  --background: oklch(0.145 0 0);           /* #121212 */
+  --foreground: oklch(0.893 0 0);           /* #e0e0e0 */
+  --card: oklch(0.205 0 0);                 /* Dark card background */
+  --card-foreground: oklch(0.893 0 0);      /* Card text */
+  --popover: oklch(0.205 0 0);              /* Popover background */
+  --popover-foreground: oklch(0.893 0 0);   /* Popover text */
+  --primary: oklch(0.637 0.121 187.5);      /* Your teal #00a9a5 */
+  --primary-foreground: oklch(0.985 0 0);   /* White text on primary */
+  --secondary: oklch(0.367 0.015 236.8);    /* Your slate #4a5568 */
+  --secondary-foreground: oklch(0.985 0 0); /* White text on secondary */
+  --muted: oklch(0.269 0 0);                /* Muted background */
+  --muted-foreground: oklch(0.708 0 0);     /* Muted text */
+  --accent: oklch(0.878 0.138 90.8);        /* Your gold #ffd700 */
+  --accent-foreground: oklch(0.145 0 0);    /* Dark text on gold */
+  --destructive: oklch(0.627 0.257 27.3);   /* Your error red #f44336 */
+  --border: oklch(1 0 0 / 10%);             /* Subtle borders */
+  --input: oklch(1 0 0 / 15%);              /* Input backgrounds */
+  --ring: oklch(0.556 0 0);                 /* Focus rings */
+  --chart-1: oklch(0.637 0.121 187.5);      /* Primary teal for charts */
+  --chart-2: oklch(0.878 0.138 90.8);       /* Gold for charts */
+  --chart-3: oklch(0.686 0.143 142.5);      /* Success green for charts */
+  --chart-4: oklch(0.627 0.257 27.3);       /* Error red for charts */
+  --chart-5: oklch(0.367 0.015 236.8);      /* Secondary slate for charts */
+  --sidebar: oklch(0.205 0 0);              /* Sidebar background */
+  --sidebar-foreground: oklch(0.893 0 0);   /* Sidebar text */
+  --sidebar-primary: oklch(0.637 0.121 187.5); /* Sidebar primary */
+  --sidebar-primary-foreground: oklch(0.985 0 0); /* Sidebar primary text */
+  --sidebar-accent: oklch(0.269 0 0);       /* Sidebar accent */
+  --sidebar-accent-foreground: oklch(0.893 0 0); /* Sidebar accent text */
+  --sidebar-border: oklch(1 0 0 / 10%);     /* Sidebar borders */
+  --sidebar-ring: oklch(0.556 0 0);         /* Sidebar focus rings */
 }
 
 @layer base {

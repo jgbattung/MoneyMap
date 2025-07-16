@@ -1,13 +1,10 @@
-"use client"
-
 import { Icons } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { signIn } from '@/lib/auth-client'
 import Link from 'next/link'
 
-export default function SignIn() {
+export default function LoginPage() {
   return (
     <section className="flex min-h-screen bg-zinc-50 px-4 py-16 md:py-32 dark:bg-transparent">
       <form
@@ -22,16 +19,15 @@ export default function SignIn() {
                 className='h-12 w-12'
               />
             </Link>
-            <h1 className="mb-1 mt-4 text-xl font-semibold">Sign In to MoneyMap</h1>
-            <p className="text-sm">Welcome back! Sign in to continue</p>
+            <h1 className="text-title mb-1 mt-4 text-xl font-semibold">Create a MopneyMap Account</h1>
+            <p className="text-sm">Welcome! Create an account to get started</p>
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-3">
             <Button
               type="button"
               variant="outline"
-              className='hover:text-primary-foreground'
-              onClick={() => signIn.social({ provider: "google" })}
+              className='hover:text-primary-foreground'  
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -62,22 +58,56 @@ export default function SignIn() {
                 xmlns="http://www.w3.org/2000/svg"
                 width="1em"
                 height="1em"
-                viewBox="0 0 1024 1024"
-                id="facebook">
+                viewBox="0 0 256 256">
                 <path
-                  fill="#1877f2"
-                  d="M1024,512C1024,229.23016,794.76978,0,512,0S0,229.23016,0,512c0,255.554,187.231,467.37012,432,505.77777V660H302V512H432V399.2C432,270.87982,508.43854,200,625.38922,200,681.40765,200,740,210,740,210V336H675.43713C611.83508,336,592,375.46667,592,415.95728V512H734L711.3,660H592v357.77777C836.769,979.37012,1024,767.554,1024,512Z"></path>
+                  fill="#f1511b"
+                  d="M121.666 121.666H0V0h121.666z"></path>
                 <path
-                  fill="#fff"
-                  d="M711.3,660,734,512H592V415.95728C592,375.46667,611.83508,336,675.43713,336H740V210s-58.59235-10-114.61078-10C508.43854,200,432,270.87982,432,399.2V512H302V660H432v357.77777a517.39619,517.39619,0,0,0,160,0V660Z"></path>
+                  fill="#80cc28"
+                  d="M256 121.666H134.335V0H256z"></path>
+                <path
+                  fill="#00adef"
+                  d="M121.663 256.002H0V134.336h121.663z"></path>
+                <path
+                  fill="#fbbc09"
+                  d="M256 256.002H134.335V134.336H256z"></path>
               </svg>
-              <span>Facebook</span>
+              <span>Microsoft</span>
             </Button>
           </div>
 
           <hr className="my-4 border-dashed" />
 
-          <div className="space-y-6">
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="firstname"
+                  className="block text-sm">
+                  Firstname
+                </Label>
+                <Input
+                  type="text"
+                  required
+                  name="firstname"
+                  id="firstname"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="lastname"
+                  className="block text-sm">
+                  Lastname
+                </Label>
+                <Input
+                  type="text"
+                  required
+                  name="lastname"
+                  id="lastname"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label
                 htmlFor="email"
@@ -92,24 +122,12 @@ export default function SignIn() {
               />
             </div>
 
-            <div className="space-y-0.5">
-              <div className="flex items-center justify-between">
-                <Label
-                  htmlFor="pwd"
-                  className="text-title text-sm">
-                  Password
-                </Label>
-                <Button
-                  asChild
-                  variant="link"
-                  size="sm">
-                  <Link
-                    href="#"
-                    className="link intent-info variant-ghost text-sm">
-                    Forgot your Password ?
-                  </Link>
-                </Button>
-              </div>
+            <div className="space-y-2">
+              <Label
+                htmlFor="pwd"
+                className="text-title text-sm">
+                Password
+              </Label>
               <Input
                 type="password"
                 required
@@ -119,18 +137,18 @@ export default function SignIn() {
               />
             </div>
 
-            <Button className="w-full">Sign In</Button>
+            <Button className="w-full">Continue</Button>
           </div>
         </div>
 
         <div className="bg-muted rounded-(--radius) border p-3">
           <p className="text-muted-foreground text-center text-sm">
-            {`Don't have an account?`}
+            Already have an account?
             <Button
               asChild
               variant="link"
               className="px-2">
-              <Link href="/sign-up">Create account</Link>
+              <Link href="/sign-in">Sign In</Link>
             </Button>
           </p>
         </div>
