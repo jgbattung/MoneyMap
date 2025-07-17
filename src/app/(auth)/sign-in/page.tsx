@@ -22,6 +22,8 @@ export default function SignIn() {
     const { error } = await signIn.email({
       email: formData.get('email') as string,
       password: formData.get('pwd') as string,
+      callbackURL: "/dashboard",
+      rememberMe: true,
     });
 
     try {

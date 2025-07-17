@@ -22,7 +22,8 @@ export default function LoginPage() {
     const { error } = await signUp.email({
       email: formData.get('email') as string,
       password: formData.get('pwd') as string,
-      name: `${formData.get("firstname")} ${formData.get("lastname")}`
+      name: `${formData.get("firstname")} ${formData.get("lastname")}`,
+      callbackURL: "/dashboard"
     });
 
     try {
