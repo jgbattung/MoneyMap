@@ -6,12 +6,39 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { signIn } from '@/lib/auth-client'
 import Link from 'next/link'
+import React, { useState } from 'react'
 
 export default function SignIn() {
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    const formData = new FormData(e.target as HTMLFormElement);
+
+    const { error } = await signIn.email({
+      email: formData.get('email') as string,
+      password: formData.get('pwd') as string,
+    });
+
+    try {
+      if (error) {
+        const errorMessage = error.message || 'An error occurred';
+        
+        setError(errorMessage);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <section className="flex min-h-screen bg-zinc-50 px-4 py-16 md:py-32 dark:bg-transparent">
       <form
-        action=""
+        onSubmit={handleEmailSignIn}
         className="bg-card m-auto h-fit w-full max-w-sm rounded-[calc(var(--radius)+.125rem)] border p-0.5 shadow-md dark:[--color-muted:var(--color-zinc-900)]">
         <div className="p-8 pb-6">
           <div>
@@ -85,7 +112,7 @@ export default function SignIn() {
               <Label
                 htmlFor="email"
                 className="block text-sm">
-                Username
+                Email
               </Label>
               <Input
                 type="email"
@@ -122,7 +149,17 @@ export default function SignIn() {
               />
             </div>
 
-            <Button className="w-full">Sign In</Button>
+            {error && (
+              <div className='text-error-400 text-sm my-4'>{error}</div>
+            )}
+
+            <Button
+              className="w-full"
+              disabled={isLoading}
+              type="submit"
+            >
+              {isLoading ? "Signing in" : "Continue"}
+            </Button>
           </div>
         </div>
 

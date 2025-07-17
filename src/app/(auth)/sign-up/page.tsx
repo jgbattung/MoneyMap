@@ -1,16 +1,54 @@
+"use client"
+
 import { Icons } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { signIn } from '@/lib/auth-client'
+import { signIn, signUp } from '@/lib/auth-client'
 import Link from 'next/link'
+import React, { useState } from 'react'
 
 export default function LoginPage() {
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const handleEmailSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    const formData = new FormData(e.target as HTMLFormElement);
+
+    const { error } = await signUp.email({
+      email: formData.get('email') as string,
+      password: formData.get('pwd') as string,
+      name: `${formData.get("firstname")} ${formData.get("lastname")}`
+    });
+
+    try {
+      if (error) {
+        let errorMessage = error.message || 'An error occurred';
+        
+        if (error.code === 'PASSWORD_TOO_SHORT' || errorMessage === 'Password too short') {
+          errorMessage = 'Password must be at least 8 characters long';
+        } else if (errorMessage === 'User already exists') {
+          errorMessage= 'User already exists. Sign in instead'
+        }
+        
+        setError(errorMessage);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+
   return (
     <section className="flex min-h-screen bg-zinc-50 px-4 py-16 md:py-32 dark:bg-transparent">
       <form
-        action=""
-        className="bg-card m-auto h-fit w-full max-w-sm rounded-[calc(var(--radius)+.125rem)] border p-0.5 shadow-md dark:[--color-muted:var(--color-zinc-900)]">
+        className="bg-card m-auto h-fit w-full max-w-sm rounded-[calc(var(--radius)+.125rem)] border p-0.5 shadow-md dark:[--color-muted:var(--color-zinc-900)]"
+        onSubmit={handleEmailSignUp}
+      >  
         <div className="p-8 pb-6">
           <div>
             <Link
@@ -117,7 +155,7 @@ export default function LoginPage() {
               <Label
                 htmlFor="email"
                 className="block text-sm">
-                Username
+                Email
               </Label>
               <Input
                 type="email"
@@ -142,7 +180,17 @@ export default function LoginPage() {
               />
             </div>
 
-            <Button className="w-full">Continue</Button>
+            {error && (
+              <div className='text-error-400 text-sm my-4'>{error}</div>
+            )}
+
+            <Button
+              className="w-full"
+              disabled={isLoading}
+              type="submit"
+            >
+              {isLoading ? "Creating account" : "Continue"}
+            </Button>
           </div>
         </div>
 
