@@ -31,7 +31,10 @@ export default function SignIn() {
               type="button"
               variant="outline"
               className='hover:text-primary-foreground'
-              onClick={() => signIn.social({ provider: "google" })}
+              onClick={() => signIn.social({
+                provider: "google",
+                callbackURL: "/dashboard"
+              })}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
