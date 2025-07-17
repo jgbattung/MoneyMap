@@ -11,6 +11,15 @@ export async function middleware(request: NextRequest) {
 			cookie: request.headers.get("cookie") || "", // Forward the cookies from the request
 		},
 	});
+
+	const { pathname } = request.nextUrl;
+
+	console.log("Middleware - pathname:", pathname);
+  console.log("Middleware - session exists:", !!session);
+
+	if (session && (pathname === '/sign-in' || pathname === '/sign-up')) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
  
 	if (!session) {
 		return NextResponse.redirect(new URL("/sign-in", request.url));
@@ -21,6 +30,6 @@ export async function middleware(request: NextRequest) {
  
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|sign-in|sign-up|$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico).*)",
   ],
 };
