@@ -1,10 +1,17 @@
+"use client"
+
 import React from 'react'
 import { Icons } from '../icons'
+import { navRoutes } from '@/app/constants/navigation'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 const Sidebar = () => {
+  const pathname = usePathname();
+
   return (
     <div
-      className="hidden md:flex flex-col px-5 w-3xs bg-background border-r-2 border-secondary-700">
+      className="hidden md:flex flex-col px-5 w-48 bg-background border-r-2 border-secondary-700">
       <div className='pt-6'>
         HEADER
       </div>
@@ -59,6 +66,18 @@ const Sidebar = () => {
 
         <div className='mb-6'>
           <p className='text-sm text-muted-foreground mb-3'>Main menu</p>
+          <div className='flex flex-col gap-3'>
+            {navRoutes.map((route) => (
+              <Link
+                href={route.path}
+                key={route.name}
+                className={`flex gap-2 items-center pl-2.5 pr-3 py-1.5 w-full border rounded-md ${pathname.startsWith(route.path) ? 'bg-primary-500 border-primary-500' : 'border-transparent hover:bg-white/10'} transition-all duration-200 ease-in-out`}
+              >
+                <route.icon size={20} />
+                <span>{route.name}</span>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
 
