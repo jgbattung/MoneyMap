@@ -22,6 +22,7 @@ const Accounts = () => {
         <CreateAccountSheet
           open={createAccountOpen}
           onOpenChange={setCreateAccountOpen}
+          className="hidden md:block"
         />
       </div>
     </div>

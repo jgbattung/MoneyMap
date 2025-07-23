@@ -16,10 +16,10 @@ import { toast } from 'sonner'
 interface CreateAccountSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-
+  className: string;
 }
 
-const CreateAccountSheet = ({ open, onOpenChange }: CreateAccountSheetProps) => {
+const CreateAccountSheet = ({ open, onOpenChange, className }: CreateAccountSheetProps) => {
   const [isLoading, setIsLoading] = useState(false)
 
   const form = useForm<z.infer<typeof AccountValidation>>({
@@ -75,11 +75,11 @@ const CreateAccountSheet = ({ open, onOpenChange }: CreateAccountSheetProps) => 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent onEscapeKeyDown={(e) => isLoading && e.preventDefault()}>
+      <SheetContent onEscapeKeyDown={(e) => isLoading && e.preventDefault()} className={`${className} w-[600px] sm:max-w-[600px] py-3 px-2`}>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <SheetHeader>
-              <SheetTitle className='text-xl'>Create account</SheetTitle>
+              <SheetTitle className='text-2xl'>Create account</SheetTitle>
               <SheetDescription>
                 Add a new account to track your balance and transactions.
               </SheetDescription>
