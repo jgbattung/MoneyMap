@@ -11,6 +11,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from '../ui/input'
 import { Checkbox } from '../ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
+import { toast } from 'sonner'
 
 interface CreateAccountSheetProps {
   open: boolean;
@@ -25,7 +26,6 @@ const CreateAccountSheet = ({ open, onOpenChange }: CreateAccountSheetProps) => 
     resolver: zodResolver(AccountValidation),
     defaultValues: {
       name: '',
-      initialBalance: "0",
       addToNetWorth: true,
     }
   });
@@ -48,14 +48,25 @@ const CreateAccountSheet = ({ open, onOpenChange }: CreateAccountSheetProps) => 
       }
 
       const newAccount = await response.json();
-      console.log('Account created: ', newAccount);
+      if (newAccount) {
+        toast.success("Account created successfully", {
+          description: `${newAccount.name} has been added to your accounts.`,
+          duration: 5000
+        });
+      }
       form.reset();
       onOpenChange(false);
     } catch (error) {
-      console.error('Error creating account: ', error)
-
       if (error instanceof Error) {
-        alert(error.message)
+        toast.error("Failed to create account", {
+          description: error.message || "Please check your information and try again.",
+          duration: 6000
+        })
+      } else {
+        toast.error("Something went wrong", {
+          description: "Unable to create account. Please try again.",
+          duration: 6000
+        })
       }
     } finally {
       setIsLoading(false);
