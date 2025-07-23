@@ -1,8 +1,7 @@
 "use client"
 
-import React from 'react'
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '../ui/sheet'
-import { Icons } from '../icons'
+import React, { useState } from 'react'
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '../ui/sheet'
 import { Button } from '../ui/button'
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -13,7 +12,15 @@ import { Input } from '../ui/input'
 import { Checkbox } from '../ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 
-const CreateAccountSheet = () => {
+interface CreateAccountSheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+
+}
+
+const CreateAccountSheet = ({ open, onOpenChange }: CreateAccountSheetProps) => {
+  const [isLoading, setIsLoading] = useState(false)
+
   const form = useForm<z.infer<typeof AccountValidation>>({
     resolver: zodResolver(AccountValidation),
     defaultValues: {
@@ -23,25 +30,41 @@ const CreateAccountSheet = () => {
     }
   });
 
-  const watchedAccountType = form.watch("accountType")
-  const isCreditCard = watchedAccountType === "CREDIT_CARD"
+  const onSubmit = async (values: z.infer<typeof AccountValidation>) => {
+    setIsLoading(true);
 
-  const onSubmit = (values: z.infer<typeof AccountValidation>) => {
-    console.log('clicked');
+    try {
+      // Make post request for new accounts
+      const response = await fetch('/api/accounts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create account')
+      }
+
+      const newAccount = await response.json();
+      console.log('Account created: ', newAccount);
+      form.reset();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating account: ', error)
+
+      if (error instanceof Error) {
+        alert(error.message)
+      }
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <button
-          className='flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-3 py-2 md:px-4 text-sm md:text-base transition-all'
-        >
-          <Icons.createAccount size={20} className="md:hidden" />
-          <Icons.createAccount size={22} className="hidden md:block" />
-          <span>Create account</span>
-        </button>
-      </SheetTrigger>
-      <SheetContent>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent onEscapeKeyDown={(e) => isLoading && e.preventDefault()}>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <SheetHeader>
@@ -74,7 +97,7 @@ const CreateAccountSheet = () => {
               render={({ field }) => (
                 <FormItem className="p-4">
                   <FormLabel>Account type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                     <FormControl>
                       <SelectTrigger className='w-full'>
                         <SelectValue placeholder="Select account type" />
@@ -83,7 +106,6 @@ const CreateAccountSheet = () => {
                     <SelectContent>
                       <SelectItem value="CHECKING">Checking</SelectItem>
                       <SelectItem value="SAVINGS">Savings</SelectItem>
-                      <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
                       <SelectItem value="INVESTMENT">Investment</SelectItem>
                       <SelectItem value="CASH">Cash</SelectItem>
                       <SelectItem value="CRYPTO">Crypto</SelectItem>
@@ -108,6 +130,7 @@ const CreateAccountSheet = () => {
                       type='number'
                       placeholder='0'
                       className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+                      disabled={isLoading}
                       {...field}
                     />
                   </FormControl>
@@ -125,6 +148,7 @@ const CreateAccountSheet = () => {
                   <Checkbox
                     checked={field.value}
                     onCheckedChange={field.onChange}
+                    disabled={isLoading}
                   />
                 </FormControl>
                 <div className="space-y-1 leading-none">
@@ -138,9 +162,20 @@ const CreateAccountSheet = () => {
           />
 
             <SheetFooter>
-              <Button type="submit">Create account</Button>
+              <Button
+                type="submit"
+                disabled={isLoading}
+              >
+                {isLoading ? "Creating account" : "Create account"}
+              </Button>
               <SheetClose asChild>
-                <Button variant="outline" className='hover:text-white'>Cancel</Button>
+                <Button
+                  variant="outline"
+                  className='hover:text-white'
+                  disabled={isLoading}
+                >
+                  Cancel
+                </Button>
               </SheetClose>
             </SheetFooter>
           </form>
