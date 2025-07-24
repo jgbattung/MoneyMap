@@ -1,26 +1,26 @@
 "use client"
 
 import React, { useState } from 'react'
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '../ui/sheet'
-import { Button } from '../ui/button'
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { z } from "zod"
-import { AccountValidation } from '@/lib/validations/account'
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form'
-import { Input } from '../ui/input'
-import { Checkbox } from '../ui/checkbox'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
-import { toast } from 'sonner'
+import { AccountValidation } from '@/lib/validations/account';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { Input } from '../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Checkbox } from '../ui/checkbox';
+import { toast } from 'sonner';
+import { Button } from '../ui/button';
 
-interface CreateAccountSheetProps {
+interface CreateAccountDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   className: string;
 }
 
-const CreateAccountSheet = ({ open, onOpenChange, className }: CreateAccountSheetProps) => {
-  const [isLoading, setIsLoading] = useState(false)
+const CreateAccountDrawer = ({ open, onOpenChange, className }: CreateAccountDrawerProps) => {
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof AccountValidation>>({
     resolver: zodResolver(AccountValidation),
@@ -75,19 +75,20 @@ const CreateAccountSheet = ({ open, onOpenChange, className }: CreateAccountShee
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        onEscapeKeyDown={(e) => isLoading && e.preventDefault()}
-        className={`${className} w-[600px] sm:max-w-[600px] py-3 px-2`}
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent
+        onEscapeKeyDown={(e) => isLoading && e.preventDefault()} className={`${className}`}
       >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <SheetHeader>
-              <SheetTitle className='text-2xl'>Create account</SheetTitle>
-              <SheetDescription>
+            <DrawerHeader>
+              <DrawerTitle className='text-xl'>
+                Create account
+              </DrawerTitle>
+              <DrawerDescription>
                 Add a new account to track your balance and transactions.
-              </SheetDescription>
-            </SheetHeader>
+              </DrawerDescription>
+            </DrawerHeader>
 
             <FormField
               control={form.control}
@@ -155,35 +156,35 @@ const CreateAccountSheet = ({ open, onOpenChange, className }: CreateAccountShee
             />
 
             <FormField
-              control={form.control}
-              name="addToNetWorth"
-              render={({ field }) => (
-                <FormItem className="p-4 flex flex-row items-start space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      disabled={isLoading}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Include in net worth calculation</FormLabel>
-                    <FormDescription>
-                      This account will be included when calculating your total net worth
-                    </FormDescription>
-                  </div>
-                </FormItem>
-              )}
-            />
+            control={form.control}
+            name="addToNetWorth"
+            render={({ field }) => (
+              <FormItem className="p-4 flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    disabled={isLoading}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Include in net worth calculation</FormLabel>
+                  <FormDescription>
+                    This account will be included when calculating your total net worth
+                  </FormDescription>
+                </div>
+              </FormItem>
+            )}
+          />
 
-            <SheetFooter>
+            <DrawerFooter>
               <Button
                 type="submit"
                 disabled={isLoading}
               >
                 {isLoading ? "Creating account" : "Create account"}
               </Button>
-              <SheetClose asChild>
+              <DrawerClose asChild>
                 <Button
                   variant="outline"
                   className='hover:text-white'
@@ -191,13 +192,13 @@ const CreateAccountSheet = ({ open, onOpenChange, className }: CreateAccountShee
                 >
                   Cancel
                 </Button>
-              </SheetClose>
-            </SheetFooter>
+              </DrawerClose>
+            </DrawerFooter>
           </form>
         </Form>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   )
 }
 
-export default CreateAccountSheet
+export default CreateAccountDrawer
