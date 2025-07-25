@@ -25,6 +25,8 @@ model User {
   sessions      Session[]
   accounts      Account[]
 
+  financialAccounts FinancialAccount[]
+
   @@unique([email])
   @@map("user")
 }
@@ -72,4 +74,34 @@ model Verification {
   updatedAt  DateTime?
 
   @@map("verification")
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CREDIT_CARD
+  INVESTMENT
+  CASH
+  CRYPTO
+  RETIREMENT
+  REAL_ESTATE
+  OTHER
+}
+
+model FinancialAccount {
+  id              String      @id @default(cuid())
+  userId          String      @map("user_id")  
+  name            String
+  accountType     AccountType @map("account_type")
+  initialBalance  Decimal     @map("initial_balance") @db.Decimal(15, 2)
+  currentBalance  Decimal     @map("current_balance") @db.Decimal(15, 2)
+  addToNetWorth   Boolean     @map("add_to_net_worth") @default(true)
+  statementDate   Int?        @map("statement_date")
+  dueDate         Int?        @map("due_date")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("financial_accounts")
 }

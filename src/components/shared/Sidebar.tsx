@@ -71,7 +71,7 @@ const Sidebar = () => {
               <Link
                 href={route.path}
                 key={route.name}
-                className={`flex gap-2 items-center pl-2.5 pr-3 py-1.5 w-full border rounded-md ${pathname.startsWith(route.path) ? 'bg-primary-500 border-primary-500' : 'border-transparent hover:bg-white/10'} transition-all duration-200 ease-in-out`}
+                className={`flex gap-2 items-center pl-2.5 pr-3 py-1.5 w-full border rounded-md ${pathname.startsWith(route.path) ? 'bg-white/15 border-white/30' : 'border-transparent hover:bg-white/10'} transition-all duration-200 ease-in-out`}
               >
                 <route.icon size={20} />
                 <span>{route.name}</span>
