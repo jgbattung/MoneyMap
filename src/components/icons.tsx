@@ -1,4 +1,18 @@
-import { IconLogin, IconLogout, IconCoinMoneroFilled, IconBrandGoogle, IconBrandFacebook, IconPlus, IconMinus, IconArrowUpRight, IconLibraryPlusFilled } from '@tabler/icons-react';
+import {
+  IconLogin,
+  IconLogout,
+  IconCoinMoneroFilled,
+  IconBrandGoogle,
+  IconBrandFacebook,
+  IconPlus,
+  IconMinus,
+  IconArrowUpRight,
+  IconLibraryPlusFilled,
+  IconCashBanknotePlus,
+  IconTrendingUp,
+} from '@tabler/icons-react';
+
+
 
 export const Icons = {
   logOut: IconLogout,
@@ -10,4 +24,6 @@ export const Icons = {
   addIncome: IconPlus,
   addTransfer: IconArrowUpRight,
   createAccount: IconLibraryPlusFilled,
+  accountIcon: IconCashBanknotePlus,
+  addToNetWorth: IconTrendingUp,
 }
