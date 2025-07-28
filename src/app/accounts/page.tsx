@@ -7,6 +7,7 @@ import CreateAccountDrawer from '@/components/forms/CreateAccountDrawer'
 import AccountCard from '@/components/shared/AccountCard'
 import useAccounts from '@/hooks/useAccounts'
 import { Button } from '@/components/ui/button'
+import SkeletonAccountCard from '@/components/shared/SkeletonAccountCard'
 
 const Accounts = () => {
   const { accounts, isLoading, error } = useAccounts();
@@ -45,7 +46,13 @@ const Accounts = () => {
         />
       </div>
 
-      {accounts.length === 0 ? (
+      {isLoading ? (
+        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'>
+          {Array.from({ length: 4 }, (_, index) => (
+            <SkeletonAccountCard key={index} />
+          ))}
+        </div>
+      ) : accounts.length === 0 ? (
         <div className='flex-1 flex flex-col items-center justify-center py-16'>
           <Icons.wallet
             className='h-24 w-24 mb-10'
@@ -71,17 +78,17 @@ const Accounts = () => {
           </Button>
         </div>
       ) : (
-      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'>
-        {accounts.map((account) => (
-          <AccountCard
-            key={account.id}
-            accountType={account.accountType}
-            addToNetWorth={account.addToNetWorth}
-            currentBalance={account.currentBalance}
-            name={account.name}
-          />
-        ))}
-      </div>
+        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'>
+          {accounts.map((account) => (
+            <AccountCard
+              key={account.id}
+              accountType={account.accountType}
+              addToNetWorth={account.addToNetWorth}
+              currentBalance={account.currentBalance}
+              name={account.name}
+            />
+          ))}
+        </div>
       )}
 
     </div>
