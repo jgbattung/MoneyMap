@@ -107,6 +107,10 @@
   --color-error-800: oklch(0.377 0.129 27.3);
   --color-error-900: oklch(0.307 0.103 27.3);
   --color-error-950: oklch(0.177 0.051 27.3);
+
+  /* Font sizes */
+  --text-xxs: 0.625rem;    /* 10px */
+  --text-xxxs: 0.5rem;     /* 8px */
 }
 
 :root {
