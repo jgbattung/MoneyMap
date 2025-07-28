@@ -52,6 +52,23 @@ const Accounts = () => {
             <SkeletonAccountCard key={index} />
           ))}
         </div>
+      ) : error ? (
+        <div className='flex-1 flex flex-col items-center justify-center py-16'>
+          <Icons.error
+            className='h-24 w-24 mb-10'
+            strokeWidth={1.25}
+          />
+          <div className='flex flex-col px-4 items-center justify-center gap-3 text-center'>
+            <p className='text-2xl min-md:text-4xl font-semibold'>Failed to load accounts</p>
+            <p className='text-muted-foreground'>{error}</p>
+          </div>
+          <Button
+            onClick={() => window.location.reload()}
+            className="mt-10"
+          >
+            Try again
+          </Button>
+        </div>
       ) : accounts.length === 0 ? (
         <div className='flex-1 flex flex-col items-center justify-center py-16'>
           <Icons.wallet

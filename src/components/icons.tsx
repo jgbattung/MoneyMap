@@ -11,6 +11,7 @@ import {
   IconCashBanknotePlus,
   IconTrendingUp,
   IconWallet,
+  IconExclamationCircleFilled,
 } from '@tabler/icons-react';
 
 
@@ -28,4 +29,5 @@ export const Icons = {
   accountIcon: IconCashBanknotePlus,
   addToNetWorth: IconTrendingUp,
   wallet: IconWallet,
+  error: IconExclamationCircleFilled,
 }
