@@ -19,16 +19,16 @@ const AccountCard = ({ accountType, addToNetWorth, currentBalance, name }: Accou
   return (
     <div className='flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md'>
       <div className='flex flex-col gap-1'>
-      <div className='flex items-center gap-2'>
-        <Icons.accountIcon size={22} className='text-foreground' />
-        <p className='text-foreground font-bold md:text-lg lg:text-xl'>{name}</p>
-        {addToNetWorth && (
-          <Icons.addToNetWorth size={16} className='text-accent-500' />
-        )}
-      </div>
-        <div className='w-fit px-3 py-1.5 bg-primary-900 rounded-2xl'>
-          <p className='text-white text-xs'>{accountTypeFormatted}</p>
+        <div className='flex items-center gap-2'>
+          <Icons.accountIcon size={22} className='text-foreground' />
+          <p className='text-foreground font-bold md:text-lg lg:text-xl'>{name}</p>
+          {addToNetWorth && (
+            <Icons.addToNetWorth size={16} className='text-accent-500' />
+          )}
         </div>
+          <div className='w-fit px-3 py-1.5 bg-primary-900 rounded-2xl'>
+            <p className='text-white text-xs'>{accountTypeFormatted}</p>
+          </div>
       </div>
       <div className='flex flex-col items-end'>
         <div className='flex items-end justify-center gap-2'>
