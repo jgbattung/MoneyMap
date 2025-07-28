@@ -10,6 +10,7 @@ import {
   IconLibraryPlusFilled,
   IconCashBanknotePlus,
   IconTrendingUp,
+  IconWallet,
 } from '@tabler/icons-react';
 
 
@@ -26,4 +27,5 @@ export const Icons = {
   createAccount: IconLibraryPlusFilled,
   accountIcon: IconCashBanknotePlus,
   addToNetWorth: IconTrendingUp,
+  wallet: IconWallet,
 }
