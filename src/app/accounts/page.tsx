@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import SkeletonAccountCard from '@/components/shared/SkeletonAccountCard'
 
 const Accounts = () => {
-  const { accounts, isLoading, error } = useAccounts();
+  const { accounts, isLoading, error, refetchAccounts } = useAccounts();
   const [createAccountSheetOpen, setCreateAccountSheetOpen] = useState(false);
   const [createAccountDrawerOpen, setCreateAccountDrawerOpen] = useState(false);
 
@@ -30,6 +30,7 @@ const Accounts = () => {
           open={createAccountSheetOpen}
           onOpenChange={setCreateAccountSheetOpen}
           className="hidden md:block"
+          onAccountCreated={refetchAccounts}
         />
 
         <button 
@@ -43,6 +44,7 @@ const Accounts = () => {
           open={createAccountDrawerOpen}
           onOpenChange={setCreateAccountDrawerOpen}
           className="block md:hidden"
+          onAccountCreated={refetchAccounts}
         />
       </div>
 
