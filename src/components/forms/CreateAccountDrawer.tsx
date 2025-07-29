@@ -17,9 +17,10 @@ interface CreateAccountDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   className: string;
+  onAccountCreated?: () => void;
 }
 
-const CreateAccountDrawer = ({ open, onOpenChange, className }: CreateAccountDrawerProps) => {
+const CreateAccountDrawer = ({ open, onOpenChange, className, onAccountCreated }: CreateAccountDrawerProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof AccountValidation>>({
@@ -54,9 +55,10 @@ const CreateAccountDrawer = ({ open, onOpenChange, className }: CreateAccountDra
           description: `${newAccount.name} has been added to your accounts.`,
           duration: 5000
         });
+        form.reset();
+        onOpenChange(false);
+        onAccountCreated?.();
       }
-      form.reset();
-      onOpenChange(false);
     } catch (error) {
       if (error instanceof Error) {
         toast.error("Failed to create account", {

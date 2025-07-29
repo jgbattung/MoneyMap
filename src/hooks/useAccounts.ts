@@ -14,25 +14,29 @@ const useAccounts = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchAccounts = async () => {
-      try {
-        setIsLoading(true)
-        const response = await fetch('/api/accounts');
-        if (!response.ok) throw new Error('Failed to fetch accounts');
-        const data = await response.json();
-        setAccounts(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred')
-      } finally {
-        setIsLoading(false)
-      }
-    };
+  const fetchAccounts = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/accounts');
+      if (!response.ok) throw new Error('Failed to fetch accounts');
+      const data = await response.json();
+      setAccounts(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchAccounts()
+  const refetchAccounts = async () => {
+    await fetchAccounts();
+  }
+
+  useEffect(() => {
+    fetchAccounts();
   }, []);
 
-  return { accounts, isLoading, error }
+  return { accounts, isLoading, error, refetchAccounts }
 }
 
 export default useAccounts
