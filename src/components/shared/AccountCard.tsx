@@ -7,9 +7,10 @@ interface AccountCardProps {
   addToNetWorth: boolean;
   currentBalance: string;
   name: string;
+  onClick?: () => void;
 }
 
-const AccountCard = ({ accountType, addToNetWorth, currentBalance, name }: AccountCardProps) => {
+const AccountCard = ({ accountType, addToNetWorth, currentBalance, name, onClick }: AccountCardProps) => {
   const accountTypeFormatted = capitalizeFirstLetter(accountType);
   const formattedBalance = parseFloat(currentBalance).toLocaleString('en-PH', {
     minimumFractionDigits: 2,
@@ -17,7 +18,10 @@ const AccountCard = ({ accountType, addToNetWorth, currentBalance, name }: Accou
   });
 
   return (
-    <div className='flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md'>
+  <div
+    className='flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md hover:bg-card/70 hover:scale-105 transition-all duration-200 cursor-pointer'
+    onClick={onClick}
+  >
       <div className='flex flex-col gap-1'>
         <div className='flex items-center gap-2'>
           <Icons.accountIcon size={22} className='text-foreground' />
