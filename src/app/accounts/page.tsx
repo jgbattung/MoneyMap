@@ -9,18 +9,25 @@ import useAccounts from '@/hooks/useAccounts'
 import { Button } from '@/components/ui/button'
 import SkeletonAccountCard from '@/components/shared/SkeletonAccountCard'
 import EditAccountSheet from '@/components/forms/EditAccountSheet'
+import EditAccountDrawer from '@/components/forms/EditAccountDrawer'
 
 const Accounts = () => {
   const { accounts, isLoading, error, refetchAccounts } = useAccounts();
   const [createAccountSheetOpen, setCreateAccountSheetOpen] = useState(false);
   const [createAccountDrawerOpen, setCreateAccountDrawerOpen] = useState(false);
   const [editAccountSheetOpen, setEditAccountSheetOpen] = useState(false);
+  const [editAccountDrawerOpen, setEditAccountDrawerOpen] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
 
-  const handleAccountClick = (accountId: string) => {
-    setSelectedAccountId(accountId);
+const handleAccountClick = (accountId: string) => {
+  setSelectedAccountId(accountId);
+  
+  if (window.innerWidth >= 768) {
     setEditAccountSheetOpen(true);
-  };
+  } else {
+    setEditAccountDrawerOpen(true);
+  }
+};
 
   return (
     <div className="h-dvh max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
@@ -60,6 +67,14 @@ const Accounts = () => {
         open={editAccountSheetOpen}
         onOpenChange={setEditAccountSheetOpen}
         className='hidden md:block'
+        accountId={selectedAccountId}
+        onAccountUpdated={refetchAccounts}
+      />
+
+      <EditAccountDrawer
+        open={editAccountDrawerOpen}
+        onOpenChange={setEditAccountDrawerOpen}
+        className='block md:hidden'
         accountId={selectedAccountId}
         onAccountUpdated={refetchAccounts}
       />
