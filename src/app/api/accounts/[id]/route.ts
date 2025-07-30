@@ -3,8 +3,13 @@ import { db } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(
+  request: NextRequest,
+  { params } : { params: { id: string } }
+) {
   try {
+    const { id } = await params;
+
     const session = await auth.api.getSession({
       headers: await headers()
     });
@@ -16,19 +21,24 @@ export async function GET() {
       );
     }
 
-    const accounts = await db.financialAccount.findMany({
+    const account = await db.financialAccount.findUnique({
       where: {
+        id: id,
         userId: session.user.id,
-      },
-      orderBy: {
-        currentBalance: 'desc',
       },
     });
 
-    return NextResponse.json(accounts, { status: 200 });
+    if (!account) {
+      return NextResponse.json(
+        { error: 'Account not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(account, { status: 200 });
 
   } catch (error) {
-    console.error('Error getting accounts: ', error);
+    console.error('Error getting account: ', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -36,8 +46,14 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
+    const { id } = await params;
+
     const session = await auth.api.getSession({
       headers: await headers()
     });
@@ -53,16 +69,19 @@ export async function POST(request: NextRequest) {
 
     const { name, accountType, initialBalance, addToNetWorth, statementDate, dueDate } = body;
 
-    if (!name || !accountType || initialBalance === undefined) {
+    if (!name || !accountType || !initialBalance === undefined) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, accountType, initialBalance' },
+        { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    const account = await db.financialAccount.create({
-      data: {
+    const updatedAccount = await db.financialAccount.update({
+      where: {
+        id: id,
         userId: session.user.id,
+      },
+      data: {
         name,
         accountType,
         initialBalance: parseFloat(initialBalance),
@@ -71,15 +90,15 @@ export async function POST(request: NextRequest) {
         statementDate: statementDate ? parseInt(statementDate) : null,
         dueDate: dueDate ? parseInt(dueDate) : null,
       },
-    });
+    })
 
-    return NextResponse.json(account, { status: 201 });
+    return NextResponse.json(updatedAccount, { status: 201 });
 
   } catch (error) {
-    console.error('Error creating account: ', error);
+    console.error('Error updating account: ', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }

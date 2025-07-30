@@ -8,11 +8,26 @@ import AccountCard from '@/components/shared/AccountCard'
 import useAccounts from '@/hooks/useAccounts'
 import { Button } from '@/components/ui/button'
 import SkeletonAccountCard from '@/components/shared/SkeletonAccountCard'
+import EditAccountSheet from '@/components/forms/EditAccountSheet'
+import EditAccountDrawer from '@/components/forms/EditAccountDrawer'
 
 const Accounts = () => {
   const { accounts, isLoading, error, refetchAccounts } = useAccounts();
   const [createAccountSheetOpen, setCreateAccountSheetOpen] = useState(false);
   const [createAccountDrawerOpen, setCreateAccountDrawerOpen] = useState(false);
+  const [editAccountSheetOpen, setEditAccountSheetOpen] = useState(false);
+  const [editAccountDrawerOpen, setEditAccountDrawerOpen] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+
+const handleAccountClick = (accountId: string) => {
+  setSelectedAccountId(accountId);
+  
+  if (window.innerWidth >= 768) {
+    setEditAccountSheetOpen(true);
+  } else {
+    setEditAccountDrawerOpen(true);
+  }
+};
 
   return (
     <div className="h-dvh max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
@@ -47,6 +62,22 @@ const Accounts = () => {
           onAccountCreated={refetchAccounts}
         />
       </div>
+
+      <EditAccountSheet
+        open={editAccountSheetOpen}
+        onOpenChange={setEditAccountSheetOpen}
+        className='hidden md:block'
+        accountId={selectedAccountId}
+        onAccountUpdated={refetchAccounts}
+      />
+
+      <EditAccountDrawer
+        open={editAccountDrawerOpen}
+        onOpenChange={setEditAccountDrawerOpen}
+        className='block md:hidden'
+        accountId={selectedAccountId}
+        onAccountUpdated={refetchAccounts}
+      />
 
       {isLoading ? (
         <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'>
@@ -105,6 +136,7 @@ const Accounts = () => {
               addToNetWorth={account.addToNetWorth}
               currentBalance={account.currentBalance}
               name={account.name}
+              onClick={() => handleAccountClick(account.id)}
             />
           ))}
         </div>
