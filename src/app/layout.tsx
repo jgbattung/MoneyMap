@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/shared/Sidebar";
 import { Toaster } from "@/components/ui/sonner";
+import BottomBar from "@/components/shared/BottomBar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,6 +42,7 @@ export default function RootLayout({
           {/* Mobile Bottom Bar */}
           {/* <BottomBar className="md:hidden" /> */}
           <Toaster position="bottom-right"/>
+          <BottomBar />
         </main>
       </body>
     </html>

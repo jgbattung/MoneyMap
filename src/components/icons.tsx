@@ -6,12 +6,13 @@ import {
   IconBrandFacebook,
   IconPlus,
   IconMinus,
-  IconArrowUpRight,
+  IconArrowRight,
   IconLibraryPlusFilled,
   IconCashBanknotePlus,
   IconTrendingUp,
   IconWallet,
   IconExclamationCircleFilled,
+  IconChevronUp,
 } from '@tabler/icons-react';
 
 
@@ -24,10 +25,11 @@ export const Icons = {
   facebook: IconBrandFacebook,
   addExpense: IconMinus,
   addIncome: IconPlus,
-  addTransfer: IconArrowUpRight,
+  addTransfer: IconArrowRight,
   createAccount: IconLibraryPlusFilled,
   accountIcon: IconCashBanknotePlus,
   addToNetWorth: IconTrendingUp,
   wallet: IconWallet,
   error: IconExclamationCircleFilled,
+  actionButtonsTrigger: IconChevronUp,
 }
