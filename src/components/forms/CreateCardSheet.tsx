@@ -10,6 +10,7 @@ import { useForm } from "react-hook-form";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Button } from "../ui/button";
+import { toast } from "sonner";
 
 interface CreateCardSheetProps {
   open: boolean;
@@ -29,8 +30,52 @@ const CreateCardSheet = ({ open, onOpenChange, className, onCardCreated }: Creat
     }
   });
 
-  const onSubmit = () => {
-    console.log('SUBMIT CARD')
+  const onSubmit = async (values: z.infer<typeof CardValidation>) => {
+    setIsLoading(true);
+
+    try {
+      const cardData = {
+        ...values,
+        initialBalance: values.initialBalance ? (-Math.abs(parseFloat(values.initialBalance))).toString() : '0'
+      };
+
+      const response = await fetch('/api/cards', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(cardData),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to create account")
+      }
+
+      const newCard = await response.json();
+      if (newCard) {
+        toast.success("Credit card added successfully" , {
+          description: `${newCard.name} has been added to your credit cards.`,
+          duration: 5000
+        });
+        form.reset();
+        onOpenChange(false);
+        onCardCreated?.();
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error("Failed to add credit card", {
+          description: error.message || "Please check your information and try again.",
+          duration: 6000
+        })
+      } else {
+        toast.error("Something went wrong", {
+          description: "Unable to add credit card. Please try again",
+          duration: 6000
+        })
+      }
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const getOrdinalSuffix = (day: number) => {
@@ -100,7 +145,7 @@ const CreateCardSheet = ({ open, onOpenChange, className, onCardCreated }: Creat
                 <FormItem className="p-4">
                   <FormLabel>Statement Date</FormLabel>
                   <FormDescription>
-                    {`Select this card's statement date of the month`}
+                    Day of the month when your statement is generated
                   </FormDescription>
                   <FormControl>
                     <Select onValueChange={(value) => field.onChange(parseInt(value))}>
@@ -127,7 +172,7 @@ const CreateCardSheet = ({ open, onOpenChange, className, onCardCreated }: Creat
                 <FormItem className="p-4">
                   <FormLabel>Due Date</FormLabel>
                   <FormDescription>
-                    {`Select this card's due date of the month`}
+                    Day of the month when payment is due
                   </FormDescription>
                   <FormControl>
                     <Select onValueChange={(value) => field.onChange(parseInt(value))}>
