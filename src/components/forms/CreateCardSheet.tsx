@@ -11,6 +11,7 @@ import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
+import { getOrdinalSuffix } from "@/lib/utils";
 
 interface CreateCardSheetProps {
   open: boolean;
@@ -77,16 +78,6 @@ const CreateCardSheet = ({ open, onOpenChange, className, onCardCreated }: Creat
       setIsLoading(false);
     }
   }
-
-  const getOrdinalSuffix = (day: number) => {
-    if (day >= 11 && day <= 13) return 'th';
-    switch (day % 10) {
-      case 1: return 'st';
-      case 2: return 'nd';
-      case 3: return 'rd';
-      default: return 'th';
-    }
-  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
