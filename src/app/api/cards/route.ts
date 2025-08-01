@@ -22,7 +22,7 @@ export async function GET() {
         accountType: 'CREDIT_CARD'
       },
       orderBy: {
-        currentBalance: 'desc'
+        currentBalance: 'asc'
       },
     });
 
