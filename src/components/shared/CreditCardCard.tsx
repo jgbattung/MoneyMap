@@ -26,7 +26,7 @@ const CreditCardCard = ({ currentBalance, name, statementDate, dueDate, onClick 
           <Icons.creditCardIcon size={22} className='text-foreground' />
           <p className='text-foreground font-bold md:text-lg lg:text-xl'>{name}</p>
         </div>
-        <div className="text-muted-foreground text-xs">
+        <div className="text-muted-foreground text-xs space-y-0.5">
           {statementDate && (
             <p>{`Statement date every ${statementDate}${getOrdinalSuffix(statementDate)} of the month.`}</p>
           )}
