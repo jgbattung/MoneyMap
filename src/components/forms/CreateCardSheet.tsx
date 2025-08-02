@@ -104,6 +104,7 @@ const CreateCardSheet = ({ open, onOpenChange, className, onCardCreated }: Creat
                     <Input
                       placeholder='e.g., BPI Blue Mastercard, Metrobank Rewards Plus'
                       {...field}
+                      disabled={isLoading}
                     />
                   </FormControl>
                 </FormItem>
@@ -121,8 +122,11 @@ const CreateCardSheet = ({ open, onOpenChange, className, onCardCreated }: Creat
                   </FormDescription>
                   <FormControl>
                     <Input
+                      type='number'
                       placeholder='0'
+                      className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
                       {...field}
+                      disabled={isLoading}
                     />
                   </FormControl>
                 </FormItem>
@@ -139,7 +143,10 @@ const CreateCardSheet = ({ open, onOpenChange, className, onCardCreated }: Creat
                     Day of the month when your statement is generated
                   </FormDescription>
                   <FormControl>
-                    <Select onValueChange={(value) => field.onChange(parseInt(value))}>
+                    <Select
+                      onValueChange={(value) => field.onChange(parseInt(value))}
+                      disabled={isLoading}  
+                    >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select day" />
                       </SelectTrigger>
@@ -166,7 +173,10 @@ const CreateCardSheet = ({ open, onOpenChange, className, onCardCreated }: Creat
                     Day of the month when payment is due
                   </FormDescription>
                   <FormControl>
-                    <Select onValueChange={(value) => field.onChange(parseInt(value))}>
+                    <Select
+                      onValueChange={(value) => field.onChange(parseInt(value))}
+                      disabled={isLoading}  
+                    >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select day" />
                       </SelectTrigger>
