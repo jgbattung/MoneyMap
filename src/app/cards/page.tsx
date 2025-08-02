@@ -1,5 +1,6 @@
 "use client"
 
+import CreateCardDrawer from '@/components/forms/CreateCardDrawer';
 import CreateCardSheet from '@/components/forms/CreateCardSheet';
 import { Icons } from '@/components/icons';
 import CreditCardCard from '@/components/shared/CreditCardCard';
@@ -10,6 +11,7 @@ import React, { useState } from 'react'
 const Cards = () => {
   const { cards, isLoading, error, refetchCards } = useCards();
   const [createCardsSheetOpen, setCreateCardsSheetOpen] = useState(false);
+  const [createCardsDrawerOpen, setCreateCardsDrawerOpen] = useState(false);
 
   return (
     <div className="h-dvh max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
@@ -29,7 +31,22 @@ const Cards = () => {
           className='hidden md:block'
           onCardCreated={refetchCards}
         />
+
+        <button
+          onClick={() => setCreateCardsDrawerOpen(true)}
+          className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"
+        >
+          <Icons.createAccount size={16} />
+          <span>Add credit card</span>
+        </button>
+        <CreateCardDrawer
+          open={createCardsDrawerOpen}
+          onOpenChange={setCreateCardsDrawerOpen}
+          className='block md:hidden'
+          onCardCreated={refetchCards}
+        />
       </div>
+
 
         {isLoading ? (
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
