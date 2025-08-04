@@ -1,22 +1,21 @@
-import React from 'react'
-import { Icons } from '../icons'
-import { capitalizeFirstLetter } from '@/lib/utils';
+import { getOrdinalSuffix } from "@/lib/utils";
+import { Icons } from "../icons";
 
-interface AccountCardProps {
-  accountType: string;
-  addToNetWorth: boolean;
+
+interface CreditCardCardProps {
   currentBalance: string;
   name: string;
+  statementDate?: number;
+  dueDate?: number;
   onClick?: () => void;
 }
 
-const AccountCard = ({ accountType, addToNetWorth, currentBalance, name, onClick }: AccountCardProps) => {
-  const accountTypeFormatted = capitalizeFirstLetter(accountType);
-  const formattedBalance = parseFloat(currentBalance).toLocaleString('en-PH', {
+const CreditCardCard = ({ currentBalance, name, statementDate, dueDate, onClick }: CreditCardCardProps) => {
+  const formattedBalance = Math.abs(parseFloat(currentBalance)).toLocaleString('en-PH', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
-
+  
   return (
     <div
       className='flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md hover:bg-card/70 hover:scale-105 transition-all duration-200 cursor-pointer'
@@ -24,25 +23,27 @@ const AccountCard = ({ accountType, addToNetWorth, currentBalance, name, onClick
     >
       <div className='flex flex-col gap-1'>
         <div className='flex items-center gap-2'>
-          <Icons.accountIcon size={22} className='text-foreground' />
+          <Icons.creditCardIcon size={22} className='text-foreground' />
           <p className='text-foreground font-bold md:text-lg lg:text-xl'>{name}</p>
-          {addToNetWorth && (
-            <Icons.addToNetWorth size={16} className='text-accent-500' />
+        </div>
+        <div className="text-muted-foreground text-xs space-y-0.5">
+          {statementDate && (
+            <p>{`Statement date every ${statementDate}${getOrdinalSuffix(statementDate)} of the month.`}</p>
+          )}
+          {dueDate && (
+            <p>{`Due date every ${dueDate}${getOrdinalSuffix(dueDate)} of the month.`}</p>
           )}
         </div>
-          <div className='w-fit px-3 py-1.5 bg-primary-900 rounded-2xl'>
-            <p className='text-white text-xs'>{accountTypeFormatted}</p>
-          </div>
       </div>
       <div className='flex flex-col items-end'>
         <div className='flex items-end justify-center gap-2'>
           <span className='text-muted-foreground font-light text-xs md:text-md'>PHP</span>
           <p className='text-foreground md:text-md lg:text-lg'>{formattedBalance}</p>
         </div>
-        <p className='text-muted-foreground text-xs'>Balance</p>
+        <p className='text-muted-foreground text-xs'>Outstanding balance</p>
       </div>
     </div>
   )
 }
 
-export default AccountCard
+export default CreditCardCard

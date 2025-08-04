@@ -11,8 +11,8 @@ import { Input } from '../ui/input'
 import { Checkbox } from '../ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { toast } from 'sonner'
-import SkeletonEditForm from '../shared/SkeletonEditForm'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose, DrawerFooter } from '../ui/drawer'
+import SkeletonEditAccountDrawerForm from '../shared/SkeletonEditAccountDrawerForm'
 
 interface EditAccountDrawerProps {
   open: boolean;
@@ -36,55 +36,55 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId, onAccount
   const [isFetching, setIsFetching] = useState(false);
   const [accountData, setAccountData] = useState<AccountData | null>(null);
 
-const form = useForm<z.infer<typeof AccountValidation>>({
-    resolver: zodResolver(AccountValidation),
-    defaultValues: {
-      name: '',
-      initialBalance: '',
-      addToNetWorth: true,
-    }
-  });
-
-useEffect(() => {
-  if (open && accountId) {
-    const fetchAccountData = async () => {
-      setIsFetching(true);
-      try {
-        const response = await fetch(`/api/accounts/${accountId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch account');
-        }
-
-        const account = await response.json();
-        
-        setAccountData(account);
-
-        form.reset({
-          name: account.name,
-          accountType: account.accountType,
-          initialBalance: account.initialBalance.toString(),
-          addToNetWorth: account.addToNetWorth,
-        });
-      } catch (error) {
-        if (error instanceof Error) {
-          toast.error("Failed to update account", {
-            description: error.message || "Please check your information and try again.",
-            duration: 6000
-          })
-        } else {
-          toast.error("Something went wrong", {
-            description: "Unable to update account. Please try again.",
-            duration: 6000
-          })
-        }
-      } finally {
-        setIsFetching(false);
+  const form = useForm<z.infer<typeof AccountValidation>>({
+      resolver: zodResolver(AccountValidation),
+      defaultValues: {
+        name: '',
+        initialBalance: '',
+        addToNetWorth: true,
       }
-    }
+    });
 
-    fetchAccountData();
-  }
-}, [open, accountId, form]);
+  useEffect(() => {
+    if (open && accountId) {
+      const fetchAccountData = async () => {
+        setIsFetching(true);
+        try {
+          const response = await fetch(`/api/accounts/${accountId}`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch account');
+          }
+
+          const account = await response.json();
+          
+          setAccountData(account);
+
+          form.reset({
+            name: account.name,
+            accountType: account.accountType,
+            initialBalance: account.initialBalance.toString(),
+            addToNetWorth: account.addToNetWorth,
+          });
+        } catch (error) {
+          if (error instanceof Error) {
+            toast.error("Failed to update account", {
+              description: error.message || "Please check your information and try again.",
+              duration: 6000
+            })
+          } else {
+            toast.error("Something went wrong", {
+              description: "Unable to update account. Please try again.",
+              duration: 6000
+            })
+          }
+        } finally {
+          setIsFetching(false);
+        }
+      }
+
+      fetchAccountData();
+    }
+  }, [open, accountId, form]);
 
   const onSubmit = async (values: z.infer<typeof AccountValidation>) => {
     setIsLoading(true);
@@ -136,7 +136,7 @@ useEffect(() => {
         className={`${className}`}
       >
         {isFetching ? (
-          <SkeletonEditForm />
+          <SkeletonEditAccountDrawerForm />
         ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -192,18 +192,6 @@ useEffect(() => {
               )}
             />
 
-            <div className="p-4 flex flex-col gap-2">
-              <FormLabel>Current balance</FormLabel>
-              <Input
-                value={`PHP ${parseFloat(accountData?.currentBalance || "0").toLocaleString('en-PH', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
-                })}`}
-                disabled={true}
-                className="bg-muted text-muted-foreground cursor-not-allowed"
-              />
-            </div>
-
             <FormField
               control={form.control}
               name="initialBalance"
@@ -223,6 +211,18 @@ useEffect(() => {
                 </FormItem>
               )}
             />
+
+            <div className="p-4 flex flex-col gap-2">
+              <FormLabel>Current balance</FormLabel>
+              <Input
+                value={`${parseFloat(accountData?.currentBalance || "0").toLocaleString('en-PH', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}`}
+                disabled={true}
+                className="bg-muted text-muted-foreground cursor-not-allowed"
+              />
+            </div>
 
             <FormField
               control={form.control}

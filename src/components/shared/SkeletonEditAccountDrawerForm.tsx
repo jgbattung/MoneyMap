@@ -1,16 +1,16 @@
 import React from 'react'
 import { Skeleton } from '../ui/skeleton'
-import { SheetHeader, SheetTitle, SheetDescription } from '../ui/sheet'
+import { DrawerDescription, DrawerHeader, DrawerTitle } from '../ui/drawer'
 
-const SkeletonEditForm = () => {
+const SkeletonEditAccountDrawerForm = () => {
   return (
     <>
-      <SheetHeader>
-        <SheetTitle className='text-2xl'>Edit account</SheetTitle>
-        <SheetDescription>
+      <DrawerHeader>
+        <DrawerTitle className='text-2xl'>Edit account</DrawerTitle>
+        <DrawerDescription>
           Update your account details and information.
-        </SheetDescription>
-      </SheetHeader>
+        </DrawerDescription>
+      </DrawerHeader>
 
       {/* Account name field */}
       <div className='p-3'>
@@ -54,4 +54,4 @@ const SkeletonEditForm = () => {
   )
 }
 
-export default SkeletonEditForm
+export default SkeletonEditAccountDrawerForm

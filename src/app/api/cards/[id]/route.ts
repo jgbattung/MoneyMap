@@ -21,31 +21,30 @@ export async function GET(
       );
     }
 
-    const account = await db.financialAccount.findUnique({
+    const card = await db.financialAccount.findUnique({
       where: {
         id: id,
-        userId: session.user.id,
+        userId: session.user.id
       },
     });
 
-    if (!account) {
+    if (!card) {
       return NextResponse.json(
         { error: 'Account not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(account, { status: 200 });
+    return NextResponse.json(card, { status: 200 });
 
   } catch (error) {
-    console.error('Error getting account: ', error);
+    console.error('Error getting credit card: ', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
-
 
 export async function PATCH(
   request: NextRequest,
@@ -67,35 +66,33 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const { name, accountType, initialBalance, addToNetWorth, statementDate, dueDate } = body;
+    const { name, initialBalance, statementDate, dueDate } = body;
 
-    if (!name || !accountType || initialBalance === undefined) {
+    if (!name || initialBalance === undefined) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    const updatedAccount = await db.financialAccount.update({
+    const updatedCard = await db.financialAccount.update({
       where: {
         id: id,
         userId: session.user.id,
       },
       data: {
         name,
-        accountType,
+        accountType: 'CREDIT_CARD',
         initialBalance: parseFloat(initialBalance),
-        currentBalance: parseFloat(initialBalance),
-        addToNetWorth: addToNetWorth ?? true,
         statementDate: statementDate ? parseInt(statementDate) : null,
         dueDate: dueDate ? parseInt(dueDate) : null,
-      },
-    })
+      }
+    });
 
-    return NextResponse.json(updatedAccount, { status: 201 });
+    return NextResponse.json(updatedCard, { status: 201 });
 
   } catch (error) {
-    console.error('Error updating account: ', error);
+    console.error('Error updating credit card: ', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

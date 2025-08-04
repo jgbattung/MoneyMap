@@ -19,15 +19,15 @@ const Accounts = () => {
   const [editAccountDrawerOpen, setEditAccountDrawerOpen] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
 
-const handleAccountClick = (accountId: string) => {
-  setSelectedAccountId(accountId);
-  
-  if (window.innerWidth >= 768) {
-    setEditAccountSheetOpen(true);
-  } else {
-    setEditAccountDrawerOpen(true);
-  }
-};
+  const handleAccountClick = (accountId: string) => {
+    setSelectedAccountId(accountId);
+    
+    if (window.innerWidth >= 768) {
+      setEditAccountSheetOpen(true);
+    } else {
+      setEditAccountDrawerOpen(true);
+    }
+  };
 
   return (
     <div className="h-dvh max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">

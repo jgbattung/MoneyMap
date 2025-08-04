@@ -102,6 +102,7 @@ const CreateAccountDrawer = ({ open, onOpenChange, className, onAccountCreated }
                     <Input
                       placeholder='e.g., BPI, GCash, Wallet'
                       {...field}
+                      disabled={isLoading}
                     />
                   </FormControl>
                   <FormMessage />
@@ -115,7 +116,11 @@ const CreateAccountDrawer = ({ open, onOpenChange, className, onAccountCreated }
               render={({ field }) => (
                 <FormItem className="p-4">
                   <FormLabel>Account type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={isLoading}
+                  >
                     <FormControl>
                       <SelectTrigger className='w-full'>
                         <SelectValue placeholder="Select account type" />

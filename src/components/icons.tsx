@@ -13,6 +13,7 @@ import {
   IconWallet,
   IconExclamationCircleFilled,
   IconChevronUp,
+  IconCreditCard,
 } from '@tabler/icons-react';
 
 
@@ -32,4 +33,5 @@ export const Icons = {
   wallet: IconWallet,
   error: IconExclamationCircleFilled,
   actionButtonsTrigger: IconChevronUp,
+  creditCardIcon: IconCreditCard,
 }
