@@ -3,6 +3,7 @@
 import CreateCardDrawer from '@/components/forms/CreateCardDrawer';
 import CreateCardSheet from '@/components/forms/CreateCardSheet';
 import EditCardDrawer from '@/components/forms/EditCardDrawer';
+import EditCardSheet from '@/components/forms/EditCardSheet';
 import { Icons } from '@/components/icons';
 import CreditCardCard from '@/components/shared/CreditCardCard';
 import SkeletonCardCard from '@/components/shared/SkeletonCardCard';
@@ -60,6 +61,14 @@ const Cards = () => {
           onCardCreated={refetchCards}
         />
       </div>
+
+      <EditCardSheet
+        open={editCardSheetOpen}
+        onOpenChange={setEditCardSheetOpen}
+        className='hidden md:block'
+        cardId={selectedCardId}
+        onCardUpdated={refetchCards}
+      />
 
       <EditCardDrawer
         open={editCardDrawerOpen}

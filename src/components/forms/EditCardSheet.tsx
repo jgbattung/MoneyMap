@@ -1,21 +1,20 @@
 "use client"
 
-import { CardValidation } from '@/lib/validations/account';
-import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form';
+import { CardValidation } from "@/lib/validations/account";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod"
-import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
-import { Input } from '../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { getOrdinalSuffix } from '@/lib/utils';
-import { Button } from '../ui/button';
-import { toast } from 'sonner';
-import SkeletonEditCardDrawerForm from '../shared/SkeletonEditCardDrawerForm';
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "../ui/form";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { getOrdinalSuffix } from "@/lib/utils";
 
 
-interface EditCardDrawerProps {
+interface EditCardSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   className: string;
@@ -23,7 +22,7 @@ interface EditCardDrawerProps {
   onCardUpdated ?: () => void;
 }
 
-const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }: EditCardDrawerProps) => {
+const EditCardSheet = ({ open, onOpenChange, className, cardId, onCardUpdated }: EditCardSheetProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
 
@@ -76,6 +75,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }
     }
   }, [open, cardId, form])
 
+
   const onSubmit = async (values: z.infer<typeof CardValidation>) => {
     setIsLoading(true);
 
@@ -122,31 +122,29 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }
   }
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
         onEscapeKeyDown={(e) => isLoading && e.preventDefault()}
         className={`${className}`}
       >
         {isFetching ? (
-          <SkeletonEditCardDrawerForm />
+          <div>FETCHING</div>
         ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DrawerHeader>
-              <DrawerTitle className='text-xl'>
-                Edit credit card
-              </DrawerTitle>
-              <DrawerDescription>
-                Update your credit card details and information.
-              </DrawerDescription>
-            </DrawerHeader>
+            <SheetHeader>
+              <SheetTitle className='text-2xl'>Add Credit Card</SheetTitle>
+              <SheetDescription>
+                Add a new credit card to track your balance, payments, and due dates.
+              </SheetDescription>
+            </SheetHeader>
 
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
-                <FormItem className='p-4'>
-                  <FormLabel>Card name</FormLabel>
+                <FormItem className="p-4">
+                  <FormLabel>Card Name</FormLabel>
                   <FormControl>
                     <Input
                       placeholder='e.g., BPI Blue Mastercard, Metrobank Rewards Plus'
@@ -154,7 +152,6 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }
                       disabled={isLoading}
                     />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -163,20 +160,20 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }
               control={form.control}
               name="initialBalance"
               render={({ field }) => (
-                <FormItem className='p-4'>
-                  <FormLabel>Outstanding balance</FormLabel>
+                <FormItem className="p-4">
+                  <FormLabel>Outstanding  balance</FormLabel>
                   <FormDescription>
                     Current amount owed on this credit card 
                   </FormDescription>
                   <FormControl>
                     <Input
                       type='number'
+                      placeholder='0'
                       className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                      disabled={isLoading}
                       {...field}
+                      disabled={isLoading}
                     />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -194,7 +191,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }
                     <Select
                       onValueChange={(value) => field.onChange(parseInt(value))}
                       defaultValue={field.value?.toString()}
-                      disabled={isLoading}
+                      disabled={isLoading}  
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select day" />
@@ -225,7 +222,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }
                     <Select
                       onValueChange={(value) => field.onChange(parseInt(value))}
                       defaultValue={field.value?.toString()}
-                      disabled={isLoading}
+                      disabled={isLoading}  
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select day" />
@@ -243,14 +240,14 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }
               )}
             />
 
-            <DrawerFooter>
+            <SheetFooter>
               <Button
                 type="submit"
                 disabled={isLoading}
               >
-                {isLoading ? "Updating credit card" : "Update credit card"}
+                {isLoading ? "Adding credit card" : "Add credit card"}
               </Button>
-              <DrawerClose asChild>
+              <SheetClose asChild>
                 <Button
                   variant="outline"
                   className='hover:text-white'
@@ -258,14 +255,14 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }
                 >
                   Cancel
                 </Button>
-              </DrawerClose>
-            </DrawerFooter>
+              </SheetClose>
+            </SheetFooter>
           </form>
         </Form>
         )}
-      </DrawerContent>
-    </Drawer>
+      </SheetContent>
+    </Sheet>
   )
 }
 
-export default EditCardDrawer
+export default EditCardSheet
