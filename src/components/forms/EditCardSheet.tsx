@@ -12,6 +12,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { getOrdinalSuffix } from "@/lib/utils";
+import SkeletonEditCardSheetForm from "../shared/SkeletonEditCardSheetForm";
 
 
 interface EditCardSheetProps {
@@ -128,14 +129,14 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId, onCardUpdated }:
         className={`${className}`}
       >
         {isFetching ? (
-          <div>FETCHING</div>
+          <SkeletonEditCardSheetForm />
         ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <SheetHeader>
-              <SheetTitle className='text-2xl'>Add Credit Card</SheetTitle>
+              <SheetTitle className='text-2xl'>Edit credit card</SheetTitle>
               <SheetDescription>
-                Add a new credit card to track your balance, payments, and due dates.
+                Update your credit card details and information.
               </SheetDescription>
             </SheetHeader>
 
