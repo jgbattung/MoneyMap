@@ -2,7 +2,7 @@ import React from 'react'
 import { Skeleton } from '../ui/skeleton'
 import { SheetHeader, SheetTitle, SheetDescription } from '../ui/sheet'
 
-const SkeletonEditForm = () => {
+const SkeletonEditAccountSheetForm = () => {
   return (
     <>
       <SheetHeader>
@@ -54,4 +54,4 @@ const SkeletonEditForm = () => {
   )
 }
 
-export default SkeletonEditForm
+export default SkeletonEditAccountSheetForm

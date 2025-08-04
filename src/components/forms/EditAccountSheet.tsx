@@ -12,7 +12,7 @@ import { Input } from '../ui/input'
 import { Checkbox } from '../ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { toast } from 'sonner'
-import SkeletonEditForm from '../shared/SkeletonEditForm'
+import SkeletonEditAccountSheetForm from '../shared/SkeletonEditAccountSheetForm'
 
 interface EditAccountSheetProps {
   open: boolean;
@@ -136,7 +136,7 @@ useEffect(() => {
         className={`${className} w-[600px] sm:max-w-[600px] py-3 px-2`}
       >
         {isFetching ? (
-          <SkeletonEditForm />
+          <SkeletonEditAccountSheetForm />
         ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>

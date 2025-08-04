@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { getOrdinalSuffix } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
+import SkeletonEditCardDrawerForm from '../shared/SkeletonEditCardDrawerForm';
 
 
 interface EditCardDrawerProps {
@@ -140,13 +141,13 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }
         className={`${className}`}
       >
         {isFetching ? (
-          <div>FETCHING</div>
+          <SkeletonEditCardDrawerForm />
         ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DrawerHeader>
               <DrawerTitle className='text-xl'>
-                Edit Credit Card
+                Edit credit card
               </DrawerTitle>
               <DrawerDescription>
                 Update your credit card details and information.
