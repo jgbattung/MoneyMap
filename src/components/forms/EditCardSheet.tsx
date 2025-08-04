@@ -126,7 +126,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId, onCardUpdated }:
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         onEscapeKeyDown={(e) => isLoading && e.preventDefault()}
-        className={`${className}`}
+        className={`${className} w-[600px] sm:max-w-[600px] py-3 px-2`}
       >
         {isFetching ? (
           <SkeletonEditCardSheetForm />

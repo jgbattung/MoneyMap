@@ -11,8 +11,8 @@ import { Input } from '../ui/input'
 import { Checkbox } from '../ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { toast } from 'sonner'
-import SkeletonEditAccountSheetForm from '../shared/SkeletonEditAccountSheetForm'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose, DrawerFooter } from '../ui/drawer'
+import SkeletonEditAccountDrawerForm from '../shared/SkeletonEditAccountDrawerForm'
 
 interface EditAccountDrawerProps {
   open: boolean;
@@ -136,7 +136,7 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId, onAccount
         className={`${className}`}
       >
         {isFetching ? (
-          <SkeletonEditAccountSheetForm />
+          <SkeletonEditAccountDrawerForm />
         ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
