@@ -19,6 +19,9 @@ export async function GET() {
     const accounts = await db.financialAccount.findMany({
       where: {
         userId: session.user.id,
+        accountType: {
+          not: "CREDIT_CARD"
+        },
       },
       orderBy: {
         currentBalance: 'desc',
