@@ -24,7 +24,9 @@ const AccountCard = ({ accountType, addToNetWorth, currentBalance, name, onClick
     >
       <div className='flex flex-col gap-1'>
         <div className='flex items-center gap-2'>
-          <Icons.accountIcon size={22} className='text-foreground' />
+          <div className='p-2 bg-primary/10 rounded-lg'>
+            <Icons.bank size={20} className='text-primary' />
+          </div>
           <p className='text-foreground font-bold md:text-lg lg:text-xl'>{name}</p>
           {addToNetWorth && (
             <Icons.addToNetWorth size={16} className='text-accent-500' />

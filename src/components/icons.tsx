@@ -15,6 +15,7 @@ import {
   IconChevronUp,
   IconCreditCard,
   IconMoneybag,
+  IconBuildingBank,
 } from '@tabler/icons-react';
 
 
@@ -36,4 +37,5 @@ export const Icons = {
   actionButtonsTrigger: IconChevronUp,
   creditCardIcon: IconCreditCard,
   money: IconMoneybag,
+  bank: IconBuildingBank,
 }
