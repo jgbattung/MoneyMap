@@ -3,6 +3,9 @@
 import CreateExpenseTypeDrawer from '@/components/forms/CreateExpenseTypeDrawer'
 import CreateExpenseTypeSheet from '@/components/forms/CreateExpenseTypeSheet'
 import { Icons } from '@/components/icons'
+import BudgetCard from '@/components/shared/BudgetCard'
+import SkeletonAccountCard from '@/components/shared/SkeletonAccountCard'
+import { Button } from '@/components/ui/button'
 import useExpenseTypes from '@/hooks/useExpenseTypes'
 import React, { useState } from 'react'
 
@@ -46,6 +49,68 @@ const Budgets = () => {
           onBudgetCreated={refetchExpenseTypes}
         />
       </div>
+
+      {isLoading ? (
+        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'>
+          {Array.from({ length: 4 }, (_, index) => (
+            <SkeletonAccountCard key={index} />
+          ))}
+        </div>
+      ) : error ? (
+        <div className='flex-1 flex flex-col items-center justify-center py-16'>
+          <Icons.error
+            className='h-24 w-24 mb-10'
+            strokeWidth={1.25}
+          />
+          <div className='flex flex-col px-4 items-center justify-center gap-3 text-center'>
+            <p className='text-2xl min-md:text-4xl font-semibold'>Failed to load budgets</p>
+            <p className='text-muted-foreground'>{error}</p>
+          </div>
+          <Button
+            onClick={() => window.location.reload()}
+            className="mt-10"
+          >
+            Try again
+          </Button>
+        </div>
+      ) : expenseTypes.length === 0 ? (
+        <div className='flex-1 flex flex-col items-center justify-center py-16'>
+          <Icons.wallet
+            className='h-24 w-24 mb-10'
+            strokeWidth={1.25}
+          />
+          <div className='flex flex-col px-4 items-center justify-center gap-3 text-center'>
+            <p className='text-2xl min-md:text-4xl font-semibold'>No budgets, yet.</p>
+            <p className='text-muted-foreground'>You have no budgets, yet! Start managing your finances by adding a budget type.</p>
+          </div>
+          <Button
+            onClick={() => setCreateExpenseTypeSheetOpen(true)}
+            className="hidden md:flex mt-10 text-lg px-6 py-6"
+          >
+            Add your first budget
+          </Button>
+          
+          {/* Mobile button */}
+          <Button
+            onClick={() => setCreateExpenseTypeDrawerOpen(true)}
+            className="flex md:hidden mt-10"
+          >
+            Add your first budget
+          </Button>
+        </div>
+      ) : (
+        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'
+        >
+          {expenseTypes.map((budget) => (
+            <BudgetCard
+              key={budget.id}
+              name={budget.name}
+              monthlyBudget={budget.monthlyBudget}
+              // onClick=''
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
