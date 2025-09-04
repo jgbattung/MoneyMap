@@ -4,7 +4,7 @@ import CreateExpenseTypeDrawer from '@/components/forms/CreateExpenseTypeDrawer'
 import CreateExpenseTypeSheet from '@/components/forms/CreateExpenseTypeSheet'
 import { Icons } from '@/components/icons'
 import BudgetCard from '@/components/shared/BudgetCard'
-import SkeletonAccountCard from '@/components/shared/SkeletonAccountCard'
+import SkeletonBudgetCard from '@/components/shared/SkeletonBudgetCard'
 import { Button } from '@/components/ui/button'
 import useExpenseTypes from '@/hooks/useExpenseTypes'
 import React, { useState } from 'react'
@@ -53,7 +53,7 @@ const Budgets = () => {
       {isLoading ? (
         <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'>
           {Array.from({ length: 4 }, (_, index) => (
-            <SkeletonAccountCard key={index} />
+            <SkeletonBudgetCard key={index} />
           ))}
         </div>
       ) : error ? (
