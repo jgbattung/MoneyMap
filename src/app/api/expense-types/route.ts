@@ -20,6 +20,9 @@ export async function GET() {
       where: {
         userId: session.user.id
       },
+      orderBy: {
+        monthlyBudget: 'desc',
+      }
     });
 
     return NextResponse.json(expenseTypes, { status: 200 });
