@@ -57,13 +57,13 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId, onCardUpdated }:
           });
         } catch (error) {
           if (error instanceof Error) {
-            toast.error("Failed to update credit card", {
+            toast.error("Failed to fetch credit card information", {
               description: error.message || "Please check your information and try again",
               duration: 6000
             })
           } else {
             toast.error("Something went wrong", {
-              description: "Unable to update credit card. Please try again.",
+              description: "Unable to fetch credit card information. Please try again.",
               duration: 6000
             })
           }
@@ -74,7 +74,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId, onCardUpdated }:
 
       fetchCardData();
     }
-  }, [open, cardId, form])
+  }, [open, cardId, form]);
 
 
   const onSubmit = async (values: z.infer<typeof CardValidation>) => {

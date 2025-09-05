@@ -2,6 +2,7 @@
 
 import CreateExpenseTypeDrawer from '@/components/forms/CreateExpenseTypeDrawer'
 import CreateExpenseTypeSheet from '@/components/forms/CreateExpenseTypeSheet'
+import EditExpenseTypeSheet from '@/components/forms/EditExpenseTypeSheet'
 import { Icons } from '@/components/icons'
 import BudgetCard from '@/components/shared/BudgetCard'
 import SkeletonBudgetCard from '@/components/shared/SkeletonBudgetCard'
@@ -13,11 +14,24 @@ const Budgets = () => {
   const { expenseTypes, isLoading, error, refetchExpenseTypes } = useExpenseTypes();
   const [createExpenseTypeSheetOpen, setCreateExpenseTypeSheetOpen] = useState(false);
   const [createExpenseTypeDrawerOpen, setCreateExpenseTypeDrawerOpen] = useState(false);
+  const [editExpenseTypeSheetOpen, setEditExpenseTypeSheetOpen] = useState(false);
+  const [editExpenseTypeDrawerOpen, setEditExpenseTypeDrawerOpen] = useState(false);
+  const [selectedExpenseTypeId, setSelectedExpenseTypeId] = useState<string>('');
+
+  const handleExpenseTypeClick = (budgetId: string) => {
+    setSelectedExpenseTypeId(budgetId);
+
+    if (window.innerWidth >= 768) {
+      setEditExpenseTypeSheetOpen(true);
+    } else {
+      setCreateExpenseTypeDrawerOpen(true);
+    }
+  }
 
   return (
     <div className="h-dvh max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
       <div className='flex items-center justify-between flex-wrap gap-4'>
-        <h1 className='text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold'>Expense type and budgets</h1>
+        <h1 className='text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold'>Budgets</h1>
 
         <button
           onClick={() => setCreateExpenseTypeSheetOpen(true)}
@@ -49,6 +63,14 @@ const Budgets = () => {
           onBudgetCreated={refetchExpenseTypes}
         />
       </div>
+
+      <EditExpenseTypeSheet
+        open={editExpenseTypeSheetOpen}
+        onOpenChange={setEditExpenseTypeSheetOpen}
+        className='hidden md:block'
+        budgetId={selectedExpenseTypeId}
+        onBudgetUpdated={refetchExpenseTypes}
+      />
 
       {isLoading ? (
         <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'>
@@ -106,7 +128,7 @@ const Budgets = () => {
               key={budget.id}
               name={budget.name}
               monthlyBudget={budget.monthlyBudget}
-              // onClick=''
+              onClick={() => handleExpenseTypeClick(budget.id)}
             />
           ))}
         </div>
