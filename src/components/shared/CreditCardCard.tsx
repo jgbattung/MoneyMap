@@ -23,7 +23,9 @@ const CreditCardCard = ({ currentBalance, name, statementDate, dueDate, onClick 
     >
       <div className='flex flex-col gap-1'>
         <div className='flex items-center gap-2'>
-          <Icons.creditCardIcon size={22} className='text-foreground' />
+        <div className='p-2 bg-primary/10 rounded-lg'>
+          <Icons.creditCardIcon size={20} className='text-primary' />
+        </div>
           <p className='text-foreground font-bold md:text-lg lg:text-xl'>{name}</p>
         </div>
         <div className="text-muted-foreground text-xs space-y-0.5">
