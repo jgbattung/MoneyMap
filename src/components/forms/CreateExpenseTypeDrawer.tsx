@@ -110,7 +110,7 @@ const CreateExpenseTypeDrawer = ({ open, onOpenChange, className, onBudgetCreate
               name="monthlyBudget"
               render={({ field }) => (
                 <FormItem className='p-4'>
-                  <FormLabel>Budget name</FormLabel>
+                  <FormLabel>Monthly budget</FormLabel>
                   <FormDescription>
                     Set a monthly spending limit for this category (optional).
                   </FormDescription>

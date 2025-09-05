@@ -10,6 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } fr
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
+import SkeletonEditBudgetForm from "../shared/SkeletonEditBudgetForm";
 
 interface EditExpenseTypeSheetProps {
   open: boolean;
@@ -108,6 +109,8 @@ const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId, onBudge
           duration: 6000
         })
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -118,12 +121,12 @@ const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId, onBudge
         className={`${className} w-[600px] sm:max-w-[600px] py-3 px-2`}
       >
         {isFetching ? (
-          <div>HAHA</div>
+          <SkeletonEditBudgetForm />
         ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <SheetHeader>
-                <SheetTitle className="text-2xl">Edit Budget</SheetTitle>
+                <SheetTitle className="text-2xl">Edit budget</SheetTitle>
                 <SheetDescription>
                   Update your budget details
                 </SheetDescription>

@@ -10,6 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } fr
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { toast } from 'sonner';
+import SkeletonEditBudgetDrawerForm from '../shared/SkeletonEditBudgetDrawerForm';
 
 interface EditExpenseTypeDrawerProps {
   open: boolean;
@@ -108,6 +109,8 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId, onBudg
           duration: 6000
         })
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -118,7 +121,7 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId, onBudg
         className={`${className}`}
       >
        {isFetching ? (
-        <div></div>
+        <SkeletonEditBudgetDrawerForm />
        ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -153,7 +156,7 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId, onBudg
               name="monthlyBudget"
               render={({ field }) => (
                 <FormItem className='p-4'>
-                  <FormLabel>Budget name</FormLabel>
+                  <FormLabel>Monthly budget</FormLabel>
                   <FormDescription>
                     Set a monthly spending limit for this category (optional).
                   </FormDescription>
