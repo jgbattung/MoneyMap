@@ -2,6 +2,7 @@
 
 import CreateExpenseTypeDrawer from '@/components/forms/CreateExpenseTypeDrawer'
 import CreateExpenseTypeSheet from '@/components/forms/CreateExpenseTypeSheet'
+import EditExpenseTypeDrawer from '@/components/forms/EditExpenseTypeDrawer'
 import EditExpenseTypeSheet from '@/components/forms/EditExpenseTypeSheet'
 import { Icons } from '@/components/icons'
 import BudgetCard from '@/components/shared/BudgetCard'
@@ -24,7 +25,7 @@ const Budgets = () => {
     if (window.innerWidth >= 768) {
       setEditExpenseTypeSheetOpen(true);
     } else {
-      setCreateExpenseTypeDrawerOpen(true);
+      setEditExpenseTypeDrawerOpen(true);
     }
   }
 
@@ -68,6 +69,14 @@ const Budgets = () => {
         open={editExpenseTypeSheetOpen}
         onOpenChange={setEditExpenseTypeSheetOpen}
         className='hidden md:block'
+        budgetId={selectedExpenseTypeId}
+        onBudgetUpdated={refetchExpenseTypes}
+      />
+
+      <EditExpenseTypeDrawer
+        open={editExpenseTypeDrawerOpen}
+        onOpenChange={setEditExpenseTypeDrawerOpen}
+        className='block md:hidden'
         budgetId={selectedExpenseTypeId}
         onBudgetUpdated={refetchExpenseTypes}
       />

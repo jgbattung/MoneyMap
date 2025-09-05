@@ -1,17 +1,17 @@
 "use client"
 
-import { z } from "zod"
 import { ExpenseTypeValidation } from '@/lib/validations/expense';
 import { zodResolver } from '@hookform/resolvers/zod';
 import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form';
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "../ui/form";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
-import { toast } from "sonner";
+import { z } from "zod"
+import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from '../ui/form';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { toast } from 'sonner';
 
-interface EditExpenseTypeSheetProps {
+interface EditExpenseTypeDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   className: string;
@@ -19,15 +19,15 @@ interface EditExpenseTypeSheetProps {
   onBudgetUpdated?: () => void;
 }
 
-const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId, onBudgetUpdated }: EditExpenseTypeSheetProps) => {
+const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId, onBudgetUpdated }: EditExpenseTypeDrawerProps)  => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
 
   const form = useForm<z.infer<typeof ExpenseTypeValidation>>({
     resolver: zodResolver(ExpenseTypeValidation),
     defaultValues: {
-      name: "",
-      monthlyBudget: "",
+      name: '',
+      monthlyBudget: '',
     }
   });
 
@@ -112,29 +112,31 @@ const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId, onBudge
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent
         onEscapeKeyDown={(e) => isLoading && e.preventDefault()}
-        className={`${className} w-[600px] sm:max-w-[600px] py-3 px-2`}
+        className={`${className}`}
       >
-        {isFetching ? (
-          <div>HAHA</div>
-        ) : (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <SheetHeader>
-                <SheetTitle className="text-2xl">Edit Budget</SheetTitle>
-                <SheetDescription>
-                  Update your budget details
-                </SheetDescription>
-              </SheetHeader>
+       {isFetching ? (
+        <div></div>
+       ) : (
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <DrawerHeader>
+              <DrawerTitle className='text-xl'>
+                Edit budget
+              </DrawerTitle>
+              <DrawerDescription>
+                Update your budget details
+              </DrawerDescription>
+            </DrawerHeader>
 
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
-                <FormItem className="p-4">
-                  <FormLabel>Budget Name</FormLabel>
+                <FormItem className='p-4'>
+                  <FormLabel>Budget name</FormLabel>
                   <FormControl>
                     <Input
                       placeholder='e.g., Groceries, transportation, entertainment, shopping'
@@ -150,16 +152,14 @@ const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId, onBudge
               control={form.control}
               name="monthlyBudget"
               render={({ field }) => (
-                <FormItem className="p-4">
-                  <FormLabel>Monthly budget</FormLabel>
+                <FormItem className='p-4'>
+                  <FormLabel>Budget name</FormLabel>
                   <FormDescription>
                     Set a monthly spending limit for this category (optional).
                   </FormDescription>
                   <FormControl>
                     <Input
-                      type="number"
-                      placeholder="0"
-                      className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+                      placeholder='e.g., Groceries, transportation, entertainment, shopping'
                       {...field}
                       disabled={isLoading}
                     />
@@ -167,14 +167,15 @@ const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId, onBudge
                 </FormItem>
               )}
             />
-            <SheetFooter>
+
+            <DrawerFooter>
               <Button
                 type="submit"
                 disabled={isLoading}
               >
                 {isLoading ? "Updating budget" : "Update budget"}
               </Button>
-              <SheetClose asChild>
+              <DrawerClose asChild>
                 <Button
                   variant="outline"
                   className='hover:text-white'
@@ -182,14 +183,14 @@ const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId, onBudge
                 >
                   Cancel
                 </Button>
-              </SheetClose>
-            </SheetFooter>
-            </form>
-          </Form>
-        )}
-      </SheetContent>
-    </Sheet>
+              </DrawerClose>
+            </DrawerFooter>
+          </form>
+        </Form>
+       )}
+      </DrawerContent>
+    </Drawer>
   )
 }
 
-export default EditExpenseTypeSheet
+export default EditExpenseTypeDrawer
