@@ -70,7 +70,7 @@ export const useAccountsQuery = () => {
   return {
     accounts,
     isLoading: isPending,
-    error: error instanceof Error ? error.message : 'An error occurred',
+    error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
     createAccount: createAccountMutation.mutateAsync,
     updateAccount: updateAccountMutation.mutateAsync,
     isCreating: createAccountMutation.isPending,
