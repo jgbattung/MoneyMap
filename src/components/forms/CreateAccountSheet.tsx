@@ -17,10 +17,9 @@ interface CreateAccountSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   className: string;
-  onAccountCreated?: () => void;
 }
 
-const CreateAccountSheet = ({ open, onOpenChange, className, onAccountCreated }: CreateAccountSheetProps) => {
+const CreateAccountSheet = ({ open, onOpenChange, className }: CreateAccountSheetProps) => {
   const [isLoading, setIsLoading] = useState(false)
 
   const form = useForm<z.infer<typeof AccountValidation>>({
@@ -57,7 +56,6 @@ const CreateAccountSheet = ({ open, onOpenChange, className, onAccountCreated }:
         });
         form.reset();
         onOpenChange(false);
-        onAccountCreated?.();
       }
     } catch (error) {
       if (error instanceof Error) {

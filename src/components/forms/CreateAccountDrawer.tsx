@@ -17,10 +17,9 @@ interface CreateAccountDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   className: string;
-  onAccountCreated?: () => void;
 }
 
-const CreateAccountDrawer = ({ open, onOpenChange, className, onAccountCreated }: CreateAccountDrawerProps) => {
+const CreateAccountDrawer = ({ open, onOpenChange, className }: CreateAccountDrawerProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof AccountValidation>>({
@@ -57,7 +56,6 @@ const CreateAccountDrawer = ({ open, onOpenChange, className, onAccountCreated }
         });
         form.reset();
         onOpenChange(false);
-        onAccountCreated?.();
       }
     } catch (error) {
       if (error instanceof Error) {

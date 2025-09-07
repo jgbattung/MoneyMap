@@ -19,7 +19,6 @@ interface EditAccountDrawerProps {
   onOpenChange: (open: boolean) => void;
   className: string;
   accountId: string;
-  onAccountUpdated ?: () => void;
 }
 
 interface AccountData {
@@ -31,7 +30,7 @@ interface AccountData {
   addToNetWorth: boolean;
 };
 
-const EditAccountDrawer = ({ open, onOpenChange, className, accountId, onAccountUpdated }: EditAccountDrawerProps) => {
+const EditAccountDrawer = ({ open, onOpenChange, className, accountId }: EditAccountDrawerProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [accountData, setAccountData] = useState<AccountData | null>(null);

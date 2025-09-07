@@ -19,7 +19,6 @@ interface EditAccountSheetProps {
   onOpenChange: (open: boolean) => void;
   className: string;
   accountId: string;
-  onAccountUpdated ?: () => void;
 }
 
 interface AccountData {
@@ -31,7 +30,7 @@ interface AccountData {
   addToNetWorth: boolean;
 };
 
-const EditAccountSheet = ({ open, onOpenChange, className, accountId, onAccountUpdated }: EditAccountSheetProps) => {
+const EditAccountSheet = ({ open, onOpenChange, className, accountId }: EditAccountSheetProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [accountData, setAccountData] = useState<AccountData | null>(null);
@@ -110,7 +109,6 @@ useEffect(() => {
         });
         form.reset();
         onOpenChange(false);
-        onAccountUpdated?.();
       }
     } catch (error) {
       if (error instanceof Error) {
