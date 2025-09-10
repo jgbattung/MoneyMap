@@ -20,12 +20,6 @@ const fetchAccounts = async (): Promise<Account[]> => {
   return response.json();
 };
 
-const fetchAccount = async (id: string): Promise<Account> => {
-  const response = await fetch(`/api/accounts/${id}`);
-  if (!response) throw new Error('Failed to fetch account');
-  return response.json();
-}
-
 const createAccount = async (accountData: any): Promise<Account> => {
   const response = await fetch('/api/accounts', {
     method: 'POST',
@@ -86,6 +80,12 @@ export const useAccountsQuery = () => {
   };
 };
 
+const fetchAccount = async (id: string): Promise<Account> => {
+  const response = await fetch(`/api/accounts/${id}`);
+  if (!response) throw new Error('Failed to fetch account');
+  return response.json();
+}
+
 export const useAccountQuery = (id: string) => {
   const { data, isPending, error } = useQuery({
     queryKey: QUERY_KEYS.account(id),
@@ -97,6 +97,6 @@ export const useAccountQuery = (id: string) => {
   return {
     data,
     isFetching: isPending,
-    error,
+    error: error ? error.message : null,
   };
 }

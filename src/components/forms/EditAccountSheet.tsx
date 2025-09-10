@@ -24,7 +24,7 @@ interface EditAccountSheetProps {
 
 const EditAccountSheet = ({ open, onOpenChange, className, accountId }: EditAccountSheetProps) => {
   const { updateAccount, isUpdating } = useAccountsQuery();
-  const { data: accountData, isFetching } = useAccountQuery(accountId);
+  const { data: accountData, isFetching, error } = useAccountQuery(accountId);
 const form = useForm<z.infer<typeof AccountValidation>>({
     resolver: zodResolver(AccountValidation),
     defaultValues: {
@@ -71,6 +71,32 @@ useEffect(() => {
       >
         {isFetching ? (
           <SkeletonEditAccountSheetForm />
+        ) : error ? (
+          <>
+            <SheetHeader className='text-center'>
+              <SheetTitle className='text-2xl'>Unable to load account</SheetTitle>
+              <SheetDescription>
+                {error || 'Something went wrong while loading your account details.'}
+              </SheetDescription>
+            </SheetHeader>
+            
+            <div className='flex flex-col gap-3 p-6'>
+              <Button
+                onClick={() => window.location.reload()}
+                className="w-full"
+              >
+                Try again
+              </Button>
+              <Button
+                variant="outline"
+                
+                onClick={() => onOpenChange(false)}
+                className='hover:text-white'
+              >
+                Close
+              </Button>
+            </div>
+          </>
         ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
