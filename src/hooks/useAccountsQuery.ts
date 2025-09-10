@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 type Account = {
   id: string;
   name: string;
-  accountType: string;
+  accountType: "CHECKING" | "SAVINGS" | "CREDIT_CARD" | "INVESTMENT" | "CASH" | "CRYPTO" | "RETIREMENT" | "REAL_ESTATE" | "OTHER";
   currentBalance: string;
   initialBalance: string;
   addToNetWorth: boolean;
@@ -19,6 +19,12 @@ const fetchAccounts = async (): Promise<Account[]> => {
   if (!response.ok) throw new Error('Failed to fetch accounts');
   return response.json();
 };
+
+const fetchAccount = async (id: string): Promise<Account> => {
+  const response = await fetch(`/api/accounts/${id}`);
+  if (!response) throw new Error('Failed to fetch account');
+  return response.json();
+}
 
 const createAccount = async (accountData: any): Promise<Account> => {
   const response = await fetch('/api/accounts', {
@@ -79,3 +85,18 @@ export const useAccountsQuery = () => {
     updateError: updateAccountMutation.error instanceof Error ? updateAccountMutation.error.message : null,
   };
 };
+
+export const useAccountQuery = (id: string) => {
+  const { data, isPending, error } = useQuery({
+    queryKey: QUERY_KEYS.account(id),
+    queryFn: () => fetchAccount(id),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return {
+    data,
+    isFetching: isPending,
+    error,
+  };
+}
