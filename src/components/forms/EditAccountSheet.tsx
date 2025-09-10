@@ -25,7 +25,8 @@ interface EditAccountSheetProps {
 const EditAccountSheet = ({ open, onOpenChange, className, accountId }: EditAccountSheetProps) => {
   const { updateAccount, isUpdating } = useAccountsQuery();
   const { data: accountData, isFetching, error } = useAccountQuery(accountId);
-const form = useForm<z.infer<typeof AccountValidation>>({
+
+  const form = useForm<z.infer<typeof AccountValidation>>({
     resolver: zodResolver(AccountValidation),
     defaultValues: {
       name: '',
@@ -34,16 +35,16 @@ const form = useForm<z.infer<typeof AccountValidation>>({
     }
   });
 
-useEffect(() => {
-  if (accountData) {
-    form.reset({
-      name: accountData.name,
-      accountType: accountData.accountType,
-      initialBalance: accountData.initialBalance.toString(),
-      addToNetWorth: accountData.addToNetWorth,
-    });
-  }
-}, [accountData, form]);
+  useEffect(() => {
+    if (accountData) {
+      form.reset({
+        name: accountData.name,
+        accountType: accountData.accountType,
+        initialBalance: accountData.initialBalance.toString(),
+        addToNetWorth: accountData.addToNetWorth,
+      });
+    }
+  }, [accountData, form]);
 
   const onSubmit = async (values: z.infer<typeof AccountValidation>) => {
     try {
