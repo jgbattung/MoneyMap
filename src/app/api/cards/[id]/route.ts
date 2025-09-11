@@ -84,6 +84,7 @@ export async function PATCH(
         name,
         accountType: 'CREDIT_CARD',
         initialBalance: parseFloat(initialBalance),
+        currentBalance: parseFloat(initialBalance),
         statementDate: statementDate ? parseInt(statementDate) : null,
         dueDate: dueDate ? parseInt(dueDate) : null,
       }

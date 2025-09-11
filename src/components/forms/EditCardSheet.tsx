@@ -217,7 +217,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
                 type="submit"
                 disabled={isUpdating}
               >
-                {isUpdating ? "Adding credit card" : "Add credit card"}
+                {isUpdating ? "Updating credit card" : "Update credit card"}
               </Button>
               <SheetClose asChild>
                 <Button

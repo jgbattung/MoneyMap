@@ -2,7 +2,7 @@
 
 import { CardValidation } from '@/lib/validations/account';
 import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { useForm } from 'react-hook-form';
 import { z } from "zod"
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
@@ -13,6 +13,7 @@ import { getOrdinalSuffix } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
 import SkeletonEditCardDrawerForm from '../shared/SkeletonEditCardDrawerForm';
+import { useCardQuery, useCardsQuery } from '@/hooks/useCardsQuery';
 
 
 interface EditCardDrawerProps {
@@ -20,12 +21,11 @@ interface EditCardDrawerProps {
   onOpenChange: (open: boolean) => void;
   className: string;
   cardId: string;
-  onCardUpdated ?: () => void;
 }
 
-const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }: EditCardDrawerProps) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
+const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawerProps) => {
+  const { updateCard, isUpdating } = useCardsQuery();
+  const { cardData, isFetching, error } = useCardQuery(cardId);
 
   const form = useForm<z.infer<typeof CardValidation>>({
     resolver: zodResolver(CardValidation),
@@ -38,98 +38,69 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }
   });
 
   useEffect(() => {
-    if (open && cardId) {
-      const fetchCardData = async () => {
-        setIsFetching(true);
-        try {
-          const response = await fetch(`/api/cards/${cardId}`);
-          if (!response.ok) {
-            throw new Error('Failed to fetch credit card');
-          }
-
-          const card = await response.json();
-
-          form.reset({
-            name: card.name,
-            initialBalance: Math.abs(card.initialBalance).toString(),
-            statementDate: card.statementDate,
-            dueDate: card.dueDate,
-          });
-        } catch (error) {
-          if (error instanceof Error) {
-            toast.error("Failed to update credit card", {
-              description: error.message || "Please check your information and try again",
-              duration: 6000
-            })
-          } else {
-            toast.error("Something went wrong", {
-              description: "Unable to update credit card. Please try again.",
-              duration: 6000
-            })
-          }
-        } finally {
-          setIsFetching(false);
-        }
-      }
-
-      fetchCardData();
+    if (cardData) {
+      form.reset({
+        name: cardData.name,
+        initialBalance: Math.abs(parseFloat(cardData.initialBalance)).toString(),
+        statementDate: cardData.statementDate,
+        dueDate: cardData.dueDate,
+      });
     }
-  }, [open, cardId, form])
+  }, [cardData, form])
 
   const onSubmit = async (values: z.infer<typeof CardValidation>) => {
-    setIsLoading(true);
-
     try {
-      const response = await fetch(`/api/cards/${cardId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      })
+      const updatedCard = await updateCard({ id: cardId, ...values })
 
-      if (!response.ok) {
-        toast.error('Failed to updated credit card', {
-          duration: 6000
-        })
-      }
-
-      const updatedCard = await response.json();
-      if (updatedCard) {
-        toast.success("Credit card updated successfully", {
-          description: `${updatedCard.name} has been updated.`,
-          duration: 5000
-        });
-        form.reset();
-        onOpenChange(false);
-        onCardUpdated?.();
-      }
+      toast.success("Credit card updated successfully", {
+        description: `${updatedCard.name} has been updated.`,
+        duration: 5000
+      });
+      form.reset();
+      onOpenChange(false);
     } catch (error) {
-      if (error instanceof Error) {
-        toast.error("Failed to update credit card", {
-          description: error.message || "Please check your information and try again.",
-          duration: 6000
-        })
-      } else {
-        toast.error("Something went wrong", {
-          description: "Unable to update credit card. Please try again.",
-          duration: 6000
-        })
-      }
-    } finally {
-      setIsLoading(false);
+      toast.error("Failed to update card", {
+        description: error instanceof Error ? error.message : "Please check your information and try again.",
+        duration: 6000
+      });
     }
   }
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent
-        onEscapeKeyDown={(e) => isLoading && e.preventDefault()}
+        onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
         className={`${className}`}
       >
         {isFetching ? (
           <SkeletonEditCardDrawerForm />
-        ) : (
+        ) : error ? (
+        <>
+          <DrawerHeader className='text-center'>
+            <DrawerTitle className='text-xl'>Unable to load account</DrawerTitle>
+            <DrawerDescription>
+              {error || 'Something went wrong while loading your account details.'}
+            </DrawerDescription>
+          </DrawerHeader>
+          
+          <DrawerFooter>
+            <Button
+              onClick={() => window.location.reload()}
+              className="w-full"
+            >
+              Try again
+            </Button>
+            <DrawerClose asChild>
+              <Button
+                variant="outline"
+                className="w-full hover:text-white"
+              >
+                Close
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </>
+      ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DrawerHeader>
@@ -151,7 +122,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }
                     <Input
                       placeholder='e.g., BPI Blue Mastercard, Metrobank Rewards Plus'
                       {...field}
-                      disabled={isLoading}
+                      disabled={isUpdating}
                     />
                   </FormControl>
                   <FormMessage />
@@ -172,7 +143,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }
                     <Input
                       type='number'
                       className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                      disabled={isLoading}
+                      disabled={isUpdating}
                       {...field}
                     />
                   </FormControl>
@@ -194,7 +165,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }
                     <Select
                       onValueChange={(value) => field.onChange(parseInt(value))}
                       defaultValue={field.value?.toString()}
-                      disabled={isLoading}
+                      disabled={isUpdating}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select day" />
@@ -225,7 +196,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }
                     <Select
                       onValueChange={(value) => field.onChange(parseInt(value))}
                       defaultValue={field.value?.toString()}
-                      disabled={isLoading}
+                      disabled={isUpdating}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select day" />
@@ -246,15 +217,15 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId, onCardUpdated }
             <DrawerFooter>
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isUpdating}
               >
-                {isLoading ? "Updating credit card" : "Update credit card"}
+                {isUpdating ? "Updating credit card" : "Update credit card"}
               </Button>
               <DrawerClose asChild>
                 <Button
                   variant="outline"
                   className='hover:text-white'
-                  disabled={isLoading}
+                  disabled={isUpdating}
                 >
                   Cancel
                 </Button>
