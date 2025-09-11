@@ -33,7 +33,7 @@ const createCard = async (cardData: any): Promise<Card> => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(transformedData),
   });
-  
+
   if (!response.ok) throw new Error ('Failed to create card');
   return response.json();
 }
@@ -85,3 +85,24 @@ export const useCardsQuery = () => {
     isUpdating: updateCardMutation.isPending,
   };
 };
+
+const fetchCard = async (id: string): Promise<Card> => {
+  const response = await fetch(`/api/cards/${id}`);
+  if (!response.ok) throw new Error('Failed to fetch card');
+  return response.json();
+}
+
+export const useCardQuery = (id: string) => {
+  const { data, isPending, error } = useQuery({
+    queryKey: QUERY_KEYS.card(id),
+    queryFn: () => fetchCard(id),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return {
+    cardData: data,
+    isFetching: isPending,
+    error: error ? error.message : null,
+  };
+} 
