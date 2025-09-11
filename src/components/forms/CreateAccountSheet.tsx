@@ -21,7 +21,7 @@ interface CreateAccountSheetProps {
 }
 
 const CreateAccountSheet = ({ open, onOpenChange, className }: CreateAccountSheetProps) => {
-const { createAccount, isCreating } = useAccountsQuery();
+  const { createAccount, isCreating } = useAccountsQuery();
 
   const form = useForm<z.infer<typeof AccountValidation>>({
     resolver: zodResolver(AccountValidation),

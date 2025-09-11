@@ -7,11 +7,11 @@ import EditCardSheet from '@/components/forms/EditCardSheet';
 import { Icons } from '@/components/icons';
 import CreditCardCard from '@/components/shared/CreditCardCard';
 import SkeletonCardCard from '@/components/shared/SkeletonCardCard';
-import useCards from '@/hooks/useCards';
+import { useCardsQuery } from '@/hooks/useCardsQuery';
 import React, { useState } from 'react'
 
 const Cards = () => {
-  const { cards, isLoading, error, refetchCards } = useCards();
+  const { cards, isLoading, error } = useCardsQuery();
   const [createCardsSheetOpen, setCreateCardsSheetOpen] = useState(false);
   const [createCardsDrawerOpen, setCreateCardsDrawerOpen] = useState(false);
   const [editCardSheetOpen, setEditCardSheetOpen] = useState(false);
@@ -44,7 +44,6 @@ const Cards = () => {
           open={createCardsSheetOpen}
           onOpenChange={setCreateCardsSheetOpen}
           className='hidden md:block'
-          onCardCreated={refetchCards}
         />
 
         <button
@@ -58,7 +57,6 @@ const Cards = () => {
           open={createCardsDrawerOpen}
           onOpenChange={setCreateCardsDrawerOpen}
           className='block md:hidden'
-          onCardCreated={refetchCards}
         />
       </div>
 
@@ -67,7 +65,6 @@ const Cards = () => {
         onOpenChange={setEditCardSheetOpen}
         className='hidden md:block'
         cardId={selectedCardId}
-        onCardUpdated={refetchCards}
       />
 
       <EditCardDrawer
@@ -75,7 +72,6 @@ const Cards = () => {
         onOpenChange={setEditCardDrawerOpen}
         className='block md:hidden'
         cardId={selectedCardId}
-        onCardUpdated={refetchCards}
       />
 
       {isLoading ? (

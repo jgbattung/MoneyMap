@@ -23,11 +23,17 @@ const fetchCards = async (): Promise<Card[]> => {
 };
 
 const createCard = async (cardData: any): Promise<Card> => {
+  const transformedData = {
+    ...cardData,
+    initialBalance: cardData.initialBalance ? (-Math.abs(parseFloat(cardData.initialBalance))).toString() : '0'
+  };
+
   const response = await fetch('/api/cards', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(cardData),
+    body: JSON.stringify(transformedData),
   });
+  
   if (!response.ok) throw new Error ('Failed to create card');
   return response.json();
 }
