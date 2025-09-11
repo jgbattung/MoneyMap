@@ -50,7 +50,7 @@ export const useAccountsQuery = () => {
   } = useQuery({
     queryKey: QUERY_KEYS.accounts,
     queryFn: fetchAccounts,
-    staleTime: 5 * 60 * 1000, // 5 minutes cache for financial data
+    staleTime: 5 * 60 * 1000,
   });
 
   const createAccountMutation = useMutation({
@@ -75,8 +75,6 @@ export const useAccountsQuery = () => {
     updateAccount: updateAccountMutation.mutateAsync,
     isCreating: createAccountMutation.isPending,
     isUpdating: updateAccountMutation.isPending,
-    createError: createAccountMutation.error instanceof Error ? createAccountMutation.error.message : null,
-    updateError: updateAccountMutation.error instanceof Error ? updateAccountMutation.error.message : null,
   };
 };
 
