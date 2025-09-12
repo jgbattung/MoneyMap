@@ -76,3 +76,24 @@ export const useExpenseTypesQuery = () => {
     isUpdating: updateBudgetsMutation.isPending, 
   };
 };
+
+const fetchBudget = async (id: string): Promise<ExpenseType> => {
+  const response = await fetch(`/api/expense-types/${id}`);
+  if (!response.ok) throw new Error('Failed to fetch budget');
+  return response.json();
+}
+
+export const useExpenseTypeQuery = (id: string) => {
+  const { data, isPending, error } = useQuery({
+    queryKey: QUERY_KEYS.budget(id),
+    queryFn: () => fetchBudget(id),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return {
+    budgetData: data,
+    isFetching: isPending,
+    error: error ? error.message : null,
+  };
+}
