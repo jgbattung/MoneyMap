@@ -2,7 +2,7 @@
 
 import { ExpenseTypeValidation } from '@/lib/validations/expense';
 import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { useForm } from 'react-hook-form';
 import { z } from "zod"
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
@@ -11,18 +11,18 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { toast } from 'sonner';
 import SkeletonEditBudgetDrawerForm from '../shared/SkeletonEditBudgetDrawerForm';
+import { useExpenseTypesQuery, useExpenseTypeQuery } from '@/hooks/useExpenseTypesQuery';
 
 interface EditExpenseTypeDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   className: string;
   budgetId: string;
-  onBudgetUpdated?: () => void;
 }
 
-const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId, onBudgetUpdated }: EditExpenseTypeDrawerProps)  => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
+const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId }: EditExpenseTypeDrawerProps)  => {
+  const { updateBudget, isUpdating } = useExpenseTypesQuery();
+  const { budgetData, isFetching, error } = useExpenseTypeQuery(budgetId);
 
   const form = useForm<z.infer<typeof ExpenseTypeValidation>>({
     resolver: zodResolver(ExpenseTypeValidation),
@@ -33,96 +33,68 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId, onBudg
   });
 
   useEffect(() => {
-    if (open && budgetId) {
-      const fetchBudgetData = async () => {
-        setIsFetching(true);
-        try {
-          const response = await fetch(`/api/expense-types/${budgetId}`)
-          if (!response.ok) {
-            throw new Error('Failed to fetch budget');
-          }
-
-          const budget = await response.json();
-
-          form.reset({
-            name: budget.name,
-            monthlyBudget: budget.monthlyBudget,
-          });
-        } catch (error) {
-          if (error instanceof Error) {
-            toast.error("Failed to fetch budget information", {
-              description: error.message || "Please check your information and try again",
-              duration: 6000
-            })
-          } else {
-            toast.error("Something went wrong", {
-              description: "Unable to fetch budget information. Please try again.",
-              duration: 6000
-            })
-          }
-        } finally {
-          setIsFetching(false);
-        }
-      }
-
-      fetchBudgetData();
+    if (budgetData) {
+      form.reset({
+        name: budgetData.name,
+        monthlyBudget: budgetData.monthlyBudget || ''
+      });
     }
-  }, [open, budgetId, form]);
+  }, [budgetData, form]);
 
   const onSubmit = async (values: z.infer<typeof ExpenseTypeValidation>) => {
-    setIsLoading(true);
-
     try {
-      const response = await fetch(`/api/expense-types/${budgetId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      })
+        const updatedBudget = await updateBudget({ id: budgetId, ...values });
 
-      if (!response.ok) {
-        toast.error('Failed to update budget', {
-          duration: 6000
-        })
-      }
-
-      const updatedBudget = await response.json();
-      if (updatedBudget) {
-        toast.success("Budget updated successfully", {
-          description: `${updatedBudget.name} has been updated.`,
-          duration: 5000
-        });
+      toast.success("Budget updated successfully", {
+        description: `${updatedBudget.name} has been updated.`,
+        duration: 5000
+      });
         form.reset();
         onOpenChange(false);
-        onBudgetUpdated?.();
-      }
     } catch (error) {
-      if (error instanceof Error) {
-        toast.error('Failed to update budget', {
-          description: error.message || "Please check your information and try again.",
-          duration: 6000
-        })
-      } else {
-        toast.error("Something went wrong", {
-          description: "Unable to update budget. Please try again.",
-          duration: 6000
-        })
-      }
-    } finally {
-      setIsLoading(false);
+      toast.error("Failed to update budget", {
+        description: error instanceof Error ? error.message : "Please check your information and try again.",
+        duration: 6000
+      });
     }
   };
+
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent
-        onEscapeKeyDown={(e) => isLoading && e.preventDefault()}
+        onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
         className={`${className}`}
       >
        {isFetching ? (
         <SkeletonEditBudgetDrawerForm />
-       ) : (
+       ) : error ? (
+          <>
+            <DrawerHeader className='text-center'>
+              <DrawerTitle className='text-xl'>Unable to load account</DrawerTitle>
+              <DrawerDescription>
+                {error || 'Something went wrong while loading your account details.'}
+              </DrawerDescription>
+            </DrawerHeader>
+            
+            <DrawerFooter>
+              <Button
+                onClick={() => window.location.reload()}
+                className="w-full"
+              >
+                Try again
+              </Button>
+              <DrawerClose asChild>
+                <Button
+                  variant="outline"
+                  className="w-full hover:text-white"
+                >
+                  Close
+                </Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </>
+        ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DrawerHeader>
@@ -144,7 +116,7 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId, onBudg
                     <Input
                       placeholder='e.g., Groceries, transportation, entertainment, shopping'
                       {...field}
-                      disabled={isLoading}
+                      disabled={isUpdating}
                     />
                   </FormControl>
                 </FormItem>
@@ -164,7 +136,7 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId, onBudg
                     <Input
                       placeholder='e.g., Groceries, transportation, entertainment, shopping'
                       {...field}
-                      disabled={isLoading}
+                      disabled={isUpdating}
                     />
                   </FormControl>
                 </FormItem>
@@ -174,15 +146,15 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId, onBudg
             <DrawerFooter>
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isUpdating}
               >
-                {isLoading ? "Updating budget" : "Update budget"}
+                {isUpdating ? "Updating budget" : "Update budget"}
               </Button>
               <DrawerClose asChild>
                 <Button
                   variant="outline"
                   className='hover:text-white'
-                  disabled={isLoading}
+                  disabled={isUpdating}
                 >
                   Cancel
                 </Button>
