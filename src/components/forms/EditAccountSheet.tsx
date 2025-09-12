@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '../ui/sheet'
 import { Button } from '../ui/button'
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -13,30 +13,20 @@ import { Checkbox } from '../ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { toast } from 'sonner'
 import SkeletonEditAccountSheetForm from '../shared/SkeletonEditAccountSheetForm'
+import { useAccountQuery, useAccountsQuery } from '@/hooks/useAccountsQuery'
 
 interface EditAccountSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   className: string;
   accountId: string;
-  onAccountUpdated ?: () => void;
 }
 
-interface AccountData {
-  id: string;
-  name: string;
-  accountType: string;
-  currentBalance: string;
-  initialBalance: string;
-  addToNetWorth: boolean;
-};
+const EditAccountSheet = ({ open, onOpenChange, className, accountId }: EditAccountSheetProps) => {
+  const { updateAccount, isUpdating } = useAccountsQuery();
+  const { data: accountData, isFetching, error } = useAccountQuery(accountId);
 
-const EditAccountSheet = ({ open, onOpenChange, className, accountId, onAccountUpdated }: EditAccountSheetProps) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
-  const [accountData, setAccountData] = useState<AccountData | null>(null);
-
-const form = useForm<z.infer<typeof AccountValidation>>({
+  const form = useForm<z.infer<typeof AccountValidation>>({
     resolver: zodResolver(AccountValidation),
     defaultValues: {
       name: '',
@@ -45,98 +35,69 @@ const form = useForm<z.infer<typeof AccountValidation>>({
     }
   });
 
-useEffect(() => {
-  if (open && accountId) {
-    const fetchAccountData = async () => {
-      setIsFetching(true);
-      try {
-        const response = await fetch(`/api/accounts/${accountId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch account');
-        }
-
-        const account = await response.json();
-        
-        setAccountData(account);
-
-        form.reset({
-          name: account.name,
-          accountType: account.accountType,
-          initialBalance: account.initialBalance.toString(),
-          addToNetWorth: account.addToNetWorth,
-        });
-      } catch (error) {
-        if (error instanceof Error) {
-          toast.error("Failed to update account", {
-            description: error.message || "Please check your information and try again.",
-            duration: 6000
-          })
-        } else {
-          toast.error("Something went wrong", {
-            description: "Unable to update account. Please try again.",
-            duration: 6000
-          })
-        }
-      } finally {
-        setIsFetching(false);
-      }
+  useEffect(() => {
+    if (accountData) {
+      form.reset({
+        name: accountData.name,
+        accountType: accountData.accountType,
+        initialBalance: accountData.initialBalance.toString(),
+        addToNetWorth: accountData.addToNetWorth,
+      });
     }
-
-    fetchAccountData();
-  }
-}, [open, accountId, form]);
+  }, [accountData, form]);
 
   const onSubmit = async (values: z.infer<typeof AccountValidation>) => {
-    setIsLoading(true);
-
     try {
-      const response = await fetch(`/api/accounts/${accountId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      })
+      const updatedAccount = await updateAccount({ id: accountId, ...values })
 
-      if (!response.ok) {
-        throw new Error('Failed to update account')
-      }
-
-      const updatedAccount = await response.json();
-      if (updatedAccount) {
-        toast.success("Account updated successfully", {
-          description: `${updatedAccount.name} has been updated.`,
-          duration: 5000
-        });
-        form.reset();
-        onOpenChange(false);
-        onAccountUpdated?.();
-      }
+      toast.success("Account updated successfully", {
+        description: `${updatedAccount.name} has been updated.`,
+        duration: 5000
+      });
+      form.reset();
+      onOpenChange(false);
     } catch (error) {
-      if (error instanceof Error) {
-        toast.error("Failed to update account", {
-          description: error.message || "Please check your information and try again.",
-          duration: 6000
-        })
-      } else {
-        toast.error("Something went wrong", {
-          description: "Unable to update account. Please try again.",
-          duration: 6000
-        })
-      }
-    } finally {
-      setIsLoading(false);
+      toast.error("Failed to update acount", {
+        description: error instanceof Error ? error.message : "Please check your information and try again.",
+        duration: 6000
+      });
     }
   }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        onEscapeKeyDown={(e) => isLoading && e.preventDefault()}
+        onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
         className={`${className} w-[600px] sm:max-w-[600px] py-3 px-2`}
       >
         {isFetching ? (
           <SkeletonEditAccountSheetForm />
+        ) : error ? (
+          <>
+            <SheetHeader className='text-center'>
+              <SheetTitle className='text-2xl'>Unable to load account</SheetTitle>
+              <SheetDescription>
+                {error || 'Something went wrong while loading your account details.'}
+              </SheetDescription>
+            </SheetHeader>
+            
+            <div className='flex flex-col gap-3 p-6'>
+              <Button
+                onClick={() => window.location.reload()}
+                className="w-full"
+              >
+                Try again
+              </Button>
+              <Button
+                variant="outline"
+                
+                onClick={() => onOpenChange(false)}
+                className='hover:text-white'
+              >
+                Close
+              </Button>
+            </div>
+          </>
         ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -170,7 +131,7 @@ useEffect(() => {
               render={({ field }) => (
                 <FormItem className="p-4">
                   <FormLabel>Account type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isUpdating}>
                     <FormControl>
                       <SelectTrigger className='w-full'>
                         <SelectValue placeholder="Select account type" />
@@ -215,7 +176,7 @@ useEffect(() => {
                       type='number'
                       placeholder='0'
                       className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                      disabled={isLoading}
+                      disabled={isUpdating}
                       {...field}
                     />
                   </FormControl>
@@ -233,7 +194,7 @@ useEffect(() => {
                     <Checkbox
                       checked={field.value}
                       onCheckedChange={field.onChange}
-                      disabled={isLoading}
+                      disabled={isUpdating}
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
@@ -249,15 +210,15 @@ useEffect(() => {
             <SheetFooter>
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isUpdating}
               >
-                {isLoading ? "Updating account" : "Update account"}
+                {isUpdating ? "Updating account" : "Update account"}
               </Button>
               <SheetClose asChild>
                 <Button
                   variant="outline"
                   className='hover:text-white'
-                  disabled={isLoading}
+                  disabled={isUpdating}
                 >
                   Cancel
                 </Button>

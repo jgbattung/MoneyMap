@@ -12,16 +12,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { getOrdinalSuffix } from '@/lib/utils';
+import { useCardsQuery } from '@/hooks/useCardsQuery';
 
 interface CreateCardDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   className: string;
-  onCardCreated?: () => void;
 }
 
-const CreateCardDrawer = ({ open, onOpenChange, className, onCardCreated }: CreateCardDrawerProps) => {
-  const [isLoading, setIsLoading] = useState(false);
+const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerProps) => {
+  const { createCard, isCreating } = useCardsQuery(); 
 
   const form = useForm<z.infer<typeof CardValidation>>({
     resolver: zodResolver(CardValidation),
@@ -32,57 +32,27 @@ const CreateCardDrawer = ({ open, onOpenChange, className, onCardCreated }: Crea
   });
 
   const onSubmit = async (values: z.infer<typeof CardValidation>) => {
-    setIsLoading(true);
-
     try {
-      const cardData = {
-        ...values,
-        initialBalance: values.initialBalance ? (-Math.abs(parseFloat(values.initialBalance))).toString() : '0'
-      };
+      const newCard = await createCard(values);
 
-      const response = await fetch('/api/cards', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(cardData),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create account')
-      }
-
-      const newCard = await response.json();
-      if (newCard) {
-        toast.success("Credit Card created successfully", {
-          description: `${newCard.name} has been added to your credit cards.`,
-          duration: 5000
-        });
-        form.reset();
-        onOpenChange(false);
-        onCardCreated?.();
-      }
+      toast.success("Card created successfully", {
+        description: `${newCard.name} has been added to your cards.`,
+        duration: 5000
+      });
+      form.reset();
+      onOpenChange(false);
     } catch (error) {
-      if (error instanceof Error) {
-        toast.error("Failed to create credit card", {
-          description: error.message || "Please check your information and try again.",
-          duration: 6000
-        })
-      } else {
-        toast.error("Something went wrong", {
-          description: "Unable to create credit card. Please try again.",
-          duration: 6000
-        })
-      }
-    } finally {
-      setIsLoading(false);
+      toast.error("Failed to create card", {
+        description: error instanceof Error ? error.message : "Please check your information and try again.",
+        duration: 6000
+      });
     }
   }
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent
-        onEscapeKeyDown={(e) => isLoading && e.preventDefault()} className={`${className}`}
+        onEscapeKeyDown={(e) => isCreating && e.preventDefault()} className={`${className}`}
       >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -105,7 +75,7 @@ const CreateCardDrawer = ({ open, onOpenChange, className, onCardCreated }: Crea
                     <Input
                       placeholder='e.g., BPI Blue Mastercard, Metrobank Rewards Plus'
                       {...field}
-                      disabled={isLoading}
+                      disabled={isCreating}
                     />
                   </FormControl>
                   <FormMessage />
@@ -126,7 +96,7 @@ const CreateCardDrawer = ({ open, onOpenChange, className, onCardCreated }: Crea
                     <Input
                       type='number'
                       className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                      disabled={isLoading}
+                      disabled={isCreating}
                       {...field}
                     />
                   </FormControl>
@@ -147,7 +117,7 @@ const CreateCardDrawer = ({ open, onOpenChange, className, onCardCreated }: Crea
                   <FormControl>
                     <Select
                       onValueChange={(value) => field.onChange(parseInt(value))}
-                      disabled={isLoading}
+                      disabled={isCreating}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select day" />
@@ -177,7 +147,7 @@ const CreateCardDrawer = ({ open, onOpenChange, className, onCardCreated }: Crea
                   <FormControl>
                     <Select
                       onValueChange={(value) => field.onChange(parseInt(value))}
-                      disabled={isLoading}
+                      disabled={isCreating}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select day" />
@@ -198,15 +168,15 @@ const CreateCardDrawer = ({ open, onOpenChange, className, onCardCreated }: Crea
             <DrawerFooter>
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isCreating}
               >
-                {isLoading ? "Adding credit card" : "Add credit card"}
+                {isCreating ? "Adding credit card" : "Add credit card"}
               </Button>
               <DrawerClose asChild>
                 <Button
                   variant="outline"
                   className='hover:text-white'
-                  disabled={isLoading}
+                  disabled={isCreating}
                 >
                   Cancel
                 </Button>

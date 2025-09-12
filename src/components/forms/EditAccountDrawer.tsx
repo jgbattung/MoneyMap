@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { Button } from '../ui/button'
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -13,28 +13,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose, DrawerFooter } from '../ui/drawer'
 import SkeletonEditAccountDrawerForm from '../shared/SkeletonEditAccountDrawerForm'
+import { useAccountQuery, useAccountsQuery } from '@/hooks/useAccountsQuery'
 
 interface EditAccountDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   className: string;
   accountId: string;
-  onAccountUpdated ?: () => void;
 }
 
-interface AccountData {
-  id: string;
-  name: string;
-  accountType: string;
-  currentBalance: string;
-  initialBalance: string;
-  addToNetWorth: boolean;
-};
-
-const EditAccountDrawer = ({ open, onOpenChange, className, accountId, onAccountUpdated }: EditAccountDrawerProps) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
-  const [accountData, setAccountData] = useState<AccountData | null>(null);
+const EditAccountDrawer = ({ open, onOpenChange, className, accountId }: EditAccountDrawerProps) => {
+  const { updateAccount, isUpdating } = useAccountsQuery();
+  const { data: accountData, isFetching, error } = useAccountQuery(accountId);
 
   const form = useForm<z.infer<typeof AccountValidation>>({
       resolver: zodResolver(AccountValidation),
@@ -46,97 +36,68 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId, onAccount
     });
 
   useEffect(() => {
-    if (open && accountId) {
-      const fetchAccountData = async () => {
-        setIsFetching(true);
-        try {
-          const response = await fetch(`/api/accounts/${accountId}`);
-          if (!response.ok) {
-            throw new Error('Failed to fetch account');
-          }
-
-          const account = await response.json();
-          
-          setAccountData(account);
-
-          form.reset({
-            name: account.name,
-            accountType: account.accountType,
-            initialBalance: account.initialBalance.toString(),
-            addToNetWorth: account.addToNetWorth,
-          });
-        } catch (error) {
-          if (error instanceof Error) {
-            toast.error("Failed to update account", {
-              description: error.message || "Please check your information and try again.",
-              duration: 6000
-            })
-          } else {
-            toast.error("Something went wrong", {
-              description: "Unable to update account. Please try again.",
-              duration: 6000
-            })
-          }
-        } finally {
-          setIsFetching(false);
-        }
-      }
-
-      fetchAccountData();
+    if (accountData) {
+      form.reset({
+        name: accountData.name,
+        accountType: accountData.accountType,
+        initialBalance: accountData.initialBalance.toString(),
+        addToNetWorth: accountData.addToNetWorth,
+      });
     }
-  }, [open, accountId, form]);
+  }, [accountData, form]);
 
   const onSubmit = async (values: z.infer<typeof AccountValidation>) => {
-    setIsLoading(true);
-
     try {
-      const response = await fetch(`/api/accounts/${accountId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      })
+      const updatedAccount = await updateAccount({ id: accountId, ...values })
 
-      if (!response.ok) {
-        throw new Error('Failed to update account')
-      }
-
-      const updatedAccount = await response.json();
-      if (updatedAccount) {
-        toast.success("Account updated successfully", {
-          description: `${updatedAccount.name} has been updated.`,
-          duration: 5000
-        });
-        form.reset();
-        onOpenChange(false);
-        onAccountUpdated?.();
-      }
+      toast.success("Account updated successfully", {
+        description: `${updatedAccount.name} has been updated.`,
+        duration: 5000
+      });
+      form.reset();
+      onOpenChange(false);
     } catch (error) {
-      if (error instanceof Error) {
-        toast.error("Failed to update account", {
-          description: error.message || "Please check your information and try again.",
-          duration: 6000
-        })
-      } else {
-        toast.error("Something went wrong", {
-          description: "Unable to update account. Please try again.",
-          duration: 6000
-        })
-      }
-    } finally {
-      setIsLoading(false);
+      toast.error("Failed to update acount", {
+        description: error instanceof Error ? error.message : "Please check your information and try again.",
+        duration: 6000
+      });
     }
   }
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent
-        onEscapeKeyDown={(e) => isLoading && e.preventDefault()}
+        onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
         className={`${className}`}
       >
         {isFetching ? (
           <SkeletonEditAccountDrawerForm />
+        ) : error ? (
+          <>
+            <DrawerHeader className='text-center'>
+              <DrawerTitle className='text-xl'>Unable to load account</DrawerTitle>
+              <DrawerDescription>
+                {error || 'Something went wrong while loading your account details.'}
+              </DrawerDescription>
+            </DrawerHeader>
+            
+            <DrawerFooter>
+              <Button
+                onClick={() => window.location.reload()}
+                className="w-full"
+              >
+                Try again
+              </Button>
+              <DrawerClose asChild>
+                <Button
+                  variant="outline"
+                  className="w-full hover:text-white"
+                >
+                  Close
+                </Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </>
         ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -170,7 +131,7 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId, onAccount
               render={({ field }) => (
                 <FormItem className="p-4">
                   <FormLabel>Account type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isUpdating}>
                     <FormControl>
                       <SelectTrigger className='w-full'>
                         <SelectValue placeholder="Select account type" />
@@ -203,7 +164,7 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId, onAccount
                       type='number'
                       placeholder='0'
                       className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                      disabled={isLoading}
+                      disabled={isUpdating}
                       {...field}
                     />
                   </FormControl>
@@ -233,7 +194,7 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId, onAccount
                     <Checkbox
                       checked={field.value}
                       onCheckedChange={field.onChange}
-                      disabled={isLoading}
+                      disabled={isUpdating}
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
@@ -249,15 +210,15 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId, onAccount
             <DrawerFooter>
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isUpdating}
               >
-                {isLoading ? "Updating account" : "Update account"}
+                {isUpdating ? "Updating account" : "Update account"}
               </Button>
               <DrawerClose asChild>
                 <Button
                   variant="outline"
                   className='hover:text-white'
-                  disabled={isLoading}
+                  disabled={isUpdating}
                 >
                   Cancel
                 </Button>

@@ -2,7 +2,7 @@
 
 import { CardValidation } from "@/lib/validations/account";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod"
@@ -13,6 +13,7 @@ import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { getOrdinalSuffix } from "@/lib/utils";
 import SkeletonEditCardSheetForm from "../shared/SkeletonEditCardSheetForm";
+import { useCardQuery, useCardsQuery } from "@/hooks/useCardsQuery";
 
 
 interface EditCardSheetProps {
@@ -20,12 +21,11 @@ interface EditCardSheetProps {
   onOpenChange: (open: boolean) => void;
   className: string;
   cardId: string;
-  onCardUpdated ?: () => void;
 }
 
-const EditCardSheet = ({ open, onOpenChange, className, cardId, onCardUpdated }: EditCardSheetProps) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
+const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetProps) => {
+  const { updateCard, isUpdating } = useCardsQuery();
+  const { cardData, isFetching, error } = useCardQuery(cardId);
 
   const form = useForm<z.infer<typeof CardValidation>>({
     resolver: zodResolver(CardValidation),
@@ -38,99 +38,70 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId, onCardUpdated }:
   });
 
   useEffect(() => {
-    if (open && cardId) {
-      const fetchCardData = async () => {
-        setIsFetching(true);
-        try {
-          const response = await fetch(`/api/cards/${cardId}`);
-          if (!response.ok) {
-            throw new Error('Failed to fetch credit card');
-          }
-
-          const card = await response.json();
-
-          form.reset({
-            name: card.name,
-            initialBalance: Math.abs(card.initialBalance).toString(),
-            statementDate: card.statementDate,
-            dueDate: card.dueDate,
-          });
-        } catch (error) {
-          if (error instanceof Error) {
-            toast.error("Failed to fetch credit card information", {
-              description: error.message || "Please check your information and try again",
-              duration: 6000
-            })
-          } else {
-            toast.error("Something went wrong", {
-              description: "Unable to fetch credit card information. Please try again.",
-              duration: 6000
-            })
-          }
-        } finally {
-          setIsFetching(false);
-        }
-      }
-
-      fetchCardData();
+    if (cardData) {
+      form.reset({
+        name: cardData.name,
+        initialBalance: Math.abs(parseFloat(cardData.initialBalance)).toString(),
+        statementDate: cardData.statementDate,
+        dueDate: cardData.dueDate,
+      });
     }
-  }, [open, cardId, form]);
+  }, [cardData, form]);
 
 
   const onSubmit = async (values: z.infer<typeof CardValidation>) => {
-    setIsLoading(true);
-
     try {
-      const response = await fetch(`/api/cards/${cardId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      })
+      const updatedCard = await updateCard({ id: cardId, ...values })
 
-      if (!response.ok) {
-        toast.error('Failed to updated credit card', {
-          duration: 6000
-        })
-      }
-
-      const updatedCard = await response.json();
-      if (updatedCard) {
-        toast.success("Credit card updated successfully", {
-          description: `${updatedCard.name} has been updated.`,
-          duration: 5000
-        });
-        form.reset();
-        onOpenChange(false);
-        onCardUpdated?.();
-      }
+      toast.success("Credit card updated successfully", {
+        description: `${updatedCard.name} has been updated.`,
+        duration: 5000
+      });
+      form.reset();
+      onOpenChange(false);
     } catch (error) {
-      if (error instanceof Error) {
-        toast.error("Failed to update credit card", {
-          description: error.message || "Please check your information and try again.",
-          duration: 6000
-        })
-      } else {
-        toast.error("Something went wrong", {
-          description: "Unable to update credit card. Please try again.",
-          duration: 6000
-        })
-      }
-    } finally {
-      setIsLoading(false);
+      toast.error("Failed to update card", {
+        description: error instanceof Error ? error.message : "Please check your information and try again.",
+        duration: 6000
+      });
     }
   }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        onEscapeKeyDown={(e) => isLoading && e.preventDefault()}
+        onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
         className={`${className} w-[600px] sm:max-w-[600px] py-3 px-2`}
       >
         {isFetching ? (
           <SkeletonEditCardSheetForm />
-        ) : (
+        ) : error ? (
+        <>
+          <SheetHeader className='text-center'>
+            <SheetTitle className='text-2xl'>Unable to load account</SheetTitle>
+            <SheetDescription>
+              {error || 'Something went wrong while loading your account details.'}
+            </SheetDescription>
+          </SheetHeader>
+          
+          <div className='flex flex-col gap-3 p-6'>
+            <Button
+              onClick={() => window.location.reload()}
+              className="w-full"
+            >
+              Try again
+            </Button>
+            <Button
+              variant="outline"
+              
+              onClick={() => onOpenChange(false)}
+              className='hover:text-white'
+            >
+              Close
+            </Button>
+          </div>
+        </>
+      ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <SheetHeader>
@@ -150,7 +121,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId, onCardUpdated }:
                     <Input
                       placeholder='e.g., BPI Blue Mastercard, Metrobank Rewards Plus'
                       {...field}
-                      disabled={isLoading}
+                      disabled={isUpdating}
                     />
                   </FormControl>
                 </FormItem>
@@ -172,7 +143,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId, onCardUpdated }:
                       placeholder='0'
                       className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
                       {...field}
-                      disabled={isLoading}
+                      disabled={isUpdating}
                     />
                   </FormControl>
                 </FormItem>
@@ -192,7 +163,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId, onCardUpdated }:
                     <Select
                       onValueChange={(value) => field.onChange(parseInt(value))}
                       defaultValue={field.value?.toString()}
-                      disabled={isLoading}  
+                      disabled={isUpdating}  
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select day" />
@@ -223,7 +194,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId, onCardUpdated }:
                     <Select
                       onValueChange={(value) => field.onChange(parseInt(value))}
                       defaultValue={field.value?.toString()}
-                      disabled={isLoading}  
+                      disabled={isUpdating}  
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select day" />
@@ -244,15 +215,15 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId, onCardUpdated }:
             <SheetFooter>
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isUpdating}
               >
-                {isLoading ? "Adding credit card" : "Add credit card"}
+                {isUpdating ? "Updating credit card" : "Update credit card"}
               </Button>
               <SheetClose asChild>
                 <Button
                   variant="outline"
                   className='hover:text-white'
-                  disabled={isLoading}
+                  disabled={isUpdating}
                 >
                   Cancel
                 </Button>

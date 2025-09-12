@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React from 'react'
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { z } from "zod"
@@ -12,16 +12,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from '../ui/checkbox';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
+import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 
 interface CreateAccountDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   className: string;
-  onAccountCreated?: () => void;
 }
 
-const CreateAccountDrawer = ({ open, onOpenChange, className, onAccountCreated }: CreateAccountDrawerProps) => {
-  const [isLoading, setIsLoading] = useState(false);
+const CreateAccountDrawer = ({ open, onOpenChange, className }: CreateAccountDrawerProps) => {
+  const { createAccount, isCreating } = useAccountsQuery();
 
   const form = useForm<z.infer<typeof AccountValidation>>({
     resolver: zodResolver(AccountValidation),
@@ -33,53 +33,27 @@ const CreateAccountDrawer = ({ open, onOpenChange, className, onAccountCreated }
   });
 
   const onSubmit = async (values: z.infer<typeof AccountValidation>) => {
-    setIsLoading(true);
-
     try {
-      // Make post request for new accounts
-      const response = await fetch('/api/accounts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      })
+      const newAccount = await createAccount(values);
 
-      if (!response.ok) {
-        throw new Error('Failed to create account')
-      }
-
-      const newAccount = await response.json();
-      if (newAccount) {
-        toast.success("Account created successfully", {
-          description: `${newAccount.name} has been added to your accounts.`,
-          duration: 5000
-        });
-        form.reset();
-        onOpenChange(false);
-        onAccountCreated?.();
-      }
+      toast.success("Account created successfully", {
+        description: `${newAccount.name} has been added to your accounts.`,
+        duration: 5000
+      });
+      form.reset();
+      onOpenChange(false);
     } catch (error) {
-      if (error instanceof Error) {
-        toast.error("Failed to create account", {
-          description: error.message || "Please check your information and try again.",
-          duration: 6000
-        })
-      } else {
-        toast.error("Something went wrong", {
-          description: "Unable to create account. Please try again.",
-          duration: 6000
-        })
-      }
-    } finally {
-      setIsLoading(false);
+      toast.error("Failed to create account", {
+        description: error instanceof Error ? error.message : "Please check your information and try again.",
+        duration: 6000
+      });
     }
   }
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent
-        onEscapeKeyDown={(e) => isLoading && e.preventDefault()} className={`${className}`}
+        onEscapeKeyDown={(e) => isCreating && e.preventDefault()} className={`${className}`}
       >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -102,7 +76,7 @@ const CreateAccountDrawer = ({ open, onOpenChange, className, onAccountCreated }
                     <Input
                       placeholder='e.g., BPI, GCash, Wallet'
                       {...field}
-                      disabled={isLoading}
+                      disabled={isCreating}
                     />
                   </FormControl>
                   <FormMessage />
@@ -119,7 +93,7 @@ const CreateAccountDrawer = ({ open, onOpenChange, className, onAccountCreated }
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
-                    disabled={isLoading}
+                    disabled={isCreating}
                   >
                     <FormControl>
                       <SelectTrigger className='w-full'>
@@ -153,7 +127,7 @@ const CreateAccountDrawer = ({ open, onOpenChange, className, onAccountCreated }
                       type='number'
                       placeholder='0'
                       className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                      disabled={isLoading}
+                      disabled={isCreating}
                       {...field}
                     />
                   </FormControl>
@@ -171,7 +145,7 @@ const CreateAccountDrawer = ({ open, onOpenChange, className, onAccountCreated }
                   <Checkbox
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    disabled={isLoading}
+                    disabled={isCreating}
                   />
                 </FormControl>
                 <div className="space-y-1 leading-none">
@@ -187,15 +161,15 @@ const CreateAccountDrawer = ({ open, onOpenChange, className, onAccountCreated }
             <DrawerFooter>
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isCreating}
               >
-                {isLoading ? "Creating account" : "Create account"}
+                {isCreating ? "Creating account" : "Create account"}
               </Button>
               <DrawerClose asChild>
                 <Button
                   variant="outline"
                   className='hover:text-white'
-                  disabled={isLoading}
+                  disabled={isCreating}
                 >
                   Cancel
                 </Button>

@@ -5,14 +5,14 @@ import CreateAccountSheet from '@/components/forms/CreateAccountSheet'
 import { Icons } from '@/components/icons'
 import CreateAccountDrawer from '@/components/forms/CreateAccountDrawer'
 import AccountCard from '@/components/shared/AccountCard'
-import useAccounts from '@/hooks/useAccounts'
+import { useAccountsQuery } from '@/hooks/useAccountsQuery'
 import { Button } from '@/components/ui/button'
 import SkeletonAccountCard from '@/components/shared/SkeletonAccountCard'
 import EditAccountSheet from '@/components/forms/EditAccountSheet'
 import EditAccountDrawer from '@/components/forms/EditAccountDrawer'
 
 const Accounts = () => {
-  const { accounts, isLoading, error, refetchAccounts } = useAccounts();
+  const { accounts, isLoading, error } = useAccountsQuery();
   const [createAccountSheetOpen, setCreateAccountSheetOpen] = useState(false);
   const [createAccountDrawerOpen, setCreateAccountDrawerOpen] = useState(false);
   const [editAccountSheetOpen, setEditAccountSheetOpen] = useState(false);
@@ -45,7 +45,6 @@ const Accounts = () => {
           open={createAccountSheetOpen}
           onOpenChange={setCreateAccountSheetOpen}
           className="hidden md:block"
-          onAccountCreated={refetchAccounts}
         />
 
         <button 
@@ -59,7 +58,6 @@ const Accounts = () => {
           open={createAccountDrawerOpen}
           onOpenChange={setCreateAccountDrawerOpen}
           className="block md:hidden"
-          onAccountCreated={refetchAccounts}
         />
       </div>
 
@@ -68,7 +66,6 @@ const Accounts = () => {
         onOpenChange={setEditAccountSheetOpen}
         className='hidden md:block'
         accountId={selectedAccountId}
-        onAccountUpdated={refetchAccounts}
       />
 
       <EditAccountDrawer
@@ -76,7 +73,6 @@ const Accounts = () => {
         onOpenChange={setEditAccountDrawerOpen}
         className='block md:hidden'
         accountId={selectedAccountId}
-        onAccountUpdated={refetchAccounts}
       />
 
       {isLoading ? (

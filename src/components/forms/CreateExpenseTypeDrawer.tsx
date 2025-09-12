@@ -2,7 +2,7 @@
 
 import { ExpenseTypeValidation } from '@/lib/validations/expense';
 import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useState } from 'react'
+import React from 'react'
 import { useForm } from 'react-hook-form';
 import { z } from "zod"
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
@@ -10,6 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } fr
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
+import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery';
 
 interface CreateExpenseTypeDrawerProps {
   open: boolean;
@@ -18,8 +19,8 @@ interface CreateExpenseTypeDrawerProps {
   onBudgetCreated?: () => void;
 }
 
-const CreateExpenseTypeDrawer = ({ open, onOpenChange, className, onBudgetCreated }: CreateExpenseTypeDrawerProps) => {
-  const [isLoading, setIsLoading] = useState(false);
+const CreateExpenseTypeDrawer = ({ open, onOpenChange, className }: CreateExpenseTypeDrawerProps) => {
+  const { createBudget, isCreating } = useExpenseTypesQuery();
 
   const form = useForm<z.infer<typeof ExpenseTypeValidation>>({
     resolver: zodResolver(ExpenseTypeValidation),
@@ -30,52 +31,28 @@ const CreateExpenseTypeDrawer = ({ open, onOpenChange, className, onBudgetCreate
   });
 
   const onSubmit = async (values: z.infer<typeof ExpenseTypeValidation>) => {
-    setIsLoading(true);
-
     try {
-      const response = await fetch(`/api/expense-types`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/jason',
-        },
-        body: JSON.stringify(values),
-      })
+      const newBudget = await createBudget(values);
 
-      if (!response.ok) {
-        throw new Error("Failed to create budget")
-      }
+      toast.success("Budget created successfully", {
+        description: `${newBudget.name} has been added to your budget.`,
+        duration: 5000
+      });
 
-      const newBudget = await response.json();
-      if (newBudget) {
-        toast.success("Budget added successfully", {
-          description: `${newBudget.name} has been added to your budgets.`,
-          duration: 5000  
-        })
-        form.reset();
-        onOpenChange(false);
-        onBudgetCreated?.();
-      }
+      form.reset();
+      onOpenChange(false);
     } catch (error) {
-      if (error instanceof Error) {
-        toast.error("Failed to add budget", {
-          description: error.message || "Please check your information and try again.",
-          duration: 6000
-        })
-      } else {
-        toast.error("Something went wrong", {
-          description: "Unable to add budget. Please try again",
-          duration: 6000
-        })
-      }
-    } finally {
-      setIsLoading(false);
+      toast.error("Failed to create budget", {
+        description: error instanceof Error ? error.message : "Please check your information and try again.",
+        duration: 6000
+      });
     }
   }
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent
-        onEscapeKeyDown={(e) => isLoading && e.preventDefault()} className={`${className}`}
+        onEscapeKeyDown={(e) => isCreating && e.preventDefault()} className={`${className}`}
       >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -98,7 +75,7 @@ const CreateExpenseTypeDrawer = ({ open, onOpenChange, className, onBudgetCreate
                     <Input
                       placeholder='e.g., Groceries, transportation, entertainment, shopping'
                       {...field}
-                      disabled={isLoading}
+                      disabled={isCreating}
                     />
                   </FormControl>
                 </FormItem>
@@ -118,7 +95,7 @@ const CreateExpenseTypeDrawer = ({ open, onOpenChange, className, onBudgetCreate
                     <Input
                       placeholder='e.g., Groceries, transportation, entertainment, shopping'
                       {...field}
-                      disabled={isLoading}
+                      disabled={isCreating}
                     />
                   </FormControl>
                 </FormItem>
@@ -128,15 +105,15 @@ const CreateExpenseTypeDrawer = ({ open, onOpenChange, className, onBudgetCreate
             <DrawerFooter>
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isCreating}
               >
-                {isLoading ? "Adding budget" : "Add budget"}
+                {isCreating ? "Adding budget" : "Add budget"}
               </Button>
               <DrawerClose asChild>
                 <Button
                   variant="outline"
                   className='hover:text-white'
-                  disabled={isLoading}
+                  disabled={isCreating}
                 >
                   Cancel
                 </Button>

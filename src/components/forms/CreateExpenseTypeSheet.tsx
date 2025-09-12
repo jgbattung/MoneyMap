@@ -10,16 +10,16 @@ import { useForm } from "react-hook-form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
+import { useExpenseTypesQuery } from "@/hooks/useExpenseTypesQuery";
 
 interface CreateExpenseTypeSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   className: string;
-  onBudgetCreated?: () => void;
 }
 
-const CreateExpenseTypeSheet = ({ open, onOpenChange, className, onBudgetCreated }: CreateExpenseTypeSheetProps) => {
-  const [isLoading, setIsLoading] = useState(false);
+const CreateExpenseTypeSheet = ({ open, onOpenChange, className }: CreateExpenseTypeSheetProps) => {
+  const { createBudget, isCreating } = useExpenseTypesQuery();
 
   const form = useForm<z.infer<typeof ExpenseTypeValidation>>({
     resolver: zodResolver(ExpenseTypeValidation),
@@ -30,52 +30,27 @@ const CreateExpenseTypeSheet = ({ open, onOpenChange, className, onBudgetCreated
   });
 
   const onSubmit = async (values: z.infer<typeof ExpenseTypeValidation>) => {
-    setIsLoading(true);
-
     try {
-      const response = await fetch('/api/expense-types', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      })
+      const newBudget = await createBudget(values);
 
-      if (!response.ok) {
-        throw new Error("Failed to create budget")
-      } 
-
-      const newCard = await response.json();
-      if (newCard) {
-        toast.success("Budget added successfully" , {
-          description: `${newCard.name} has been added to your budgets.`,
-          duration: 5000
-        });
-        form.reset();
-        onOpenChange(false);
-        onBudgetCreated?.();
-      }
+      toast.success("Budget created successfully", {
+        description: `${newBudget.name} has been added to your budgets.`,
+        duration: 5000
+      });
+      form.reset();
+      onOpenChange(false);
     } catch (error) {
-      if (error instanceof Error) {
-        toast.error("Failed to add budget", {
-          description: error.message || "Please check your information and try again.",
-          duration: 6000
-        })
-      } else {
-        toast.error("Something went wrong", {
-          description: "Unable to add budget. Please try again",
-          duration: 6000
-        })
-      }
-    } finally {
-      setIsLoading(false);
+      toast.error("Failed to create budget", {
+        description: error instanceof Error ? error.message : "Please check your information and try again.",
+        duration: 6000
+      });
     }
   }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        onEscapeKeyDown={(e) => isLoading && e.preventDefault()}
+        onEscapeKeyDown={(e) => isCreating && e.preventDefault()}
         className={`${className} w-[600px] sm:max-w-[600px] py-3 px-2`}
       >
         <Form {...form}>
@@ -97,7 +72,7 @@ const CreateExpenseTypeSheet = ({ open, onOpenChange, className, onBudgetCreated
                     <Input
                       placeholder='e.g., Groceries, transportation, entertainment, shopping'
                       {...field}
-                      disabled={isLoading}
+                      disabled={isCreating}
                     />
                   </FormControl>
                 </FormItem>
@@ -119,7 +94,7 @@ const CreateExpenseTypeSheet = ({ open, onOpenChange, className, onBudgetCreated
                       placeholder="0"
                       className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
                       {...field}
-                      disabled={isLoading}
+                      disabled={isCreating}
                     />
                   </FormControl>
                 </FormItem>
@@ -129,15 +104,15 @@ const CreateExpenseTypeSheet = ({ open, onOpenChange, className, onBudgetCreated
             <SheetFooter>
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isCreating}
               >
-                {isLoading ? "Adding budget" : "Add budget"}
+                {isCreating ? "Adding budget" : "Add budget"}
               </Button>
               <SheetClose asChild>
                 <Button
                   variant="outline"
                   className='hover:text-white'
-                  disabled={isLoading}
+                  disabled={isCreating}
                 >
                   Cancel
                 </Button>
