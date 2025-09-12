@@ -8,11 +8,11 @@ import { Icons } from '@/components/icons'
 import BudgetCard from '@/components/shared/BudgetCard'
 import SkeletonBudgetCard from '@/components/shared/SkeletonBudgetCard'
 import { Button } from '@/components/ui/button'
-import useExpenseTypes from '@/hooks/useExpenseTypes'
+import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery'
 import React, { useState } from 'react'
 
 const Budgets = () => {
-  const { expenseTypes, isLoading, error, refetchExpenseTypes } = useExpenseTypes();
+  const { budgets, isLoading, error } = useExpenseTypesQuery();
   const [createExpenseTypeSheetOpen, setCreateExpenseTypeSheetOpen] = useState(false);
   const [createExpenseTypeDrawerOpen, setCreateExpenseTypeDrawerOpen] = useState(false);
   const [editExpenseTypeSheetOpen, setEditExpenseTypeSheetOpen] = useState(false);
@@ -46,7 +46,6 @@ const Budgets = () => {
           open={createExpenseTypeSheetOpen}
           onOpenChange={setCreateExpenseTypeSheetOpen}
           className='hidden md:block'
-          onBudgetCreated={refetchExpenseTypes}
         />
 
         <button
@@ -61,7 +60,6 @@ const Budgets = () => {
           open={createExpenseTypeDrawerOpen}
           onOpenChange={setCreateExpenseTypeDrawerOpen}
           className="block md:hidden"
-          onBudgetCreated={refetchExpenseTypes}
         />
       </div>
 
@@ -70,7 +68,6 @@ const Budgets = () => {
         onOpenChange={setEditExpenseTypeSheetOpen}
         className='hidden md:block'
         budgetId={selectedExpenseTypeId}
-        onBudgetUpdated={refetchExpenseTypes}
       />
 
       <EditExpenseTypeDrawer
@@ -78,7 +75,6 @@ const Budgets = () => {
         onOpenChange={setEditExpenseTypeDrawerOpen}
         className='block md:hidden'
         budgetId={selectedExpenseTypeId}
-        onBudgetUpdated={refetchExpenseTypes}
       />
 
       {isLoading ? (
@@ -104,7 +100,7 @@ const Budgets = () => {
             Try again
           </Button>
         </div>
-      ) : expenseTypes.length === 0 ? (
+      ) : budgets.length === 0 ? (
         <div className='flex-1 flex flex-col items-center justify-center py-16'>
           <Icons.wallet
             className='h-24 w-24 mb-10'
@@ -132,7 +128,7 @@ const Budgets = () => {
       ) : (
         <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'
         >
-          {expenseTypes.map((budget) => (
+          {budgets.map((budget) => (
             <BudgetCard
               key={budget.id}
               name={budget.name}
