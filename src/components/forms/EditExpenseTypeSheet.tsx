@@ -3,7 +3,7 @@
 import { z } from "zod"
 import { ExpenseTypeValidation } from '@/lib/validations/expense';
 import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { useForm } from 'react-hook-form';
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "../ui/form";
@@ -11,18 +11,18 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
 import SkeletonEditBudgetForm from "../shared/SkeletonEditBudgetForm";
+import { useExpenseTypeQuery, useExpenseTypesQuery } from "@/hooks/useExpenseTypesQuery";
 
 interface EditExpenseTypeSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   className: string;
   budgetId: string;
-  onBudgetUpdated?: () => void;
 }
 
-const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId, onBudgetUpdated }: EditExpenseTypeSheetProps) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
+const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId }: EditExpenseTypeSheetProps) => {
+  const { updateBudget, isUpdating } = useExpenseTypesQuery();
+  const { budgetData, isFetching, error } = useExpenseTypeQuery(budgetId);
 
   const form = useForm<z.infer<typeof ExpenseTypeValidation>>({
     resolver: zodResolver(ExpenseTypeValidation),
@@ -33,95 +33,66 @@ const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId, onBudge
   });
 
   useEffect(() => {
-    if (open && budgetId) {
-      const fetchBudgetData = async () => {
-        setIsFetching(true);
-        try {
-          const response = await fetch(`/api/expense-types/${budgetId}`)
-          if (!response.ok) {
-            throw new Error('Failed to fetch budget');
-          }
-
-          const budget = await response.json();
-
-          form.reset({
-            name: budget.name,
-            monthlyBudget: budget.monthlyBudget,
-          });
-        } catch (error) {
-          if (error instanceof Error) {
-            toast.error("Failed to fetch budget information", {
-              description: error.message || "Please check your information and try again",
-              duration: 6000
-            })
-          } else {
-            toast.error("Something went wrong", {
-              description: "Unable to fetch budget information. Please try again.",
-              duration: 6000
-            })
-          }
-        } finally {
-          setIsFetching(false);
-        }
-      }
-
-      fetchBudgetData();
+    if (budgetData) {
+      form.reset({
+        name: budgetData.name,
+        monthlyBudget: budgetData.monthlyBudget || ''
+      });
     }
-  }, [open, budgetId, form]);
+  }, [budgetData, form]);
 
   const onSubmit = async (values: z.infer<typeof ExpenseTypeValidation>) => {
-    setIsLoading(true);
-
     try {
-      const response = await fetch(`/api/expense-types/${budgetId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      })
+        const updatedBudget = await updateBudget({ id: budgetId, ...values });
 
-      if (!response.ok) {
-        toast.error('Failed to update budget', {
-          duration: 6000
-        })
-      }
-
-      const updatedBudget = await response.json();
-      if (updatedBudget) {
-        toast.success("Budget updated successfully", {
-          description: `${updatedBudget.name} has been updated.`,
-          duration: 5000
-        });
+      toast.success("Budget updated successfully", {
+        description: `${updatedBudget.name} has been updated.`,
+        duration: 5000
+      });
         form.reset();
         onOpenChange(false);
-        onBudgetUpdated?.();
-      }
     } catch (error) {
-      if (error instanceof Error) {
-        toast.error('Failed to update budget', {
-          description: error.message || "Please check your information and try again.",
-          duration: 6000
-        })
-      } else {
-        toast.error("Something went wrong", {
-          description: "Unable to update budget. Please try again.",
-          duration: 6000
-        })
-      }
-    } finally {
-      setIsLoading(false);
+      toast.error("Failed to update budget", {
+        description: error instanceof Error ? error.message : "Please check your information and try again.",
+        duration: 6000
+      });
     }
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        onEscapeKeyDown={(e) => isLoading && e.preventDefault()}
+        onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
         className={`${className} w-[600px] sm:max-w-[600px] py-3 px-2`}
       >
         {isFetching ? (
           <SkeletonEditBudgetForm />
+        ) : error ? (
+          <>
+            <SheetHeader className='text-center'>
+              <SheetTitle className='text-2xl'>Unable to load bugdet</SheetTitle>
+              <SheetDescription>
+                {error || 'Something went wrong while loading your account details.'}
+              </SheetDescription>
+            </SheetHeader>
+            
+            <div className='flex flex-col gap-3 p-6'>
+              <Button
+                onClick={() => window.location.reload()}
+                className="w-full"
+              >
+                Try again
+              </Button>
+              <Button
+                variant="outline"
+                
+                onClick={() => onOpenChange(false)}
+                className='hover:text-white'
+              >
+                Close
+              </Button>
+            </div>
+          </>
         ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -142,7 +113,7 @@ const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId, onBudge
                     <Input
                       placeholder='e.g., Groceries, transportation, entertainment, shopping'
                       {...field}
-                      disabled={isLoading}
+                      disabled={isUpdating}
                     />
                   </FormControl>
                 </FormItem>
@@ -164,7 +135,7 @@ const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId, onBudge
                       placeholder="0"
                       className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
                       {...field}
-                      disabled={isLoading}
+                      disabled={isUpdating}
                     />
                   </FormControl>
                 </FormItem>
@@ -173,15 +144,15 @@ const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId, onBudge
             <SheetFooter>
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isUpdating}
               >
-                {isLoading ? "Updating budget" : "Update budget"}
+                {isUpdating ? "Updating budget" : "Update budget"}
               </Button>
               <SheetClose asChild>
                 <Button
                   variant="outline"
                   className='hover:text-white'
-                  disabled={isLoading}
+                  disabled={isUpdating}
                 >
                   Cancel
                 </Button>
