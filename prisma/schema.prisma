@@ -27,6 +27,7 @@ model User {
 
   financialAccounts FinancialAccount[]
   expenseTypes      ExpenseType[]
+  incomeTypes       IncomeType[]
 
   @@unique([email])
   @@map("user")
@@ -119,4 +120,18 @@ model ExpenseType {
   
   @@unique([userId, name])
   @@map("expense_types")
+}
+
+model IncomeType {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  name          String    @db.VarChar(50)
+  monthlyTarget Decimal?  @map("monthly_target") @db.Decimal(15, 2)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, name])
+  @@map("income_types")
 }
