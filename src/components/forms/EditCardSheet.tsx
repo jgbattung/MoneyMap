@@ -128,14 +128,26 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
               )}
             />
 
+            <div className="p-4 flex flex-col gap-2">
+              <FormLabel>Current outstanding balance</FormLabel>
+              <FormDescription>
+                Current debt on this card including all transactions. Updates automatically.
+              </FormDescription>
+              <Input
+                value={cardData?.currentBalance || '0'}
+                disabled={true}
+                className="bg-muted text-muted-foreground cursor-not-allowed"
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="initialBalance"
               render={({ field }) => (
                 <FormItem className="p-4">
-                  <FormLabel>Outstanding  balance</FormLabel>
+                  <FormLabel>Initial outstanding balance</FormLabel>
                   <FormDescription>
-                    Current amount owed on this credit card 
+                    Starting debt when card was added. Edit to correct initial amount.
                   </FormDescription>
                   <FormControl>
                     <Input
