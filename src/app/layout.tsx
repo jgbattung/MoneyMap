@@ -37,7 +37,7 @@ export default function RootLayout({
             <Sidebar />
             
             {/* Content Area */}
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-auto pb-14 md:pb-0">
               {children}
             </div>
             
