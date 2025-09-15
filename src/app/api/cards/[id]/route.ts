@@ -35,7 +35,13 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(card, { status: 200 });
+    const transformedCard = {
+      ...card,
+      initialBalance: Math.abs(parseFloat(card.initialBalance.toString())),
+      currentBalance: Math.abs(parseFloat(card.currentBalance.toString()))
+    };
+
+    return NextResponse.json(transformedCard, { status: 200 });
 
   } catch (error) {
     console.error('Error getting credit card: ', error);

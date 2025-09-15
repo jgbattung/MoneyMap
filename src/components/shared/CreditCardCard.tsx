@@ -11,7 +11,7 @@ interface CreditCardCardProps {
 }
 
 const CreditCardCard = ({ currentBalance, name, statementDate, dueDate, onClick }: CreditCardCardProps) => {
-  const formattedBalance = Math.abs(parseFloat(currentBalance)).toLocaleString('en-PH', {
+  const formattedBalance = parseFloat(currentBalance).toLocaleString('en-PH', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
