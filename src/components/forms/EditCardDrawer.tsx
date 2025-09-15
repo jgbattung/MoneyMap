@@ -14,6 +14,7 @@ import { Button } from '../ui/button';
 import { toast } from 'sonner';
 import SkeletonEditCardDrawerForm from '../shared/SkeletonEditCardDrawerForm';
 import { useCardQuery, useCardsQuery } from '@/hooks/useCardsQuery';
+import { ScrollArea } from '../ui/scroll-area';
 
 
 interface EditCardDrawerProps {
@@ -102,8 +103,8 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
         </>
       ) : (
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DrawerHeader>
+          <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85vh]'>
+            <DrawerHeader className='className="flex-shrink-0"'>
               <DrawerTitle className='text-xl'>
                 Edit credit card
               </DrawerTitle>
@@ -112,121 +113,123 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
               </DrawerDescription>
             </DrawerHeader>
 
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem className='p-4'>
-                  <FormLabel>Card name</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder='e.g., BPI Blue Mastercard, Metrobank Rewards Plus'
-                      {...field}
-                      disabled={isUpdating}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="p-4 flex flex-col gap-2">
-              <FormLabel>Current outstanding balance</FormLabel>
-              <FormDescription>
-                Current debt on this card including all transactions. Updates automatically.
-              </FormDescription>
-              <Input
-                value={cardData?.currentBalance || '0'}
-                disabled={true}
-                className="bg-muted text-muted-foreground cursor-not-allowed"
+            <ScrollArea className="flex-1 min-h-0 scrollbar-hide">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem className='p-4'>
+                    <FormLabel>Card name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder='e.g., BPI Blue Mastercard, Metrobank Rewards Plus'
+                        {...field}
+                        disabled={isUpdating}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <FormField
-              control={form.control}
-              name="initialBalance"
-              render={({ field }) => (
-                <FormItem className='p-4'>
-                  <FormLabel>Initial outstanding balance</FormLabel>
-                  <FormDescription>
-                    Starting debt when card was added. Edit to correct initial amount.
-                  </FormDescription>
-                  <FormControl>
-                    <Input
-                      type='number'
-                      className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                      disabled={isUpdating}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <div className="p-4 flex flex-col gap-2">
+                <FormLabel>Current outstanding balance</FormLabel>
+                <FormDescription>
+                  Current debt on this card including all transactions. Updates automatically.
+                </FormDescription>
+                <Input
+                  value={cardData?.currentBalance || '0'}
+                  disabled={true}
+                  className="bg-muted text-muted-foreground cursor-not-allowed"
+                />
+              </div>
 
-            <FormField
-              control={form.control}
-              name="statementDate"
-              render={({ field }) => (
-                <FormItem className="p-4">
-                  <FormLabel>Statement Date</FormLabel>
-                  <FormDescription>
-                    Day of the month when your statement is generated
-                  </FormDescription>
-                  <FormControl>
-                    <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                      defaultValue={field.value?.toString()}
-                      disabled={isUpdating}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select day" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 31 }, (_, i) => (
-                          <SelectItem key={i + 1} value={(i + 1).toString()}>
-                            {i + 1}{getOrdinalSuffix(i + 1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="initialBalance"
+                render={({ field }) => (
+                  <FormItem className='p-4'>
+                    <FormLabel>Initial outstanding balance</FormLabel>
+                    <FormDescription>
+                      Starting debt when card was added. Edit to correct initial amount.
+                    </FormDescription>
+                    <FormControl>
+                      <Input
+                        type='number'
+                        className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+                        disabled={isUpdating}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="dueDate"
-              render={({ field }) => (
-                <FormItem className="p-4">
-                  <FormLabel>Due Date</FormLabel>
-                  <FormDescription>
-                    Day of the month when payment is due
-                  </FormDescription>
-                  <FormControl>
-                    <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                      defaultValue={field.value?.toString()}
-                      disabled={isUpdating}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select day" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 31 }, (_, i) => (
-                          <SelectItem key={i + 1} value={(i + 1).toString()}>
-                            {i + 1}{getOrdinalSuffix(i + 1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="statementDate"
+                render={({ field }) => (
+                  <FormItem className="p-4">
+                    <FormLabel>Statement Date</FormLabel>
+                    <FormDescription>
+                      Day of the month when your statement is generated
+                    </FormDescription>
+                    <FormControl>
+                      <Select
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        defaultValue={field.value?.toString()}
+                        disabled={isUpdating}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select day" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 31 }, (_, i) => (
+                            <SelectItem key={i + 1} value={(i + 1).toString()}>
+                              {i + 1}{getOrdinalSuffix(i + 1)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-            <DrawerFooter>
+              <FormField
+                control={form.control}
+                name="dueDate"
+                render={({ field }) => (
+                  <FormItem className="p-4">
+                    <FormLabel>Due Date</FormLabel>
+                    <FormDescription>
+                      Day of the month when payment is due
+                    </FormDescription>
+                    <FormControl>
+                      <Select
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        defaultValue={field.value?.toString()}
+                        disabled={isUpdating}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select day" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 31 }, (_, i) => (
+                            <SelectItem key={i + 1} value={(i + 1).toString()}>
+                              {i + 1}{getOrdinalSuffix(i + 1)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </ScrollArea>
+
+            <DrawerFooter className='className="flex-shrink-0"'>
               <Button
                 type="submit"
                 disabled={isUpdating}
