@@ -32,9 +32,7 @@ const AccountCard = ({ accountType, addToNetWorth, currentBalance, name, onClick
             <Icons.addToNetWorth size={16} className='text-accent-500' />
           )}
         </div>
-          <div className='w-fit px-3 py-1.5 bg-primary-900 rounded-2xl'>
-            <p className='text-white text-xs'>{accountTypeFormatted}</p>
-          </div>
+      <p className='text-muted-foreground text-xs font-bold'>{accountTypeFormatted}</p>
       </div>
       <div className='flex flex-col items-end'>
         <div className='flex items-end justify-center gap-2'>
