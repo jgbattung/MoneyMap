@@ -26,7 +26,13 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(cards, { status: 200 });
+    const transformedCards = cards.map(card => ({
+      ...card,
+      initialBalance: Math.abs(parseFloat(card.initialBalance.toString())),
+      currentBalance: Math.abs(parseFloat(card.currentBalance.toString()))
+    }));
+
+    return NextResponse.json(transformedCards, { status: 200 });
 
   } catch (error) {
     console.error('Error getting accounts: ', error);
