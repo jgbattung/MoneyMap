@@ -11,7 +11,10 @@ interface AccountCardProps {
 }
 
 const AccountCard = ({ accountType, addToNetWorth, currentBalance, name, onClick }: AccountCardProps) => {
-  const accountTypeFormatted = capitalizeFirstLetter(accountType);
+  const accountTypeFormatted = accountType
+    .split('_')
+    .map(word => capitalizeFirstLetter(word))
+    .join(' ');
   const formattedBalance = parseFloat(currentBalance).toLocaleString('en-PH', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
