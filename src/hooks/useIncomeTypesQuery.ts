@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { NextResponse } from "next/server";
 
 type IncomeType = {
   id: string;
@@ -76,3 +77,24 @@ export const useIncomeTypesQuery = () => {
     isUpdating: updateIncomeTypeMutation.isPending,
   };
 };
+
+const fetchIncomeType = async (id: string): Promise<IncomeType> => {
+  const response = await fetch(`/api/income-types/${id}`);
+  if (!response.ok) throw new Error('Failed to fetch income type');
+  return response.json();
+}
+
+export const useIncomeTypeQuery = (id: string) => {
+  const { data, isPending, error } = useQuery({
+    queryKey: QUERY_KEYS.incomeType(id),
+    queryFn: () => fetchIncomeType(id),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return {
+    incomeTypeData: data,
+    isFetching: isPending,
+    error: error ? error.message : null,
+  };
+}
