@@ -2,6 +2,8 @@
 
 import CreateIncomeTypeDrawer from '@/components/forms/CreateIncomeTypeDrawer';
 import CreateIncomeTypeSheet from '@/components/forms/CreateIncomeTypeSheet';
+import EditIncomeTypeDrawer from '@/components/forms/EditIncomeTypeDrawer';
+import EditIncomeTypeSheet from '@/components/forms/EditIncomeTypeSheet';
 import { Icons } from '@/components/icons';
 import IncomeTypeCard from '@/components/shared/IncomeTypeCard';
 import SkeletonBudgetCard from '@/components/shared/SkeletonBudgetCard';
@@ -13,17 +15,19 @@ const Income = () => {
   const { incomeTypes, isLoading, error } = useIncomeTypesQuery();
   const [createIncomeTypeSheetOpen, setCreateIncomeTypeSheetOpen] = useState(false);
   const [createIncomeTypeDrawerOpen, setCreateIncomeTypeDrawerOpen] = useState(false);
+  const [editIncomeTypeSheetOpen, setEditIncomeTypeSheetOpen] = useState(false);
+  const [editIncomeTypeDrawerOpen, setEditIncomeTypeDrawerOpen] = useState(false);
   const [selectedIncomeTypeId, setSelectedIncomeTypeId] = useState<string>('');
 
-  // const handleIncomeTypeClick = (budgetId: string) => {
-  //   setSelectedExpenseTypeId(budgetId);
+  const handleIncomeTypeClick = (budgetId: string) => {
+    setSelectedIncomeTypeId(budgetId);
 
-  //   if (window.innerWidth >= 768) {
-  //     setCreateIncomeTypeSheetOpen(true);
-  //   } else {
-  //     setCreateIncomeTypeDrawerOpen(true);
-  //   }
-  // }
+    if (window.innerWidth >= 768) {
+      setEditIncomeTypeSheetOpen(true);
+    } else {
+      setEditIncomeTypeDrawerOpen(true);
+    }
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
@@ -58,6 +62,20 @@ const Income = () => {
           className='block md:hidden'
         />
       </div>
+      
+      <EditIncomeTypeSheet
+        open={editIncomeTypeSheetOpen}
+        onOpenChange={setEditIncomeTypeSheetOpen}
+        className='hidden md:block'
+        incomeTypeId={selectedIncomeTypeId}
+      />
+
+      <EditIncomeTypeDrawer
+        open={editIncomeTypeDrawerOpen}
+        onOpenChange={setEditIncomeTypeDrawerOpen}
+        className='block md:hidden'
+        incomeTypeId={selectedIncomeTypeId}
+      />
 
       {isLoading ? (
         <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'>
@@ -115,6 +133,7 @@ const Income = () => {
             key={income.id}
             name={income.name}
             monthlyTarget={income.monthlyTarget}
+            onClick={() => handleIncomeTypeClick(income.id)}
           />
         ))}
       </div>
