@@ -3,6 +3,7 @@
 import CreateIncomeTypeDrawer from '@/components/forms/CreateIncomeTypeDrawer';
 import CreateIncomeTypeSheet from '@/components/forms/CreateIncomeTypeSheet';
 import { Icons } from '@/components/icons';
+import IncomeTypeCard from '@/components/shared/IncomeTypeCard';
 import SkeletonBudgetCard from '@/components/shared/SkeletonBudgetCard';
 import { Button } from '@/components/ui/button';
 import { useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery'
@@ -110,9 +111,11 @@ const Income = () => {
       <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'
       >
         {incomeTypes.map((income) => (
-          <div key={income.id}>
-            blabla
-          </div>
+          <IncomeTypeCard
+            key={income.id}
+            name={income.name}
+            monthlyTarget={income.monthlyTarget}
+          />
         ))}
       </div>
       ) }
