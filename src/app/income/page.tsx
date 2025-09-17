@@ -6,7 +6,7 @@ import EditIncomeTypeDrawer from '@/components/forms/EditIncomeTypeDrawer';
 import EditIncomeTypeSheet from '@/components/forms/EditIncomeTypeSheet';
 import { Icons } from '@/components/icons';
 import IncomeTypeCard from '@/components/shared/IncomeTypeCard';
-import SkeletonBudgetCard from '@/components/shared/SkeletonBudgetCard';
+import SkeletonIncomeTypeCard from '@/components/shared/SkeletonIncomeTypeCard';
 import { Button } from '@/components/ui/button';
 import { useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery'
 import React, { useState } from 'react'
@@ -78,9 +78,9 @@ const Income = () => {
       />
 
       {isLoading ? (
-        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'>
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
           {Array.from({ length: 4 }, (_, index) => (
-            <SkeletonBudgetCard key={index} />
+            <SkeletonIncomeTypeCard key={index} />
           ))}
         </div>
       ) : error ? (
@@ -126,8 +126,7 @@ const Income = () => {
         </Button>
       </div>
       ) : (
-      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'
-      >
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
         {incomeTypes.map((income) => (
           <IncomeTypeCard
             key={income.id}
