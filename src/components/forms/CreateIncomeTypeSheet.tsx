@@ -2,45 +2,45 @@
 
 import { z } from "zod"
 import React from 'react'
-import { ExpenseTypeValidation } from "@/lib/validations/expense";
+import { useIncomeTypesQuery } from "@/hooks/useIncomeTypesQuery";
+import { useForm } from "react-hook-form";
+import { IncomeTypeValidation } from "@/lib/validations/income";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "../ui/form";
-import { useForm } from "react-hook-form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { toast } from "sonner";
-import { useExpenseTypesQuery } from "@/hooks/useExpenseTypesQuery";
 
-interface CreateExpenseTypeSheetProps {
+interface CreateIncomeTypeSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   className: string;
 }
 
-const CreateExpenseTypeSheet = ({ open, onOpenChange, className }: CreateExpenseTypeSheetProps) => {
-  const { createBudget, isCreating } = useExpenseTypesQuery();
-
-  const form = useForm<z.infer<typeof ExpenseTypeValidation>>({
-    resolver: zodResolver(ExpenseTypeValidation),
+const CreateIncomeTypeSheet = ({ open, onOpenChange, className }: CreateIncomeTypeSheetProps) => {
+  const { createIncomeType, isCreating } = useIncomeTypesQuery();
+  
+  const form = useForm<z.infer<typeof IncomeTypeValidation>> ({
+    resolver: zodResolver(IncomeTypeValidation),
     defaultValues: {
       name: "",
-      monthlyBudget: "",
+      monthlyTarget: "",
     }
   });
 
-  const onSubmit = async (values: z.infer<typeof ExpenseTypeValidation>) => {
+  const onSubmit = async (values: z.infer<typeof IncomeTypeValidation>) => {
     try {
-      const newBudget = await createBudget(values);
+      const newIncomeType = await createIncomeType(values);
 
-      toast.success("Budget created successfully", {
-        description: `${newBudget.name} has been added to your budgets.`,
-        duration: 5000
+      toast.success("Income type created successfully", {
+        description: `${newIncomeType.name} has been added to your income types.`,
+        duration: 5000,
       });
       form.reset();
       onOpenChange(false);
     } catch (error) {
-      toast.error("Failed to create budget", {
+      toast.error("Failed to create income type", {
         description: error instanceof Error ? error.message : "Please check your information and try again.",
         duration: 6000
       });
@@ -56,9 +56,11 @@ const CreateExpenseTypeSheet = ({ open, onOpenChange, className }: CreateExpense
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <SheetHeader>
-              <SheetTitle className='text-2xl'>Add Budget</SheetTitle>
+              <SheetTitle className="text-2xl">
+                Add Income Type
+              </SheetTitle>
               <SheetDescription>
-                Create a budget category to track your monthly spending and stay on target.
+                Create an income category to organize and track your earnings.
               </SheetDescription>
             </SheetHeader>
 
@@ -67,10 +69,10 @@ const CreateExpenseTypeSheet = ({ open, onOpenChange, className }: CreateExpense
               name="name"
               render={({ field }) => (
                 <FormItem className="p-4">
-                  <FormLabel>Budget name</FormLabel>
+                  <FormLabel>Income name</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder='e.g., Groceries, transportation, entertainment, shopping'
+                      placeholder='e.g., Salary, Investment, Interest, Reimbursement'
                       {...field}
                       disabled={isCreating}
                     />
@@ -81,12 +83,12 @@ const CreateExpenseTypeSheet = ({ open, onOpenChange, className }: CreateExpense
 
             <FormField
               control={form.control}
-              name="monthlyBudget"
+              name="monthlyTarget"
               render={({ field }) => (
                 <FormItem className="p-4">
-                  <FormLabel>Monthly budget</FormLabel>
+                  <FormLabel>Monthly target</FormLabel>
                   <FormDescription>
-                    Set a monthly spending limit for this category (optional).
+                    Set a monthly income goal for this category (optional).
                   </FormDescription>
                   <FormControl>
                     <Input
@@ -106,7 +108,7 @@ const CreateExpenseTypeSheet = ({ open, onOpenChange, className }: CreateExpense
                 type="submit"
                 disabled={isCreating}
               >
-                {isCreating ? "Adding budget" : "Add budget"}
+                {isCreating ? "Adding income category" : "Add income category"}
               </Button>
               <SheetClose asChild>
                 <Button
@@ -125,4 +127,4 @@ const CreateExpenseTypeSheet = ({ open, onOpenChange, className }: CreateExpense
   )
 }
 
-export default CreateExpenseTypeSheet
+export default CreateIncomeTypeSheet
