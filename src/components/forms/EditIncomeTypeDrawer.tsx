@@ -11,6 +11,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { toast } from 'sonner';
 import { useIncomeTypeQuery, useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery';
+import SkeletonEditIncomeTypeDrawerForm from '../shared/SkeletonEditIncomeTypeDrawerForm';
 
 interface EditIncomeTypeDrawerProps {
   open: boolean;
@@ -58,63 +59,6 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
     }
   };
 
-  const renderLoadingState = () => (
-    <>
-      <DrawerHeader>
-        <DrawerTitle className='text-xl'>Edit income type</DrawerTitle>
-        <DrawerDescription>
-          Update your income type details
-        </DrawerDescription>
-      </DrawerHeader>
-
-      <div className='p-4'>
-        <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Income type name</label>
-        <div className='h-8 w-full bg-secondary-500 animate-pulse rounded mt-2' />
-      </div>
-
-      <div className="p-4">
-        <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Monthly target</label>
-        <div className='flex flex-col'>
-          <div className='h-5 w-3/4 bg-secondary-500 animate-pulse rounded mt-2' />
-          <div className='h-8 w-full bg-secondary-500 animate-pulse rounded mt-2' />
-        </div>
-      </div>
-
-      <div className="flex flex-col p-4 gap-2">
-        <div className='h-8 w-full bg-secondary-500 animate-pulse rounded' />
-        <div className='h-8 w-full bg-secondary-500 animate-pulse rounded' />
-      </div>
-    </>
-  );
-
-  const renderErrorState = () => (
-    <>
-      <DrawerHeader className='text-center'>
-        <DrawerTitle className='text-xl'>Unable to load income type</DrawerTitle>
-        <DrawerDescription>
-          {error || 'Something went wrong while loading your income type details.'}
-        </DrawerDescription>
-      </DrawerHeader>
-      
-      <DrawerFooter>
-        <Button
-          onClick={() => window.location.reload()}
-          className="w-full"
-        >
-          Try again
-        </Button>
-        <DrawerClose asChild>
-          <Button
-            variant="outline"
-            className="w-full hover:text-white"
-          >
-            Close
-          </Button>
-        </DrawerClose>
-      </DrawerFooter>
-    </>
-  );
-
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent
@@ -122,9 +66,33 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
         className={`${className}`}
       >
         {isFetching ? (
-          renderLoadingState()
+          <SkeletonEditIncomeTypeDrawerForm />
         ) : error ? (
-          renderErrorState()
+          <>
+            <DrawerHeader className='text-center'>
+              <DrawerTitle className='text-xl'>Unable to load income categorie</DrawerTitle>
+              <DrawerDescription>
+                {error || 'Something went wrong while loading your income category details.'}
+              </DrawerDescription>
+            </DrawerHeader>
+            
+            <DrawerFooter>
+              <Button
+                onClick={() => window.location.reload()}
+                className="w-full"
+              >
+                Try again
+              </Button>
+              <DrawerClose asChild>
+                <Button
+                  variant="outline"
+                  className="w-full hover:text-white"
+                >
+                  Close
+                </Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </>
         ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>

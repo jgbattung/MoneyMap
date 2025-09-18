@@ -11,6 +11,7 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
 import { useIncomeTypeQuery, useIncomeTypesQuery } from "@/hooks/useIncomeTypesQuery";
+import SkeletonEditIncomeTypeSheetForm from "../shared/SkeletonEditIncomeTypeSheetForm";
 
 interface EditIncomeTypeSheetProps {
   open: boolean;
@@ -58,62 +59,6 @@ const EditIncomeTypeSheet = ({ open, onOpenChange, className, incomeTypeId }: Ed
     }
   };
 
-  const renderLoadingState = () => (
-    <>
-      <SheetHeader>
-        <SheetTitle className='text-2xl'>Edit income type</SheetTitle>
-        <SheetDescription>
-          Update your income type details
-        </SheetDescription>
-      </SheetHeader>
-
-      <div className="p-4">
-        <label className="flex flex-col text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Income type name</label>
-        <div className='h-8 w-full bg-secondary-500 animate-pulse rounded mt-2' />
-      </div>
-
-      <div className="p-4">
-        <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Monthly target</label>
-        <div className='flex flex-col'>
-          <div className='h-5 w-4/7 bg-secondary-500 animate-pulse rounded mt-2' />
-          <div className='h-8 w-full bg-secondary-500 animate-pulse rounded mt-2' />
-        </div>
-      </div>
-
-      <div className="flex flex-col p-4 gap-2">
-        <div className='h-8 w-full bg-secondary-500 animate-pulse rounded' />
-        <div className='h-8 w-full bg-secondary-500 animate-pulse rounded' />
-      </div>
-    </>
-  );
-
-  const renderErrorState = () => (
-    <>
-      <SheetHeader className='text-center'>
-        <SheetTitle className='text-2xl'>Unable to load income type</SheetTitle>
-        <SheetDescription>
-          {error || 'Something went wrong while loading your income type details.'}
-        </SheetDescription>
-      </SheetHeader>
-      
-      <div className='flex flex-col gap-3 p-6'>
-        <Button
-          onClick={() => window.location.reload()}
-          className="w-full"
-        >
-          Try again
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => onOpenChange(false)}
-          className='hover:text-white'
-        >
-          Close
-        </Button>
-      </div>
-    </>
-  );
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -121,9 +66,33 @@ const EditIncomeTypeSheet = ({ open, onOpenChange, className, incomeTypeId }: Ed
         className={`${className} w-[600px] sm:max-w-[600px] py-3 px-2`}
       >
         {isFetching ? (
-          renderLoadingState()
+          <SkeletonEditIncomeTypeSheetForm />
         ) : error ? (
-          renderErrorState()
+          <>
+            <SheetHeader className='text-center'>
+              <SheetTitle className='text-2xl'>Unable to load income categories</SheetTitle>
+              <SheetDescription>
+                {error || 'Something went wrong while loading your income category details.'}
+              </SheetDescription>
+            </SheetHeader>
+            
+            <div className='flex flex-col gap-3 p-6'>
+              <Button
+                onClick={() => window.location.reload()}
+                className="w-full"
+              >
+                Try again
+              </Button>
+              <Button
+                variant="outline"
+                
+                onClick={() => onOpenChange(false)}
+                className='hover:text-white'
+              >
+                Close
+              </Button>
+            </div>
+          </>
         ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
