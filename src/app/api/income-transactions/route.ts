@@ -89,13 +89,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating income transaction: ', error);
 
-    if (error instanceof Error && 'code' in error && error.code === "P20002") {
-      return NextResponse.json(
-        { error: 'An income transaction with this name already exists' },
-        { status: 409 }
-      );
-    }
-
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

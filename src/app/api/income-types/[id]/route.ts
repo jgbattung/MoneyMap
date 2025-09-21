@@ -31,7 +31,7 @@ export async function GET(
     if (!incomeType) {
       return NextResponse.json(
         { error: 'Income type not found' },
-        { status: 400 }
+        { status: 404 }
       );
     }
 
