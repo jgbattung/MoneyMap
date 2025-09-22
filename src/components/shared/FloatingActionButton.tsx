@@ -4,6 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 const FloatingActionButton = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [createIncomeTransactionDrawerOpen, setCreateIncomeTransactionDrawerOpen] = useState(false);
+
+  const handleAddIncome = () => {
+    setCreateIncomeTransactionDrawerOpen(true);
+  };
 
   const toggleActionButtons = () => {
     setIsOpen(prev => !prev);
@@ -53,7 +58,6 @@ const FloatingActionButton = () => {
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Add Income Button */}
             <motion.button
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -64,8 +68,8 @@ const FloatingActionButton = () => {
               <Icons.addExpense className="text-white" size={18} />
             </motion.button>
 
-            {/* Add Expense Button */}
             <motion.button
+              onClick={handleAddIncome}
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
@@ -75,7 +79,6 @@ const FloatingActionButton = () => {
               <Icons.addIncome className="text-white" size={18} />
             </motion.button>
 
-            {/* Add Transfer Button */}
             <motion.button
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
