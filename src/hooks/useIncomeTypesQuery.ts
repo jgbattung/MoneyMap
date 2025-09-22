@@ -25,7 +25,7 @@ const createIncomeType = async (incomeTypeData: any): Promise<IncomeType> => {
     headers: { 'Content-Type' : 'application/json' },
     body: JSON.stringify(incomeTypeData),
   });
-  if (!response.ok) throw new Error('Failed to created income type');
+  if (!response.ok) throw new Error('Failed to create income type');
   return response.json();
 };
 
