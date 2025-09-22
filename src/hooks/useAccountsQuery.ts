@@ -80,7 +80,7 @@ export const useAccountsQuery = () => {
 
 const fetchAccount = async (id: string): Promise<Account> => {
   const response = await fetch(`/api/accounts/${id}`);
-  if (!response) throw new Error('Failed to fetch account');
+  if (!response.ok) throw new Error('Failed to fetch account');
   return response.json();
 }
 
