@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { NextResponse } from "next/server";
 
 type IncomeType = {
   id: string;
@@ -26,7 +25,7 @@ const createIncomeType = async (incomeTypeData: any): Promise<IncomeType> => {
     headers: { 'Content-Type' : 'application/json' },
     body: JSON.stringify(incomeTypeData),
   });
-  if (!response.ok) throw new Error('Failed to created income type');
+  if (!response.ok) throw new Error('Failed to create income type');
   return response.json();
 };
 

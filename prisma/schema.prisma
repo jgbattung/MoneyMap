@@ -29,6 +29,8 @@ model User {
   expenseTypes      ExpenseType[]
   incomeTypes       IncomeType[]
 
+  incomeTransactions IncomeTransaction[]
+
   @@unique([email])
   @@map("user")
 }
@@ -104,6 +106,8 @@ model FinancialAccount {
   updatedAt       DateTime    @updatedAt @map("updated_at")
   
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  incomeTransactions IncomeTransaction[]
   
   @@map("financial_accounts")
 }
@@ -131,7 +135,28 @@ model IncomeType {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  incomeTransactions IncomeTransaction[]
   
   @@unique([userId, name])
   @@map("income_types")
+}
+
+model IncomeTransaction {
+  id            String          @id @default(cuid())
+  userId        String          @map("user_id")
+  accountId     String          @map("account_id")
+  incomeTypeId  String          @map("income_type_id")
+  name          String          @db.VarChar(100)
+  amount        Decimal         @db.Decimal(15, 2)
+  date          DateTime        @db.Date
+  description   String?         @db.Text
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account     FinancialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  incomeType  IncomeType       @relation(fields: [incomeTypeId], references: [id], onDelete: Cascade)
+  
+  @@map("income_transactions")
 }
