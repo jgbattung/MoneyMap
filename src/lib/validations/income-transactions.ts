@@ -17,11 +17,9 @@ export const IncomeTransactionValidation = z.object({
   incomeTypeId: z.string()
     .min(1, "Income type is required"),
 
-  date: z.string()
-    .min(1, "Date is required")
-    .refine((val) => !isNaN(Date.parse(val)), {
-      message: "Date must be a valid date"
-    }),
+  date: z.date({
+    message: "Date is required"
+  }),
 
   description: z.string()
     .max(500, "Description must be less than 500 characters")
