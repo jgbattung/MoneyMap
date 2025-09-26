@@ -4,7 +4,7 @@ import React from 'react'
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "../ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useIncomeTransactionsQuery } from "@/hooks/useIncomeTransactionsQuery";
@@ -17,6 +17,7 @@ import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { ChevronDownIcon } from "lucide-react";
 import { Textarea } from "../ui/textarea";
+import { format } from "date-fns";
 
 interface CreateIncomeTransactionProps {
   open: boolean;
@@ -28,6 +29,8 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
   const { createIncomeTransaction, isCreating } = useIncomeTransactionsQuery();
   const { accounts } = useAccountsQuery();
   const { incomeTypes } = useIncomeTypesQuery();
+  const [calendarOpen, setCalendarOpen] = React.useState(false);
+  
 
   const form = useForm<z.infer<typeof IncomeTransactionValidation>> ({
     resolver: zodResolver(IncomeTransactionValidation),
@@ -36,7 +39,7 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
       amount: "",
       accountId: "",
       incomeTypeId: "",
-      date: "",
+      date: undefined,
       description: "",
     }
   });
@@ -160,40 +163,45 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
               )}
             />
 
-          <FormField
-            control={form.control}
-            name="date"
-            render={({ field }) => (
-              <FormItem className="p-4">
-                <FormLabel>Date</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-between font-normal hover:text-white"
-                        disabled={isCreating}
-                      >
-                        {field.value ? new Date(field.value).toLocaleDateString() : "Select date"}
-                        <ChevronDownIcon className="h-4 w-4" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value ? new Date(field.value) : undefined}
-                      captionLayout="dropdown"
-                      onSelect={(date) => {
-                        field.onChange(date ? date.toISOString().split('T')[0] : '');
-                      }}
-                      disabled={(date) => date > new Date()} // Prevent future dates
-                    />
-                  </PopoverContent>
-                </Popover>
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="p-4">
+                  <FormLabel>Date</FormLabel>
+                  <Popover open={calendarOpen} onOpenChange={setCalendarOpen} modal>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-between font-normal hover:text-white"
+                          disabled={isCreating}
+                        >
+                          {field.value ? (
+                            format(field.value, "MMMM, d, yyyy")
+                          ) : (
+                            <span className="text-muted-foreground">Select date</span>
+                          )}
+                          <ChevronDownIcon className="h-4 w-4" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        captionLayout="dropdown"
+                        onDayClick={(date) => {
+                          field.onChange(date);
+                          setCalendarOpen(false)
+                        }}
+                        disabled={(date) => date > new Date()}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </FormItem>
+              )}
+            />
 
           <FormField
             control={form.control}
@@ -203,7 +211,6 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
                 <FormLabel>Description</FormLabel>
                 <FormControl>
                   <Textarea
-                    // placeholder="type"
                     className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
                     {...field}
                     disabled={isCreating}
