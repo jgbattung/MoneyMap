@@ -61,6 +61,7 @@ export const useIncomeTransactionsQuery = () => {
     mutationFn: createIncomeTransaction,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.incomeTransactions });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
     },
   });
 
@@ -68,6 +69,7 @@ export const useIncomeTransactionsQuery = () => {
     mutationFn: updateIncomeTransaction,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.incomeTransactions });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
     },
   });
 
