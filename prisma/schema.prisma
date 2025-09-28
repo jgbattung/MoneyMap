@@ -30,6 +30,7 @@ model User {
   incomeTypes       IncomeType[]
 
   incomeTransactions IncomeTransaction[]
+  transferTypes TransferType[]
 
   @@unique([email])
   @@map("user")
@@ -159,4 +160,17 @@ model IncomeTransaction {
   incomeType  IncomeType       @relation(fields: [incomeTypeId], references: [id], onDelete: Cascade)
   
   @@map("income_transactions")
+}
+
+model TransferType {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  name      String    @db.VarChar(50)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, name])
+  @@map("transfer_types")
 }
