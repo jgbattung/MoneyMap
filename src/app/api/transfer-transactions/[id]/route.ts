@@ -171,3 +171,70 @@ export async function PATCH(
     )
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params } : { params: { id: string } }
+) {
+  try {
+    const { id } = await params;
+
+    const session = await auth.api.getSession({
+      headers: await headers()
+    });
+
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const existingTransfer = await db.transferTransaction.findUnique({
+      where: {
+        id: id,
+        userId: session.user.id
+      },
+    });
+
+    if (!existingTransfer) {
+      return NextResponse.json(
+        { error: 'Transfer transaction not found' },
+        { status: 404 }
+      );
+    }
+
+    await db.$transaction(async (tx) => {
+      // Reverse the transfer
+      await tx.financialAccount.update({
+        where: { id: existingTransfer.fromAccountId },
+        data: { currentBalance: { increment: existingTransfer.amount } }
+      });
+
+      await tx.financialAccount.update({
+        where: { id: existingTransfer.toAccountId },
+        data: { currentBalance: { decrement: existingTransfer.amount } }
+      });
+
+      // Delete the transfer transaction
+      await tx.transferTransaction.delete({
+        where: {
+          id: id,
+          userId: session.user.id,
+        },
+      });
+    });
+
+    return NextResponse.json(
+      { message: 'Transfer transaction deleted successfully' },
+      { status: 200 }
+    );
+
+  } catch (error) {
+    console.error('Error deleting transfer transaction: ', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
