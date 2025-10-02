@@ -105,7 +105,7 @@ const Sidebar = () => {
 
       <CreateTransferSheet
         open={createTransferSheetOpen}
-        onOpenChange={setCreateIncomeTransactionSheetOpen}
+        onOpenChange={setCreateTransferSheetOpen}
         className="hidden md:block"
       />
     </>
