@@ -33,7 +33,7 @@ const QUERY_KEYS = {
   transfer: (id: string) => ['transfers', id] as const,
 }
 
-const fethTransfers = async (): Promise<TransferTransaction[]> => {
+const fetchTransfers = async (): Promise<TransferTransaction[]> => {
   const response = await fetch('/api/transfer-transactions');
   if (!response.ok) throw new Error('Failed to fetch transactions');
   return response.json();
@@ -59,6 +59,16 @@ const updateTransfer = async ({ id, ...transferData }: any): Promise<TransferTra
   return response.json();
 }
 
+  const deleteTransfer = async (id: string): Promise<void> => {
+    const response = await fetch(`/api/transfer-transactions/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete transfer transaction');
+    }
+  };
+
 export const useTransfersQuery = () => {
   const queryClient = useQueryClient();
 
@@ -68,7 +78,7 @@ export const useTransfersQuery = () => {
     error,
   } = useQuery({
     queryKey: QUERY_KEYS.transfers,
-    queryFn: fethTransfers,
+    queryFn: fetchTransfers,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -88,14 +98,24 @@ export const useTransfersQuery = () => {
     }
   });
 
+  const deleteTransferMutation = useMutation({
+    mutationFn: deleteTransfer,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.transfers });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    },
+  });
+
   return {
     transfers,
     isLoading: isPending,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
     createTransfer: createTransferMutation.mutateAsync,
     updateTransfer: updateTransferMutation.mutateAsync,
+    deleteTransfer: deleteTransferMutation.mutateAsync,
     isCreating: createTransferMutation.isPending,
     isUpdating: updateTransferMutation.isPending,
+    isDeleting: deleteTransferMutation.isPending,
   };
 }
 
