@@ -20,6 +20,11 @@ export async function GET() {
       where: {
         userId: session.user.id,
       },
+      include: {
+        fromAccount: true,
+        toAccount: true,
+        transferType: true,
+      },
     });
 
     return NextResponse.json(transferTransactions, { status: 200 });
