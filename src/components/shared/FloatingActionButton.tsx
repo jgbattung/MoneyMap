@@ -2,14 +2,20 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Icons } from '../icons'
 import { motion, AnimatePresence } from 'framer-motion'
 import CreateIncomeTransactionDrawer from '../forms/CreateIncomeTransactionDrawer';
+import CreateTransferDrawer from '../forms/CreateTransferDrawer';
 
 const FloatingActionButton = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [createIncomeTransactionDrawerOpen, setCreateIncomeTransactionDrawerOpen] = useState(false);
+  const [createTransferDrawerOpen, setCreateTransferDrawerOpen] = useState(false);
 
   const handleAddIncome = () => {
     setCreateIncomeTransactionDrawerOpen(true);
   };
+
+  const handleAddTransfer = () => {
+    setCreateTransferDrawerOpen(true);
+  }
 
   const toggleActionButtons = () => {
     setIsOpen(prev => !prev);
@@ -82,6 +88,7 @@ const FloatingActionButton = () => {
               </motion.button>
 
               <motion.button
+                onClick={handleAddTransfer}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
@@ -107,6 +114,12 @@ const FloatingActionButton = () => {
       <CreateIncomeTransactionDrawer
         open={createIncomeTransactionDrawerOpen}
         onOpenChange={setCreateIncomeTransactionDrawerOpen}
+        className="block md:hidden"
+      />
+
+      <CreateTransferDrawer
+        open={createTransferDrawerOpen}
+        onOpenChange={setCreateTransferDrawerOpen}
         className="block md:hidden"
       />
     </>

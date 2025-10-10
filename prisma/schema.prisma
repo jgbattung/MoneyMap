@@ -30,6 +30,9 @@ model User {
   incomeTypes       IncomeType[]
 
   incomeTransactions IncomeTransaction[]
+  transferTypes TransferType[]
+  transferTransactions TransferTransaction[]
+
 
   @@unique([email])
   @@map("user")
@@ -106,6 +109,8 @@ model FinancialAccount {
   updatedAt       DateTime    @updatedAt @map("updated_at")
   
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transfersFrom TransferTransaction[] @relation("TransferFrom")
+  transfersTo   TransferTransaction[] @relation("TransferTo")
 
   incomeTransactions IncomeTransaction[]
   
@@ -159,4 +164,40 @@ model IncomeTransaction {
   incomeType  IncomeType       @relation(fields: [incomeTypeId], references: [id], onDelete: Cascade)
   
   @@map("income_transactions")
+}
+
+model TransferType {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  name      String    @db.VarChar(50)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  transferTransactions TransferTransaction[]
+  
+  @@unique([userId, name])
+  @@map("transfer_types")
+}
+
+model TransferTransaction {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  name            String   @db.VarChar(100)
+  amount          Float
+  fromAccountId   String   @map("from_account_id")
+  toAccountId     String   @map("to_account_id")
+  transferTypeId  String   @map("transfer_type_id")
+  date            DateTime
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fromAccount  FinancialAccount      @relation("TransferFrom", fields: [fromAccountId], references: [id], onDelete: Cascade)
+  toAccount    FinancialAccount      @relation("TransferTo", fields: [toAccountId], references: [id], onDelete: Cascade)
+  transferType TransferType @relation(fields: [transferTypeId], references: [id])
+
+  @@map("transfer_transactions")
 }

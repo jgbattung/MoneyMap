@@ -6,14 +6,20 @@ import { navRoutes } from '@/app/constants/navigation'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import CreateIncomeTransactionSheet from '../forms/CreateIncomeTransactionSheet'
+import CreateTransferSheet from '../forms/CreateTransferSheet'
 
 const Sidebar = () => {
   const pathname = usePathname();
   const [createIncomeTransactionSheetOpen, setCreateIncomeTransactionSheetOpen] = useState(false);
+  const [createTransferSheetOpen, setCreateTransferSheetOpen] = useState(false);
 
   const handleAddIncome = () => {
     setCreateIncomeTransactionSheetOpen(true);
   };
+
+  const handleAddTransfer = () => {
+    setCreateTransferSheetOpen(true);
+  }
 
   return (
     <>
@@ -42,7 +48,8 @@ const Sidebar = () => {
               </button>
 
               <button
-                onClick={handleAddIncome}              className='flex items-center w-36 px-4 py-2 gap-2 text-sm font-semibold border border-white/40 rounded-md hover:bg-white/10 transition-colors'
+                onClick={handleAddIncome}
+                className='flex items-center w-36 px-4 py-2 gap-2 text-sm font-semibold border border-white/40 rounded-md hover:bg-white/10 transition-colors'
               >
                 <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
                   <Icons.addIncome
@@ -54,7 +61,7 @@ const Sidebar = () => {
               </button>
 
               <button
-                // onClick={handleIncomeTransactionClick}
+                onClick={handleAddTransfer}
                 className='flex items-center w-36 px-4 py-2 gap-2 text-sm font-semibold border border-white/40 rounded-md hover:bg-white/10 transition-colors'
               >
                 <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
@@ -93,6 +100,12 @@ const Sidebar = () => {
       <CreateIncomeTransactionSheet
         open={createIncomeTransactionSheetOpen}
         onOpenChange={setCreateIncomeTransactionSheetOpen}
+        className="hidden md:block"
+      />
+
+      <CreateTransferSheet
+        open={createTransferSheetOpen}
+        onOpenChange={setCreateTransferSheetOpen}
         className="hidden md:block"
       />
     </>
