@@ -23,7 +23,9 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 
 const TransferTable = () => {
-  const { transfers, isLoading, isUpdating, isDeleting } = useTransfersQuery();
+  const { transfers, isLoading, isUpdating, isDeleting, updateTransfer , deleteTransfer } = useTransfersQuery();
+  const { accounts } = useAccountsQuery();
+  const { transferTypes } = useTransferTypesQuery();
 
   const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50] as const;
 
@@ -32,52 +34,141 @@ const TransferTable = () => {
       accessorKey: "date",
       header: "Date",
       cell: ({ row }) => {
-        return new Date(row.original.date).toLocaleDateString()
+        const rowId = row.id;
+        const cellId = "date";
+        const currentValue = isCellEditing(rowId, cellId) 
+          ? new Date(editValues[rowId]?.[cellId] || row.original.date)
+          : new Date(row.original.date);
+
+        return (
+          <EditableDateCell
+            value={currentValue}
+            isEditing={isCellEditing(rowId, cellId)}
+            onStartEdit={() => startEditingCell(rowId, cellId, row.original.date)}
+            onChange={(value) => updateEditValue(rowId, cellId, value.toISOString())}
+          />
+        );
       }
     },
     {
       accessorKey: "name",
       header: "Name",
+      cell: ({ row }) => {
+        const rowId = row.id;
+        const cellId = "name";
+        const currentValue = isCellEditing(rowId, cellId)
+          ? editValues[rowId]?.[cellId] || row.original.name
+          : row.original.name;
+
+        return (
+          <EditableTextCell
+            value={currentValue}
+            isEditing={isCellEditing(rowId, cellId)}
+            onStartEdit={() => startEditingCell(rowId, cellId, row.original.name)}
+            onChange={(value) => updateEditValue(rowId, cellId, value)}
+          />
+        );
+      }
     },
     {
       accessorKey: "amount",
       header: "Amount",
       cell: ({ row }) => {
-        return `${row.original.amount.toFixed(2)}`
+        const rowId = row.id;
+        const cellId = "amount";
+        const currentValue = isCellEditing(rowId, cellId)
+          ? editValues[rowId]?.[cellId] || row.original.amount
+          : row.original.amount;
+
+        return (
+          <EditableNumberCell
+            value={currentValue}
+            isEditing={isCellEditing(rowId, cellId)}
+            onStartEdit={() => startEditingCell(rowId, cellId, row.original.amount)}
+            onChange={(value) => updateEditValue(rowId, cellId, value)}
+          />
+        );
       }
     },
     {
       accessorKey: "fromAccount",
-      header: "From",
+      header: "From Account",
       cell: ({ row }) => {
         return row.original.fromAccount?.name || "N/A";
       }
     },
     {
       accessorKey: "toAccount",
-      header: "To",
+      header: "To Account",
       cell: ({ row }) => {
-        return row.original.toAccount?.name || "N/A";
+        const rowId = row.id;
+        const cellId = "toAccountId";
+        const currentValue = isCellEditing(rowId, cellId)
+          ? editValues[rowId]?.[cellId] || row.original.toAccountId
+          : row.original.toAccountId;
+        
+        const fromAccountId = editValues[rowId]?.["fromAccountId"] || row.original.fromAccountId;
+        const filteredAccounts = accounts?.filter(acc => acc.id !== fromAccountId) || [];
+
+        return (
+          <EditableSelectCell
+            value={currentValue}
+            displayValue={row.original.toAccount?.name || '-'}
+            options={filteredAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
+            isEditing={isCellEditing(rowId, cellId)}
+            onStartEdit={() => startEditingCell(rowId, cellId, row.original.toAccountId)}
+            onChange={(value) => updateEditValue(rowId, cellId, value)}
+            placeholder="Select account"
+          />
+        );
       }
     },
     {
       accessorKey: "transferType",
       header: "Transfer Type",
       cell: ({ row }) => {
-        return row.original.transferType?.name || "N/A"
+        const rowId = row.id;
+        const cellId = "transferTypeId";
+        const currentValue = isCellEditing(rowId, cellId)
+          ? editValues[rowId]?.[cellId] || row.original.transferTypeId
+          : row.original.transferTypeId;
+
+        return (
+          <EditableSelectCell
+            value={currentValue}
+            displayValue={row.original.transferType?.name || '-'}
+            options={transferTypes?.map(type => ({ value: type.id, label: type.name })) || []}
+            isEditing={isCellEditing(rowId, cellId)}
+            onStartEdit={() => startEditingCell(rowId, cellId, row.original.transferTypeId)}
+            onChange={(value) => updateEditValue(rowId, cellId, value)}
+            placeholder="Select type"
+          />
+        );
       }
     },
     {
       accessorKey: "notes",
       header: "Notes",
       cell: ({ row }) => {
-        const notes = row.original.notes || "";
-        return notes.length > 15 ? `${notes.substring(0, 15)}...` : notes;
+        const rowId = row.id;
+        const cellId = "notes";
+        const currentValue = isCellEditing(rowId, cellId)
+          ? editValues[rowId]?.[cellId] || row.original.notes
+          : row.original.notes;
+
+        return (
+          <EditableNotesCell
+            value={currentValue}
+            isEditing={isCellEditing(rowId, cellId)}
+            onStartEdit={() => startEditingCell(rowId, cellId, row.original.notes || '')}
+            onChange={(value) => updateEditValue(rowId, cellId, value)}
+          />
+        );
       }
     },
     {
-      accessorKey: "actions",
-      header: "Action",
+      id: "actions",
+      header: "Actions",
       cell: ({ row }) => {
         return <div>Actions</div>
       }
