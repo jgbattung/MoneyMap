@@ -94,7 +94,26 @@ const TransferTable = () => {
       accessorKey: "fromAccount",
       header: "From Account",
       cell: ({ row }) => {
-        return row.original.fromAccount?.name || "N/A";
+        const rowId = row.id;
+        const cellId = "fromAccountId";
+        const currentValue = isCellEditing(rowId, cellId)
+          ? editValues[rowId]?.[cellId] || row.original.fromAccountId
+          : row.original.fromAccountId;
+        
+        const toAccountId = editValues[rowId]?.["toAccountId"] || row.original.toAccountId;
+        const filteredAccounts = accounts?.filter(acc => acc.id !== toAccountId) || [];
+
+        return (
+          <EditableSelectCell
+            value={currentValue}
+            displayValue={row.original.fromAccount?.name || '-'}
+            options={filteredAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
+            isEditing={isCellEditing(rowId, cellId)}
+            onStartEdit={() => startEditingCell(rowId, cellId, row.original.fromAccountId)}
+            onChange={(value) => updateEditValue(rowId, cellId, value)}
+            placeholder="Select account"
+          />
+        );
       }
     },
     {
