@@ -54,7 +54,7 @@ const EditableDateCell = ({
   return (
     <div 
       onClick={onStartEdit}
-      className="cursor-pointer hover:bg-accent/50 rounded px-2 py-1 -mx-2 -my-1"
+      className="cursor-pointer hover:bg-secondary/50 transition-all rounded px-2 py-1 -mx-2 -my-1"
     >
       {format(value, "MMM d, yyyy")}
     </div>

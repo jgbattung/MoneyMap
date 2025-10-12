@@ -30,7 +30,7 @@ const EditableNumberCell = ({
         step="0.01"
         min="0"
         autoFocus
-        className="h-8"
+        className="h-8 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
       />
     )
   }
@@ -38,7 +38,7 @@ const EditableNumberCell = ({
   return (
     <div 
       onClick={onStartEdit}
-      className="cursor-pointer hover:bg-accent/50 rounded px-2 py-1 -mx-2 -my-1"
+      className="cursor-pointer hover:bg-secondary/50 rounded px-2 py-1 -mx-2 -my-1"
     >
       {value.toFixed(decimals)}
     </div>
