@@ -31,6 +31,7 @@ import EditableSelectCell from '../cells/EditableSelectCell';
 import EditableTextCell from '../cells/EditableTextCell';
 import { Button } from '@/components/ui/button';
 import { IconCheck, IconTrash, IconX } from '@tabler/icons-react';
+import { Spinner } from '@/components/ui/spinner';
 
 
 const TransferTable = () => {
@@ -218,7 +219,11 @@ const TransferTable = () => {
                 onClick={() => handleSave(rowId, row.original)}
                 disabled={isUpdating}
               >
-                <IconCheck />
+                {isUpdating ? (
+                  <Spinner />
+                ) : (
+                  <IconCheck />
+                )}
               </Button>
               <Button
                 size="sm"
@@ -232,7 +237,7 @@ const TransferTable = () => {
                 size="sm"
                 className='bg-error-800 hover:bg-error-900 transition-colors'
                 onClick={() => handleDelete(row.original.id)}
-                disabled={isDeleting}
+                disabled={isDeleting || isUpdating}
               >
                 <IconTrash />
               </Button>
