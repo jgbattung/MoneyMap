@@ -2,7 +2,7 @@
 
 import { Table } from '@/components/ui/table';
 import { useTransfersQuery } from '@/hooks/useTransferTransactionsQuery'
-import React from 'react'
+import React, { useState } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -20,6 +20,15 @@ import {
 import { flexRender } from '@tanstack/react-table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTransferTypesQuery } from '@/hooks/useTransferTypesQuery';
+import { useAccountsQuery } from '@/hooks/useAccountsQuery';
+import EditableDateCell from '../cells/EditableDateCell';
+import EditableNotesCell from '../cells/EditableNotesCell';
+import EditableNumberCell from '../cells/EditableNumberCell';
+import EditableSelectCell from '../cells/EditableSelectCell';
+import EditableTextCell from '../cells/EditableTextCell';
+import { Button } from '@/components/ui/button';
+import { IconCheck, IconTrash, IconX } from '@tabler/icons-react';
 
 
 const TransferTable = () => {
@@ -189,10 +198,54 @@ const TransferTable = () => {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => {
-        return <div>Actions</div>
+        const rowId = row.id;
+        const isEditing = isRowEditing(rowId);
+
+        if (isEditing) {
+          return (
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                className='bg-primary-600 hover:bg-primary-700 transition-colors'
+                onClick={() => handleSave(rowId, row.original)}
+                disabled={isUpdating}
+              >
+                <IconCheck />
+              </Button>
+              <Button
+                size="sm"
+                className='border border-secondary-400/50 rounded-md bg-transparent hover:bg-secondary-500 hover:text-white transition-colors'
+                onClick={() => cancelEditing(rowId)}
+                disabled={isUpdating}
+              >
+                <IconX />
+              </Button>
+              <Button
+                size="sm"
+                className='bg-error-800 hover:bg-error-900 transition-colors'
+                onClick={() => handleDelete(row.original.id)}
+                disabled={isDeleting}
+              >
+                <IconTrash />
+              </Button>
+            </div>
+          );
+        }
+
+        // View Mode: Show only Delete
+        return (
+          <Button
+            size="sm"
+            className='bg-error-800 hover:bg-error-900 transition-colors'
+            onClick={() => handleDelete(row.original.id)}
+            disabled={isDeleting}
+          >
+            <IconTrash />
+          </Button>
+        );
       }
-    },
-  ];
+    }
+  ]
 
   const table = useReactTable({
     data: transfers || [],
@@ -206,6 +259,99 @@ const TransferTable = () => {
     },
   })
 
+  type EditState = {
+    [rowId: string]: {
+      [columnId: string]: any;
+    };
+  };
+
+  const [editingCells, setEditingCells] = useState<Set<string>>(new Set());
+  const [editValues, setEditValues] = useState<EditState>({});
+
+  const getCellKey = (rowId: string, columnId: string) => `${rowId}-${columnId}`;
+
+  const isCellEditing = (rowId: string, columnId: string) => {
+    return editingCells.has(getCellKey(rowId, columnId));
+  }
+
+  const isRowEditing = (rowId: string) => {
+    return Array.from(editingCells).some(key => key.startsWith(`${rowId}-`));
+  }
+
+  const startEditingCell = (rowId: string, columnId: string, initialValue: any) => {
+    const cellKey = getCellKey(rowId, columnId);
+    setEditingCells(prev => new Set(prev).add(cellKey));
+    setEditValues(prev => ({
+      ...prev,
+      [rowId]: {
+        ...prev[rowId],
+        [columnId]: initialValue,
+      },
+    }));
+  }
+
+  const updateEditValue = (rowId: string, columnId: string, value: any) => {
+    setEditValues(prev => ({
+      ...prev,
+      [rowId]: {
+        ...prev[rowId],
+        [columnId]: value,
+      },
+    }));
+  }
+
+  const cancelEditing = (rowId: string) => {
+    setEditingCells(prev => {
+      const newSet = new Set(prev);
+      Array.from(newSet).forEach(key => {
+        if (key.startsWith(`${rowId}-`)) {
+          newSet.delete(key);
+        }
+      });
+      return newSet;
+    })
+  }
+  
+  const handleSave = async (rowId: string, originalData: TransferTransaction) => {
+    const editedValues = editValues[rowId];
+    
+    if (!editedValues) {
+      cancelEditing(rowId);
+      return;
+    }
+
+    const updatePayload = {
+      id: originalData.id,
+      name: originalData.name,
+      amount: originalData.amount,
+      fromAccountId: originalData.fromAccountId,
+      toAccountId: originalData.toAccountId,
+      transferTypeId: originalData.transferTypeId,
+      date: originalData.date,
+      notes: originalData.notes,
+      ...editedValues,
+    };
+
+    console.log('Update Payload:', updatePayload);
+
+    try {
+      await updateTransfer(updatePayload);
+      cancelEditing(rowId);
+    } catch (error) {
+      console.error('Failed to update transfer:', error);
+      // TODO: Show error toast (we'll add this in Step 5)
+    }
+  };
+
+  const handleDelete = async (transferId: string) => {
+    // TODO: Add confirmation dialog (we'll add this in Step 5)
+    try {
+      await deleteTransfer(transferId);
+    } catch (error) {
+      console.error('Failed to delete transfer:', error);
+      // TODO: Show error toast (we'll add this in Step 5)
+    }
+  };
   
   const currentPage = table.getState().pagination.pageIndex;
   const totalPages = table.getPageCount();
@@ -259,7 +405,10 @@ const TransferTable = () => {
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow 
+                  key={row.id}
+                  className={isRowEditing(row.id) ? 'bg-secondary/50' : ''}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className='px-4'>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
