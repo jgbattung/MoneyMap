@@ -8,6 +8,8 @@ import {
   getCoreRowModel,
   getPaginationRowModel,
   ColumnDef,
+  getSortedRowModel,
+  SortingState,
 } from '@tanstack/react-table'
 import { TransferTransaction } from '@/hooks/useTransferTransactionsQuery'
 import { 
@@ -35,6 +37,12 @@ const TransferTable = () => {
   const { transfers, isLoading, isUpdating, isDeleting, updateTransfer , deleteTransfer } = useTransfersQuery();
   const { accounts } = useAccountsQuery();
   const { transferTypes } = useTransferTypesQuery();
+  const [sorting, setSorting] = React.useState<SortingState>([
+    {
+      id: 'date',
+      desc: true,
+    },
+  ]);
 
   const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50] as const;
 
@@ -252,6 +260,11 @@ const TransferTable = () => {
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    onSortingChange: setSorting,
+    state: {
+      sorting,
+    },                                        
     initialState: {
       pagination: {
         pageSize: 10,
