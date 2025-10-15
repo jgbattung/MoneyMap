@@ -22,7 +22,6 @@ const EditableNotesCell = ({
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Add notes..."
-        autoFocus
         className="min-h-[60px] resize-none"
         rows={2}
       />

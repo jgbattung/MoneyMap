@@ -248,7 +248,6 @@ const TransferTable = () => {
           );
         }
 
-        // View Mode: Show only Delete
         return (
           <Button
             size="sm"
@@ -353,19 +352,15 @@ const TransferTable = () => {
       ...editedValues,
     };
 
-    console.log('Update Payload:', updatePayload);
-
     try {
       await updateTransfer(updatePayload);
       cancelEditing(rowId);
     } catch (error) {
       console.error('Failed to update transfer:', error);
-      // TODO: Show error toast (we'll add this in Step 5)
     }
   };
 
   const handleDelete = async (transferId: string) => {
-    // Open dialog and store which transfer to delete
     setTransferToDelete(transferId);
     setDeleteDialogOpen(true);
   };
@@ -379,7 +374,6 @@ const TransferTable = () => {
       setTransferToDelete(null);
     } catch (error) {
       console.error('Failed to delete transfer:', error);
-      // Dialog stays open on error so user can try again
     }
   };
 
@@ -388,10 +382,7 @@ const TransferTable = () => {
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
-
     pages.push(1);
-
-    // Calculate range around current page
     const currentPageDisplay = currentPage + 1;
     const rangeStart = Math.max(2, currentPageDisplay - 2);
     const rangeEnd = Math.min(totalPages - 1, currentPageDisplay + 2)
@@ -433,7 +424,15 @@ const TransferTable = () => {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-36">
+                  <div className="flex items-center justify-center">
+                    <Spinner className="size-6" />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow 
                   key={row.id}
@@ -448,8 +447,11 @@ const TransferTable = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
+                <TableCell colSpan={columns.length} className="h-32 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <p className="text-muted-foreground">No transfer transactions found.</p>
+                    <p className="text-sm text-muted-foreground">Create your first transfer to get started.</p>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
@@ -457,26 +459,20 @@ const TransferTable = () => {
         </Table>
         {/* Pagination */}
         <div className="flex items-center justify-between space-x-2 py-4 px-4 border border-border border-t-2">
-          {/* Showing */}
           <div>
             <p className='text-sm text-muted-foreground'>{`Showing ${table.getRowModel().rows.length} out of ${transfers.length}`}</p>
           </div>
-          {/* Pages */}
           <div className='flex items-center gap-1'>
             <button
               className='text-muted-foreground hover:text-white transition-colors disabled:hover:text-muted-foreground'
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
-              <ChevronLeft
-                size={22}
-                strokeWidth={1}
-              />
+              <ChevronLeft size={22} strokeWidth={1} />
             </button>
             <div className='flex items-center gap-1'>
               {pageNumbers.map((pageNum, index) => {
                 const isCurrentPage = typeof pageNum === 'number' && pageNum === currentPage + 1;
-
                 return (
                   <button
                     key={index}
@@ -504,13 +500,9 @@ const TransferTable = () => {
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >
-              <ChevronRight
-                size={22}
-                strokeWidth={1}
-              />
+              <ChevronRight size={22} strokeWidth={1} />
             </button>
           </div>
-          {/* Rows */}
           <div className='flex items-center justify-center gap-2'>
             <p className='text-sm text-muted-foreground'>Rows per page</p>
             <Select
@@ -532,15 +524,16 @@ const TransferTable = () => {
             </Select>
           </div>
         </div>
-        <DeleteDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          onConfirm={confirmDelete}
-          title="Delete Transfer Transaction?"
-          description="This will permanently delete this transfer and reverse the balance changes. This action cannot be undone."
-          isDeleting={isDeleting}
-        />
-      </div>  
+      </div>
+      
+      <DeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        title="Delete Transfer Transaction?"
+        description="This will permanently delete this transfer and reverse the balance changes. This action cannot be undone."
+        isDeleting={isDeleting}
+      />
     </div>
   )
 }
