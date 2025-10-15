@@ -33,6 +33,12 @@ import { Button } from '@/components/ui/button';
 import { IconCheck, IconTrash, IconX } from '@tabler/icons-react';
 import { Spinner } from '@/components/ui/spinner';
 import DeleteDialog from '@/components/shared/DeleteDialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 
 const TransferTable = () => {
@@ -49,235 +55,6 @@ const TransferTable = () => {
   const [transferToDelete, setTransferToDelete] = React.useState<string | null>(null);
 
   const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50] as const;
-
-  const columns: ColumnDef<TransferTransaction>[] = [
-    {
-      accessorKey: "date",
-      header: "Date",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const cellId = "date";
-        const currentValue = isCellEditing(rowId, cellId) 
-          ? new Date(editValues[rowId]?.[cellId] || row.original.date)
-          : new Date(row.original.date);
-
-        return (
-          <EditableDateCell
-            value={currentValue}
-            isEditing={isCellEditing(rowId, cellId)}
-            onStartEdit={() => startEditingCell(rowId, cellId, row.original.date)}
-            onChange={(value) => updateEditValue(rowId, cellId, value.toISOString())}
-          />
-        );
-      }
-    },
-    {
-      accessorKey: "name",
-      header: "Name",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const cellId = "name";
-        const currentValue = isCellEditing(rowId, cellId)
-          ? editValues[rowId]?.[cellId] || row.original.name
-          : row.original.name;
-
-        return (
-          <EditableTextCell
-            value={currentValue}
-            isEditing={isCellEditing(rowId, cellId)}
-            onStartEdit={() => startEditingCell(rowId, cellId, row.original.name)}
-            onChange={(value) => updateEditValue(rowId, cellId, value)}
-          />
-        );
-      }
-    },
-    {
-      accessorKey: "amount",
-      header: "Amount",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const cellId = "amount";
-        const currentValue = isCellEditing(rowId, cellId)
-          ? editValues[rowId]?.[cellId] || row.original.amount
-          : row.original.amount;
-
-        return (
-          <EditableNumberCell
-            value={currentValue}
-            isEditing={isCellEditing(rowId, cellId)}
-            onStartEdit={() => startEditingCell(rowId, cellId, row.original.amount)}
-            onChange={(value) => updateEditValue(rowId, cellId, value)}
-          />
-        );
-      }
-    },
-    {
-      accessorKey: "fromAccount",
-      header: "From Account",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const cellId = "fromAccountId";
-        const currentValue = isCellEditing(rowId, cellId)
-          ? editValues[rowId]?.[cellId] || row.original.fromAccountId
-          : row.original.fromAccountId;
-        
-        const toAccountId = editValues[rowId]?.["toAccountId"] || row.original.toAccountId;
-        const filteredAccounts = accounts?.filter(acc => acc.id !== toAccountId) || [];
-
-        return (
-          <EditableSelectCell
-            value={currentValue}
-            displayValue={row.original.fromAccount?.name || '-'}
-            options={filteredAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
-            isEditing={isCellEditing(rowId, cellId)}
-            onStartEdit={() => startEditingCell(rowId, cellId, row.original.fromAccountId)}
-            onChange={(value) => updateEditValue(rowId, cellId, value)}
-            placeholder="Select account"
-          />
-        );
-      }
-    },
-    {
-      accessorKey: "toAccount",
-      header: "To Account",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const cellId = "toAccountId";
-        const currentValue = isCellEditing(rowId, cellId)
-          ? editValues[rowId]?.[cellId] || row.original.toAccountId
-          : row.original.toAccountId;
-        
-        const fromAccountId = editValues[rowId]?.["fromAccountId"] || row.original.fromAccountId;
-        const filteredAccounts = accounts?.filter(acc => acc.id !== fromAccountId) || [];
-
-        return (
-          <EditableSelectCell
-            value={currentValue}
-            displayValue={row.original.toAccount?.name || '-'}
-            options={filteredAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
-            isEditing={isCellEditing(rowId, cellId)}
-            onStartEdit={() => startEditingCell(rowId, cellId, row.original.toAccountId)}
-            onChange={(value) => updateEditValue(rowId, cellId, value)}
-            placeholder="Select account"
-          />
-        );
-      }
-    },
-    {
-      accessorKey: "transferType",
-      header: "Transfer Type",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const cellId = "transferTypeId";
-        const currentValue = isCellEditing(rowId, cellId)
-          ? editValues[rowId]?.[cellId] || row.original.transferTypeId
-          : row.original.transferTypeId;
-
-        return (
-          <EditableSelectCell
-            value={currentValue}
-            displayValue={row.original.transferType?.name || '-'}
-            options={transferTypes?.map(type => ({ value: type.id, label: type.name })) || []}
-            isEditing={isCellEditing(rowId, cellId)}
-            onStartEdit={() => startEditingCell(rowId, cellId, row.original.transferTypeId)}
-            onChange={(value) => updateEditValue(rowId, cellId, value)}
-            placeholder="Select type"
-          />
-        );
-      }
-    },
-    {
-      accessorKey: "notes",
-      header: "Notes",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const cellId = "notes";
-        const currentValue = isCellEditing(rowId, cellId)
-          ? editValues[rowId]?.[cellId] || row.original.notes
-          : row.original.notes;
-
-        return (
-          <EditableNotesCell
-            value={currentValue}
-            isEditing={isCellEditing(rowId, cellId)}
-            onStartEdit={() => startEditingCell(rowId, cellId, row.original.notes || '')}
-            onChange={(value) => updateEditValue(rowId, cellId, value)}
-          />
-        );
-      }
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const isEditing = isRowEditing(rowId);
-
-        if (isEditing) {
-          return (
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                className='bg-primary-600 hover:bg-primary-700 transition-colors'
-                onClick={() => handleSave(rowId, row.original)}
-                disabled={isUpdating}
-              >
-                {isUpdating ? (
-                  <Spinner />
-                ) : (
-                  <IconCheck />
-                )}
-              </Button>
-              <Button
-                size="sm"
-                className='border border-secondary-400/50 rounded-md bg-transparent hover:bg-secondary-500 hover:text-white transition-colors'
-                onClick={() => cancelEditing(rowId)}
-                disabled={isUpdating}
-              >
-                <IconX />
-              </Button>
-              <Button
-                size="sm"
-                className='bg-error-800 hover:bg-error-900 transition-colors'
-                onClick={() => handleDelete(row.original.id)}
-                disabled={isDeleting || isUpdating}
-              >
-                <IconTrash />
-              </Button>
-            </div>
-          );
-        }
-
-        return (
-          <Button
-            size="sm"
-            className='bg-error-700 hover:bg-error-800 transition-colors'
-            onClick={() => handleDelete(row.original.id)}
-            disabled={isDeleting}
-          >
-            <IconTrash />
-          </Button>
-        );
-      }
-    }
-  ]
-
-  const table = useReactTable({
-    data: transfers || [],
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
-    state: {
-      sorting,
-    },                                        
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
-    },
-  })
 
   type EditState = {
     [rowId: string]: {
@@ -331,6 +108,32 @@ const TransferTable = () => {
       return newSet;
     })
   }
+
+  // Validation function
+  const validateRow = (rowId: string, originalData: TransferTransaction) => {
+    const editedValues = editValues[rowId] || {};
+    
+    // Get current values (edited or original)
+    const currentName = editedValues.name ?? originalData.name;
+    const currentAmount = editedValues.amount ?? originalData.amount;
+    const currentFromAccountId = editedValues.fromAccountId ?? originalData.fromAccountId;
+    const currentToAccountId = editedValues.toAccountId ?? originalData.toAccountId;
+    const currentTransferTypeId = editedValues.transferTypeId ?? originalData.transferTypeId;
+    const currentDate = editedValues.date ?? originalData.date;
+
+    const errors: string[] = [];
+
+    // Validation rules
+    if (!currentName || currentName.trim() === '') errors.push('Name');
+    if (!currentAmount || currentAmount <= 0) errors.push('Amount');
+    if (!currentFromAccountId) errors.push('From Account');
+    if (!currentToAccountId) errors.push('To Account');
+    if (!currentTransferTypeId) errors.push('Transfer Type');
+    if (!currentDate) errors.push('Date');
+    if (currentFromAccountId === currentToAccountId) errors.push('From and To accounts must be different');
+
+    return errors;
+  };
   
   const handleSave = async (rowId: string, originalData: TransferTransaction) => {
     const editedValues = editValues[rowId];
@@ -376,6 +179,286 @@ const TransferTable = () => {
       console.error('Failed to delete transfer:', error);
     }
   };
+
+  const columns: ColumnDef<TransferTransaction>[] = [
+    {
+      accessorKey: "date",
+      header: "Date",
+      cell: ({ row }) => {
+        const rowId = row.id;
+        const cellId = "date";
+        const currentValue = isCellEditing(rowId, cellId) 
+          ? new Date(editValues[rowId]?.[cellId] || row.original.date)
+          : new Date(row.original.date);
+
+        // Validation
+        const errors = validateRow(rowId, row.original);
+        const hasError = errors.includes('Date');
+
+        return (
+          <EditableDateCell
+            value={currentValue}
+            isEditing={isCellEditing(rowId, cellId)}
+            onStartEdit={() => startEditingCell(rowId, cellId, row.original.date)}
+            onChange={(value) => updateEditValue(rowId, cellId, value.toISOString())}
+            isError={hasError}
+          />
+        );
+      }
+    },
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => {
+        const rowId = row.id;
+        const cellId = "name";
+        const currentValue = isCellEditing(rowId, cellId)
+          ? editValues[rowId]?.[cellId] || row.original.name
+          : row.original.name;
+
+        // Validation
+        const errors = validateRow(rowId, row.original);
+        const hasError = errors.includes('Name');
+
+        return (
+          <EditableTextCell
+            value={currentValue}
+            isEditing={isCellEditing(rowId, cellId)}
+            onStartEdit={() => startEditingCell(rowId, cellId, row.original.name)}
+            onChange={(value) => updateEditValue(rowId, cellId, value)}
+            isError={hasError}
+          />
+        );
+      }
+    },
+    {
+      accessorKey: "amount",
+      header: "Amount",
+      cell: ({ row }) => {
+        const rowId = row.id;
+        const cellId = "amount";
+        const currentValue = isCellEditing(rowId, cellId)
+          ? editValues[rowId]?.[cellId] || row.original.amount
+          : row.original.amount;
+
+        // Validation
+        const errors = validateRow(rowId, row.original);
+        const hasError = errors.includes('Amount');
+
+        return (
+          <EditableNumberCell
+            value={currentValue}
+            isEditing={isCellEditing(rowId, cellId)}
+            onStartEdit={() => startEditingCell(rowId, cellId, row.original.amount)}
+            onChange={(value) => updateEditValue(rowId, cellId, value)}
+            isError={hasError}
+          />
+        );
+      }
+    },
+    {
+      accessorKey: "fromAccount",
+      header: "From Account",
+      cell: ({ row }) => {
+        const rowId = row.id;
+        const cellId = "fromAccountId";
+        const currentValue = isCellEditing(rowId, cellId)
+          ? editValues[rowId]?.[cellId] || row.original.fromAccountId
+          : row.original.fromAccountId;
+        
+        const toAccountId = editValues[rowId]?.["toAccountId"] || row.original.toAccountId;
+        const filteredAccounts = accounts?.filter(acc => acc.id !== toAccountId) || [];
+
+        // Validation
+        const errors = validateRow(rowId, row.original);
+        const hasError = errors.includes('From Account') || errors.includes('From and To accounts must be different');
+
+        return (
+          <EditableSelectCell
+            value={currentValue}
+            displayValue={row.original.fromAccount?.name || '-'}
+            options={filteredAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
+            isEditing={isCellEditing(rowId, cellId)}
+            onStartEdit={() => startEditingCell(rowId, cellId, row.original.fromAccountId)}
+            onChange={(value) => updateEditValue(rowId, cellId, value)}
+            placeholder="Select account"
+            isError={hasError}
+          />
+        );
+      }
+    },
+    {
+      accessorKey: "toAccount",
+      header: "To Account",
+      cell: ({ row }) => {
+        const rowId = row.id;
+        const cellId = "toAccountId";
+        const currentValue = isCellEditing(rowId, cellId)
+          ? editValues[rowId]?.[cellId] || row.original.toAccountId
+          : row.original.toAccountId;
+        
+        const fromAccountId = editValues[rowId]?.["fromAccountId"] || row.original.fromAccountId;
+        const filteredAccounts = accounts?.filter(acc => acc.id !== fromAccountId) || [];
+
+        // Validation
+        const errors = validateRow(rowId, row.original);
+        const hasError = errors.includes('To Account') || errors.includes('From and To accounts must be different');
+
+        return (
+          <EditableSelectCell
+            value={currentValue}
+            displayValue={row.original.toAccount?.name || '-'}
+            options={filteredAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
+            isEditing={isCellEditing(rowId, cellId)}
+            onStartEdit={() => startEditingCell(rowId, cellId, row.original.toAccountId)}
+            onChange={(value) => updateEditValue(rowId, cellId, value)}
+            placeholder="Select account"
+            isError={hasError}
+          />
+        );
+      }
+    },
+    {
+      accessorKey: "transferType",
+      header: "Transfer Type",
+      cell: ({ row }) => {
+        const rowId = row.id;
+        const cellId = "transferTypeId";
+        const currentValue = isCellEditing(rowId, cellId)
+          ? editValues[rowId]?.[cellId] || row.original.transferTypeId
+          : row.original.transferTypeId;
+
+        // Validation
+        const errors = validateRow(rowId, row.original);
+        const hasError = errors.includes('Transfer Type');
+
+        return (
+          <EditableSelectCell
+            value={currentValue}
+            displayValue={row.original.transferType?.name || '-'}
+            options={transferTypes?.map(type => ({ value: type.id, label: type.name })) || []}
+            isEditing={isCellEditing(rowId, cellId)}
+            onStartEdit={() => startEditingCell(rowId, cellId, row.original.transferTypeId)}
+            onChange={(value) => updateEditValue(rowId, cellId, value)}
+            placeholder="Select type"
+            isError={hasError}
+          />
+        );
+      }
+    },
+    {
+      accessorKey: "notes",
+      header: "Notes",
+      cell: ({ row }) => {
+        const rowId = row.id;
+        const cellId = "notes";
+        const currentValue = isCellEditing(rowId, cellId)
+          ? editValues[rowId]?.[cellId] || row.original.notes
+          : row.original.notes;
+
+        return (
+          <EditableNotesCell
+            value={currentValue}
+            isEditing={isCellEditing(rowId, cellId)}
+            onStartEdit={() => startEditingCell(rowId, cellId, row.original.notes || '')}
+            onChange={(value) => updateEditValue(rowId, cellId, value)}
+          />
+        );
+      }
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const rowId = row.id;
+        const isEditing = isRowEditing(rowId);
+
+        if (isEditing) {
+          const errors = validateRow(rowId, row.original);
+          const hasErrors = errors.length > 0;
+
+          return (
+            <div className="flex items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        size="sm"
+                        className='bg-primary-600 hover:bg-primary-700 transition-colors'
+                        onClick={() => handleSave(rowId, row.original)}
+                        disabled={isUpdating || hasErrors}
+                      >
+                        {isUpdating ? (
+                          <Spinner />
+                        ) : (
+                          <IconCheck />
+                        )}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {hasErrors && (
+                    <TooltipContent>
+                      <p className="text-sm">
+                        {errors.length > 1 
+                          ? `Please fix the following fields: ${errors.join(', ')}` 
+                          : `Please fix the following field: ${errors[0]}`
+                        }
+                      </p>                    
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+              <Button
+                size="sm"
+                className='border border-secondary-400/50 rounded-md bg-transparent hover:bg-secondary-500 hover:text-white transition-colors'
+                onClick={() => cancelEditing(rowId)}
+                disabled={isUpdating}
+              >
+                <IconX />
+              </Button>
+              <Button
+                size="sm"
+                className='bg-error-800 hover:bg-error-900 transition-colors'
+                onClick={() => handleDelete(row.original.id)}
+                disabled={isDeleting || isUpdating}
+              >
+                <IconTrash />
+              </Button>
+            </div>
+          );
+        }
+
+        return (
+          <Button
+            size="sm"
+            className='bg-error-700 hover:bg-error-800 transition-colors'
+            onClick={() => handleDelete(row.original.id)}
+            disabled={isDeleting}
+          >
+            <IconTrash />
+          </Button>
+        );
+      }
+    }
+  ]
+
+  const table = useReactTable({
+    data: transfers || [],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    onSortingChange: setSorting,
+    state: {
+      sorting,
+    },                                        
+    initialState: {
+      pagination: {
+        pageSize: 10,
+      },
+    },
+  })
 
   const currentPage = table.getState().pagination.pageIndex;
   const totalPages = table.getPageCount();

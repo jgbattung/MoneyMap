@@ -7,6 +7,7 @@ type EditableNumberCellProps = {
   onStartEdit: () => void;
   onChange: (value: number) => void;
   decimals?: number;
+  isError?: boolean;
 }
 
 const EditableNumberCell = ({
@@ -15,6 +16,7 @@ const EditableNumberCell = ({
   onStartEdit,
   onChange,
   decimals = 2,
+  isError = false,
 }: EditableNumberCellProps ) => {
   if (isEditing) {
     return (
@@ -30,7 +32,7 @@ const EditableNumberCell = ({
         step="0.01"
         min="0"
         autoFocus
-        className="h-8 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+        className={`h-8 ${isError ? 'border-red-600 focus-visible:ring-red-600' : ''}`} 
       />
     )
   }

@@ -7,6 +7,7 @@ type EditableTextCellProps = {
   isEditing: boolean;
   onStartEdit: () => void;
   onChange: (value: string) => void;
+  isError?: boolean;
 }
 
 const EditableTextCell = ({
@@ -14,6 +15,7 @@ const EditableTextCell = ({
   isEditing,
   onStartEdit,
   onChange,
+  isError = false,
 }: EditableTextCellProps) => {
   if (isEditing) {
     return (
@@ -21,7 +23,7 @@ const EditableTextCell = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoFocus
-        className="h-8"
+        className={`h-8 ${isError ? 'border-red-600 focus-visible:ring-red-600' : ''}`}
       />
     )
   }

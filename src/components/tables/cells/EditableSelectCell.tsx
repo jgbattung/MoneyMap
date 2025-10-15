@@ -14,6 +14,7 @@ type EditableSelectCellProps = {
   onStartEdit: () => void;
   onChange: (value: string) => void;
   placeholder?: string;
+  isError?: boolean;
 }
 
 const EditableSelectCell = ({
@@ -23,12 +24,13 @@ const EditableSelectCell = ({
   isEditing, 
   onStartEdit, 
   onChange,
+  isError = false,
   placeholder = "Select..."
 }: EditableSelectCellProps) => {
   if (isEditing) {
     return (
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="h-8">
+        <SelectTrigger className={`h-8 ${isError ? 'border-red-600' : ''}`}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>

@@ -10,13 +10,15 @@ type EditableDateCellProps = {
   isEditing: boolean;
   onStartEdit: () => void;
   onChange: (value: Date) => void;
+  isError?: boolean;
 }
 
 const EditableDateCell = ({
   value, 
   isEditing, 
   onStartEdit, 
-  onChange 
+  onChange,
+  isError = false,
 }: EditableDateCellProps) => {
   const [calendarOpen, setCalendarOpen] = React.useState(false);
 
@@ -26,7 +28,7 @@ const EditableDateCell = ({
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className="h-8 w-full justify-start text-left font-normal"
+            className={`h-8 w-full justify-start text-left font-normal ${isError ? 'border-red-600' : ''}`}
             onClick={() => setCalendarOpen(true)}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />

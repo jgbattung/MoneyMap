@@ -7,6 +7,7 @@ type EditableNotesCellProps = {
   onStartEdit: () => void;
   onChange: (value: string) => void;
   maxLength?: number;
+  isError?: boolean;
 }
 
 const EditableNotesCell = ({
@@ -15,6 +16,7 @@ const EditableNotesCell = ({
   onStartEdit, 
   onChange,
   maxLength = 50,
+  isError = false,
 }: EditableNotesCellProps) => {
   if (isEditing) {
     return (
@@ -22,7 +24,7 @@ const EditableNotesCell = ({
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Add notes..."
-        className="min-h-[60px] resize-none"
+        className={`min-h-[60px] resize-none ${isError ? 'border-red-600 focus-visible:ring-red-600' : ''}`}
         rows={2}
       />
     )
