@@ -32,6 +32,7 @@ import EditableTextCell from '../cells/EditableTextCell';
 import { Button } from '@/components/ui/button';
 import { IconCheck, IconTrash, IconX } from '@tabler/icons-react';
 import { Spinner } from '@/components/ui/spinner';
+import DeleteDialog from '@/components/shared/DeleteDialog';
 
 
 const TransferTable = () => {
@@ -44,6 +45,8 @@ const TransferTable = () => {
       desc: true,
     },
   ]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [transferToDelete, setTransferToDelete] = React.useState<string | null>(null);
 
   const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50] as const;
 
@@ -249,7 +252,7 @@ const TransferTable = () => {
         return (
           <Button
             size="sm"
-            className='bg-error-800 hover:bg-error-900 transition-colors'
+            className='bg-error-700 hover:bg-error-800 transition-colors'
             onClick={() => handleDelete(row.original.id)}
             disabled={isDeleting}
           >
@@ -362,15 +365,24 @@ const TransferTable = () => {
   };
 
   const handleDelete = async (transferId: string) => {
-    // TODO: Add confirmation dialog (we'll add this in Step 5)
+    // Open dialog and store which transfer to delete
+    setTransferToDelete(transferId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!transferToDelete) return;
+    
     try {
-      await deleteTransfer(transferId);
+      await deleteTransfer(transferToDelete);
+      setDeleteDialogOpen(false);
+      setTransferToDelete(null);
     } catch (error) {
       console.error('Failed to delete transfer:', error);
-      // TODO: Show error toast (we'll add this in Step 5)
+      // Dialog stays open on error so user can try again
     }
   };
-  
+
   const currentPage = table.getState().pagination.pageIndex;
   const totalPages = table.getPageCount();
 
@@ -520,6 +532,14 @@ const TransferTable = () => {
             </Select>
           </div>
         </div>
+        <DeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={confirmDelete}
+          title="Delete Transfer Transaction?"
+          description="This will permanently delete this transfer and reverse the balance changes. This action cannot be undone."
+          isDeleting={isDeleting}
+        />
       </div>  
     </div>
   )
