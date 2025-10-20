@@ -1,5 +1,6 @@
 "use client"
 
+import EditTransferDrawer from '@/components/forms/EditTransferDrawer';
 import TransferCard from '@/components/shared/TransferCard';
 import TransferTypesList from '@/components/shared/TransferTypesList';
 import TransferTable from '@/components/tables/transfers/TransferTable';
@@ -7,8 +8,15 @@ import { useTransfersQuery } from '@/hooks/useTransferTransactionsQuery';
 import { useState } from 'react';
 
 const Transactions = () => {
-  const [selectedTransferId, setSelectedTransferId] = useState<string | null>(null);
   const { transfers } = useTransfersQuery();
+  const [selectedTransferId, setSelectedTransferId] = useState<string>('');
+  const [editTransferDrawerOpen, setEditTransferDrawerOpen] = useState(false)
+  
+  const handleTransferCardClick = (transferId: string) => {
+    setSelectedTransferId(transferId);
+    setEditTransferDrawerOpen(true);
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
       <h1 className="text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold">Transfers</h1>
@@ -47,7 +55,7 @@ const Transactions = () => {
               fromAccount={transfer.fromAccount}
               toAccount={transfer.toAccount}
               transferType={transfer.transferType}
-              onClick={() => setSelectedTransferId(transfer.id)}
+              onClick={() => handleTransferCardClick(transfer.id)}
             />
           ))}
         </div>
@@ -56,6 +64,13 @@ const Transactions = () => {
           <TransferTable />
         </div>
       </div>
+
+      <EditTransferDrawer
+        open={editTransferDrawerOpen}
+        onOpenChange={setEditTransferDrawerOpen}
+        className='block md:hidden'
+        transferId={selectedTransferId}
+      />
     </div>
   )
 }
