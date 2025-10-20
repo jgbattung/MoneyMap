@@ -1,14 +1,18 @@
 "use client"
 
-import TransferTypesList from '@/components/shared/TransferTypesList'
-import TransferTable from '@/components/tables/transfers/TransferTable'
-import React from 'react'
+import TransferCard from '@/components/shared/TransferCard';
+import TransferTypesList from '@/components/shared/TransferTypesList';
+import TransferTable from '@/components/tables/transfers/TransferTable';
+import { useTransfersQuery } from '@/hooks/useTransferTransactionsQuery';
+import { useState } from 'react';
 
 const Transactions = () => {
+  const [selectedTransferId, setSelectedTransferId] = useState<string | null>(null);
+  const { transfers } = useTransfersQuery();
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
       <h1 className="text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold">Transfers</h1>
-      {/* Transfer Types Section */}
+      
       <div className="my-3 md:my-6 lg:my-12">
         <div className="mb-6">
           <h2 className="text-lg font-semibold md:text-xl lg:text-2xl">
@@ -31,11 +35,26 @@ const Transactions = () => {
             View and manage your transfer history.
           </p>
         </div>
-        {/* <div className="border border-dashed border-border rounded-lg p-8 text-center text-muted-foreground">
-          Transfer transactions coming in Phase 2
-        </div> */}
 
-        <TransferTable />
+        <div className="md:hidden space-y-4">
+          {transfers?.map((transfer) => (
+            <TransferCard
+              key={transfer.id}
+              id={transfer.id}
+              name={transfer.name}
+              amount={transfer.amount}
+              date={transfer.date}
+              fromAccount={transfer.fromAccount}
+              toAccount={transfer.toAccount}
+              transferType={transfer.transferType}
+              onClick={() => setSelectedTransferId(transfer.id)}
+            />
+          ))}
+        </div>
+
+        <div className="hidden md:block">
+          <TransferTable />
+        </div>
       </div>
     </div>
   )
