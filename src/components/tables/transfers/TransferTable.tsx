@@ -39,6 +39,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { toast } from 'sonner';
 
 
 const TransferTable = () => {
@@ -158,6 +159,9 @@ const TransferTable = () => {
     try {
       await updateTransfer(updatePayload);
       cancelEditing(rowId);
+      toast.success("Transfer updated successfully", {
+        duration: 5000
+      });
     } catch (error) {
       console.error('Failed to update transfer:', error);
     }
@@ -175,6 +179,9 @@ const TransferTable = () => {
       await deleteTransfer(transferToDelete);
       setDeleteDialogOpen(false);
       setTransferToDelete(null);
+      toast.success("Transfer deleted successfully", {
+        duration: 5000
+      });
     } catch (error) {
       console.error('Failed to delete transfer:', error);
     }
