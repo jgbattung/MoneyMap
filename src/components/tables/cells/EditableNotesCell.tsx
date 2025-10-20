@@ -1,0 +1,49 @@
+import { Textarea } from '@/components/ui/textarea';
+import React from 'react'
+
+type EditableNotesCellProps = {
+  value: string | null;
+  isEditing: boolean;
+  onStartEdit: () => void;
+  onChange: (value: string) => void;
+  maxLength?: number;
+  isError?: boolean;
+}
+
+const EditableNotesCell = ({
+  value, 
+  isEditing, 
+  onStartEdit, 
+  onChange,
+  maxLength = 50,
+  isError = false,
+}: EditableNotesCellProps) => {
+  if (isEditing) {
+    return (
+      <Textarea
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Add notes..."
+        className={`min-h-[60px] resize-none ${isError ? 'border-red-600 focus-visible:ring-red-600' : ''}`}
+        rows={2}
+      />
+    )
+  }
+
+  const displayValue = value || '-';
+  const truncated = displayValue.length > maxLength 
+    ? `${displayValue.substring(0, maxLength)}...` 
+    : displayValue;
+
+  return (
+    <div 
+      onClick={onStartEdit}
+      className="cursor-pointer hover:bg-secondary/50 rounded px-2 py-1 -mx-2 -my-1"
+      title={value || undefined}
+    >
+      {truncated}
+    </div>
+  )
+}
+
+export default EditableNotesCell

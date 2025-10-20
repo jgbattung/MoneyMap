@@ -1,6 +1,7 @@
 "use client"
 
 import TransferTypesList from '@/components/shared/TransferTypesList'
+import TransferTable from '@/components/tables/transfers/TransferTable'
 import React from 'react'
 
 const Transactions = () => {
@@ -30,9 +31,11 @@ const Transactions = () => {
             View and manage your transfer history.
           </p>
         </div>
-        <div className="border border-dashed border-border rounded-lg p-8 text-center text-muted-foreground">
+        {/* <div className="border border-dashed border-border rounded-lg p-8 text-center text-muted-foreground">
           Transfer transactions coming in Phase 2
-        </div>
+        </div> */}
+
+        <TransferTable />
       </div>
     </div>
   )
