@@ -32,7 +32,7 @@ model User {
   incomeTransactions IncomeTransaction[]
   transferTypes TransferType[]
   transferTransactions TransferTransaction[]
-
+  expenseTransactions ExpenseTransaction[]
 
   @@unique([email])
   @@map("user")
@@ -113,6 +113,7 @@ model FinancialAccount {
   transfersTo   TransferTransaction[] @relation("TransferTo")
 
   incomeTransactions IncomeTransaction[]
+  expenseTransactions ExpenseTransaction[]
   
   @@map("financial_accounts")
 }
@@ -126,9 +127,37 @@ model ExpenseType {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expenseTransactions ExpenseTransaction[]
   
   @@unique([userId, name])
   @@map("expense_types")
+}
+
+model ExpenseTransaction {
+  id                    String          @id @default(cuid())
+  userId                String          @map("user_id")
+  accountId             String          @map("account_id")
+  expenseTypeId         String          @map("expense_type_id")
+  name                  String
+  amount                Decimal         @db.Decimal(15, 2)
+  date                  DateTime
+  description           String?
+  
+  isInstallment         Boolean         @default(false) @map("is_installment")
+  installmentDuration   Int?            @map("installment_duration")
+  remainingInstallments Int?            @map("remaining_installments")
+  installmentStartDate  DateTime?       @map("installment_start_date")
+  monthlyAmount         Decimal?        @map("monthly_amount") @db.Decimal(15, 2)
+  
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
+  
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account               FinancialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  expenseType           ExpenseType     @relation(fields: [expenseTypeId], references: [id], onDelete: Restrict)
+  
+  @@map("expense_transactions")
 }
 
 model IncomeType {
