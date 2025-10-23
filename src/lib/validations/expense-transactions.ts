@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const expenseTransactionSchema = z.object({
+export const ExpenseTransactionValidation = z.object({
   accountId: z.string().min(1, "Account is required"),
   expenseTypeId: z.string().min(1, "Expense type is required"),
   name: z.string().min(1, "Name is required").max(100, "Name is too long"),
@@ -14,7 +14,7 @@ export const expenseTransactionSchema = z.object({
   }),
   description: z.string().optional(),
   
-  isInstallment: z.boolean().default(false),
+  isInstallment: z.boolean(),
   installmentDuration: z.number()
     .int()
     .positive("Duration must be positive")
@@ -23,7 +23,7 @@ export const expenseTransactionSchema = z.object({
   installmentStartDate: z.date().optional().nullable(),
 });
 
-export const createExpenseTransactionSchema = expenseTransactionSchema.refine(
+export const createExpenseTransactionSchema = ExpenseTransactionValidation.refine(
   (data) => {
     if (data.isInstallment) {
       return data.installmentDuration && data.installmentDuration > 0 && data.installmentStartDate;
@@ -36,7 +36,7 @@ export const createExpenseTransactionSchema = expenseTransactionSchema.refine(
   }
 );
 
-export const updateExpenseTransactionSchema = expenseTransactionSchema.partial().extend({
+export const updateExpenseTransactionSchema = ExpenseTransactionValidation.partial().extend({
   id: z.string().min(1, "ID is required"),
 });
 
