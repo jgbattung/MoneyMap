@@ -24,9 +24,11 @@ const Expenses = () => {
           <span>Add expense</span>
         </button>
 
-        {/* <CreateExpenseTransactionSheet
-
-        /> */}
+        <CreateExpenseTransactionSheet
+          open={createExpenseSheetOpen}
+          onOpenChange={setCreateExpenseSheetOpen}
+          className='hidden md:block'
+        />
       </div>
 
       {isLoading ? (
