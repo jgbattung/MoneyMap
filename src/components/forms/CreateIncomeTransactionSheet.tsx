@@ -48,7 +48,7 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
     try {
       const newIncomeTransaction = await createIncomeTransaction(values);
 
-      toast.success("Income type created successfully", {
+      toast.success("Income transaction created successfully", {
         description: `${newIncomeTransaction.name} has been added to your income transactions.`,
         duration: 5000,
       });
