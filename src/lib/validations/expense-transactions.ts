@@ -9,9 +9,7 @@ export const ExpenseTransactionValidation = z.object({
     .refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
       message: "Amount must be a positive number",
     }),
-  date: z.date({
-    message: "Date is required",
-  }),
+  date: z.date().optional(),
   description: z.string().optional(),
   
   isInstallment: z.boolean(),
@@ -27,6 +25,10 @@ export const createExpenseTransactionSchema = ExpenseTransactionValidation.refin
   (data) => {
     if (data.isInstallment) {
       return data.installmentDuration && data.installmentDuration > 0 && data.installmentStartDate;
+    }
+
+    if (!data.isInstallment) {
+      return data.date !== undefined;
     }
     return true;
   },

@@ -235,7 +235,6 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                               field.onChange(date);
                               setInstallmentCalendarOpen(false)
                             }}
-                            disabled={(date) => date > new Date()}
                           />
                         </PopoverContent>
                       </Popover>
@@ -269,45 +268,47 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="p-4">
-                    <FormLabel>Date</FormLabel>
-                    <Popover open={calendarOpen} onOpenChange={setCalendarOpen} modal>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-between font-normal hover:text-white"
-                            disabled={isCreating}
-                          >
-                            {field.value ? (
-                              format(field.value, "MMMM, d, yyyy")
-                            ) : (
-                              <span className="text-muted-foreground">Select date</span>
-                            )}
-                            <ChevronDownIcon className="h-4 w-4" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          captionLayout="dropdown"
-                          onDayClick={(date) => {
-                            field.onChange(date);
-                            setCalendarOpen(false)
-                          }}
-                          disabled={(date) => date > new Date()}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </FormItem>
-                )}
-              />
+              {!isInstallment && (
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem className="p-4">
+                      <FormLabel>Date</FormLabel>
+                      <Popover open={calendarOpen} onOpenChange={setCalendarOpen} modal>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-between font-normal hover:text-white"
+                              disabled={isCreating}
+                            >
+                              {field.value ? (
+                                format(field.value, "MMMM, d, yyyy")
+                              ) : (
+                                <span className="text-muted-foreground">Select date</span>
+                              )}
+                              <ChevronDownIcon className="h-4 w-4" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            captionLayout="dropdown"
+                            onDayClick={(date) => {
+                              field.onChange(date);
+                              setCalendarOpen(false)
+                            }}
+                            disabled={(date) => date > new Date()}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}

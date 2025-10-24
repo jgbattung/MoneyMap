@@ -90,7 +90,9 @@ export async function POST(request: NextRequest) {
           amount: parsedAmount,
           accountId,
           expenseTypeId,
-          date: new Date(date),
+          date: isInstallment
+            ? new Date(installmentStartDate)
+            : new Date,
           description: description || null,
           isInstallment: isInstallment || false,
           installmentDuration: installmentDuration ? parseInt(installmentDuration) : null,
