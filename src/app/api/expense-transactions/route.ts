@@ -59,13 +59,13 @@ export async function POST(request: NextRequest) {
       installmentStartDate
     } = body;
 
-    if (!name || !!amount || !accountId || !expenseTypeId || !date) {
+    if (!name || !amount || !accountId || !expenseTypeId || !date) {
       return NextResponse.json(
         { error: 'Missing required fileds: name, amount, accountId, expenseTypeId, date' }
       )
     }
 
-    if (installmentStartDate && (!installmentDuration || !installmentStartDate)) {
+    if (isInstallment && (!installmentDuration || !installmentStartDate)) {
       return NextResponse.json(
         { error: 'Installment duration and start date are required for installment expenses' },
         { status: 400 }
@@ -95,7 +95,8 @@ export async function POST(request: NextRequest) {
           date: new Date(date),
           description: description || null,
           isInstallment: isInstallment || false,
-          installmentDuration: installmentDuration ? parseInt(installmentDuration) : remainingInstallments,
+          installmentDuration: installmentDuration ? parseInt(installmentDuration) : null,
+          remainingInstallments: remainingInstallments,
           installmentStartDate: installmentStartDate ? new Date(installmentStartDate) : null,
           monthlyAmount,
         },
