@@ -83,8 +83,6 @@ export async function POST(request: NextRequest) {
         remainingInstallments = parseInt(installmentDuration);
       }
 
-      const amountToDeduct = isInstallment && monthlyAmount ? monthlyAmount : parsedAmount;
-
       const expenseTransaction = await tx.expenseTransaction.create({
         data: {
           userId: session.user.id,
@@ -102,17 +100,19 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      await tx.financialAccount.update({
-        where: {
-          id: accountId,
-          userId: session.user.id,
-        },
-        data: {
-          currentBalance: {
-            decrement: amountToDeduct,
+      if (!isInstallment) {
+        await tx.financialAccount.update({
+          where: {
+            id: accountId,
+            userId: session.user.id,
           },
-        },
-      });
+          data: {
+            currentBalance: {
+              decrement: parsedAmount,
+            },
+          },
+        });
+      }
 
       return expenseTransaction;
     })
