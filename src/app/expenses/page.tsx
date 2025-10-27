@@ -1,5 +1,6 @@
 "use client"
 
+import CreateExpenseTransactionDrawer from "@/components/forms/CreateExpenseTransactionDrawer";
 import CreateExpenseTransactionSheet from "@/components/forms/CreateExpenseTransactionSheet";
 import { Icons } from "@/components/icons";
 import SkeletonIncomeTypeCard from "@/components/shared/SkeletonIncomeTypeCard";
@@ -10,6 +11,7 @@ import { useState } from "react";
 const Expenses = () => {
   const { expenseTransactions, isLoading, error } = useExpenseTransactionsQuery();
   const [createExpenseSheetOpen, setCreateExpenseSheetOpen] = useState(false);
+  const [createExpenseDrawerOpen, setCreateExpenseDrawerOpen] = useState(false);
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
@@ -24,10 +26,24 @@ const Expenses = () => {
           <span>Add expense</span>
         </button>
 
+        <button
+          onClick={() => setCreateExpenseDrawerOpen(true)}
+          className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"
+        >
+          <Icons.createAccount size={16} />
+          <span>Add expense</span>
+        </button>
+
         <CreateExpenseTransactionSheet
           open={createExpenseSheetOpen}
           onOpenChange={setCreateExpenseSheetOpen}
           className='hidden md:block'
+        />
+
+        <CreateExpenseTransactionDrawer
+          open={createExpenseDrawerOpen}
+          onOpenChange={setCreateExpenseDrawerOpen}
+          className="block md:hidden"
         />
       </div>
 
@@ -71,13 +87,12 @@ const Expenses = () => {
             Add your first expense
           </Button>
           
-          {/* Mobile button
           <Button
-            onClick={() => setCreateIncomeTypeDrawerOpen(true)}
+            onClick={() => setCreateExpenseDrawerOpen(true)}
             className="flex md:hidden mt-10"
           >
             Add your first income category
-          </Button> */}
+          </Button>
         </div>
       ) : (
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>

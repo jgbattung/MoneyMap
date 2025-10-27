@@ -1,27 +1,29 @@
 "use client"
-import { z } from "zod"
+
 import React from 'react'
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
-import { useExpenseTransactionsQuery } from "@/hooks/useExpenseTransactionsQuery";
-import { useForm } from "react-hook-form";
-import { createExpenseTransactionSchema } from "@/lib/validations/expense-transactions";
-import { Input } from "../ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { useExpenseTypesQuery } from "@/hooks/useExpenseTypesQuery";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Button } from "../ui/button";
-import { format } from "date-fns";
-import { Calendar } from "../ui/calendar";
+import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
+import { z } from "zod"
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { Input } from '../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { toast } from 'sonner';
+import { Button } from '../ui/button';
+import { useAccountsQuery } from '@/hooks/useAccountsQuery';
+import { useCardsQuery } from '@/hooks/useCardsQuery';
+import { useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery';
+import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery';
+import { createExpenseTransactionSchema } from '@/lib/validations/expense-transactions';
+import { ScrollArea } from '../ui/scroll-area';
+import { Textarea } from '../ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { format } from 'date-fns';
+import { Calendar } from '../ui/calendar';
 import { ChevronDownIcon } from "lucide-react";
-import { useAccountsQuery } from "@/hooks/useAccountsQuery";
-import { Switch } from "../ui/switch";
-import { Label } from "../ui/label";
-import { useCardsQuery } from "@/hooks/useCardsQuery";
-import { Textarea } from "../ui/textarea";
-import { ScrollArea } from "../ui/scroll-area";
+import { Switch } from '../ui/switch';
+import { Label } from '../ui/label';
+
 
 interface CreateExpenseTransactionProps {
   open: boolean;
@@ -29,14 +31,13 @@ interface CreateExpenseTransactionProps {
   className: string;
 }
 
-const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: CreateExpenseTransactionProps) => {
+const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: CreateExpenseTransactionProps) => {
   const { createExpenseTransaction, isCreating } = useExpenseTransactionsQuery();
   const { accounts } = useAccountsQuery();
   const { cards } = useCardsQuery();
   const { budgets } = useExpenseTypesQuery();
   const [calendarOpen, setCalendarOpen] = React.useState(false);
   const [installmentCalendarOpen, setInstallmentCalendarOpen] = React.useState(false);
-
 
   const allAccounts = [...accounts, ...cards];
 
@@ -79,24 +80,20 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        onEscapeKeyDown={(e) => isCreating && e.preventDefault()}
-        className={`${className} w-[600px] sm:max-w-[600px] py-3 px-2`}
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent
+        onEscapeKeyDown={(e) => isCreating && e.preventDefault()} className={`${className}`}
       >
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="flex flex-col h-full max-h-[calc(100vh-2rem)]"
-          >
-            <SheetHeader className="flex-shrink-0">
-              <SheetTitle className="text-xl">
+          <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85vh]'>
+            <DrawerHeader className='flex-shrink-0'>
+              <DrawerTitle className='text-xl'>
                 Add Expense Transaction
-              </SheetTitle>
-              <SheetDescription>
+              </DrawerTitle>
+              <DrawerDescription>
                 Add a new expense transaction.
-              </SheetDescription>
-            </SheetHeader>
+              </DrawerDescription>
+            </DrawerHeader>
 
             <ScrollArea className="flex-1 min-h-0 scrollbar-hide">
               <FormField
@@ -326,16 +323,17 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                   </FormItem>
                 )}
               />
-              
+
             </ScrollArea>
-            <SheetFooter>
+
+            <DrawerFooter className='flex-shrink-0'>
               <Button
                 type="submit"
                 disabled={isCreating}
               >
                 {isCreating ? "Adding expense" : "Add expense"}
               </Button>
-              <SheetClose asChild>
+              <DrawerClose asChild>
                 <Button
                   variant="outline"
                   className='hover:text-white'
@@ -343,13 +341,14 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                 >
                   Cancel
                 </Button>
-              </SheetClose>
-            </SheetFooter>
+              </DrawerClose>
+            </DrawerFooter>
+
           </form>
         </Form>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   )
 }
 
-export default CreateExpenseTransactionSheet
+export default CreateExpenseTransactionDrawer;
