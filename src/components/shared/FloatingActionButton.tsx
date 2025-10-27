@@ -3,11 +3,13 @@ import { Icons } from '../icons'
 import { motion, AnimatePresence } from 'framer-motion'
 import CreateIncomeTransactionDrawer from '../forms/CreateIncomeTransactionDrawer';
 import CreateTransferDrawer from '../forms/CreateTransferDrawer';
+import CreateExpenseTransactionDrawer from '../forms/CreateExpenseTransactionDrawer';
 
 const FloatingActionButton = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [createIncomeTransactionDrawerOpen, setCreateIncomeTransactionDrawerOpen] = useState(false);
   const [createTransferDrawerOpen, setCreateTransferDrawerOpen] = useState(false);
+  const [createExpenseDrawerOpen, setCreateExpenseDrawerOpen] = useState(false)
 
   const handleAddIncome = () => {
     setCreateIncomeTransactionDrawerOpen(true);
@@ -15,6 +17,10 @@ const FloatingActionButton = () => {
 
   const handleAddTransfer = () => {
     setCreateTransferDrawerOpen(true);
+  }
+
+  const handleAddExpense = () => {
+    setCreateExpenseDrawerOpen(true);
   }
 
   const toggleActionButtons = () => {
@@ -67,6 +73,7 @@ const FloatingActionButton = () => {
           {isOpen && (
             <>
               <motion.button
+                onClick={handleAddExpense}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
@@ -121,6 +128,12 @@ const FloatingActionButton = () => {
         open={createTransferDrawerOpen}
         onOpenChange={setCreateTransferDrawerOpen}
         className="block md:hidden"
+      />
+
+      <CreateExpenseTransactionDrawer
+        open={createExpenseDrawerOpen}
+        onOpenChange={setCreateExpenseDrawerOpen}
+        className='block md:hidden'
       />
     </>
   )
