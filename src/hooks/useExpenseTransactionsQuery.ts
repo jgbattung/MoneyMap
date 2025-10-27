@@ -66,7 +66,8 @@ export const useExpenseTransactionsQuery = () => {
     mutationFn: createExpenseTransaction,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenseTransactions });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['cards'] });
     },
   });
 
