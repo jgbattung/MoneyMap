@@ -16,6 +16,14 @@ type ExpenseTransaction = {
   monthlyAmount?: string | null;
   createdAt: string;
   updatedAt: string;
+  account: {
+    id: string;
+    name: string;
+  };
+  expenseType: {
+    id: string;
+    name: string;
+  };
 }
 
 const QUERY_KEYS = {
