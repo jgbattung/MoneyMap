@@ -3,6 +3,7 @@
 import CreateExpenseTransactionDrawer from "@/components/forms/CreateExpenseTransactionDrawer";
 import CreateExpenseTransactionSheet from "@/components/forms/CreateExpenseTransactionSheet";
 import { Icons } from "@/components/icons";
+import ExpenseCard from "@/components/shared/ExpenseCard";
 import SkeletonIncomeTypeCard from "@/components/shared/SkeletonIncomeTypeCard";
 import { Button } from "@/components/ui/button";
 import { useExpenseTransactionsQuery } from "@/hooks/useExpenseTransactionsQuery";
@@ -96,14 +97,29 @@ const Expenses = () => {
         </div>
       ) : (
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
-          {/* {expenseTransactions.map((expense) => (
-            // <IncomeTypeCard
-            //   key={income.id}
-            //   name={income.name}
-            //   monthlyTarget={income.monthlyTarget}
-            //   onClick={() => handleIncomeTypeClick(income.id)}
-            // />
-          ))} */}
+          {expenseTransactions.map((expense) => (
+            <ExpenseCard
+              key={expense.id}
+              id={expense.id}
+              name={expense.name}
+              amount={expense.amount}
+              date={expense.date}
+              description={expense.description}
+              account={{
+                id: expense.account.id,
+                name: expense.account.name,
+              }}
+              expenseType={{
+                id: expense.expenseType.id,
+                name: expense.expenseType.name
+              }}
+              isInstallment={expense.isInstallment}
+              installmentDuration={expense.installmentDuration}
+              remainingInstallments={expense.remainingInstallments}
+              installmentStartDate={expense.installmentStartDate}
+              monthlyAmount={expense.monthlyAmount}
+            />
+          ))}
         </div>
       )}
     </div>
