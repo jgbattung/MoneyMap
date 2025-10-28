@@ -104,7 +104,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
       ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85vh]'>
-            <DrawerHeader className='className="flex-shrink-0"'>
+            <DrawerHeader className='flex-shrink-0'>
               <DrawerTitle className='text-xl'>
                 Edit credit card
               </DrawerTitle>
@@ -229,7 +229,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
               />
             </ScrollArea>
 
-            <DrawerFooter className='className="flex-shrink-0"'>
+            <DrawerFooter className='flex-shrink-0'>
               <Button
                 type="submit"
                 disabled={isUpdating}
