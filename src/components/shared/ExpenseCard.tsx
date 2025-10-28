@@ -4,7 +4,8 @@ import React, { useState } from 'react'
 import { format } from 'date-fns'
 import { Icons } from '../icons'
 import { Badge } from '../ui/badge'
-import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
+import { ChevronDownIcon } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface ExpenseCardProps {
   id: string;
@@ -74,22 +75,21 @@ const ExpenseCard = ({
       className='flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md hover:bg-card/70 hover:scale-105 transition-all duration-200 cursor-pointer'
       onClick={onClick}
     >
-        <div className='flex items-center gap-2'>
-          <div className='p-2 bg-primary/10 rounded-lg'>
-            <Icons.addExpense size={20} className='text-primary' />
-          </div>
-          <p className='text-foreground font-bold md:text-lg lg:text-xl'>{name}</p>
+      <div className='flex items-center gap-2'>
+        <div className='p-2 bg-primary/10 rounded-lg'>
+          <Icons.addExpense size={20} className='text-primary' />
         </div>
+        <p className='text-foreground font-bold md:text-lg lg:text-xl'>{name}</p>
+      </div>
 
-        {isInstallment && (
-          <Badge variant="secondary" className="text-xs">
-            Installment
-          </Badge>
-        )}
-        <p className='text-muted-foreground text-xs font-bold'>{expenseType.name}</p>
+      {isInstallment && (
+        <Badge variant="secondary" className="text-xs">
+          Installment
+        </Badge>
+      )}
+      <p className='text-muted-foreground text-xs font-bold'>{expenseType.name}</p>
 
       <div className='flex items-end justify-between'>
-        {/* Left side: Expand button (only for installments) */}
         {isInstallment && (
           <div className='flex items-center justify-center'>
             <button
@@ -97,16 +97,16 @@ const ExpenseCard = ({
               className='flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors'
             >
               <span>Installment details</span>
-              {isExpanded ? (
-                <ChevronUpIcon size={14} />
-              ) : (
+              <motion.div
+                animate={{ rotate: isExpanded ? 180 : 0 }}
+                transition={{ duration: 0.3 }}
+              >
                 <ChevronDownIcon size={14} />
-              )}
+              </motion.div>
             </button>
           </div>
         )}
 
-        {/* Right side: Amount and account */}
         <div className='flex flex-col items-end ml-auto'>
           <div className='flex items-end justify-center gap-2'>
             <span className='text-muted-foreground font-light text-xs md:text-md'>PHP</span>
@@ -118,28 +118,38 @@ const ExpenseCard = ({
         </div>
       </div>
 
-      {isInstallment && isExpanded && (
-        <div className='mt-2 p-3 bg-neutral-800 rounded-md space-y-2 text-xs'>
-          <div className='flex justify-between'>
-            <span className='text-muted-foreground'>Start Date:</span>
-            <span className='font-medium'>{displayDate}</span>
-          </div>
-          <div className='flex justify-between'>
-            <span className='text-muted-foreground'>Installment:</span>
-            <span className='font-medium'>
-              {paidInstallments + 1}/{installmentDuration}
-            </span>
-          </div>
-          <div className='flex justify-between'>
-            <span className='text-muted-foreground'>Installment duration:</span>
-            <span className='font-medium'>{remainingInstallments} months</span>
-          </div>
-          <div className='flex justify-between'>
-            <span className='text-muted-foreground'>Total Amount:</span>
-            <span className='font-medium'>₱{formattedAmount}</span>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {isInstallment && isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className='overflow-hidden'
+          >
+            <div className='mt-2 p-3 bg-neutral-800 rounded-md space-y-2 text-xs'>
+              <div className='flex justify-between'>
+                <span className='text-muted-foreground'>Start Date:</span>
+                <span className='font-medium'>{displayDate}</span>
+              </div>
+              <div className='flex justify-between'>
+                <span className='text-muted-foreground'>Installment:</span>
+                <span className='font-medium'>
+                  {paidInstallments + 1}/{installmentDuration}
+                </span>
+              </div>
+              <div className='flex justify-between'>
+                <span className='text-muted-foreground'>Installment duration:</span>
+                <span className='font-medium'>{remainingInstallments} months</span>
+              </div>
+              <div className='flex justify-between'>
+                <span className='text-muted-foreground'>Total Amount:</span>
+                <span className='font-medium'>₱{formattedAmount}</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
