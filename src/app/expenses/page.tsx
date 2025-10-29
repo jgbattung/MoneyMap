@@ -2,6 +2,7 @@
 
 import CreateExpenseTransactionDrawer from "@/components/forms/CreateExpenseTransactionDrawer";
 import CreateExpenseTransactionSheet from "@/components/forms/CreateExpenseTransactionSheet";
+import EditExpenseDrawer from "@/components/forms/EditExpenseDrawer";
 import { Icons } from "@/components/icons";
 import ExpenseCard from "@/components/shared/ExpenseCard";
 import SkeletonIncomeTypeCard from "@/components/shared/SkeletonIncomeTypeCard";
@@ -13,6 +14,14 @@ const Expenses = () => {
   const { expenseTransactions, isLoading, error } = useExpenseTransactionsQuery();
   const [createExpenseSheetOpen, setCreateExpenseSheetOpen] = useState(false);
   const [createExpenseDrawerOpen, setCreateExpenseDrawerOpen] = useState(false);
+  const [editExpenseDrawerOpen, setEditExpenseDrawerOpen] = useState(false);
+  const [selectedExpenseId, setSelectedExpenseId] = useState<string>('');
+
+  const handleExpenseClick = (expenseId: string) => {
+    setSelectedExpenseId(expenseId);
+
+    setEditExpenseDrawerOpen(true);
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
@@ -47,6 +56,12 @@ const Expenses = () => {
           className="block md:hidden"
         />
       </div>
+
+      <EditExpenseDrawer
+        open={editExpenseDrawerOpen}
+        onOpenChange={setEditExpenseDrawerOpen}
+        expenseId={selectedExpenseId}
+      />
 
       {isLoading ? (
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
@@ -118,6 +133,7 @@ const Expenses = () => {
               remainingInstallments={expense.remainingInstallments}
               installmentStartDate={expense.installmentStartDate}
               monthlyAmount={expense.monthlyAmount}
+              onClick={() => handleExpenseClick(expense.id)}
             />
           ))}
         </div>

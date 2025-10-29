@@ -1,41 +1,42 @@
-"use client"
-
-import React from 'react'
+import { useExpenseTransactionQuery, useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery';
+import { createExpenseTransactionSchema } from '@/lib/validations/expense-transactions';
+import { zodResolver } from '@hookform/resolvers/zod';
+import React, { useEffect } from 'react'
+import { useForm } from 'react-hook-form';
+import { z } from "zod"
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
 import { Form, FormControl, FormField, FormItem, FormLabel } from '../ui/form';
-import { z } from "zod"
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { toast } from 'sonner';
 import { Button } from '../ui/button';
-import { useAccountsQuery } from '@/hooks/useAccountsQuery';
-import { useCardsQuery } from '@/hooks/useCardsQuery';
-import { useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery';
-import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery';
-import { createExpenseTransactionSchema } from '@/lib/validations/expense-transactions';
 import { ScrollArea } from '../ui/scroll-area';
 import { Textarea } from '../ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { format } from 'date-fns';
 import { Calendar } from '../ui/calendar';
-import { ChevronDownIcon } from "lucide-react";
-import { Switch } from '../ui/switch';
+import { ChevronDownIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery';
+import { useAccountsQuery } from '@/hooks/useAccountsQuery';
+import { useCardsQuery } from '@/hooks/useCardsQuery';
 import { Label } from '../ui/label';
+import { Switch } from '../ui/switch';
+import { toast } from 'sonner';
+import SkeletonEditCardDrawerForm from '../shared/SkeletonEditCardDrawerForm';
 
-
-interface CreateExpenseTransactionProps {
+interface EditExpenseDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  className: string;
+  className?: string;
+  expenseId: string;
 }
 
-const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: CreateExpenseTransactionProps) => {
-  const { createExpenseTransaction, isCreating } = useExpenseTransactionsQuery();
+const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExpenseDrawerProps) => {
+  const { updateExpenseTransaction, isUpdating } = useExpenseTransactionsQuery();
+  const { expenseTransactionData, isFetching, error } = useExpenseTransactionQuery(expenseId);
   const { accounts } = useAccountsQuery();
   const { cards } = useCardsQuery();
   const { budgets } = useExpenseTypesQuery();
+
   const [calendarOpen, setCalendarOpen] = React.useState(false);
   const [installmentCalendarOpen, setInstallmentCalendarOpen] = React.useState(false);
 
@@ -56,6 +57,24 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
     }
   });
 
+  useEffect(() => {
+    if (expenseTransactionData) {
+      form.reset({
+        name: expenseTransactionData.name,
+        amount: expenseTransactionData.amount,
+        accountId: expenseTransactionData.accountId,
+        expenseTypeId: expenseTransactionData.expenseTypeId,
+        date: new Date(expenseTransactionData.date),
+        description: expenseTransactionData.description ?? undefined,
+        isInstallment: expenseTransactionData.isInstallment,
+        installmentDuration: expenseTransactionData.installmentDuration ?? undefined,
+        installmentStartDate: expenseTransactionData.installmentStartDate 
+          ? new Date(expenseTransactionData.installmentStartDate)
+          : undefined,
+      })
+    }
+  }, [expenseTransactionData, form])
+
   const selectedAccountId = form.watch("accountId");
   const selectedAccount = allAccounts.find(acc => acc.id === selectedAccountId);
   const isCreditCard = selectedAccount?.accountType === "CREDIT_CARD";
@@ -63,16 +82,16 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
 
   const onSubmit = async (values: z.infer<typeof createExpenseTransactionSchema>) => {
     try {
-      const newExpenseTransaction = await createExpenseTransaction(values);
+      const updatedExpense = await updateExpenseTransaction({ id: expenseId, ...values });
 
-      toast.success("Expense transaction created successfully", {
-        description: `${newExpenseTransaction.name} has been added to your expense transactions.`,
-        duration: 5000,
+      toast.success("Expense has been updated successfully", {
+        description: `${updatedExpense.name} has been updated.`,
+        duration: 5000
       });
       form.reset();
       onOpenChange(false);
     } catch (error) {
-      toast.error("Failed to create expense transaction", {
+      toast.error("Failed to update expense", {
         description: error instanceof Error ? error.message : "Please check your information and try again.",
         duration: 6000
       });
@@ -82,8 +101,37 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent
-        onEscapeKeyDown={(e) => isCreating && e.preventDefault()} className={`${className}`}
+        onEscapeKeyDown={(e) => isUpdating && e.preventDefault()} className={`${className}`}
       >
+        {isFetching ? (
+          <SkeletonEditCardDrawerForm />
+        ) : error ? (
+        <>
+          <DrawerHeader className='text-center'>
+            <DrawerTitle className='text-xl'>Unable to load expense</DrawerTitle>
+            <DrawerDescription>
+              {error || 'Something went wrong while loading your account details.'}
+            </DrawerDescription>
+          </DrawerHeader>
+          
+          <DrawerFooter>
+            <Button
+              onClick={() => window.location.reload()}
+              className="w-full"
+            >
+              Try again
+            </Button>
+            <DrawerClose asChild>
+              <Button
+                variant="outline"
+                className="w-full hover:text-white"
+              >
+                Close
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </>
+      ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85vh]'>
             <DrawerHeader className='flex-shrink-0'>
@@ -106,7 +154,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                       <Input
                         placeholder='e.g., Rent, groceries, Grab ride, Netflix'
                         {...field}
-                        disabled={isCreating}
+                        disabled={isUpdating}
                       />
                     </FormControl>
                   </FormItem>
@@ -125,7 +173,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                         placeholder="0"
                         className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
                         {...field}
-                        disabled={isCreating}
+                        disabled={isUpdating}
                       />
                     </FormControl>
                   </FormItem>
@@ -138,7 +186,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                 render={({ field }) => (
                   <FormItem className="p-4">
                     <FormLabel>Account</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isCreating}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isUpdating}>
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select account" />
@@ -167,7 +215,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                           <Switch
                             checked={field.value}
                             onCheckedChange={field.onChange}
-                            disabled={isCreating}
+                            disabled={isUpdating}
                           />
                           <Label>Is this an installment transaction?</Label>
                         </div>
@@ -193,7 +241,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                             placeholder="e.g., 12 months, 24 months"
                             className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
                             onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                            disabled={isCreating}
+                            disabled={isUpdating}
                           />
                         </FormControl>
                       </FormItem>
@@ -212,7 +260,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                               <Button
                                 variant="outline"
                                 className="w-full justify-between font-normal hover:text-white"
-                                disabled={isCreating}
+                                disabled={isUpdating}
                               >
                                 {field.value ? (
                                   format(field.value, "MMMM, d, yyyy")
@@ -247,7 +295,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                 render={({ field }) => (
                   <FormItem className="p-4">
                     <FormLabel>Expense type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isCreating}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isUpdating}>
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select income type" />
@@ -278,7 +326,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                             <Button
                               variant="outline"
                               className="w-full justify-between font-normal hover:text-white"
-                              disabled={isCreating}
+                              disabled={isUpdating}
                             >
                               {field.value ? (
                                 format(field.value, "MMMM, d, yyyy")
@@ -317,7 +365,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                       <Textarea
                         className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
                         {...field}
-                        disabled={isCreating}
+                        disabled={isUpdating}
                       />
                     </FormControl>
                   </FormItem>
@@ -329,15 +377,15 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
             <DrawerFooter className='flex-shrink-0'>
               <Button
                 type="submit"
-                disabled={isCreating}
+                disabled={isUpdating}
               >
-                {isCreating ? "Adding expense" : "Add expense"}
+                {isUpdating ? "Updating expense" : "Update expense"}
               </Button>
               <DrawerClose asChild>
                 <Button
                   variant="outline"
                   className='hover:text-white'
-                  disabled={isCreating}
+                  disabled={isUpdating}
                 >
                   Cancel
                 </Button>
@@ -346,9 +394,10 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
 
           </form>
         </Form>
+      )}
       </DrawerContent>
     </Drawer>
   )
 }
 
-export default CreateExpenseTransactionDrawer;
+export default EditExpenseDrawer
