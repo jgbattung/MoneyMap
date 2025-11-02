@@ -154,6 +154,9 @@ export async function POST(request: NextRequest) {
             },
             data: {
               lastProcessedDate: startDate,
+              remainingInstallments: {
+                decrement: 1,
+              }
             },
           });
         }

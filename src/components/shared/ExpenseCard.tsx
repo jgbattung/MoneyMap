@@ -135,17 +135,22 @@ const ExpenseCard = ({
               <div className='flex justify-between'>
                 <span className='text-muted-foreground'>Installment:</span>
                 <span className='font-medium'>
-                  {paidInstallments + 1}/{installmentDuration}
+                  {paidInstallments}/{installmentDuration}
                 </span>
               </div>
               <div className='flex justify-between'>
-                <span className='text-muted-foreground'>Installment duration:</span>
-                <span className='font-medium'>{remainingInstallments} months</span>
+                <span className='text-muted-foreground'>Remaining Installments:</span>
+                <span className='font-medium'>{remainingInstallments} of {installmentDuration}</span>
               </div>
               <div className='flex justify-between'>
-                <span className='text-muted-foreground'>Total Amount:</span>
-                <span className='font-medium'>₱{formattedAmount}</span>
-              </div>
+              <span className='text-muted-foreground'>Total Charged:</span>
+              <span className='font-medium'>
+                ₱{((installmentDuration! - remainingInstallments!) * parseFloat(monthlyAmount!)).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className='text-muted-foreground text-xs ml-1'>
+                  of ₱{parseFloat(amount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </span>
+            </div>
             </div>
           </motion.div>
         )}
