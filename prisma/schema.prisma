@@ -149,6 +149,7 @@ model ExpenseTransaction {
   remainingInstallments Int?            @map("remaining_installments")
   installmentStartDate  DateTime?       @map("installment_start_date")
   monthlyAmount         Decimal?        @map("monthly_amount") @db.Decimal(15, 2)
+  lastProcessedDate     DateTime?       @map("last_processed_date")
   
   createdAt             DateTime        @default(now()) @map("created_at")
   updatedAt             DateTime        @updatedAt @map("updated_at")
