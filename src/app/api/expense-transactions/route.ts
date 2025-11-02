@@ -128,6 +128,35 @@ export async function POST(request: NextRequest) {
             },
           },
         });
+      } else {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const startDate = new Date(installmentStartDate);
+        startDate.setHours(0, 0, 0, 0);
+
+        if (startDate <= today) {
+          await tx.financialAccount.update({
+            where: {
+              id: accountId,
+              userId: session.user.id,
+            },
+            data: {
+              currentBalance: {
+                decrement: monthlyAmount!,
+              },
+            },
+          });
+
+          await tx.expenseTransaction.update({
+            where: {
+              id: expenseTransaction.id,
+            },
+            data: {
+              lastProcessedDate: startDate,
+            },
+          });
+        }
       }
 
       return expenseTransaction;
