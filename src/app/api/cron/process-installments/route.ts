@@ -3,6 +3,17 @@ import { db } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+
+    if (!token || token !== process.env.CRON_SECRET) {
+      console.error('Unauthorized cron request');
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 },
+      );
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
