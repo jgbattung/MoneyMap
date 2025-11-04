@@ -3,17 +3,20 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
+import { useCardsQuery } from '@/hooks/useCardsQuery';
 import { ExpenseTransaction, useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery';
 import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery';
-import { ColumnDef, createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
+import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const columnHelper = createColumnHelper<ExpenseTransaction>();
 
-const EditableCell = ({ getValue, row, column, table }) => {
+const EditableCell = ({ getValue, row, column, table }: any) => {
   const initialValue = getValue();
+  const columnMeta = column.columnDef.meta;
+  const tableMeta = table.options.meta;
   const [value, setValue] = useState("");
 
   useEffect(() => {
@@ -21,86 +24,111 @@ const EditableCell = ({ getValue, row, column, table }) => {
   }, [initialValue]);
 
   const onBlur = () => {
-    table.options.meta?.updateData(row.index, column.id, value)
+    tableMeta?.updateData(row.index, column.id, value)
+  }
+
+  const onSelectChange = (newValue: string) => {
+    setValue(newValue);
+    tableMeta?.updateData(row.index, column.id, newValue);
+  };
+
+  if (columnMeta?.type === "select") {
+    return (
+      <Select value={value} onValueChange={onSelectChange}>
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {columnMeta?.options?.map((option: any) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
   }
 
   return (
     <input
-      className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
       value={value}
       onChange={e => setValue(e.target.value)}
       onBlur={onBlur}
-      type={column.columnDef.meta?.type || "text"}
+      className="w-full [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
     />
-  )
-}
-
-const columns = [
-  columnHelper.accessor("date", {
-    header: "Date",
-    cell: EditableCell,
-    meta: {
-      type: "date"
-    },
-    // cell: (info) => {
-    //   const date = new Date(info.getValue());
-    //   return format(date, "MMM d, yyyy");
-    // },
-  }),
-  columnHelper.accessor("name", {
-    header: "Name",
-    cell: EditableCell,
-    meta: {
-      type: "text"
-    },
-  }),
-  columnHelper.accessor("amount", {
-    header: "Amount",
-    cell: EditableCell,
-    meta: {
-      type: "number"
-    },
-    // cell: (info) => {
-    //   const amount = parseFloat(info.getValue());
-    //   return amount.toLocaleString('en-US', {
-    //     minimumFractionDigits: 2,
-    //     maximumFractionDigits: 2,
-    //   });
-    // },
-  }),
-  columnHelper.accessor("account.name", {
-    header: "Account",
-    cell: EditableCell,
-    meta: {
-      type: "text"
-    },
-  }),
-  columnHelper.accessor("expenseType.name", {
-    header: "Expense type",
-    cell: EditableCell,
-    meta: {
-      type: "text"
-    },
-  }),
-  columnHelper.accessor("description", {
-    header: "Description",
-    cell: EditableCell,
-    meta: {
-      type: "text"
-    },
-  }),
-];
+  );
+};
 
 const ExpenseTable = () => {
   const { expenseTransactions, isLoading, isUpdating } = useExpenseTransactionsQuery();
-  const [data, setData] = useState(() => [...expenseTransactions]);
+  const { accounts } = useAccountsQuery();
+  const { cards } = useCardsQuery();
+  const { budgets } = useExpenseTypesQuery();
+
+  const [data, setData] = useState<ExpenseTransaction[]>([]);
 
   useEffect(() => {
     setData([...expenseTransactions]);
   }, [expenseTransactions]);
 
+  const allAccounts = [...accounts, ...cards];
+
+  // Define columns inside component so they have access to hooks data
+  const columns = [
+    columnHelper.accessor("date", {
+      header: "Date",
+      cell: EditableCell,
+      meta: {
+        type: "date"
+      },
+    }),
+    columnHelper.accessor("name", {
+      header: "Name",
+      cell: EditableCell,
+      meta: {
+        type: "text"
+      },
+    }),
+    columnHelper.accessor("amount", {
+      header: "Amount",
+      cell: EditableCell,
+      meta: {
+        type: "number"
+      },
+    }),
+    columnHelper.accessor("accountId", {
+      header: "Account",
+      cell: EditableCell,
+      meta: {
+        type: "select",
+        options: allAccounts.map(acc => ({
+          value: acc.id,
+          label: acc.name
+        }))
+      },
+    }),
+    columnHelper.accessor("expenseTypeId", {
+      header: "Expense type",
+      cell: EditableCell,
+      meta: {
+        type: "select",
+        options: budgets.map(budget => ({
+          value: budget.id,
+          label: budget.name
+        }))
+      },
+    }),
+    columnHelper.accessor("description", {
+      header: "Description",
+      cell: EditableCell,
+      meta: {
+        type: "text"
+      },
+    }),
+  ];
+
   const table = useReactTable({
-    data: data || [],
+    data: data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -167,7 +195,7 @@ const ExpenseTable = () => {
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id}>
+                  <TableHead key={header.id} className='p-4'>
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -185,7 +213,7 @@ const ExpenseTable = () => {
             table.getRowModel().rows.map((row) => (
               <TableRow key={row.id}>
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className='py-4'>
+                  <TableCell key={cell.id} className='p-4'>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
