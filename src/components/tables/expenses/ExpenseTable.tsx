@@ -8,49 +8,97 @@ import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery';
 import { ColumnDef, createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const columnHelper = createColumnHelper<ExpenseTransaction>();
+
+const EditableCell = ({ getValue, row, column, table }) => {
+  const initialValue = getValue();
+  const [value, setValue] = useState("");
+
+  useEffect(() => {
+    setValue(initialValue)
+  }, [initialValue]);
+
+  const onBlur = () => {
+    table.options.meta?.updateData(row.index, column.id, value)
+  }
+
+  return (
+    <input
+      value={value}
+      onChange={e => setValue(e.target.value)}
+      onBlur={onBlur}
+    />
+  )
+}
 
 const columns = [
   columnHelper.accessor("date", {
     header: "Date",
-    cell: (info) => {
-      const date = new Date(info.getValue());
-      return format(date, "MMM d, yyyy");
-    },
+    cell: EditableCell,
+    // cell: (info) => {
+    //   const date = new Date(info.getValue());
+    //   return format(date, "MMM d, yyyy");
+    // },
   }),
   columnHelper.accessor("name", {
     header: "Name",
+    cell: EditableCell,
   }),
   columnHelper.accessor("amount", {
     header: "Amount",
-    cell: (info) => {
-      const amount = parseFloat(info.getValue());
-      return amount.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-    },
+    cell: EditableCell,
+    // cell: (info) => {
+    //   const amount = parseFloat(info.getValue());
+    //   return amount.toLocaleString('en-US', {
+    //     minimumFractionDigits: 2,
+    //     maximumFractionDigits: 2,
+    //   });
+    // },
   }),
   columnHelper.accessor("account.name", {
     header: "Account",
+    cell: EditableCell,
   }),
   columnHelper.accessor("expenseType.name", {
     header: "Expense type",
+    cell: EditableCell,
   }),
   columnHelper.accessor("description", {
     header: "Description",
+    cell: EditableCell,
   }),
 ];
 
 const ExpenseTable = () => {
   const { expenseTransactions, isLoading, isUpdating } = useExpenseTransactionsQuery();
+  const [data, setData] = useState(() => [...expenseTransactions]);
+
+  useEffect(() => {
+    setData([...expenseTransactions]);
+  }, [expenseTransactions]);
 
   const table = useReactTable({
-    data: expenseTransactions || [],
+    data: data || [],
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    meta: {
+      updateData: (rowIndex: number, columnId: string, value: string) => {
+        setData((old) =>
+          old.map((row, index) => {
+            if (index === rowIndex) {
+              return {
+                ...old[rowIndex],
+                [columnId]: value,
+              };
+            }
+            return row;
+          })
+        );
+      },
+    },
     initialState: {
       pagination: {
         pageSize: 5,
