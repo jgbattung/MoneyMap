@@ -26,9 +26,11 @@ const EditableCell = ({ getValue, row, column, table }) => {
 
   return (
     <input
+      className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
       value={value}
       onChange={e => setValue(e.target.value)}
       onBlur={onBlur}
+      type={column.columnDef.meta?.type || "text"}
     />
   )
 }
@@ -37,6 +39,9 @@ const columns = [
   columnHelper.accessor("date", {
     header: "Date",
     cell: EditableCell,
+    meta: {
+      type: "date"
+    },
     // cell: (info) => {
     //   const date = new Date(info.getValue());
     //   return format(date, "MMM d, yyyy");
@@ -45,10 +50,16 @@ const columns = [
   columnHelper.accessor("name", {
     header: "Name",
     cell: EditableCell,
+    meta: {
+      type: "text"
+    },
   }),
   columnHelper.accessor("amount", {
     header: "Amount",
     cell: EditableCell,
+    meta: {
+      type: "number"
+    },
     // cell: (info) => {
     //   const amount = parseFloat(info.getValue());
     //   return amount.toLocaleString('en-US', {
@@ -60,14 +71,23 @@ const columns = [
   columnHelper.accessor("account.name", {
     header: "Account",
     cell: EditableCell,
+    meta: {
+      type: "text"
+    },
   }),
   columnHelper.accessor("expenseType.name", {
     header: "Expense type",
     cell: EditableCell,
+    meta: {
+      type: "text"
+    },
   }),
   columnHelper.accessor("description", {
     header: "Description",
     cell: EditableCell,
+    meta: {
+      type: "text"
+    },
   }),
 ];
 
