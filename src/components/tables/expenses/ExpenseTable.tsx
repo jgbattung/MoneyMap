@@ -64,6 +64,14 @@ const CellContent = ({ getValue, row, column, table }: any) => {
       return <span>{option?.label || value}</span>;
     }
 
+    if (column.id === "description") {
+      return (
+        <span className="block max-w-[150px] truncate" title={value}>
+          {value}
+        </span>
+      );
+    }
+
     return <span>{value}</span>;
   }
 
@@ -256,6 +264,7 @@ const ExpenseTable = () => {
       },
     }),
     columnHelper.display({
+      header: "Actions",
       id: "edit",
       cell: EditCell,
     }),
