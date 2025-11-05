@@ -12,7 +12,7 @@ import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery';
 import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
 import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDownIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -82,8 +82,11 @@ const CellContent = ({ getValue, row, column, table }: any) => {
     return (
       <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
         <PopoverTrigger asChild>
-          <button className="w-full text-left">
-            {dateValue ? format(dateValue, "MMM d, yyyy") : "Select date"}
+          <button className="w-full text-left flex items-center bg-[oklch(1_0_0_/_0.045)] gap-2 justify-between border rounded-lg px-3 py-2 hover:bg-[oklch(1_0_0_/_0.075)]">
+            <span>
+              {dateValue ? format(dateValue, "MMM d, yyyy") : "Select date"}
+            </span>
+            <ChevronDownIcon className="h-4 w-4 opacity-50" />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
