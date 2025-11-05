@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -8,6 +9,7 @@ import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 import { useCardsQuery } from '@/hooks/useCardsQuery';
 import { ExpenseTransaction, useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery';
 import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery';
+import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
 import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -15,7 +17,7 @@ import { useEffect, useState } from 'react';
 
 const columnHelper = createColumnHelper<ExpenseTransaction>();
 
-const EditableCell = ({ getValue, row, column, table }: any) => {
+const CellContent = ({ getValue, row, column, table }: any) => {
   const initialValue = getValue();
   const columnMeta = column.columnDef.meta;
   const tableMeta = table.options.meta;
@@ -37,13 +39,34 @@ const EditableCell = ({ getValue, row, column, table }: any) => {
   
   const onDateChange = (date: Date | undefined) => {
     if (date) {
-      const isoDate = date.toString();
+      const isoDate = date.toISOString();
       setValue(isoDate);
       tableMeta?.updateData(row.index, column.id, isoDate);
       setCalendarOpen(false);
     }
   }
 
+  // If row is not in edit mode, show read-only display
+  if (!tableMeta?.editedRows[row.id]) {
+    if (columnMeta?.type === "date") {
+      const dateValue = value ? new Date(value) : null;
+      return <span>{dateValue ? format(dateValue, "MMM d, yyyy") : ""}</span>;
+    }
+    
+    if (columnMeta?.type === "number") {
+      const amount = parseFloat(value);
+      return <span>{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
+    }
+
+    if (columnMeta?.type === "select") {
+      const option = columnMeta?.options?.find((opt: any) => opt.value === value);
+      return <span>{option?.label || value}</span>;
+    }
+
+    return <span>{value}</span>;
+  }
+
+  // If row is in edit mode, show editable fields
   if (columnMeta?.type === "date") {
     const dateValue = value ? new Date(value) : undefined;
     
@@ -93,6 +116,40 @@ const EditableCell = ({ getValue, row, column, table }: any) => {
   );
 };
 
+const EditCell = ({ row, table }: any) => {
+  const meta = table.options.meta;
+
+  const setEditedRows = (e: React.MouseEvent<HTMLButtonElement>) => {
+    meta?.setEditedRows((old: any) => ({
+      ...old,
+      [row.id]: !old[row.id],
+    }));
+  }
+
+  const removeRow = () => {
+    meta?.revertData(row.index);
+    meta?.setEditedRows((old: any) => ({
+      ...old,
+      [row.id]: !old[row.id],
+    }));
+  }
+
+  return meta?.editedRows[row.id] ? (
+    <div className='flex gap-2 items-center justify-center'>
+      <Button variant="ghost" size="icon" onClick={removeRow}>
+        <IconX />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={setEditedRows}>
+        <IconCheck />
+      </Button>
+    </div>
+  ) : (
+    <Button variant="ghost" size="icon" onClick={setEditedRows}>
+      <IconEdit />
+    </Button>
+  )
+}
+
 const ExpenseTable = () => {
   const { expenseTransactions, isLoading, isUpdating } = useExpenseTransactionsQuery();
   const { accounts } = useAccountsQuery();
@@ -100,39 +157,41 @@ const ExpenseTable = () => {
   const { budgets } = useExpenseTypesQuery();
 
   const [data, setData] = useState<ExpenseTransaction[]>([]);
+  const [originalData, setOriginalData] = useState<ExpenseTransaction[]>([]);
+  const [editedRows, setEditedRows] = useState({});
 
   useEffect(() => {
     setData([...expenseTransactions]);
+    setOriginalData([...expenseTransactions]);
   }, [expenseTransactions]);
 
   const allAccounts = [...accounts, ...cards];
 
-  // Define columns inside component so they have access to hooks data
   const columns = [
     columnHelper.accessor("date", {
       header: "Date",
-      cell: EditableCell,
+      cell: CellContent,
       meta: {
         type: "date"
       },
     }),
     columnHelper.accessor("name", {
       header: "Name",
-      cell: EditableCell,
+      cell: CellContent,
       meta: {
         type: "text"
       },
     }),
     columnHelper.accessor("amount", {
       header: "Amount",
-      cell: EditableCell,
+      cell: CellContent,
       meta: {
         type: "number"
       },
     }),
     columnHelper.accessor("accountId", {
       header: "Account",
-      cell: EditableCell,
+      cell: CellContent,
       meta: {
         type: "select",
         options: allAccounts.map(acc => ({
@@ -143,7 +202,7 @@ const ExpenseTable = () => {
     }),
     columnHelper.accessor("expenseTypeId", {
       header: "Expense type",
-      cell: EditableCell,
+      cell: CellContent,
       meta: {
         type: "select",
         options: budgets.map(budget => ({
@@ -154,10 +213,14 @@ const ExpenseTable = () => {
     }),
     columnHelper.accessor("description", {
       header: "Description",
-      cell: EditableCell,
+      cell: CellContent,
       meta: {
         type: "text"
       },
+    }),
+    columnHelper.display({
+      id: "edit",
+      cell: EditCell,
     }),
   ];
 
@@ -167,6 +230,8 @@ const ExpenseTable = () => {
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     meta: {
+      editedRows,
+      setEditedRows,
       updateData: (rowIndex: number, columnId: string, value: string) => {
         setData((old) =>
           old.map((row, index) => {
@@ -178,6 +243,11 @@ const ExpenseTable = () => {
             }
             return row;
           })
+        );
+      },
+      revertData: (rowIndex: number) => {
+        setData((old) =>
+          old.map((row, index) => (index === rowIndex ? originalData[rowIndex] : row))
         );
       },
     },
