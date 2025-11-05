@@ -14,6 +14,7 @@ import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel,
 import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 const columnHelper = createColumnHelper<ExpenseTransaction>();
 
@@ -134,12 +135,48 @@ const EditCell = ({ row, table }: any) => {
     }));
   }
 
+  const saveRow = async () => {
+    try {
+      const updatedRow = table.options.data[row.index];
+      
+      // Extract only the fields the API expects
+      const updatePayload = {
+        id: updatedRow.id,
+        name: updatedRow.name,
+        amount: updatedRow.amount,
+        accountId: updatedRow.accountId,
+        expenseTypeId: updatedRow.expenseTypeId,
+        date: updatedRow.date,
+        description: updatedRow.description,
+        isInstallment: updatedRow.isInstallment,
+        installmentDuration: updatedRow.installmentDuration,
+        installmentStartDate: updatedRow.installmentStartDate,
+        remainingInstallments: updatedRow.remainingInstallments,
+      };
+
+      await meta?.updateExpenseTransaction(updatePayload);
+
+      meta?.setEditedRows((old: any) => ({
+        ...old,
+        [row.id]: false,
+      }));
+      toast.success("Expense updated successfully", {
+        duration: 5000
+      });
+    } catch (error) {
+      toast.error("Failed to update expense", {
+        description: error instanceof Error ? error.message : "Please check your information and try again.",
+        duration: 6000
+      });
+    }
+  } 
+
   return meta?.editedRows[row.id] ? (
     <div className='flex gap-2 items-center justify-center'>
       <Button variant="ghost" size="icon" onClick={removeRow}>
         <IconX />
       </Button>
-      <Button variant="ghost" size="icon" onClick={setEditedRows}>
+      <Button variant="ghost" size="icon" onClick={saveRow}>
         <IconCheck />
       </Button>
     </div>
@@ -151,7 +188,7 @@ const EditCell = ({ row, table }: any) => {
 }
 
 const ExpenseTable = () => {
-  const { expenseTransactions, isLoading, isUpdating } = useExpenseTransactionsQuery();
+  const { expenseTransactions, updateExpenseTransaction, isLoading, isUpdating } = useExpenseTransactionsQuery();
   const { accounts } = useAccountsQuery();
   const { cards } = useCardsQuery();
   const { budgets } = useExpenseTypesQuery();
@@ -250,6 +287,8 @@ const ExpenseTable = () => {
           old.map((row, index) => (index === rowIndex ? originalData[rowIndex] : row))
         );
       },
+      updateExpenseTransaction,
+      isUpdating,
     },
     initialState: {
       pagination: {
