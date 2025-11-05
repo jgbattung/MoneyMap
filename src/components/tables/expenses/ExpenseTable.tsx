@@ -1,5 +1,7 @@
 "use client"
 
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
@@ -18,6 +20,7 @@ const EditableCell = ({ getValue, row, column, table }: any) => {
   const columnMeta = column.columnDef.meta;
   const tableMeta = table.options.meta;
   const [value, setValue] = useState("");
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   useEffect(() => {
     setValue(initialValue)
@@ -31,6 +34,37 @@ const EditableCell = ({ getValue, row, column, table }: any) => {
     setValue(newValue);
     tableMeta?.updateData(row.index, column.id, newValue);
   };
+  
+  const onDateChange = (date: Date | undefined) => {
+    if (date) {
+      const isoDate = date.toString();
+      setValue(isoDate);
+      tableMeta?.updateData(row.index, column.id, isoDate);
+      setCalendarOpen(false);
+    }
+  }
+
+  if (columnMeta?.type === "date") {
+    const dateValue = value ? new Date(value) : undefined;
+    
+    return (
+      <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+        <PopoverTrigger asChild>
+          <button className="w-full text-left">
+            {dateValue ? format(dateValue, "MMM d, yyyy") : "Select date"}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={dateValue}
+            onSelect={onDateChange}
+            disabled={(date) => date > new Date()}
+          />
+        </PopoverContent>
+      </Popover>
+    );
+  }
 
   if (columnMeta?.type === "select") {
     return (
