@@ -6,6 +6,7 @@ import EditExpenseDrawer from "@/components/forms/EditExpenseDrawer";
 import { Icons } from "@/components/icons";
 import ExpenseCard from "@/components/shared/ExpenseCard";
 import SkeletonIncomeTypeCard from "@/components/shared/SkeletonIncomeTypeCard";
+import SkeletonExpenseTable from "@/components/shared/SkeletonTable";
 import ExpenseTable from "@/components/tables/expenses/ExpenseTable";
 import { Button } from "@/components/ui/button";
 import { useExpenseTransactionsQuery } from "@/hooks/useExpenseTransactionsQuery";
@@ -65,11 +66,16 @@ const Expenses = () => {
       />
 
       {isLoading ? (
-        <div className='md:hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
-          {Array.from({ length: 4 }, (_, index) => (
-            <SkeletonIncomeTypeCard key={index} />
-          ))}
-        </div>
+        <>
+          <div className='md:hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
+            {Array.from({ length: 4 }, (_, index) => (
+              <SkeletonIncomeTypeCard key={index} />
+            ))}
+          </div>
+          <div className='hidden md:block mt-10'>
+            <SkeletonExpenseTable />
+          </div>
+        </>
       ) : error ? (
       <div className='flex-1 flex flex-col items-center justify-center py-16'>
         <Icons.error
