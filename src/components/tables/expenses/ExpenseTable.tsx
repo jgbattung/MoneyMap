@@ -30,7 +30,7 @@ const CellContent = ({ getValue, row, column, table }: any) => {
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   useEffect(() => {
-    setValue(initialValue)
+    setValue(initialValue ?? "")
   }, [initialValue]);
 
   const onBlur = () => {
