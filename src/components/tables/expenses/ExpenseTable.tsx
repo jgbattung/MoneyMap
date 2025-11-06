@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,8 +14,8 @@ import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery';
 import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
 import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import { ChevronDownIcon, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ChevronDownIcon, ChevronLeft, ChevronRight, Search, SearchIcon } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 const columnHelper = createColumnHelper<ExpenseTransaction>();
@@ -205,6 +206,9 @@ const ExpenseTable = () => {
   const { cards } = useCardsQuery();
   const { budgets } = useExpenseTypesQuery();
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
   const [data, setData] = useState<ExpenseTransaction[]>([]);
   const [originalData, setOriginalData] = useState<ExpenseTransaction[]>([]);
   const [editedRows, setEditedRows] = useState({});
@@ -214,7 +218,30 @@ const ExpenseTable = () => {
     setOriginalData([...expenseTransactions]);
   }, [expenseTransactions]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const allAccounts = [...accounts, ...cards];
+
+  const filteredData = useMemo(() => {
+    return data.filter((row) => {
+      if (!debouncedSearchTerm) return true;
+      
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      
+      return (
+        row.name.toLowerCase().includes(searchLower) ||
+        row.description?.toLowerCase().includes(searchLower) ||
+        row.expenseType.name.toLowerCase().includes(searchLower) ||
+        row.account.name.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [data, debouncedSearchTerm]);
 
   const columns = [
     columnHelper.accessor("date", {
@@ -275,7 +302,7 @@ const ExpenseTable = () => {
   ];
 
   const table = useReactTable({
-    data: data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -344,114 +371,135 @@ const ExpenseTable = () => {
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="overflow-hidden rounded-md border">
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => {
-                return (
-                  <TableHead key={header.id} className='p-4'>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                  </TableHead>
-                )
-              })}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className='p-4'>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
+    <div className='space-y-4'>
+      {/* Search */}
+      <div className="flex justify-end">
+        <div className="w-full max-w-xs">
+          <InputGroup>
+            <InputGroupInput 
+              placeholder='Search expenses...' 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <InputGroupAddon>
+              <SearchIcon />
+            </InputGroupAddon>
+          </InputGroup>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-hidden rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id} className='p-4'>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                    </TableHead>
+                  )
+                })}
               </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="h-32 text-center">
-                <div className="flex flex-col items-center gap-2">
-                  <p className="text-muted-foreground">No expense transactions found.</p>
-                  <p className="text-sm text-muted-foreground">Add your first expense to get started.</p>
-                </div>
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-      {/* Pagination */}
-      <div className="flex items-center justify-between space-x-2 py-4 px-4 border border-border border-t-2">
-        <div>
-          <p className='text-sm text-muted-foreground'>{`Showing ${table.getRowModel().rows.length} out of ${expenseTransactions.length}`}</p>
-        </div>
-        <div className='flex items-center gap-1'>
-          <button
-            className='text-muted-foreground hover:text-white transition-colors disabled:hover:text-muted-foreground'
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <ChevronLeft size={22} strokeWidth={1} />
-          </button>
-          <div className='flex items-center gap-1'>
-            {pageNumbers.map((pageNum, index) => {
-              const isCurrentPage = typeof pageNum === 'number' && pageNum === currentPage + 1;
-              return (
-                <button
-                  key={index}
-                  onClick={() => {
-                    if (typeof pageNum === 'number') {
-                      table.setPageIndex(pageNum - 1)
-                    }
-                  }}
-                  disabled={typeof pageNum !== 'number'}
-                  className={`px-3 py-1 text-sm rounded transition-colors ${
-                    isCurrentPage 
-                      ? 'bg-primary-700/30 text-primary-foreground' 
-                      : typeof pageNum === 'number'
-                        ? 'hover:bg-primary-600/30'
-                        : 'cursor-default'
-                  }`}                  
-                >
-                  {pageNum}
-                </button>
-              )
-          })}
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className='pl-4'>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-32 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <p className="text-muted-foreground">No expense transactions found.</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+        {/* Pagination */}
+        <div className="flex items-center justify-between space-x-2 py-4 px-4 border border-border border-t-2">
+          <div>
+            <p className='text-sm text-muted-foreground'>
+              {`Showing ${table.getRowModel().rows.length} out of ${filteredData.length}`}
+              {debouncedSearchTerm && <span className="text-primary-600"> (filtered)</span>}
+            </p>
           </div>
-          <button
-            className='text-muted-foreground hover:text-white transition-colors disabled:hover:text-muted-foreground'
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            <ChevronRight size={22} strokeWidth={1} />
-          </button>
-        </div>
-        <div className='flex items-center justify-center gap-2'>
-          <p className='text-sm text-muted-foreground'>Rows per page</p>
-          <Select
-            value={table.getState().pagination.pageSize.toString()}
-            onValueChange={(value) => {
-              table.setPageSize(Number(value))
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <SelectItem key={size} value={size.toString()}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className='flex items-center gap-1'>
+            <button
+              className='text-muted-foreground hover:text-white transition-colors disabled:hover:text-muted-foreground'
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <ChevronLeft size={22} strokeWidth={1} />
+            </button>
+            <div className='flex items-center gap-1'>
+              {pageNumbers.map((pageNum, index) => {
+                const isCurrentPage = typeof pageNum === 'number' && pageNum === currentPage + 1;
+                return (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      if (typeof pageNum === 'number') {
+                        table.setPageIndex(pageNum - 1)
+                      }
+                    }}
+                    disabled={typeof pageNum !== 'number'}
+                    className={`px-3 py-1 text-sm rounded transition-colors ${
+                      isCurrentPage 
+                        ? 'bg-primary-700/30 text-primary-foreground' 
+                        : typeof pageNum === 'number'
+                          ? 'hover:bg-primary-600/30'
+                          : 'cursor-default'
+                    }`}                  
+                  >
+                    {pageNum}
+                  </button>
+                )
+            })}
+            </div>
+            <button
+              className='text-muted-foreground hover:text-white transition-colors disabled:hover:text-muted-foreground'
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <ChevronRight size={22} strokeWidth={1} />
+            </button>
+          </div>
+          <div className='flex items-center justify-center gap-2'>
+            <p className='text-sm text-muted-foreground'>Rows per page</p>
+            <Select
+              value={table.getState().pagination.pageSize.toString()}
+              onValueChange={(value) => {
+                table.setPageSize(Number(value))
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <SelectItem key={size} value={size.toString()}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
     </div>
