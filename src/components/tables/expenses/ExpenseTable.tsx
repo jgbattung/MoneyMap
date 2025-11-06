@@ -467,7 +467,7 @@ const ExpenseTable = () => {
 
       </div>
 
-      {/* Table */}
+{/* Table */}
       <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
@@ -489,7 +489,15 @@ const ExpenseTable = () => {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-36">
+                  <div className="flex items-center justify-center">
+                    <Spinner className="size-6" />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
