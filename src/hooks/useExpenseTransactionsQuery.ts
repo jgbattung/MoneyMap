@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-type ExpenseTransaction = {
+export type ExpenseTransaction = {
   id: string;
   userId: string;
   accountId: string;
