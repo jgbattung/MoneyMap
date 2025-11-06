@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 import { useCardsQuery } from '@/hooks/useCardsQuery';
@@ -14,7 +15,7 @@ import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery';
 import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
 import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import { ChevronDownIcon, ChevronLeft, ChevronRight, Search, SearchIcon } from 'lucide-react';
+import { ChevronDownIcon, ChevronLeft, ChevronRight, SearchIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -186,11 +187,25 @@ const EditCell = ({ row, table }: any) => {
 
   return meta?.editedRows[row.id] ? (
     <div className='flex gap-2 items-center justify-center'>
-      <Button variant="ghost" size="icon" onClick={removeRow}>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={removeRow}
+        disabled={meta?.isUpdating}
+      >
         <IconX />
       </Button>
-      <Button variant="ghost" size="icon" onClick={saveRow}>
-        <IconCheck />
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={saveRow}
+        disabled={meta?.isUpdating}
+      >
+        {meta?.isUpdating ? (
+          <Spinner className="h-4 w-4" />
+        ) : (
+          <IconCheck />
+        )}
       </Button>
     </div>
   ) : (
