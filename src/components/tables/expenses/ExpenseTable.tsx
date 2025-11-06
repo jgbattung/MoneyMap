@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 import { useCardsQuery } from '@/hooks/useCardsQuery';
 import { ExpenseTransaction, useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery';
@@ -228,6 +229,8 @@ const ExpenseTable = () => {
   const [originalData, setOriginalData] = useState<ExpenseTransaction[]>([]);
   const [editedRows, setEditedRows] = useState({});
 
+  const [dateFilter, setDateFilter] = useState<string>("view-all");
+
   useEffect(() => {
     setData([...expenseTransactions]);
     setOriginalData([...expenseTransactions]);
@@ -243,12 +246,36 @@ const ExpenseTable = () => {
 
   const allAccounts = [...accounts, ...cards];
 
+  const dateFilterOptions = {
+    viewAll: "view-all",
+    thisWeek: "this-week",
+    thisMonth: "this-month",
+    thisYear: "this-year",
+  }
+
   const filteredData = useMemo(() => {
     return data.filter((row) => {
+      if (dateFilter !== dateFilterOptions.viewAll) {
+        const expenseDate = new Date(row.date);
+        const now = new Date();
+
+        if (dateFilter === dateFilterOptions.thisWeek) {
+          const weekStart = new Date(now);
+          weekStart.setDate(now.getDate() - now.getDay());
+          weekStart.setHours(0, 0, 0, 0);
+          if (expenseDate < weekStart) return false;
+        } else if (dateFilter === dateFilterOptions.thisMonth) {
+          if (expenseDate.getMonth() !== now.getMonth() || 
+              expenseDate.getFullYear() !== now.getFullYear()) return false;
+        } else if (dateFilter === dateFilterOptions.thisYear) {
+          if (expenseDate.getFullYear() !== now.getFullYear()) return false;
+        }
+      }
+
+      // Search filter
       if (!debouncedSearchTerm) return true;
       
       const searchLower = debouncedSearchTerm.toLowerCase();
-      
       return (
         row.name.toLowerCase().includes(searchLower) ||
         row.description?.toLowerCase().includes(searchLower) ||
@@ -256,7 +283,7 @@ const ExpenseTable = () => {
         row.account.name.toLowerCase().includes(searchLower)
       );
     });
-  }, [data, debouncedSearchTerm]);
+  }, [data, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);
 
   const columns = [
     columnHelper.accessor("date", {
@@ -387,20 +414,58 @@ const ExpenseTable = () => {
 
   return (
     <div className='space-y-4'>
-      {/* Search */}
-      <div className="flex justify-end">
-        <div className="w-full max-w-xs">
-          <InputGroup>
-            <InputGroupInput 
-              placeholder='Search expenses...' 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <InputGroupAddon>
-              <SearchIcon />
-            </InputGroupAddon>
-          </InputGroup>
+      <div className='flex items-center justify-between'>
+        {/* Quick filter */}
+        <div>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            onValueChange={(value) =>  value && setDateFilter(value)}
+          >
+            <ToggleGroupItem
+              value={dateFilterOptions.viewAll}
+              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
+            >
+              View all
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value={dateFilterOptions.thisWeek}
+              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
+            >
+              This week
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value={dateFilterOptions.thisMonth}
+              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
+            >
+              This month
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value={dateFilterOptions.thisYear}
+              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
+            >
+              This year
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
+
+        {/* Search */}
+        <div className="flex justify-end">
+          <div className="w-full max-w-xs">
+            <InputGroup>
+              <InputGroupInput 
+                placeholder='Search expenses...' 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <InputGroupAddon>
+                <SearchIcon />
+              </InputGroupAddon>
+            </InputGroup>
+          </div>
+        </div>
+
       </div>
 
       {/* Table */}
