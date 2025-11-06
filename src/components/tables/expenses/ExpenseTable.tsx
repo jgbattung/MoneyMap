@@ -337,7 +337,6 @@ const ExpenseTable = () => {
       },
     }),
     columnHelper.display({
-      header: "Actions",
       id: "edit",
       cell: EditCell,
     }),
@@ -374,12 +373,12 @@ const ExpenseTable = () => {
     },
     initialState: {
       pagination: {
-        pageSize: 5,
+        pageSize: 10,
       },
     },
   });
 
-  const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 40, 50] as const;
+  const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50] as const;
 
   const currentPage = table.getState().pagination.pageIndex;
   const totalPages = table.getPageCount();
