@@ -11,16 +11,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 import { useCardsQuery } from '@/hooks/useCardsQuery';
-import { ExpenseTransaction, useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery';
-import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery';
+import { IncomeTransaction, useIncomeTransactionsQuery } from '@/hooks/useIncomeTransactionsQuery';
 import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
 import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { ChevronDownIcon, ChevronLeft, ChevronRight, SearchIcon } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery';
+import SkeletonTable from '@/components/shared/SkeletonTable';
 
-const columnHelper = createColumnHelper<ExpenseTransaction>();
+const columnHelper = createColumnHelper<IncomeTransaction>();
 
 const CellContent = ({ getValue, row, column, table }: any) => {
   const initialValue = getValue();
@@ -154,37 +155,32 @@ const EditCell = ({ row, table }: any) => {
     try {
       const updatedRow = table.options.data[row.index];
       
-      // Extract only the fields the API expects
       const updatePayload = {
         id: updatedRow.id,
         name: updatedRow.name,
         amount: updatedRow.amount,
         accountId: updatedRow.accountId,
-        expenseTypeId: updatedRow.expenseTypeId,
+        incomeTypeId: updatedRow.incomeTypeId,
         date: updatedRow.date,
         description: updatedRow.description,
-        isInstallment: updatedRow.isInstallment,
-        installmentDuration: updatedRow.installmentDuration,
-        installmentStartDate: updatedRow.installmentStartDate,
-        remainingInstallments: updatedRow.remainingInstallments,
       };
 
-      await meta?.updateExpenseTransaction(updatePayload);
+      await meta?.updateIncomeTransaction(updatePayload);
 
       meta?.setEditedRows((old: any) => ({
         ...old,
         [row.id]: false,
       }));
-      toast.success("Expense updated successfully", {
+      toast.success("Income updated successfully", {
         duration: 5000
       });
     } catch (error) {
-      toast.error("Failed to update expense", {
+      toast.error("Failed to update income", {
         description: error instanceof Error ? error.message : "Please check your information and try again.",
         duration: 6000
       });
     }
-  } 
+  }
 
   return meta?.editedRows[row.id] ? (
     <div className='flex gap-2 items-center justify-center'>
@@ -216,25 +212,35 @@ const EditCell = ({ row, table }: any) => {
   )
 }
 
-const ExpenseTable = () => {
-  const { expenseTransactions, updateExpenseTransaction, isUpdating } = useExpenseTransactionsQuery();
-  const { accounts } = useAccountsQuery();
-  const { cards } = useCardsQuery();
-  const { budgets } = useExpenseTypesQuery();
+const IncomeTable = () => {
+  const { incomeTransactions, updateIncomeTransaction, isUpdating } = useIncomeTransactionsQuery();
+  const { accounts, isLoading: accountsLoading } = useAccountsQuery();
+  const { cards, isLoading: cardsLoading } = useCardsQuery();
+  const { incomeTypes, isLoading: incomeTypesLoading } = useIncomeTypesQuery();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
-  const [data, setData] = useState<ExpenseTransaction[]>([]);
-  const [originalData, setOriginalData] = useState<ExpenseTransaction[]>([]);
+  const [data, setData] = useState<IncomeTransaction[]>([]);
+  const [originalData, setOriginalData] = useState<IncomeTransaction[]>([]);
   const [editedRows, setEditedRows] = useState({});
 
   const [dateFilter, setDateFilter] = useState<string>("view-all");
 
+  const prevTransactionsRef = useRef<IncomeTransaction[]>([]);
+
   useEffect(() => {
-    setData([...expenseTransactions]);
-    setOriginalData([...expenseTransactions]);
-  }, [expenseTransactions]);
+    // Only update if the data actually changed
+    const hasChanged = 
+      incomeTransactions.length !== prevTransactionsRef.current.length ||
+      incomeTransactions.some((t, i) => t.id !== prevTransactionsRef.current[i]?.id);
+    
+    if (hasChanged) {
+      setData([...incomeTransactions]);
+      setOriginalData([...incomeTransactions]);
+      prevTransactionsRef.current = incomeTransactions;
+    }
+  }, [incomeTransactions]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -244,7 +250,25 @@ const ExpenseTable = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const allAccounts = [...accounts, ...cards];
+  // Memoize the combined accounts array
+  const allAccounts = useMemo(() => [...accounts, ...cards], [accounts, cards]);
+
+  // Memoize the options arrays
+  const accountOptions = useMemo(() => 
+    allAccounts.map(acc => ({
+      value: acc.id,
+      label: acc.name
+    })), 
+    [allAccounts]
+  );
+
+  const incomeTypeOptions = useMemo(() => 
+    incomeTypes.map(incomeType => ({
+      value: incomeType.id,
+      label: incomeType.name
+    })), 
+    [incomeTypes]
+  );
 
   const dateFilterOptions = {
     viewAll: "view-all",
@@ -256,19 +280,19 @@ const ExpenseTable = () => {
   const filteredData = useMemo(() => {
     return data.filter((row) => {
       if (dateFilter !== dateFilterOptions.viewAll) {
-        const expenseDate = new Date(row.date);
+        const incomeDate = new Date(row.date);
         const now = new Date();
 
         if (dateFilter === dateFilterOptions.thisWeek) {
           const weekStart = new Date(now);
           weekStart.setDate(now.getDate() - now.getDay());
           weekStart.setHours(0, 0, 0, 0);
-          if (expenseDate < weekStart) return false;
+          if (incomeDate < weekStart) return false;
         } else if (dateFilter === dateFilterOptions.thisMonth) {
-          if (expenseDate.getMonth() !== now.getMonth() || 
-              expenseDate.getFullYear() !== now.getFullYear()) return false;
+          if (incomeDate.getMonth() !== now.getMonth() || 
+              incomeDate.getFullYear() !== now.getFullYear()) return false;
         } else if (dateFilter === dateFilterOptions.thisYear) {
-          if (expenseDate.getFullYear() !== now.getFullYear()) return false;
+          if (incomeDate.getFullYear() !== now.getFullYear()) return false;
         }
       }
 
@@ -279,13 +303,14 @@ const ExpenseTable = () => {
       return (
         row.name.toLowerCase().includes(searchLower) ||
         row.description?.toLowerCase().includes(searchLower) ||
-        row.expenseType.name.toLowerCase().includes(searchLower) ||
+        row.incomeType.name.toLowerCase().includes(searchLower) ||
         row.account.name.toLowerCase().includes(searchLower)
       );
     });
   }, [data, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);
 
-  const columns = [
+  // Memoize the columns with proper dependencies
+  const columns = useMemo(() => [
     columnHelper.accessor("date", {
       header: "Date",
       cell: CellContent,
@@ -312,21 +337,15 @@ const ExpenseTable = () => {
       cell: CellContent,
       meta: {
         type: "select",
-        options: allAccounts.map(acc => ({
-          value: acc.id,
-          label: acc.name
-        }))
+        options: accountOptions
       },
     }),
-    columnHelper.accessor("expenseTypeId", {
-      header: "Expense type",
+    columnHelper.accessor("incomeTypeId", {
+      header: "Income type",
       cell: CellContent,
       meta: {
         type: "select",
-        options: budgets.map(budget => ({
-          value: budget.id,
-          label: budget.name
-        }))
+        options: incomeTypeOptions
       },
     }),
     columnHelper.accessor("description", {
@@ -340,43 +359,61 @@ const ExpenseTable = () => {
       id: "edit",
       cell: EditCell,
     }),
-  ];
+  ], [accountOptions, incomeTypeOptions]);
+
+  // Memoize meta functions with useCallback
+  const updateData = useCallback((rowIndex: number, columnId: string, value: string) => {
+    setData((old) =>
+      old.map((row, index) => {
+        if (index === rowIndex) {
+          return {
+            ...old[rowIndex],
+            [columnId]: value,
+          };
+        }
+        return row;
+      })
+    );
+  }, []);
+
+  const revertData = useCallback((rowIndex: number) => {
+    setData((old) =>
+      old.map((row, index) => (index === rowIndex ? originalData[rowIndex] : row))
+    );
+  }, [originalData]);
+
+  // Memoize the table meta object
+  const tableMeta = useMemo(() => ({
+    editedRows,
+    setEditedRows,
+    updateData,
+    revertData,
+    updateIncomeTransaction,
+    isUpdating,
+  }), [editedRows, updateData, revertData, updateIncomeTransaction, isUpdating]);
 
   const table = useReactTable({
     data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    meta: {
-      editedRows,
-      setEditedRows,
-      updateData: (rowIndex: number, columnId: string, value: string) => {
-        setData((old) =>
-          old.map((row, index) => {
-            if (index === rowIndex) {
-              return {
-                ...old[rowIndex],
-                [columnId]: value,
-              };
-            }
-            return row;
-          })
-        );
-      },
-      revertData: (rowIndex: number) => {
-        setData((old) =>
-          old.map((row, index) => (index === rowIndex ? originalData[rowIndex] : row))
-        );
-      },
-      updateExpenseTransaction,
-      isUpdating,
-    },
+    meta: tableMeta,
     initialState: {
       pagination: {
         pageSize: 10,
       },
     },
   });
+
+  const isLoadingData = accountsLoading || cardsLoading || incomeTypesLoading;
+
+  if (isLoadingData) {
+    return (
+      <div className="md:block mt-10">
+        <SkeletonTable tableType='income' />
+      </div>
+    );
+  }
 
   const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50] as const;
 
@@ -454,7 +491,7 @@ const ExpenseTable = () => {
           <div className="w-full max-w-xs">
             <InputGroup>
               <InputGroupInput 
-                placeholder='Search expenses...' 
+                placeholder='Search income...' 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -467,7 +504,7 @@ const ExpenseTable = () => {
 
       </div>
 
-{/* Table */}
+      {/* Table */}
       <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
@@ -503,7 +540,7 @@ const ExpenseTable = () => {
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-32 text-center">
                   <div className="flex flex-col items-center gap-2">
-                    <p className="text-muted-foreground">No expense transactions found.</p>
+                    <p className="text-muted-foreground">No income transactions found.</p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -585,4 +622,4 @@ const ExpenseTable = () => {
   )
 }
 
-export default ExpenseTable
+export default IncomeTable

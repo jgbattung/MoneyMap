@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-type IncomeTransaction = {
+export type IncomeTransaction = {
   id: string;
   userId: string;
   accountId: string;
@@ -11,6 +11,14 @@ type IncomeTransaction = {
   description?: string | null;
   createdAt: string;
   updatedAt: string;
+  account: {
+    id: string;
+    name: string;
+  };
+  incomeType: {
+    id: string;
+    name: string;
+  };
 }
 
 const QUERY_KEYS = {
