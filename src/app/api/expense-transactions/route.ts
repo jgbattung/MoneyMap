@@ -19,6 +19,7 @@ export async function GET() {
     const expenseTransactions = await db.expenseTransaction.findMany({
       where: {
         userId: session.user.id,
+        isInstallment: false,
       },
       include: {
         account: true,
@@ -63,7 +64,9 @@ export async function POST(request: NextRequest) {
       description,
       isInstallment,
       installmentDuration,
-      installmentStartDate
+      installmentStartDate,
+      isSystemGenerated,
+      parentInstallmentId,
     } = body;
 
     if (!name || !amount || !accountId || !expenseTypeId) {
@@ -113,29 +116,13 @@ export async function POST(request: NextRequest) {
           remainingInstallments: remainingInstallments,
           installmentStartDate: installmentStartDate ? new Date(installmentStartDate) : null,
           monthlyAmount,
+          isSystemGenerated: isSystemGenerated || false,
+          parentInstallmentId: parentInstallmentId || null,
         },
       });
 
-      if (!isInstallment) {
-        await tx.financialAccount.update({
-          where: {
-            id: accountId,
-            userId: session.user.id,
-          },
-          data: {
-            currentBalance: {
-              decrement: parsedAmount,
-            },
-          },
-        });
-      } else {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const startDate = new Date(installmentStartDate);
-        startDate.setHours(0, 0, 0, 0);
-
-        if (startDate <= today) {
+      if (!isSystemGenerated) {
+        if (!isInstallment) {
           await tx.financialAccount.update({
             where: {
               id: accountId,
@@ -143,22 +130,57 @@ export async function POST(request: NextRequest) {
             },
             data: {
               currentBalance: {
-                decrement: monthlyAmount!,
+                decrement: parsedAmount,
               },
             },
           });
+        } else {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
 
-          await tx.expenseTransaction.update({
-            where: {
-              id: expenseTransaction.id,
-            },
-            data: {
-              lastProcessedDate: startDate,
-              remainingInstallments: {
-                decrement: 1,
-              }
-            },
-          });
+          const startDate = new Date(installmentStartDate);
+          startDate.setHours(0, 0, 0, 0);
+
+          if (startDate <= today) {
+            await tx.financialAccount.update({
+              where: {
+                id: accountId,
+                userId: session.user.id,
+              },
+              data: {
+                currentBalance: {
+                  decrement: monthlyAmount!,
+                },
+              },
+            });
+
+            await tx.expenseTransaction.update({
+              where: {
+                id: expenseTransaction.id,
+              },
+              data: {
+                lastProcessedDate: startDate,
+                remainingInstallments: {
+                  decrement: 1,
+                }
+              },
+            });
+
+            await tx.expenseTransaction.create({
+              data: {
+                userId: session.user.id,
+                accountId,
+                expenseTypeId,
+                name: `${name} (Payment 1/${installmentDuration})`,
+                amount: monthlyAmount!,
+                date: startDate,
+                description: `Installment payment 1 of ${installmentDuration}`,
+                isInstallment: false,
+                isSystemGenerated: true,
+                parentInstallmentId: expenseTransaction.id,
+              },
+            });
+          }
         }
       }
 

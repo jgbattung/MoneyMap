@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          // Update installment record
+          // Update master installment record
           await tx.expenseTransaction.update({
             where: {
               id: installment.id,
@@ -77,6 +77,24 @@ export async function POST(request: NextRequest) {
                 decrement: 1
               },
               lastProcessedDate: today,
+            },
+          });
+
+          // Create payment record (new expense transaction)
+          const paidCount = installment.installmentDuration! - (installment.remainingInstallments! - 1);
+          
+          await tx.expenseTransaction.create({
+            data: {
+              userId: installment.userId,
+              accountId: installment.accountId,
+              expenseTypeId: installment.expenseTypeId,
+              name: `${installment.name} (Payment ${paidCount}/${installment.installmentDuration})`,
+              amount: installment.monthlyAmount!,
+              date: today,
+              description: `Installment payment ${paidCount} of ${installment.installmentDuration}`,
+              isInstallment: false,
+              isSystemGenerated: true,
+              parentInstallmentId: installment.id,
             },
           });
         });
