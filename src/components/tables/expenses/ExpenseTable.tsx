@@ -17,8 +17,9 @@ import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
 import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { ChevronDownIcon, ChevronLeft, ChevronRight, SearchIcon } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import SkeletonTable from '@/components/shared/SkeletonTable';
 
 const columnHelper = createColumnHelper<ExpenseTransaction>();
 
@@ -218,9 +219,9 @@ const EditCell = ({ row, table }: any) => {
 
 const ExpenseTable = () => {
   const { expenseTransactions, updateExpenseTransaction, isUpdating } = useExpenseTransactionsQuery();
-  const { accounts } = useAccountsQuery();
-  const { cards } = useCardsQuery();
-  const { budgets } = useExpenseTypesQuery();
+  const { accounts, isLoading: accountsLoading } = useAccountsQuery();
+  const { cards, isLoading: cardsLoading } = useCardsQuery();
+  const { budgets, isLoading: budgetsLoading } = useExpenseTypesQuery();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -231,9 +232,19 @@ const ExpenseTable = () => {
 
   const [dateFilter, setDateFilter] = useState<string>("view-all");
 
+  const prevTransactionsRef = useRef<ExpenseTransaction[]>([]);
+
   useEffect(() => {
-    setData([...expenseTransactions]);
-    setOriginalData([...expenseTransactions]);
+    // Only update if the data actually changed
+    const hasChanged = 
+      expenseTransactions.length !== prevTransactionsRef.current.length ||
+      expenseTransactions.some((t, i) => t.id !== prevTransactionsRef.current[i]?.id);
+    
+    if (hasChanged) {
+      setData([...expenseTransactions]);
+      setOriginalData([...expenseTransactions]);
+      prevTransactionsRef.current = expenseTransactions;
+    }
   }, [expenseTransactions]);
 
   useEffect(() => {
@@ -244,7 +255,25 @@ const ExpenseTable = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const allAccounts = [...accounts, ...cards];
+  // Memoize the combined accounts array
+  const allAccounts = useMemo(() => [...accounts, ...cards], [accounts, cards]);
+
+  // Memoize the options arrays
+  const accountOptions = useMemo(() => 
+    allAccounts.map(acc => ({
+      value: acc.id,
+      label: acc.name
+    })), 
+    [allAccounts]
+  );
+
+  const expenseTypeOptions = useMemo(() => 
+    budgets.map(budget => ({
+      value: budget.id,
+      label: budget.name
+    })), 
+    [budgets]
+  );
 
   const dateFilterOptions = {
     viewAll: "view-all",
@@ -285,7 +314,8 @@ const ExpenseTable = () => {
     });
   }, [data, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);
 
-  const columns = [
+  // Memoize the columns with proper dependencies
+  const columns = useMemo(() => [
     columnHelper.accessor("date", {
       header: "Date",
       cell: CellContent,
@@ -312,10 +342,7 @@ const ExpenseTable = () => {
       cell: CellContent,
       meta: {
         type: "select",
-        options: allAccounts.map(acc => ({
-          value: acc.id,
-          label: acc.name
-        }))
+        options: accountOptions
       },
     }),
     columnHelper.accessor("expenseTypeId", {
@@ -323,10 +350,7 @@ const ExpenseTable = () => {
       cell: CellContent,
       meta: {
         type: "select",
-        options: budgets.map(budget => ({
-          value: budget.id,
-          label: budget.name
-        }))
+        options: expenseTypeOptions
       },
     }),
     columnHelper.accessor("description", {
@@ -340,37 +364,45 @@ const ExpenseTable = () => {
       id: "edit",
       cell: EditCell,
     }),
-  ];
+  ], [accountOptions, expenseTypeOptions]);
+
+  // Memoize meta functions with useCallback
+  const updateData = useCallback((rowIndex: number, columnId: string, value: string) => {
+    setData((old) =>
+      old.map((row, index) => {
+        if (index === rowIndex) {
+          return {
+            ...old[rowIndex],
+            [columnId]: value,
+          };
+        }
+        return row;
+      })
+    );
+  }, []);
+
+  const revertData = useCallback((rowIndex: number) => {
+    setData((old) =>
+      old.map((row, index) => (index === rowIndex ? originalData[rowIndex] : row))
+    );
+  }, [originalData]);
+
+  // Memoize the table meta object
+  const tableMeta = useMemo(() => ({
+    editedRows,
+    setEditedRows,
+    updateData,
+    revertData,
+    updateExpenseTransaction,
+    isUpdating,
+  }), [editedRows, updateData, revertData, updateExpenseTransaction, isUpdating]);
 
   const table = useReactTable({
     data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    meta: {
-      editedRows,
-      setEditedRows,
-      updateData: (rowIndex: number, columnId: string, value: string) => {
-        setData((old) =>
-          old.map((row, index) => {
-            if (index === rowIndex) {
-              return {
-                ...old[rowIndex],
-                [columnId]: value,
-              };
-            }
-            return row;
-          })
-        );
-      },
-      revertData: (rowIndex: number) => {
-        setData((old) =>
-          old.map((row, index) => (index === rowIndex ? originalData[rowIndex] : row))
-        );
-      },
-      updateExpenseTransaction,
-      isUpdating,
-    },
+    meta: tableMeta,
     initialState: {
       pagination: {
         pageSize: 10,
@@ -467,7 +499,7 @@ const ExpenseTable = () => {
 
       </div>
 
-{/* Table */}
+      {/* Table */}
       <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
