@@ -21,7 +21,7 @@ const Transactions = () => {
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
       <h1 className="text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold">Transfers</h1>
       
-      <div className="my-3 md:my-6 lg:my-12">
+      <div className="my-3 md:my-6 lg:my-8">
         <div className="mb-6">
           <h2 className="text-lg font-semibold md:text-xl lg:text-2xl">
             Transfer Types
@@ -33,9 +33,8 @@ const Transactions = () => {
         <TransferTypesList />
       </div>
 
-      {/* Transactions Section - Placeholder for Phase 2 */}
       <div>
-        <div className="my-3 md:my-6 lg:my-12">
+        <div className="my-3 md:my-6 lg:my-8">
           <h2 className="text-lg font-semibold md:text-xl lg:text-2xl">
             Transfer Transactions
           </h2>
