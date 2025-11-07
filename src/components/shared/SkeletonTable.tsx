@@ -1,4 +1,3 @@
-// components/tables/expenses/SkeletonExpenseTable.tsx
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
@@ -6,7 +5,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ChevronLeft, ChevronRight, SearchIcon } from 'lucide-react';
 
-const SkeletonExpenseTable = () => {
+interface SkeletonTableProps {
+  tableType: string;
+}
+
+const SkeletonTable = ({ tableType }: SkeletonTableProps) => {
   const dateFilterOptions = {
     viewAll: "view-all",
     thisWeek: "this-week",
@@ -74,7 +77,7 @@ const SkeletonExpenseTable = () => {
               <TableHead className='p-4'>Name</TableHead>
               <TableHead className='p-4'>Amount</TableHead>
               <TableHead className='p-4'>Account</TableHead>
-              <TableHead className='p-4'>Expense type</TableHead>
+              <TableHead className='p-4'>{tableType === "income" ? 'Income type' : 'Expense type'}</TableHead>
               <TableHead className='p-4'>Description</TableHead>
               <TableHead className='p-4'></TableHead>
             </TableRow>
@@ -138,4 +141,4 @@ const SkeletonExpenseTable = () => {
   );
 };
 
-export default SkeletonExpenseTable;
+export default SkeletonTable;

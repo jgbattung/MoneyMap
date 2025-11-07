@@ -217,7 +217,7 @@ const EditCell = ({ row, table }: any) => {
 }
 
 const ExpenseTable = () => {
-  const { expenseTransactions, updateExpenseTransaction, isLoading, isUpdating } = useExpenseTransactionsQuery();
+  const { expenseTransactions, updateExpenseTransaction, isUpdating } = useExpenseTransactionsQuery();
   const { accounts } = useAccountsQuery();
   const { cards } = useCardsQuery();
   const { budgets } = useExpenseTypesQuery();
@@ -489,15 +489,7 @@ const ExpenseTable = () => {
             ))}
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-36">
-                  <div className="flex items-center justify-center">
-                    <Spinner className="size-6" />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : table.getRowModel().rows?.length ? (
+            {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
