@@ -6,7 +6,7 @@ import EditExpenseDrawer from "@/components/forms/EditExpenseDrawer";
 import { Icons } from "@/components/icons";
 import ExpenseCard from "@/components/shared/ExpenseCard";
 import SkeletonIncomeTypeCard from "@/components/shared/SkeletonIncomeTypeCard";
-import SkeletonExpenseTable from "@/components/shared/SkeletonTable";
+import SkeletonTable from "@/components/shared/SkeletonTable";
 import ExpenseTable from "@/components/tables/expenses/ExpenseTable";
 import { Button } from "@/components/ui/button";
 import { useExpenseTransactionsQuery } from "@/hooks/useExpenseTransactionsQuery";
@@ -73,7 +73,7 @@ const Expenses = () => {
             ))}
           </div>
           <div className='hidden md:block mt-10'>
-            <SkeletonExpenseTable />
+            <SkeletonTable tableType="expense" />
           </div>
         </>
       ) : error ? (

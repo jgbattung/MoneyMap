@@ -20,6 +20,13 @@ export async function GET() {
       where: {
         userId: session.user.id,
       },
+      include: {
+        account: true,
+        incomeType: true,
+      },
+      orderBy: {
+        date: 'desc',
+      },
     });
 
     return NextResponse.json(incomeTransactions, { status: 200 });
