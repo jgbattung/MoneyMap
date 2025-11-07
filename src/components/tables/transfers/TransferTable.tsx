@@ -1,471 +1,430 @@
 "use client"
 
-import { Table } from '@/components/ui/table';
-import { useTransfersQuery } from '@/hooks/useTransferTransactionsQuery'
-import React, { useState } from 'react'
-import {
-  useReactTable,
-  getCoreRowModel,
-  getPaginationRowModel,
-  ColumnDef,
-  getSortedRowModel,
-  SortingState,
-} from '@tanstack/react-table'
-import { TransferTransaction } from '@/hooks/useTransferTransactionsQuery'
-import { 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table'
-import { flexRender } from '@tanstack/react-table'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useTransferTypesQuery } from '@/hooks/useTransferTypesQuery';
-import { useAccountsQuery } from '@/hooks/useAccountsQuery';
-import EditableDateCell from '../cells/EditableDateCell';
-import EditableNotesCell from '../cells/EditableNotesCell';
-import EditableNumberCell from '../cells/EditableNumberCell';
-import EditableSelectCell from '../cells/EditableSelectCell';
-import EditableTextCell from '../cells/EditableTextCell';
 import { Button } from '@/components/ui/button';
-import { IconCheck, IconTrash, IconX } from '@tabler/icons-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Input } from '@/components/ui/input';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
-import DeleteDialog from '@/components/shared/DeleteDialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { useAccountsQuery } from '@/hooks/useAccountsQuery';
+import { useCardsQuery } from '@/hooks/useCardsQuery';
+import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
+import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
+import { format } from 'date-fns';
+import { ChevronDownIcon, ChevronLeft, ChevronRight, SearchIcon } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { TransferTransaction, useTransfersQuery } from '@/hooks/useTransferTransactionsQuery';
+import { useTransferTypesQuery } from '@/hooks/useTransferTypesQuery';
+import SkeletonTransferTable from '@/components/shared/SkeletonTransferTable';
 
+const columnHelper = createColumnHelper<TransferTransaction>();
 
-const TransferTable = () => {
-  const { transfers, isLoading, isUpdating, isDeleting, updateTransfer , deleteTransfer } = useTransfersQuery();
-  const { accounts } = useAccountsQuery();
-  const { transferTypes } = useTransferTypesQuery();
-  const [sorting, setSorting] = React.useState<SortingState>([
-    {
-      id: 'date',
-      desc: true,
-    },
-  ]);
-  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-  const [transferToDelete, setTransferToDelete] = React.useState<string | null>(null);
+const CellContent = ({ getValue, row, column, table }: any) => {
+  const initialValue = getValue();
+  const columnMeta = column.columnDef.meta;
+  const tableMeta = table.options.meta;
+  const [value, setValue] = useState("");
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50] as const;
+  useEffect(() => {
+    setValue(initialValue ?? "")
+  }, [initialValue]);
 
-  type EditState = {
-    [rowId: string]: {
-      [columnId: string]: any;
-    };
-  };
-
-  const [editingCells, setEditingCells] = useState<Set<string>>(new Set());
-  const [editValues, setEditValues] = useState<EditState>({});
-
-  const getCellKey = (rowId: string, columnId: string) => `${rowId}-${columnId}`;
-
-  const isCellEditing = (rowId: string, columnId: string) => {
-    return editingCells.has(getCellKey(rowId, columnId));
+  const onBlur = () => {
+    tableMeta?.updateData(row.index, column.id, value)
   }
 
-  const isRowEditing = (rowId: string) => {
-    return Array.from(editingCells).some(key => key.startsWith(`${rowId}-`));
-  }
-
-  const startEditingCell = (rowId: string, columnId: string, initialValue: any) => {
-    const cellKey = getCellKey(rowId, columnId);
-    setEditingCells(prev => new Set(prev).add(cellKey));
-    setEditValues(prev => ({
-      ...prev,
-      [rowId]: {
-        ...prev[rowId],
-        [columnId]: initialValue,
-      },
-    }));
-  }
-
-  const updateEditValue = (rowId: string, columnId: string, value: any) => {
-    setEditValues(prev => ({
-      ...prev,
-      [rowId]: {
-        ...prev[rowId],
-        [columnId]: value,
-      },
-    }));
-  }
-
-  const cancelEditing = (rowId: string) => {
-    setEditingCells(prev => {
-      const newSet = new Set(prev);
-      Array.from(newSet).forEach(key => {
-        if (key.startsWith(`${rowId}-`)) {
-          newSet.delete(key);
-        }
-      });
-      return newSet;
-    })
-  }
-
-  // Validation function
-  const validateRow = (rowId: string, originalData: TransferTransaction) => {
-    const editedValues = editValues[rowId] || {};
-    
-    // Get current values (edited or original)
-    const currentName = editedValues.name ?? originalData.name;
-    const currentAmount = editedValues.amount ?? originalData.amount;
-    const currentFromAccountId = editedValues.fromAccountId ?? originalData.fromAccountId;
-    const currentToAccountId = editedValues.toAccountId ?? originalData.toAccountId;
-    const currentTransferTypeId = editedValues.transferTypeId ?? originalData.transferTypeId;
-    const currentDate = editedValues.date ?? originalData.date;
-
-    const errors: string[] = [];
-
-    // Validation rules
-    if (!currentName || currentName.trim() === '') errors.push('Name');
-    if (!currentAmount || currentAmount <= 0) errors.push('Amount');
-    if (!currentFromAccountId) errors.push('From Account');
-    if (!currentToAccountId) errors.push('To Account');
-    if (!currentTransferTypeId) errors.push('Transfer Type');
-    if (!currentDate) errors.push('Date');
-    if (currentFromAccountId === currentToAccountId) errors.push('From and To accounts must be different');
-
-    return errors;
+  const onSelectChange = (newValue: string) => {
+    setValue(newValue);
+    tableMeta?.updateData(row.index, column.id, newValue);
   };
   
-  const handleSave = async (rowId: string, originalData: TransferTransaction) => {
-    const editedValues = editValues[rowId];
+  const onDateChange = (date: Date | undefined) => {
+    if (date) {
+      const isoDate = date.toISOString();
+      setValue(isoDate);
+      tableMeta?.updateData(row.index, column.id, isoDate);
+      setCalendarOpen(false);
+    }
+  }
+
+  // If row is not in edit mode, show read-only display
+  if (!tableMeta?.editedRows[row.id]) {
+    if (columnMeta?.type === "date") {
+      const dateValue = value ? new Date(value) : null;
+      return <span>{dateValue ? format(dateValue, "MMM d, yyyy") : ""}</span>;
+    }
     
-    if (!editedValues) {
-      cancelEditing(rowId);
-      return;
+    if (columnMeta?.type === "number") {
+      const amount = parseFloat(value);
+      return <span>{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
     }
 
-    const updatePayload = {
-      id: originalData.id,
-      name: originalData.name,
-      amount: originalData.amount,
-      fromAccountId: originalData.fromAccountId,
-      toAccountId: originalData.toAccountId,
-      transferTypeId: originalData.transferTypeId,
-      date: originalData.date,
-      notes: originalData.notes,
-      ...editedValues,
-    };
+    if (columnMeta?.type === "select") {
+      const option = columnMeta?.options?.find((opt: any) => opt.value === value);
+      return <span>{option?.label || value}</span>;
+    }
 
+    if (column.id === "description") {
+      return (
+        <span className="block max-w-[150px] truncate" title={value}>
+          {value}
+        </span>
+      );
+    }
+
+    return <span>{value}</span>;
+  }
+
+  // If row is in edit mode, show editable fields
+  if (columnMeta?.type === "date") {
+    const dateValue = value ? new Date(value) : undefined;
+    
+    return (
+      <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+        <PopoverTrigger asChild>
+          <button className="w-full text-left flex items-center bg-[oklch(1_0_0_/_0.045)] gap-2 justify-between border rounded-lg px-3 py-2 hover:bg-[oklch(1_0_0_/_0.075)]">
+            <span>
+              {dateValue ? format(dateValue, "MMM d, yyyy") : "Select date"}
+            </span>
+            <ChevronDownIcon className="h-4 w-4 opacity-50" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={dateValue}
+            onSelect={onDateChange}
+            disabled={(date) => date > new Date()}
+          />
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  if (columnMeta?.type === "select") {
+    return (
+      <Select value={value} onValueChange={onSelectChange}>
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {columnMeta?.options?.map((option: any) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }
+
+  return (
+    <Input
+      value={value}
+      onChange={e => setValue(e.target.value)}
+      onBlur={onBlur}
+      className="w-full [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+    />
+  );
+};
+
+const EditCell = ({ row, table }: any) => {
+  const meta = table.options.meta;
+
+  const setEditedRows = (e: React.MouseEvent<HTMLButtonElement>) => {
+    meta?.setEditedRows((old: any) => ({
+      ...old,
+      [row.id]: !old[row.id],
+    }));
+  }
+
+  const removeRow = () => {
+    meta?.revertData(row.index);
+    meta?.setEditedRows((old: any) => ({
+      ...old,
+      [row.id]: !old[row.id],
+    }));
+  }
+
+  const saveRow = async () => {
     try {
-      await updateTransfer(updatePayload);
-      cancelEditing(rowId);
+      const updatedRow = table.options.data[row.index];
+      
+      const updatePayload = {
+        id: updatedRow.id,
+        name: updatedRow.name,
+        amount: updatedRow.amount,
+        fromAccountId: updatedRow.fromAccountId,
+        toAccountId: updatedRow.toAccountId,
+        transferTypeId: updatedRow.transferTypeId,
+        date: updatedRow.date,
+        notes: updatedRow.notes,
+      };
+
+      await meta?.updateTransfer(updatePayload);
+
+      meta?.setEditedRows((old: any) => ({
+        ...old,
+        [row.id]: false,
+      }));
       toast.success("Transfer updated successfully", {
         duration: 5000
       });
     } catch (error) {
-      console.error('Failed to update transfer:', error);
-    }
-  };
-
-  const handleDelete = async (transferId: string) => {
-    setTransferToDelete(transferId);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!transferToDelete) return;
-    
-    try {
-      await deleteTransfer(transferToDelete);
-      setDeleteDialogOpen(false);
-      setTransferToDelete(null);
-      toast.success("Transfer deleted successfully", {
-        duration: 5000
+      toast.error("Failed to update transfer", {
+        description: error instanceof Error ? error.message : "Please check your information and try again.",
+        duration: 6000
       });
-    } catch (error) {
-      console.error('Failed to delete transfer:', error);
     }
-  };
+  }
 
-  const columns: ColumnDef<TransferTransaction>[] = [
-    {
-      accessorKey: "date",
-      header: "Date",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const cellId = "date";
-        const currentValue = isCellEditing(rowId, cellId) 
-          ? new Date(editValues[rowId]?.[cellId] || row.original.date)
-          : new Date(row.original.date);
+  return meta?.editedRows[row.id] ? (
+    <div className='flex gap-2 items-center justify-center'>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={removeRow}
+        disabled={meta?.isUpdating}
+      >
+        <IconX />
+      </Button>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={saveRow}
+        disabled={meta?.isUpdating}
+      >
+        {meta?.isUpdating ? (
+          <Spinner className="h-4 w-4" />
+        ) : (
+          <IconCheck />
+        )}
+      </Button>
+    </div>
+  ) : (
+    <Button variant="ghost" size="icon" onClick={setEditedRows}>
+      <IconEdit />
+    </Button>
+  )
+}
 
-        // Validation
-        const errors = validateRow(rowId, row.original);
-        const hasError = errors.includes('Date');
+const TransferTable = () => {
+  const { transfers, updateTransfer, isUpdating } = useTransfersQuery();
+  const { accounts, isLoading: accountsLoading } = useAccountsQuery();
+  const { cards, isLoading: cardsLoading } = useCardsQuery();
+  const { transferTypes, isLoading: transferTypesLoading } = useTransferTypesQuery();
 
-        return (
-          <EditableDateCell
-            value={currentValue}
-            isEditing={isCellEditing(rowId, cellId)}
-            onStartEdit={() => startEditingCell(rowId, cellId, row.original.date)}
-            onChange={(value) => updateEditValue(rowId, cellId, value.toISOString())}
-            isError={hasError}
-          />
-        );
-      }
-    },
-    {
-      accessorKey: "name",
-      header: "Name",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const cellId = "name";
-        const currentValue = isCellEditing(rowId, cellId)
-          ? editValues[rowId]?.[cellId] || row.original.name
-          : row.original.name;
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
-        // Validation
-        const errors = validateRow(rowId, row.original);
-        const hasError = errors.includes('Name');
+  const [data, setData] = useState<TransferTransaction[]>([]);
+  const [originalData, setOriginalData] = useState<TransferTransaction[]>([]);
+  const [editedRows, setEditedRows] = useState({});
 
-        return (
-          <EditableTextCell
-            value={currentValue}
-            isEditing={isCellEditing(rowId, cellId)}
-            onStartEdit={() => startEditingCell(rowId, cellId, row.original.name)}
-            onChange={(value) => updateEditValue(rowId, cellId, value)}
-            isError={hasError}
-          />
-        );
-      }
-    },
-    {
-      accessorKey: "amount",
-      header: "Amount",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const cellId = "amount";
-        const currentValue = isCellEditing(rowId, cellId)
-          ? editValues[rowId]?.[cellId] || row.original.amount
-          : row.original.amount;
+  const [dateFilter, setDateFilter] = useState<string>("view-all");
 
-        // Validation
-        const errors = validateRow(rowId, row.original);
-        const hasError = errors.includes('Amount');
+  const prevTransactionsRef = useRef<TransferTransaction[]>([]);
 
-        return (
-          <EditableNumberCell
-            value={currentValue}
-            isEditing={isCellEditing(rowId, cellId)}
-            onStartEdit={() => startEditingCell(rowId, cellId, row.original.amount)}
-            onChange={(value) => updateEditValue(rowId, cellId, value)}
-            isError={hasError}
-          />
-        );
-      }
-    },
-    {
-      accessorKey: "fromAccount",
-      header: "From Account",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const cellId = "fromAccountId";
-        const currentValue = isCellEditing(rowId, cellId)
-          ? editValues[rowId]?.[cellId] || row.original.fromAccountId
-          : row.original.fromAccountId;
-        
-        const toAccountId = editValues[rowId]?.["toAccountId"] || row.original.toAccountId;
-        const filteredAccounts = accounts?.filter(acc => acc.id !== toAccountId) || [];
+  useEffect(() => {
+    // Only update if the data actually changed
+    const hasChanged = 
+      transfers.length !== prevTransactionsRef.current.length ||
+      transfers.some((t, i) => t.id !== prevTransactionsRef.current[i]?.id);
+    
+    if (hasChanged) {
+      setData([...transfers]);
+      setOriginalData([...transfers]);
+      prevTransactionsRef.current = transfers;
+    }
+  }, [transfers]);
 
-        // Validation
-        const errors = validateRow(rowId, row.original);
-        const hasError = errors.includes('From Account') || errors.includes('From and To accounts must be different');
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
 
-        return (
-          <EditableSelectCell
-            value={currentValue}
-            displayValue={row.original.fromAccount?.name || '-'}
-            options={filteredAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
-            isEditing={isCellEditing(rowId, cellId)}
-            onStartEdit={() => startEditingCell(rowId, cellId, row.original.fromAccountId)}
-            onChange={(value) => updateEditValue(rowId, cellId, value)}
-            placeholder="Select account"
-            isError={hasError}
-          />
-        );
-      }
-    },
-    {
-      accessorKey: "toAccount",
-      header: "To Account",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const cellId = "toAccountId";
-        const currentValue = isCellEditing(rowId, cellId)
-          ? editValues[rowId]?.[cellId] || row.original.toAccountId
-          : row.original.toAccountId;
-        
-        const fromAccountId = editValues[rowId]?.["fromAccountId"] || row.original.fromAccountId;
-        const filteredAccounts = accounts?.filter(acc => acc.id !== fromAccountId) || [];
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-        // Validation
-        const errors = validateRow(rowId, row.original);
-        const hasError = errors.includes('To Account') || errors.includes('From and To accounts must be different');
+  // Memoize the combined accounts array
+  const allAccounts = useMemo(() => [...accounts, ...cards], [accounts, cards]);
 
-        return (
-          <EditableSelectCell
-            value={currentValue}
-            displayValue={row.original.toAccount?.name || '-'}
-            options={filteredAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
-            isEditing={isCellEditing(rowId, cellId)}
-            onStartEdit={() => startEditingCell(rowId, cellId, row.original.toAccountId)}
-            onChange={(value) => updateEditValue(rowId, cellId, value)}
-            placeholder="Select account"
-            isError={hasError}
-          />
-        );
-      }
-    },
-    {
-      accessorKey: "transferType",
-      header: "Transfer Type",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const cellId = "transferTypeId";
-        const currentValue = isCellEditing(rowId, cellId)
-          ? editValues[rowId]?.[cellId] || row.original.transferTypeId
-          : row.original.transferTypeId;
+  // Memoize the options arrays
+  const accountOptions = useMemo(() => 
+    allAccounts.map(acc => ({
+      value: acc.id,
+      label: acc.name
+    })), 
+    [allAccounts]
+  );
 
-        // Validation
-        const errors = validateRow(rowId, row.original);
-        const hasError = errors.includes('Transfer Type');
+  const transferTypeOptions = useMemo(() => 
+    transferTypes.map(transferType => ({
+      value: transferType.id,
+      label: transferType.name
+    })), 
+    [transferTypes]
+  );
 
-        return (
-          <EditableSelectCell
-            value={currentValue}
-            displayValue={row.original.transferType?.name || '-'}
-            options={transferTypes?.map(type => ({ value: type.id, label: type.name })) || []}
-            isEditing={isCellEditing(rowId, cellId)}
-            onStartEdit={() => startEditingCell(rowId, cellId, row.original.transferTypeId)}
-            onChange={(value) => updateEditValue(rowId, cellId, value)}
-            placeholder="Select type"
-            isError={hasError}
-          />
-        );
-      }
-    },
-    {
-      accessorKey: "notes",
-      header: "Notes",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const cellId = "notes";
-        const currentValue = isCellEditing(rowId, cellId)
-          ? editValues[rowId]?.[cellId] || row.original.notes
-          : row.original.notes;
+  const dateFilterOptions = {
+    viewAll: "view-all",
+    thisWeek: "this-week",
+    thisMonth: "this-month",
+    thisYear: "this-year",
+  }
 
-        return (
-          <EditableNotesCell
-            value={currentValue}
-            isEditing={isCellEditing(rowId, cellId)}
-            onStartEdit={() => startEditingCell(rowId, cellId, row.original.notes || '')}
-            onChange={(value) => updateEditValue(rowId, cellId, value)}
-          />
-        );
-      }
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const rowId = row.id;
-        const isEditing = isRowEditing(rowId);
+  const filteredData = useMemo(() => {
+    return data.filter((row) => {
+      if (dateFilter !== dateFilterOptions.viewAll) {
+        const transferDate = new Date(row.date);
+        const now = new Date();
 
-        if (isEditing) {
-          const errors = validateRow(rowId, row.original);
-          const hasErrors = errors.length > 0;
-
-          return (
-            <div className="flex items-center gap-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <Button
-                        size="sm"
-                        className='bg-primary-600 hover:bg-primary-700 transition-colors'
-                        onClick={() => handleSave(rowId, row.original)}
-                        disabled={isUpdating || hasErrors}
-                      >
-                        {isUpdating ? (
-                          <Spinner />
-                        ) : (
-                          <IconCheck />
-                        )}
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {hasErrors && (
-                    <TooltipContent>
-                      <p className="text-sm">
-                        {errors.length > 1 
-                          ? `Please fix the following fields: ${errors.join(', ')}` 
-                          : `Please fix the following field: ${errors[0]}`
-                        }
-                      </p>                    
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
-              <Button
-                size="sm"
-                className='border border-secondary-400/50 rounded-md bg-transparent hover:bg-secondary-500 hover:text-white transition-colors'
-                onClick={() => cancelEditing(rowId)}
-                disabled={isUpdating}
-              >
-                <IconX />
-              </Button>
-              <Button
-                size="sm"
-                className='bg-error-800 hover:bg-error-900 transition-colors'
-                onClick={() => handleDelete(row.original.id)}
-                disabled={isDeleting || isUpdating}
-              >
-                <IconTrash />
-              </Button>
-            </div>
-          );
+        if (dateFilter === dateFilterOptions.thisWeek) {
+          const weekStart = new Date(now);
+          weekStart.setDate(now.getDate() - now.getDay());
+          weekStart.setHours(0, 0, 0, 0);
+          if (transferDate < weekStart) return false;
+        } else if (dateFilter === dateFilterOptions.thisMonth) {
+          if (transferDate.getMonth() !== now.getMonth() || 
+              transferDate.getFullYear() !== now.getFullYear()) return false;
+        } else if (dateFilter === dateFilterOptions.thisYear) {
+          if (transferDate.getFullYear() !== now.getFullYear()) return false;
         }
-
-        return (
-          <Button
-            size="sm"
-            className='bg-error-700 hover:bg-error-800 transition-colors'
-            onClick={() => handleDelete(row.original.id)}
-            disabled={isDeleting}
-          >
-            <IconTrash />
-          </Button>
-        );
       }
-    }
-  ]
+
+      // Search filter
+      if (!debouncedSearchTerm) return true;
+      
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      return (
+        row.name.toLowerCase().includes(searchLower) ||
+        row.notes?.toLowerCase().includes(searchLower) ||
+        row.transferType.name.toLowerCase().includes(searchLower) ||
+        row.toAccount.name.toLowerCase().includes(searchLower) ||
+        row.fromAccount.name.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [data, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);
+
+  const columns = useMemo(() => [
+    columnHelper.accessor("date", {
+      header: "Date",
+      cell: CellContent,
+      meta: {
+        type: "date"
+      },
+    }),
+    columnHelper.accessor("name", {
+      header: "Name",
+      cell: CellContent,
+      meta: {
+        type: "text"
+      },
+    }),
+    columnHelper.accessor("amount", {
+      header: "Amount",
+      cell: CellContent,
+      meta: {
+        type: "number"
+      },
+    }),
+    columnHelper.accessor("fromAccountId", {
+      header: "From account",
+      cell: CellContent,
+      meta: {
+        type: "select",
+        options: accountOptions
+      },
+    }),
+    columnHelper.accessor("toAccountId", {
+      header: "To account",
+      cell: CellContent,
+      meta: {
+        type: "select",
+        options: accountOptions
+      },
+    }),
+    columnHelper.accessor("transferTypeId", {
+      header: "Transfer type",
+      cell: CellContent,
+      meta: {
+        type: "select",
+        options: transferTypeOptions
+      },
+    }),
+    columnHelper.accessor("notes", {
+      header: "Notes",
+      cell: CellContent,
+      meta: {
+        type: "text"
+      },
+    }),
+    columnHelper.display({
+      id: "edit",
+      cell: EditCell,
+    }),
+  ], [accountOptions, transferTypeOptions]);
+
+  // Memoize meta functions with useCallback
+  const updateData = useCallback((rowIndex: number, columnId: string, value: string) => {
+    setData((old) =>
+      old.map((row, index) => {
+        if (index === rowIndex) {
+          return {
+            ...old[rowIndex],
+            [columnId]: value,
+          };
+        }
+        return row;
+      })
+    );
+  }, []);
+
+  const revertData = useCallback((rowIndex: number) => {
+    setData((old) =>
+      old.map((row, index) => (index === rowIndex ? originalData[rowIndex] : row))
+    );
+  }, [originalData]);
+
+  // Memoize the table meta object
+  const tableMeta = useMemo(() => ({
+    editedRows,
+    setEditedRows,
+    updateData,
+    revertData,
+    updateTransfer,
+    isUpdating,
+  }), [editedRows, updateData, revertData, updateTransfer, isUpdating]);
 
   const table = useReactTable({
-    data: transfers || [],
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
-    state: {
-      sorting,
-    },                                        
+    meta: tableMeta,
     initialState: {
       pagination: {
         pageSize: 10,
       },
     },
-  })
+  });
+
+  const isLoadingData = accountsLoading || cardsLoading || transferTypesLoading;
+
+  if (isLoadingData) {
+    return (
+      <div className="md:block mt-10">
+        <SkeletonTransferTable />
+      </div>
+    );
+  }
+
+  const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50] as const;
 
   const currentPage = table.getState().pagination.pageIndex;
   const totalPages = table.getPageCount();
@@ -497,39 +456,90 @@ const TransferTable = () => {
   }
 
   const pageNumbers = getPageNumbers();
-  
+
   return (
-    <div className='w-full space-y-4'>
-      <div className='rounded-md border'>
+    <div className='space-y-4'>
+      <div className='flex items-center justify-between'>
+        {/* Quick filter */}
+        <div>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            onValueChange={(value) =>  value && setDateFilter(value)}
+          >
+            <ToggleGroupItem
+              value={dateFilterOptions.viewAll}
+              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
+            >
+              View all
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value={dateFilterOptions.thisWeek}
+              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
+            >
+              This week
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value={dateFilterOptions.thisMonth}
+              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
+            >
+              This month
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value={dateFilterOptions.thisYear}
+              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
+            >
+              This year
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+
+        {/* Search */}
+        <div className="flex justify-end">
+          <div className="w-full max-w-xs">
+            <InputGroup>
+              <InputGroupInput 
+                placeholder='Search transfers...' 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <InputGroupAddon>
+                <SearchIcon />
+              </InputGroupAddon>
+            </InputGroup>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Table */}
+      <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className='px-4'>
-                  {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                </TableHead>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id} className='p-4'>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                    </TableHead>
+                  )
+                })}
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-36">
-                  <div className="flex items-center justify-center">
-                    <Spinner className="size-6" />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : table.getRowModel().rows?.length ? (
+            {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow 
-                  key={row.id}
-                  className={isRowEditing(row.id) ? 'bg-secondary/50' : ''}
-                >
+                <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className='px-4'>
+                    <TableCell key={cell.id} className='pl-4'>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -540,7 +550,6 @@ const TransferTable = () => {
                 <TableCell colSpan={columns.length} className="h-32 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <p className="text-muted-foreground">No transfer transactions found.</p>
-                    <p className="text-sm text-muted-foreground">Create your first transfer to get started.</p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -550,7 +559,10 @@ const TransferTable = () => {
         {/* Pagination */}
         <div className="flex items-center justify-between space-x-2 py-4 px-4 border border-border border-t-2">
           <div>
-            <p className='text-sm text-muted-foreground'>{`Showing ${table.getRowModel().rows.length} out of ${transfers.length}`}</p>
+            <p className='text-sm text-muted-foreground'>
+              {`Showing ${table.getRowModel().rows.length} out of ${filteredData.length}`}
+              {debouncedSearchTerm && <span className="text-primary-600"> (filtered)</span>}
+            </p>
           </div>
           <div className='flex items-center gap-1'>
             <button
@@ -615,15 +627,6 @@ const TransferTable = () => {
           </div>
         </div>
       </div>
-      
-      <DeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={confirmDelete}
-        title="Delete Transfer Transaction?"
-        description="This will permanently delete this transfer and reverse the balance changes. This action cannot be undone."
-        isDeleting={isDeleting}
-      />
     </div>
   )
 }

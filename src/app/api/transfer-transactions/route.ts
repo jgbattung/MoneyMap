@@ -25,6 +25,9 @@ export async function GET() {
         toAccount: true,
         transferType: true,
       },
+      orderBy: {
+        date: 'desc'
+      },
     });
 
     return NextResponse.json(transferTransactions, { status: 200 });
