@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import { INSTALLMENT_STATUS } from "../../expense-transactions/[id]/route";
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,7 +26,8 @@ export async function POST(request: NextRequest) {
         },
         installmentStartDate: {
           lte: today,
-        }
+        },
+        installmentStatus: INSTALLMENT_STATUS.active
       }
     });
 

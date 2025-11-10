@@ -59,15 +59,15 @@ const updateTransfer = async ({ id, ...transferData }: any): Promise<TransferTra
   return response.json();
 }
 
-  const deleteTransfer = async (id: string): Promise<void> => {
-    const response = await fetch(`/api/transfer-transactions/${id}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to delete transfer transaction');
-    }
-  };
+const deleteTransfer = async (id: string): Promise<void> => {
+  const response = await fetch(`/api/transfer-transactions/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to delete transfer transaction');
+  }
+};
 
 export const useTransfersQuery = () => {
   const queryClient = useQueryClient();

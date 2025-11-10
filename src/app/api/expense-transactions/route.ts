@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import { INSTALLMENT_STATUS } from "./[id]/route";
 
 export async function GET() {
   try {
@@ -178,6 +179,7 @@ export async function POST(request: NextRequest) {
                 isInstallment: false,
                 isSystemGenerated: true,
                 parentInstallmentId: expenseTransaction.id,
+                installmentStatus: isInstallment ? INSTALLMENT_STATUS.active : null,
               },
             });
           }

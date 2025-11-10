@@ -220,3 +220,100 @@ export async function PATCH(
     )
   }
 }
+
+export const INSTALLMENT_STATUS = {
+  active: "ACTIVE",
+  cancelled: "CANCELLED"
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = await params;
+
+    const session = await auth.api.getSession({
+      headers: await headers()
+    });
+
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const existingExpense = await db.expenseTransaction.findUnique({
+      where: {
+        id: id,
+        userId: session.user.id,
+      },
+    });
+
+    if (!existingExpense) {
+      return NextResponse.json(
+        { error: 'Expense transaction not found' },
+        { status: 404 }
+      );
+    }
+
+    if (existingExpense.isInstallment) {
+      // Mark as CANCELLED for master installment expense transaction
+      await db.expenseTransaction.update({
+        where: {
+          id: id,
+          userId: session.user.id,
+        },
+        data: {
+          installmentStatus: INSTALLMENT_STATUS.cancelled,
+        },
+      });
+
+      return NextResponse.json(
+        { message: 'Installment cancelled successfully', cancelled: true },
+        { status: 200 }
+      );
+    }
+
+    // Regular expense or payment record: Hard delete
+    await db.$transaction(async (tx) => {
+      // Reverse the balance deduction
+      if (!existingExpense.isSystemGenerated) {
+        const amountToReverse = parseFloat(existingExpense.amount.toString());
+        
+        await tx.financialAccount.update({
+          where: {
+            id: existingExpense.accountId,
+            userId: session.user.id,
+          },
+          data: {
+            currentBalance: {
+              increment: amountToReverse,
+            },
+          },
+        });
+      }
+
+      // Delete the expense record
+      await tx.expenseTransaction.delete({
+        where: {
+          id: id,
+          userId: session.user.id,
+        },
+      });
+    });
+
+    return NextResponse.json(
+      { message: 'Expense deleted successfully', deleted: true },
+      { status: 200 }
+    );
+
+  } catch (error) {
+    console.error('Error deleting expense transaction:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

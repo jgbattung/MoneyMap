@@ -57,6 +57,16 @@ const updateExpenseTransaction = async ({ id, ...expenseTransactionData }: any):
   return response.json();
 }
 
+const deleteExpenseTransaction = async (id: string): Promise<void> => {
+  const response = await fetch(`/api/expense-transactions/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to delete transfer transaction')
+  }
+}
+
 export const useExpenseTransactionsQuery = () => {
   const queryClient = useQueryClient();
 
@@ -83,9 +93,19 @@ export const useExpenseTransactionsQuery = () => {
     mutationFn: updateExpenseTransaction,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenseTransactions });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['cards'] });
     },
   });
+
+  const deleteExpenseTransactionMutation = useMutation({
+    mutationFn: deleteExpenseTransaction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenseTransactions });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['cards'] });
+    }
+  })
 
   return {
     expenseTransactions,
@@ -95,6 +115,7 @@ export const useExpenseTransactionsQuery = () => {
     updateExpenseTransaction: updateExpenseTransactionMutation.mutateAsync,
     isCreating: createExpenseTransactionMutation.isPending,
     isUpdating: updateExpenseTransactionMutation.isPending,
+    isDeleteing: deleteExpenseTransactionMutation.isPending,
   };
 };
 
