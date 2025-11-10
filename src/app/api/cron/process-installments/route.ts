@@ -79,6 +79,9 @@ export async function POST(request: NextRequest) {
                 decrement: 1
               },
               lastProcessedDate: today,
+              installmentStatus: installment.remainingInstallments === 1 
+                ? INSTALLMENT_STATUS.completed
+                : INSTALLMENT_STATUS.active,
             },
           });
 

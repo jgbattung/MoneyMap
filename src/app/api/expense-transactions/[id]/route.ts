@@ -223,7 +223,8 @@ export async function PATCH(
 
 export const INSTALLMENT_STATUS = {
   active: "ACTIVE",
-  cancelled: "CANCELLED"
+  cancelled: "CANCELLED",
+  completed: "COMPLETED",
 }
 
 export async function DELETE(
