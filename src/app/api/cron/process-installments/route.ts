@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import { INSTALLMENT_STATUS } from "../../expense-transactions/[id]/route";
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,7 +26,8 @@ export async function POST(request: NextRequest) {
         },
         installmentStartDate: {
           lte: today,
-        }
+        },
+        installmentStatus: INSTALLMENT_STATUS.active
       }
     });
 
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          // Update installment record
+          // Update master installment record
           await tx.expenseTransaction.update({
             where: {
               id: installment.id,
@@ -77,6 +79,27 @@ export async function POST(request: NextRequest) {
                 decrement: 1
               },
               lastProcessedDate: today,
+              installmentStatus: installment.remainingInstallments === 1 
+                ? INSTALLMENT_STATUS.completed
+                : INSTALLMENT_STATUS.active,
+            },
+          });
+
+          // Create payment record (new expense transaction)
+          const paidCount = installment.installmentDuration! - (installment.remainingInstallments! - 1);
+          
+          await tx.expenseTransaction.create({
+            data: {
+              userId: installment.userId,
+              accountId: installment.accountId,
+              expenseTypeId: installment.expenseTypeId,
+              name: `${installment.name} (Payment ${paidCount}/${installment.installmentDuration})`,
+              amount: installment.monthlyAmount!,
+              date: today,
+              description: `Installment payment ${paidCount} of ${installment.installmentDuration}`,
+              isInstallment: false,
+              isSystemGenerated: true,
+              parentInstallmentId: installment.id,
             },
           });
         });
