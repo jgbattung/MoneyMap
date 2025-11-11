@@ -219,9 +219,9 @@ const EditCell = ({ row, table }: any) => {
 
 const ExpenseTable = () => {
   const { expenseTransactions, updateExpenseTransaction, isUpdating } = useExpenseTransactionsQuery();
-  const { accounts, isLoading: accountsLoading } = useAccountsQuery();
-  const { cards, isLoading: cardsLoading } = useCardsQuery();
-  const { budgets, isLoading: budgetsLoading } = useExpenseTypesQuery();
+  const { accounts } = useAccountsQuery();
+  const { cards } = useCardsQuery();
+  const { budgets } = useExpenseTypesQuery();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");

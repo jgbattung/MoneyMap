@@ -8,16 +8,58 @@ import { Icons } from '@/components/icons'
 import BudgetCard from '@/components/shared/BudgetCard'
 import SkeletonBudgetCard from '@/components/shared/SkeletonBudgetCard'
 import { Button } from '@/components/ui/button'
+import { ExpenseTransaction, useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery'
 import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery'
 import React, { useState } from 'react'
 
+const calculateMonthlySpent = (
+  transactions: ExpenseTransaction[],
+  expenseTypeId: string,
+  month: Date = new Date(),
+): number => {
+  const targetMonth = month.getMonth();
+  const targetYear = month.getFullYear();
+
+  return transactions
+    .filter((transaction) => {
+      if (transaction.isInstallment) return false;
+
+      if (transaction.expenseTypeId !== expenseTypeId) return false;
+
+      const transactionDate = new Date(transaction.date);
+      return (
+        transactionDate.getMonth() === targetMonth &&
+        transactionDate.getFullYear() === targetYear
+      );
+    })
+    .reduce((sum, transaction) => sum + parseFloat(transaction.amount.toString()), 0);
+}
+
 const Budgets = () => {
   const { budgets, isLoading, error } = useExpenseTypesQuery();
+  const { expenseTransactions } = useExpenseTransactionsQuery();
   const [createExpenseTypeSheetOpen, setCreateExpenseTypeSheetOpen] = useState(false);
   const [createExpenseTypeDrawerOpen, setCreateExpenseTypeDrawerOpen] = useState(false);
   const [editExpenseTypeSheetOpen, setEditExpenseTypeSheetOpen] = useState(false);
   const [editExpenseTypeDrawerOpen, setEditExpenseTypeDrawerOpen] = useState(false);
   const [selectedExpenseTypeId, setSelectedExpenseTypeId] = useState<string>('');
+
+  const sortedBudgets = [...budgets].sort((a, b) => {
+  // If both have budgets, sort by budget amount (highest first)
+  if (a.monthlyBudget && b.monthlyBudget) {
+    return parseFloat(b.monthlyBudget) - parseFloat(a.monthlyBudget);
+  }
+  // If only a has no budget, put it after b
+  if (!a.monthlyBudget && b.monthlyBudget) {
+    return 1;
+  }
+  // If only b has no budget, put it after a
+  if (a.monthlyBudget && !b.monthlyBudget) {
+    return -1;
+  }
+  // If both have no budget, maintain original order
+  return 0;
+});
 
   const handleExpenseTypeClick = (budgetId: string) => {
     setSelectedExpenseTypeId(budgetId);
@@ -128,14 +170,19 @@ const Budgets = () => {
       ) : (
         <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'
         >
-          {budgets.map((budget) => (
-            <BudgetCard
-              key={budget.id}
-              name={budget.name}
-              monthlyBudget={budget.monthlyBudget}
-              onClick={() => handleExpenseTypeClick(budget.id)}
-            />
-          ))}
+          {sortedBudgets.map((budget) => {
+            const spentAmount = calculateMonthlySpent(expenseTransactions, budget.id);
+            
+            return (
+              <BudgetCard
+                key={budget.id}
+                name={budget.name}
+                monthlyBudget={budget.monthlyBudget}
+                spentAmount={spentAmount}
+                onClick={() => handleExpenseTypeClick(budget.id)}
+              />
+            );
+          })}
         </div>
       )}
     </div>
