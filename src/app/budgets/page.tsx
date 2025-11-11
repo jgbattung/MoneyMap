@@ -11,6 +11,29 @@ import { Button } from '@/components/ui/button'
 import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery'
 import React, { useState } from 'react'
 
+const calculateMonthlySpent = (
+  transactions: ExpenseTransaction[],
+  expenseTypeId: string,
+  month: Date = new Date(),
+): number => {
+  const targetMonth = month.getMonth();
+  const targetYear = month.getFullYear();
+
+  return transactions
+    .filter((transaction) => {
+      if (transaction.isInstallment) return false;
+
+      if (transaction.expenseTypeId !== expenseTypeId) return false;
+
+      const transactionDate = new Date(transaction.date);
+      return (
+        transactionDate.getMonth() === targetMonth &&
+        transactionDate.getFullYear() === targetYear
+      );
+    })
+    .reduce((sum, transaction) => sum + parseFloat(transaction.amount.toString()), 0);
+}
+
 const Budgets = () => {
   const { budgets, isLoading, error } = useExpenseTypesQuery();
   const [createExpenseTypeSheetOpen, setCreateExpenseTypeSheetOpen] = useState(false);
