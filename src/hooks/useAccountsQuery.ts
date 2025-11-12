@@ -40,6 +40,23 @@ const updateAccount = async ({ id, ...accountData }: any): Promise<Account> => {
   return response.json();
 };
 
+const deleteAccount = async (id: string): Promise<void> => {
+  const response = await fetch(`/api/accounts/${id}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    const error: any = new Error(errorData.error || "Failed to delete account");
+    if (errorData.transactionCount) {
+      error.transactionCount = errorData.transactionCount;
+    }
+    throw error;
+  }
+
+  return response.json();
+}
+
 export const useAccountsQuery = () => {
   const queryClient = useQueryClient();
 
@@ -67,14 +84,23 @@ export const useAccountsQuery = () => {
     },
   });
 
+  const deleteAccountMutation = useMutation({
+    mutationFn: deleteAccount,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.accounts });
+    }
+  });
+
   return {
     accounts,
     isLoading: isPending,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
     createAccount: createAccountMutation.mutateAsync,
     updateAccount: updateAccountMutation.mutateAsync,
+    deleteAccount: deleteAccountMutation.mutateAsync,
     isCreating: createAccountMutation.isPending,
     isUpdating: updateAccountMutation.isPending,
+    isDeleting: deleteAccountMutation.isPending,
   };
 };
 
