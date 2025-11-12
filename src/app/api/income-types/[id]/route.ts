@@ -122,29 +122,78 @@ export async function DELETE(
       );
     }
 
-    const existingIncomeType = await db.incomeType.findUnique({
-      where: {
-        id: id,
-        userId: session.user.id
-      },
-    });
-
-    if (!existingIncomeType) {
-      return NextResponse.json(
-        { error: 'Income type not found' },
-        { status: 404 }
-      );
-    }
-
-    await db.incomeType.delete({
+    const incomeTypeToDelete = await db.incomeType.findUnique({
       where: {
         id: id,
         userId: session.user.id,
       },
     });
 
+    if (!incomeTypeToDelete) {
+      return NextResponse.json(
+        { error: 'Income type not found' },
+        { status: 404 }
+      );
+    }
+
+    if (incomeTypeToDelete.name.toLowerCase() === "uncategorized") {
+      return NextResponse.json(
+        { error: 'Cannot delete the Uncategorized income type' },
+        { status: 400 }
+      );
+    }
+
+    const result = await db.$transaction(async (tx) => {
+      // Find or created "Uncategorized type"
+      let uncategorizedType = await tx.incomeType.findFirst({
+        where: {
+          userId: session.user.id,
+          name: 'Uncategorized',
+        }
+      });
+
+      if (!uncategorizedType) {
+        uncategorizedType = await tx.incomeType.create({
+          data: {
+            userId: session.user.id,
+            name: "Uncategorized",
+            monthlyTarget: null,
+          }
+        });
+      }
+
+      const transactionCount = await tx.incomeTransaction.count({
+        where: {
+          incomeTypeId: id,
+        }
+      });
+
+      if (transactionCount > 0) {
+        await tx.incomeTransaction.updateMany({
+          where: {
+            incomeTypeId: id,
+          },
+          data: {
+            incomeTypeId: uncategorizedType.id,
+          }
+        });
+      }
+
+      await tx.incomeType.delete({
+        where: {
+          id: id,
+          userId: session.user.id,
+        }
+      });
+
+      return { transactionCount };
+    });
+
     return NextResponse.json(
-      { message: 'Income type deleted successfully' },
+      {
+        message: 'Income type deleted successfully',
+        reassignedCount: result.transactionCount,
+      },
       { status: 200 }
     );
 
