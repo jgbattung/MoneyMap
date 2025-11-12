@@ -165,19 +165,21 @@ const Income = () => {
       </div>
       ) : (
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
-        {sortedIncomeTypes.map((income) => {
-          const incomeEarned = calculateMonthlyEarned(incomeTransactions, income.id);
+        {sortedIncomeTypes
+          .filter(income => income.name.toLowerCase() !== 'uncategorized') // Add this
+          .map((income) => {
+            const incomeEarned = calculateMonthlyEarned(incomeTransactions, income.id);
 
-          return (
-            <IncomeTypeCard
-              key={income.id}
-              name={income.name}
-              monthlyTarget={income.monthlyTarget}
-              incomeAmount={incomeEarned}
-              onClick={() => handleIncomeTypeClick(income.id)}
-            />
-          )
-        })}
+            return (
+              <IncomeTypeCard
+                key={income.id}
+                name={income.name}
+                monthlyTarget={income.monthlyTarget}
+                incomeAmount={incomeEarned}
+                onClick={() => handleIncomeTypeClick(income.id)}
+              />
+            )
+          })}
       </div>
       )}
 
