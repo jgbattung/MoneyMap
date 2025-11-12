@@ -39,6 +39,19 @@ const updateIncomeType = async ({ id, ...incomeTypeData }: any): Promise<IncomeT
   return response.json();
 }
 
+const deleteIncomeType = async (id: string): Promise<void> => {
+  const response = await fetch(`/api/income-types/${id}`, {
+    method: 'DELETE',
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to delete income type');
+  }
+  
+  return response.json();
+}
+
 export const useIncomeTypesQuery = () => {
   const queryClient = useQueryClient();
 
@@ -66,14 +79,24 @@ export const useIncomeTypesQuery = () => {
     },
   });
 
+  const deleteIncomeTypeMutation = useMutation({
+    mutationFn: deleteIncomeType,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.incomeTypes });
+    },
+  });
+
+
   return {
     incomeTypes,
     isLoading: isPending,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
     createIncomeType: createIncomeTypeMutation.mutateAsync,
     updateIncomeType: updateIncomeTypeMutation.mutateAsync,
+    deleteIncomeType: deleteIncomeTypeMutation.mutateAsync,
     isCreating: createIncomeTypeMutation.isPending,
     isUpdating: updateIncomeTypeMutation.isPending,
+    isDeleting: deleteIncomeTypeMutation.isPending,
   };
 };
 
