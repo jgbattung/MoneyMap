@@ -106,6 +106,10 @@ export async function PATCH(
           date: new Date(date),
           description: description || null,
         },
+        include: {
+          account: true,
+          incomeType: true,
+        },
       });
 
       if (balanceDifference !== 0) {

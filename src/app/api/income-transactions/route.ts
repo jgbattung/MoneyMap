@@ -74,6 +74,10 @@ export async function POST(request: NextRequest) {
           date: new Date(date),
           description: description || null,
         },
+        include: {
+          account: true,
+          incomeType: true,
+        }
       });
 
       await tx.financialAccount.update({

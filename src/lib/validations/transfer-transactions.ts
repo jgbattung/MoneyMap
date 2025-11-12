@@ -21,7 +21,7 @@ export const TransferTransactionValidation = z.object({
     .min(1, "Transfer type is required"),
   
   date: z.date({
-    required_error: "Date is required",
+    message: "Date is required",
   }),
   
   notes: z.string().optional(),

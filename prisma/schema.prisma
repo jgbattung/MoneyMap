@@ -187,7 +187,7 @@ model IncomeTransaction {
   incomeTypeId  String          @map("income_type_id")
   name          String          @db.VarChar(100)
   amount        Decimal         @db.Decimal(15, 2)
-  date          DateTime        @db.Date
+  date          DateTime
   description   String?         @db.Text
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
