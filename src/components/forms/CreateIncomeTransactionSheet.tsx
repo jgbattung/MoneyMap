@@ -189,7 +189,7 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
                     <PopoverContent className="w-auto overflow-hidden p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={field.value}
+                        selected={field.value ?? undefined}
                         captionLayout="dropdown"
                         onDayClick={(date) => {
                           field.onChange(date);

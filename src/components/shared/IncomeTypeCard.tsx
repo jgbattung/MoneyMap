@@ -4,11 +4,15 @@ import { Icons } from '../icons';
 interface IncomeTypeCardProps {
   name: string;
   monthlyTarget?: string | null;
+  incomeAmount: number;
   onClick?: () => void,
 }
 
-const IncomeTypeCard = ({ name, monthlyTarget, onClick }: IncomeTypeCardProps) => {
+const IncomeTypeCard = ({ name, monthlyTarget, incomeAmount, onClick }: IncomeTypeCardProps) => {
   const targetAmount = monthlyTarget ? parseFloat(monthlyTarget) : 0;
+
+  const percentageOfTarget = targetAmount > 0 ? (incomeAmount / targetAmount) * 100 : 0;
+
 
   return (
     <div
@@ -29,12 +33,14 @@ const IncomeTypeCard = ({ name, monthlyTarget, onClick }: IncomeTypeCardProps) =
       <div className='space-y-2'>
         <div className='flex justify-between items-center text-sm'>
           <span className='text-muted-foreground'>
-            ₱0.00 earned this month
+            ₱{incomeAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} earned this month
           </span>
           <span className={`font-medium ${
-            targetAmount > 0 ? 'text-muted-foreground' : 'text-muted-foreground'
+            targetAmount > 0 && percentageOfTarget >= 100
+              ? 'text-green-600'
+              : 'text-muted-foreground'
           }`}>
-            {targetAmount > 0 ? '0% of target' : 'No target set'}
+            {targetAmount > 0 ? `${percentageOfTarget.toFixed(0)}% of target` : 'No target set'}
           </span>
         </div>
       </div>

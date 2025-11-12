@@ -45,7 +45,6 @@ const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: Create
   });
 
   const onSubmit = async (values: z.infer<typeof IncomeTransactionValidation>) => {
-    console.log(values)
     try {
       const newIncomeTransaction = await createIncomeTransaction(values);
 
@@ -189,7 +188,7 @@ const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: Create
                       <PopoverContent className="w-auto overflow-hidden p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value}
+                          selected={field.value ?? undefined}
                           captionLayout="dropdown"
                           onDayClick={(date) => {
                             field.onChange(date);

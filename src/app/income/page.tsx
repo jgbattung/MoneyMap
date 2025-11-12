@@ -9,16 +9,53 @@ import IncomeTypeCard from '@/components/shared/IncomeTypeCard';
 import SkeletonIncomeTypeCard from '@/components/shared/SkeletonIncomeTypeCard';
 import IncomeTable from '@/components/tables/income/IncomeTable';
 import { Button } from '@/components/ui/button';
+import { IncomeTransaction, useIncomeTransactionsQuery } from '@/hooks/useIncomeTransactionsQuery';
 import { useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery'
 import React, { useState } from 'react'
 
+const calculateMonthlyEarned = (
+  transactions: IncomeTransaction[],
+  incomeTypeId: string,
+  month: Date = new Date(),
+): number => {
+  const targetMonth = month.getMonth();
+  const targetYear = month.getFullYear();
+
+    return transactions
+    .filter((transaction) => {
+
+      if (transaction.incomeTypeId !== incomeTypeId) return false;
+
+      const transactionDate = new Date(transaction.date);
+      return (
+        transactionDate.getMonth() === targetMonth &&
+        transactionDate.getFullYear() === targetYear
+      );
+    })
+    .reduce((sum, transaction) => sum + parseFloat(transaction.amount.toString()), 0);
+}
+
 const Income = () => {
   const { incomeTypes, isLoading, error } = useIncomeTypesQuery();
+  const { incomeTransactions } = useIncomeTransactionsQuery();
   const [createIncomeTypeSheetOpen, setCreateIncomeTypeSheetOpen] = useState(false);
   const [createIncomeTypeDrawerOpen, setCreateIncomeTypeDrawerOpen] = useState(false);
   const [editIncomeTypeSheetOpen, setEditIncomeTypeSheetOpen] = useState(false);
   const [editIncomeTypeDrawerOpen, setEditIncomeTypeDrawerOpen] = useState(false);
   const [selectedIncomeTypeId, setSelectedIncomeTypeId] = useState<string>('');
+
+  const sortedIncomeTypes = [...incomeTypes].sort((a, b) => {
+    if (a.monthlyTarget && b.monthlyTarget) {
+      return parseFloat(b.monthlyTarget) - parseFloat(a.monthlyTarget);
+    }
+    if (!a.monthlyTarget && b.monthlyTarget) {
+      return 1;
+    }
+    if (a.monthlyTarget && !b.monthlyTarget) {
+      return -1;
+    }
+    return 0;
+  });
 
   const handleIncomeTypeClick = (budgetId: string) => {
     setSelectedIncomeTypeId(budgetId);
@@ -128,14 +165,19 @@ const Income = () => {
       </div>
       ) : (
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
-        {incomeTypes.map((income) => (
-          <IncomeTypeCard
-            key={income.id}
-            name={income.name}
-            monthlyTarget={income.monthlyTarget}
-            onClick={() => handleIncomeTypeClick(income.id)}
-          />
-        ))}
+        {sortedIncomeTypes.map((income) => {
+          const incomeEarned = calculateMonthlyEarned(incomeTransactions, income.id);
+
+          return (
+            <IncomeTypeCard
+              key={income.id}
+              name={income.name}
+              monthlyTarget={income.monthlyTarget}
+              incomeAmount={incomeEarned}
+              onClick={() => handleIncomeTypeClick(income.id)}
+            />
+          )
+        })}
       </div>
       )}
 
