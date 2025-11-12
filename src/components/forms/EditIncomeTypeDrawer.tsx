@@ -2,7 +2,7 @@
 
 import { IncomeTypeValidation } from '@/lib/validations/income';
 import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { z } from "zod"
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
@@ -12,6 +12,8 @@ import { Input } from '../ui/input';
 import { toast } from 'sonner';
 import { useIncomeTypeQuery, useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery';
 import SkeletonEditIncomeTypeDrawerForm from '../shared/SkeletonEditIncomeTypeDrawerForm';
+import DeleteDialog from '../shared/DeleteDialog';
+import { Separator } from '../ui/separator';
 
 interface EditIncomeTypeDrawerProps {
   open: boolean;
@@ -21,8 +23,9 @@ interface EditIncomeTypeDrawerProps {
 }
 
 const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: EditIncomeTypeDrawerProps) => {
-  const { updateIncomeType, isUpdating } = useIncomeTypesQuery();
+  const { updateIncomeType, isUpdating, deleteIncomeType, isDeleting } = useIncomeTypesQuery();
   const { incomeTypeData, isFetching, error } = useIncomeTypeQuery(incomeTypeId);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const form = useForm<z.infer<typeof IncomeTypeValidation>>({
     resolver: zodResolver(IncomeTypeValidation),
@@ -59,113 +62,168 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
     }
   };
 
+    const handleDeleteClick = async () => {
+      setDeleteDialogOpen(true);
+    }
+  
+  const handleDeleteConfirm = async () => {
+    try {
+      const result = await deleteIncomeType(incomeTypeId);
+
+      setDeleteDialogOpen(false);
+      onOpenChange(false);
+
+      toast.success("Income type deleted successfully", {
+        description: result.reassignedCount > 0 
+          ? `${result.reassignedCount} transaction(s) reassigned to 'Uncategorized'.`
+          : `${incomeTypeData?.name} has been deleted.`,
+      });
+    } catch (error: any) {
+      toast.error("Failed to delete income type", {
+        description: error instanceof Error ? error.message : "Please try again.",
+        duration: 6000
+      });
+    }
+  }
+
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent
-        onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
-        className={`${className}`}
-      >
-        {isFetching ? (
-          <SkeletonEditIncomeTypeDrawerForm />
-        ) : error ? (
-          <>
-            <DrawerHeader className='text-center'>
-              <DrawerTitle className='text-xl'>Unable to load income categorie</DrawerTitle>
-              <DrawerDescription>
-                {error || 'Something went wrong while loading your income category details.'}
-              </DrawerDescription>
-            </DrawerHeader>
-            
-            <DrawerFooter>
-              <Button
-                onClick={() => window.location.reload()}
-                className="w-full"
-              >
-                Try again
-              </Button>
-              <DrawerClose asChild>
-                <Button
-                  variant="outline"
-                  className="w-full hover:text-white"
-                >
-                  Close
-                </Button>
-              </DrawerClose>
-            </DrawerFooter>
-          </>
-        ) : (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <DrawerHeader>
-                <DrawerTitle className='text-xl'>
-                  Edit income type
-                </DrawerTitle>
+    <>
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent
+          onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
+          className={`${className}`}
+        >
+          {isFetching ? (
+            <SkeletonEditIncomeTypeDrawerForm />
+          ) : error ? (
+            <>
+              <DrawerHeader className='text-center'>
+                <DrawerTitle className='text-xl'>Unable to load income categorie</DrawerTitle>
                 <DrawerDescription>
-                  Update your income type details
+                  {error || 'Something went wrong while loading your income category details.'}
                 </DrawerDescription>
               </DrawerHeader>
-
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem className='p-4'>
-                    <FormLabel>Income type name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder='e.g., Salary, Investment, Interest, Reimbursement'
-                        {...field}
-                        disabled={isUpdating}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="monthlyTarget"
-                render={({ field }) => (
-                  <FormItem className='p-4'>
-                    <FormLabel>Monthly target</FormLabel>
-                    <FormDescription>
-                      Set a monthly income goal for this category (optional).
-                    </FormDescription>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                        {...field}
-                        disabled={isUpdating}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
+              
               <DrawerFooter>
                 <Button
-                  type="submit"
-                  disabled={isUpdating}
+                  onClick={() => window.location.reload()}
+                  className="w-full"
                 >
-                  {isUpdating ? "Updating income type" : "Update income type"}
+                  Try again
                 </Button>
                 <DrawerClose asChild>
                   <Button
                     variant="outline"
-                    className='hover:text-white'
-                    disabled={isUpdating}
+                    className="w-full hover:text-white"
                   >
-                    Cancel
+                    Close
                   </Button>
                 </DrawerClose>
               </DrawerFooter>
-            </form>
-          </Form>
-        )}
-      </DrawerContent>
-    </Drawer>
+            </>
+          ) : (
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)}>
+                <DrawerHeader>
+                  <DrawerTitle className='text-xl'>
+                    Edit income type
+                  </DrawerTitle>
+                  <DrawerDescription>
+                    Update your income type details
+                  </DrawerDescription>
+                </DrawerHeader>
+
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className='p-4'>
+                      <FormLabel>Income type name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder='e.g., Salary, Investment, Interest, Reimbursement'
+                          {...field}
+                          disabled={isUpdating}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="monthlyTarget"
+                  render={({ field }) => (
+                    <FormItem className='p-4'>
+                      <FormLabel>Monthly target</FormLabel>
+                      <FormDescription>
+                        Set a monthly income goal for this category (optional).
+                      </FormDescription>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+                          {...field}
+                          disabled={isUpdating}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <DrawerFooter>
+                  <Button
+                    type="submit"
+                    disabled={isUpdating}
+                  >
+                    {isUpdating ? "Updating income type" : "Update income type"}
+                  </Button>
+                  <DrawerClose asChild>
+                    <Button
+                      variant="outline"
+                      className='hover:text-white'
+                      disabled={isUpdating}
+                    >
+                      Cancel
+                    </Button>
+                  </DrawerClose>
+                </DrawerFooter>
+
+                <Separator className='mt-2 mb-6' />
+
+                <div className='px-4 pb-4'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    className="w-full text-error-700 hover:text-error-600 hover:bg-error-50 border-error-300"
+                    onClick={handleDeleteClick}
+                    disabled={isUpdating || isDeleting}
+                  >
+                    {isDeleting ? "Deleting..." : "Delete income type"}
+                  </Button>
+                </div>
+
+              </form>
+            </Form>
+          )}
+        </DrawerContent>
+      </Drawer>
+
+      <DeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        description={
+          <>
+            Are you sure you want to delete <span className="font-semibold">{incomeTypeData?.name}</span>? 
+            Any transactions using this type will be reassigned to &apos;Uncategorized&apos;. This action cannot be undone.
+          </>
+        }
+        title="Delete income type"
+        isDeleting={isDeleting}
+      />
+    </>
   )
 }
 

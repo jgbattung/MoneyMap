@@ -39,7 +39,7 @@ const updateIncomeType = async ({ id, ...incomeTypeData }: any): Promise<IncomeT
   return response.json();
 }
 
-const deleteIncomeType = async (id: string): Promise<void> => {
+const deleteIncomeType = async (id: string): Promise<{ message: string; reassignedCount: number }> => {
   const response = await fetch(`/api/income-types/${id}`, {
     method: 'DELETE',
   });
@@ -83,6 +83,7 @@ export const useIncomeTypesQuery = () => {
     mutationFn: deleteIncomeType,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.incomeTypes });
+      queryClient.invalidateQueries({ queryKey: ['incomeTransactions'] });
     },
   });
 
