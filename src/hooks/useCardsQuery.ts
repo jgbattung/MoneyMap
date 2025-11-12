@@ -53,6 +53,21 @@ const updateCard = async ({ id, ...cardData }: any): Promise<Card> => {
   return response.json();
 }
 
+const deleteCard = async (id: string): Promise<void> => {
+  const response = await fetch(`/api/cards/${id}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    const error: any = new Error(errorData.error || "Failed to delete account");
+    if (errorData.transactionCount) {
+      error.transactionCount = errorData.transactionCount;
+    }
+    throw error;
+  }
+} 
+
 export const useCardsQuery = () => {
   const queryClient = useQueryClient();
 
@@ -80,14 +95,23 @@ export const useCardsQuery = () => {
     },
   });
 
+  const deletecardMutation = useMutation({
+    mutationFn: deleteCard,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cards });
+    }
+  })
+
   return {
     cards,
     isLoading: isPending,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
     createCard: createCardMutation.mutateAsync,
     updateCard: updateCardMutation.mutateAsync,
+    deleteCard: deletecardMutation.mutateAsync,
     isCreating: createCardMutation.isPending,
     isUpdating: updateCardMutation.isPending,
+    isDeleting: deletecardMutation.isPending,
   };
 };
 
