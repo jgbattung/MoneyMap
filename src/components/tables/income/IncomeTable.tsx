@@ -15,11 +15,12 @@ import { IncomeTransaction, useIncomeTransactionsQuery } from '@/hooks/useIncome
 import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
 import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import { ChevronDownIcon, ChevronLeft, ChevronRight, SearchIcon } from 'lucide-react';
+import { ChevronDownIcon, ChevronLeft, ChevronRight, SearchIcon, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery';
 import SkeletonTable from '@/components/shared/SkeletonTable';
+import DeleteDialog from '@/components/shared/DeleteDialog';
 
 const columnHelper = createColumnHelper<IncomeTransaction>();
 
@@ -182,27 +183,41 @@ const EditCell = ({ row, table }: any) => {
     }
   }
 
+  const handleDeleteClick = () => {
+    const transaction = table.options.data[row.index];
+    meta?.setTransactionToDelete({ id: transaction.id, name: transaction.name });
+    meta?.setDeleteDialogOpen(true);
+  }
+
   return meta?.editedRows[row.id] ? (
     <div className='flex gap-2 items-center justify-center'>
       <Button 
         variant="ghost" 
         size="icon" 
-        onClick={removeRow}
-        disabled={meta?.isUpdating}
-      >
-        <IconX />
-      </Button>
-      <Button 
-        variant="ghost" 
-        size="icon" 
         onClick={saveRow}
-        disabled={meta?.isUpdating}
+        disabled={meta?.isUpdating || meta?.isDeleting}
       >
         {meta?.isUpdating ? (
           <Spinner className="h-4 w-4" />
         ) : (
           <IconCheck />
         )}
+      </Button>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={removeRow}
+        disabled={meta?.isUpdating || meta?.isDeleting}
+      >
+        <IconX />
+      </Button>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={handleDeleteClick}
+        disabled={meta?.isUpdating || meta?.isDeleting}
+      >
+        <Trash2 />
       </Button>
     </div>
   ) : (
@@ -213,7 +228,7 @@ const EditCell = ({ row, table }: any) => {
 }
 
 const IncomeTable = () => {
-  const { incomeTransactions, updateIncomeTransaction, isUpdating } = useIncomeTransactionsQuery();
+  const { incomeTransactions, updateIncomeTransaction, isUpdating, deleteIncomeTransaction, isDeleting } = useIncomeTransactionsQuery();
   const { accounts, isLoading: accountsLoading } = useAccountsQuery();
   const { cards, isLoading: cardsLoading } = useCardsQuery();
   const { incomeTypes, isLoading: incomeTypesLoading } = useIncomeTypesQuery();
@@ -226,6 +241,9 @@ const IncomeTable = () => {
   const [editedRows, setEditedRows] = useState({});
 
   const [dateFilter, setDateFilter] = useState<string>("view-all");
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const prevTransactionsRef = useRef<IncomeTransaction[]>([]);
 
@@ -382,6 +400,27 @@ const IncomeTable = () => {
     );
   }, [originalData]);
 
+  const handleDeleteConfirm = async () => {
+    if (!transactionToDelete) return;
+    
+    try {
+      await deleteIncomeTransaction(transactionToDelete.id);
+      
+      setDeleteDialogOpen(false);
+      setTransactionToDelete(null);
+      setEditedRows({});
+      
+      toast.success("Income transaction deleted successfully", {
+        duration: 5000
+      });
+    } catch (error) {
+      toast.error("Failed to delete income transaction", {
+        description: error instanceof Error ? error.message : "Please try again.",
+        duration: 6000
+      });
+    }
+  };
+
   // Memoize the table meta object
   const tableMeta = useMemo(() => ({
     editedRows,
@@ -390,7 +429,11 @@ const IncomeTable = () => {
     revertData,
     updateIncomeTransaction,
     isUpdating,
-  }), [editedRows, updateData, revertData, updateIncomeTransaction, isUpdating]);
+    deleteIncomeTransaction,
+    isDeleting,
+    setDeleteDialogOpen,
+    setTransactionToDelete,
+  }), [editedRows, updateData, revertData, updateIncomeTransaction, isUpdating, deleteIncomeTransaction, isDeleting]);
 
   const table = useReactTable({
     data: filteredData,
@@ -449,176 +492,187 @@ const IncomeTable = () => {
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className='space-y-4'>
-      <div className='flex items-center justify-between'>
-        {/* Quick filter */}
-        <div>
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            size="sm"
-            onValueChange={(value) =>  value && setDateFilter(value)}
-          >
-            <ToggleGroupItem
-              value={dateFilterOptions.viewAll}
-              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
-            >
-              View all
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value={dateFilterOptions.thisWeek}
-              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
-            >
-              This week
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value={dateFilterOptions.thisMonth}
-              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
-            >
-              This month
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value={dateFilterOptions.thisYear}
-              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
-            >
-              This year
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </div>
-
-        {/* Search */}
-        <div className="flex justify-end">
-          <div className="w-full max-w-xs">
-            <InputGroup>
-              <InputGroupInput 
-                placeholder='Search income...' 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <InputGroupAddon>
-                <SearchIcon />
-              </InputGroupAddon>
-            </InputGroup>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Table */}
-      <div className="overflow-hidden rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id} className='p-4'>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className='pl-4'>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-32 text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <p className="text-muted-foreground">No income transactions found.</p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-        {/* Pagination */}
-        <div className="flex items-center justify-between space-x-2 py-4 px-4 border border-border border-t-2">
+    <>
+      <div className='space-y-4'>
+        <div className='flex items-center justify-between'>
+          {/* Quick filter */}
           <div>
-            <p className='text-sm text-muted-foreground'>
-              {`Showing ${table.getRowModel().rows.length} out of ${filteredData.length}`}
-              {debouncedSearchTerm && <span className="text-primary-600"> (filtered)</span>}
-            </p>
-          </div>
-          <div className='flex items-center gap-1'>
-            <button
-              className='text-muted-foreground hover:text-white transition-colors disabled:hover:text-muted-foreground'
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              size="sm"
+              onValueChange={(value) =>  value && setDateFilter(value)}
             >
-              <ChevronLeft size={22} strokeWidth={1} />
-            </button>
-            <div className='flex items-center gap-1'>
-              {pageNumbers.map((pageNum, index) => {
-                const isCurrentPage = typeof pageNum === 'number' && pageNum === currentPage + 1;
-                return (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      if (typeof pageNum === 'number') {
-                        table.setPageIndex(pageNum - 1)
-                      }
-                    }}
-                    disabled={typeof pageNum !== 'number'}
-                    className={`px-3 py-1 text-sm rounded transition-colors ${
-                      isCurrentPage 
-                        ? 'bg-primary-700/30 text-primary-foreground' 
-                        : typeof pageNum === 'number'
-                          ? 'hover:bg-primary-600/30'
-                          : 'cursor-default'
-                    }`}                  
-                  >
-                    {pageNum}
-                  </button>
-                )
-            })}
+              <ToggleGroupItem
+                value={dateFilterOptions.viewAll}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
+              >
+                View all
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value={dateFilterOptions.thisWeek}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
+              >
+                This week
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value={dateFilterOptions.thisMonth}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
+              >
+                This month
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value={dateFilterOptions.thisYear}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
+              >
+                This year
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+
+          {/* Search */}
+          <div className="flex justify-end">
+            <div className="w-full max-w-xs">
+              <InputGroup>
+                <InputGroupInput 
+                  placeholder='Search income...' 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <InputGroupAddon>
+                  <SearchIcon />
+                </InputGroupAddon>
+              </InputGroup>
             </div>
-            <button
-              className='text-muted-foreground hover:text-white transition-colors disabled:hover:text-muted-foreground'
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <ChevronRight size={22} strokeWidth={1} />
-            </button>
           </div>
-          <div className='flex items-center justify-center gap-2'>
-            <p className='text-sm text-muted-foreground'>Rows per page</p>
-            <Select
-              value={table.getState().pagination.pageSize.toString()}
-              onValueChange={(value) => {
-                table.setPageSize(Number(value))
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAGE_SIZE_OPTIONS.map((size) => (
-                  <SelectItem key={size} value={size.toString()}>
-                    {size}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+        </div>
+
+        {/* Table */}
+        <div className="overflow-hidden rounded-md border">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead key={header.id} className='p-4'>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                      </TableHead>
+                    )
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className='pl-4'>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-32 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <p className="text-muted-foreground">No income transactions found.</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+          {/* Pagination */}
+          <div className="flex items-center justify-between space-x-2 py-4 px-4 border border-border border-t-2">
+            <div>
+              <p className='text-sm text-muted-foreground'>
+                {`Showing ${table.getRowModel().rows.length} out of ${filteredData.length}`}
+                {debouncedSearchTerm && <span className="text-primary-600"> (filtered)</span>}
+              </p>
+            </div>
+            <div className='flex items-center gap-1'>
+              <button
+                className='text-muted-foreground hover:text-white transition-colors disabled:hover:text-muted-foreground'
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <ChevronLeft size={22} strokeWidth={1} />
+              </button>
+              <div className='flex items-center gap-1'>
+                {pageNumbers.map((pageNum, index) => {
+                  const isCurrentPage = typeof pageNum === 'number' && pageNum === currentPage + 1;
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        if (typeof pageNum === 'number') {
+                          table.setPageIndex(pageNum - 1)
+                        }
+                      }}
+                      disabled={typeof pageNum !== 'number'}
+                      className={`px-3 py-1 text-sm rounded transition-colors ${
+                        isCurrentPage 
+                          ? 'bg-primary-700/30 text-primary-foreground' 
+                          : typeof pageNum === 'number'
+                            ? 'hover:bg-primary-600/30'
+                            : 'cursor-default'
+                      }`}                  
+                    >
+                      {pageNum}
+                    </button>
+                  )
+              })}
+              </div>
+              <button
+                className='text-muted-foreground hover:text-white transition-colors disabled:hover:text-muted-foreground'
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                <ChevronRight size={22} strokeWidth={1} />
+              </button>
+            </div>
+            <div className='flex items-center justify-center gap-2'>
+              <p className='text-sm text-muted-foreground'>Rows per page</p>
+              <Select
+                value={table.getState().pagination.pageSize.toString()}
+                onValueChange={(value) => {
+                  table.setPageSize(Number(value))
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <SelectItem key={size} value={size.toString()}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <DeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Income Transaction"
+        itemName={transactionToDelete?.name}
+        isDeleting={isDeleting}
+      />
+    </>
   )
 }
 

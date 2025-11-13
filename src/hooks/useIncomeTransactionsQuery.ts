@@ -52,6 +52,17 @@ const updateIncomeTransaction = async ({ id, ...incomeTransactionData }: any): P
   return response.json();
 }
 
+const deleteIncomeTransaction = async (id: string): Promise<void> => {
+  const response = await fetch(`/api/income-transactions/${id}`, {
+    method: 'DELETE',
+  });
+
+    if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to income transfer transaction')
+  }
+}
+
 export const useIncomeTransactionsQuery = () => {
   const queryClient = useQueryClient();
 
@@ -81,14 +92,24 @@ export const useIncomeTransactionsQuery = () => {
     },
   });
 
+  const deleteIncomeTransactionMutation = useMutation({
+    mutationFn: deleteIncomeTransaction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.incomeTransactions });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+    }
+  })
+
   return {
     incomeTransactions,
     isLoading: isPending,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
     createIncomeTransaction: createIncomeTransactionMutation.mutateAsync,
     updateIncomeTransaction: updateIncomeTransactionMutation.mutateAsync,
+    deleteIncomeTransaction: deleteIncomeTransactionMutation.mutateAsync,
     isCreating: createIncomeTransactionMutation.isPending,
     isUpdating: updateIncomeTransactionMutation.isPending,
+    isDeleting: deleteIncomeTransactionMutation.isPending,
   };
 };
 
