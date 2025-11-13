@@ -102,3 +102,84 @@ export async function PATCH(
     )
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = await params;
+
+    const session = await auth.api.getSession({
+      headers: await headers()
+    });
+
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const account = await db.financialAccount.findUnique({
+      where: {
+        id: id,
+        userId: session.user.id,
+      },
+    });
+
+    if (!account) {
+      return NextResponse.json(
+        { error: 'Account not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check for associated transactions
+    const [incomeCount, expenseCount,transferFromCount, transferToCount] = await Promise.all([
+      db.incomeTransaction.count({
+        where: { accountId: id }
+      }),
+      db.expenseTransaction.count({
+        where: { accountId: id }
+      }),
+      db.transferTransaction.count({
+        where: { fromAccountId: id }
+      }),
+      db.transferTransaction.count({
+        where: { toAccountId: id }
+      }),
+    ]);
+
+    const totalTransactionCount = incomeCount + expenseCount + transferFromCount + transferToCount;
+
+    if (totalTransactionCount > 0) {
+      return NextResponse.json(
+        { 
+          error: "Cannot delete account with existing transactions",
+          transactionCount: totalTransactionCount, 
+        },
+        { status: 400 },
+      );
+    }
+
+    await db.financialAccount.delete({
+      where: {
+        id: id,
+        userId: session.user.id,
+      },
+    });
+
+    return NextResponse.json(
+      { message: "Account deleted successfully" },
+      { status: 200 }
+    );
+
+  } catch (error) {
+    console.error('Error deleting account: ', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 },
+    );
+  }
+}

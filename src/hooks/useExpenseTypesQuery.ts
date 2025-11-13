@@ -39,6 +39,19 @@ const updateBudget = async ({ id, ...budgetData }: any): Promise<ExpenseType> =>
   return response.json();
 }
 
+const deleteBudget = async (id: string): Promise<{ message: string; reassignedCount: number}> => {
+  const response = await fetch(`/api/expense-types/${id}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to delete expense type');
+  }
+
+  return response.json();
+}
+
 export const useExpenseTypesQuery = () => {
   const queryClient = useQueryClient();
 
@@ -66,14 +79,24 @@ export const useExpenseTypesQuery = () => {
     },
   });
 
+  const deleteBudgetMutation = useMutation({
+    mutationFn: deleteBudget,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.budgets });
+      queryClient.invalidateQueries({ queryKey: ['expenseTransactions'] });
+    }
+  })
+
   return {
     budgets,
     isLoading: isPending,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
     createBudget: createBudgetMutation.mutateAsync,
     updateBudget: updateBudgetsMutation.mutateAsync,
+    deleteBudget: deleteBudgetMutation.mutateAsync,
     isCreating: createBudgetMutation.isPending,
-    isUpdating: updateBudgetsMutation.isPending, 
+    isUpdating: updateBudgetsMutation.isPending,
+    isDeleting: deleteBudgetMutation.isPending,
   };
 };
 

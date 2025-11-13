@@ -113,9 +113,10 @@ export const useExpenseTransactionsQuery = () => {
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
     createExpenseTransaction: createExpenseTransactionMutation.mutateAsync,
     updateExpenseTransaction: updateExpenseTransactionMutation.mutateAsync,
+    deleteExpenseTransaction: deleteExpenseTransactionMutation.mutateAsync,
     isCreating: createExpenseTransactionMutation.isPending,
     isUpdating: updateExpenseTransactionMutation.isPending,
-    isDeleteing: deleteExpenseTransactionMutation.isPending,
+    isDeleting: deleteExpenseTransactionMutation.isPending,
   };
 };
 

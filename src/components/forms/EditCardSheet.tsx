@@ -2,7 +2,7 @@
 
 import { CardValidation } from "@/lib/validations/account";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod"
@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { getOrdinalSuffix } from "@/lib/utils";
 import SkeletonEditCardSheetForm from "../shared/SkeletonEditCardSheetForm";
 import { useCardQuery, useCardsQuery } from "@/hooks/useCardsQuery";
+import DeleteDialog from "../shared/DeleteDialog";
+import { Separator } from "../ui/separator";
 
 
 interface EditCardSheetProps {
@@ -24,8 +26,9 @@ interface EditCardSheetProps {
 }
 
 const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetProps) => {
-  const { updateCard, isUpdating } = useCardsQuery();
+  const { updateCard, isUpdating, deleteCard, isDeleting } = useCardsQuery();
   const { cardData, isFetching, error } = useCardQuery(cardId);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const form = useForm<z.infer<typeof CardValidation>>({
     resolver: zodResolver(CardValidation),
@@ -67,185 +70,246 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
     }
   }
 
+  const handleDeleteClick = async () => {
+    const response = await fetch(`/api/cards/${cardId}/transaction-count`);
+    const { count } = await response.json();
+
+    if (count > 0) {
+      toast.error("Cannot delete card with existing transactions", {
+        description: `Please delete the ${count} transctions first.`,
+        duration: 10000,
+      });
+
+      return;
+    }
+
+    setDeleteDialogOpen(true);
+  }
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await deleteCard(cardId);
+
+      setDeleteDialogOpen(false);
+      onOpenChange(false);
+
+      toast.success("Card deleted successfully", {
+        description:`${cardData?.name} has been deleted.`,
+        duration: 5000
+      });
+    } catch (error: any) {
+      toast.error("Failed to delete card", {
+        description: error instanceof Error ? error.message : "Please try again.",
+        duration: 6000
+      });
+    }
+  }
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
-        className={`${className} w-[600px] sm:max-w-[600px] py-3 px-2`}
-      >
-        {isFetching ? (
-          <SkeletonEditCardSheetForm />
-        ) : error ? (
-        <>
-          <SheetHeader className='text-center'>
-            <SheetTitle className='text-2xl'>Unable to load account</SheetTitle>
-            <SheetDescription>
-              {error || 'Something went wrong while loading your account details.'}
-            </SheetDescription>
-          </SheetHeader>
-          
-          <div className='flex flex-col gap-3 p-6'>
-            <Button
-              onClick={() => window.location.reload()}
-              className="w-full"
-            >
-              Try again
-            </Button>
-            <Button
-              variant="outline"
-              
-              onClick={() => onOpenChange(false)}
-              className='hover:text-white'
-            >
-              Close
-            </Button>
-          </div>
-        </>
-      ) : (
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <SheetHeader>
-              <SheetTitle className='text-2xl'>Edit credit card</SheetTitle>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent
+          onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
+          className={`${className} w-[600px] sm:max-w-[600px] py-3 px-2`}
+        >
+          {isFetching ? (
+            <SkeletonEditCardSheetForm />
+          ) : error ? (
+          <>
+            <SheetHeader className='text-center'>
+              <SheetTitle className='text-2xl'>Unable to load account</SheetTitle>
               <SheetDescription>
-                Update your credit card details and information.
+                {error || 'Something went wrong while loading your account details.'}
               </SheetDescription>
             </SheetHeader>
-
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem className="p-4">
-                  <FormLabel>Card Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder='e.g., BPI Blue Mastercard, Metrobank Rewards Plus'
-                      {...field}
-                      disabled={isUpdating}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <div className="p-4 flex flex-col gap-2">
-              <FormLabel>Current outstanding balance</FormLabel>
-              <FormDescription>
-                Current debt on this card including all transactions. Updates automatically.
-              </FormDescription>
-              <Input
-                value={cardData?.currentBalance || '0'}
-                disabled={true}
-                className="bg-muted text-muted-foreground cursor-not-allowed"
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="initialBalance"
-              render={({ field }) => (
-                <FormItem className="p-4">
-                  <FormLabel>Initial outstanding balance</FormLabel>
-                  <FormDescription>
-                    Starting debt when card was added. Edit to correct initial amount.
-                  </FormDescription>
-                  <FormControl>
-                    <Input
-                      type='number'
-                      placeholder='0'
-                      className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                      {...field}
-                      disabled={isUpdating}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="statementDate"
-              render={({ field }) => (
-                <FormItem className="p-4">
-                  <FormLabel>Statement Date</FormLabel>
-                  <FormDescription>
-                    Day of the month when your statement is generated
-                  </FormDescription>
-                  <FormControl>
-                    <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                      defaultValue={field.value?.toString()}
-                      disabled={isUpdating}  
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select day" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 31 }, (_, i) => (
-                          <SelectItem key={i + 1} value={(i + 1).toString()}>
-                            {i + 1}{getOrdinalSuffix(i + 1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="dueDate"
-              render={({ field }) => (
-                <FormItem className="p-4">
-                  <FormLabel>Due Date</FormLabel>
-                  <FormDescription>
-                    Day of the month when payment is due
-                  </FormDescription>
-                  <FormControl>
-                    <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                      defaultValue={field.value?.toString()}
-                      disabled={isUpdating}  
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select day" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 31 }, (_, i) => (
-                          <SelectItem key={i + 1} value={(i + 1).toString()}>
-                            {i + 1}{getOrdinalSuffix(i + 1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <SheetFooter>
+            
+            <div className='flex flex-col gap-3 p-6'>
               <Button
-                type="submit"
-                disabled={isUpdating}
+                onClick={() => window.location.reload()}
+                className="w-full"
               >
-                {isUpdating ? "Updating credit card" : "Update credit card"}
+                Try again
               </Button>
-              <SheetClose asChild>
+              <Button
+                variant="outline"
+                
+                onClick={() => onOpenChange(false)}
+                className='hover:text-white'
+              >
+                Close
+              </Button>
+            </div>
+          </>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <SheetHeader>
+                <SheetTitle className='text-2xl'>Edit credit card</SheetTitle>
+                <SheetDescription>
+                  Update your credit card details and information.
+                </SheetDescription>
+              </SheetHeader>
+
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem className="p-4">
+                    <FormLabel>Card Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder='e.g., BPI Blue Mastercard, Metrobank Rewards Plus'
+                        {...field}
+                        disabled={isUpdating}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <div className="p-4 flex flex-col gap-2">
+                <FormLabel>Current outstanding balance</FormLabel>
+                <FormDescription>
+                  Current debt on this card including all transactions. Updates automatically.
+                </FormDescription>
+                <Input
+                  value={cardData?.currentBalance || '0'}
+                  disabled={true}
+                  className="bg-muted text-muted-foreground cursor-not-allowed"
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="initialBalance"
+                render={({ field }) => (
+                  <FormItem className="p-4">
+                    <FormLabel>Initial outstanding balance</FormLabel>
+                    <FormDescription>
+                      Starting debt when card was added. Edit to correct initial amount.
+                    </FormDescription>
+                    <FormControl>
+                      <Input
+                        type='number'
+                        placeholder='0'
+                        className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+                        {...field}
+                        disabled={isUpdating}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="statementDate"
+                render={({ field }) => (
+                  <FormItem className="p-4">
+                    <FormLabel>Statement Date</FormLabel>
+                    <FormDescription>
+                      Day of the month when your statement is generated
+                    </FormDescription>
+                    <FormControl>
+                      <Select
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        defaultValue={field.value?.toString()}
+                        disabled={isUpdating}  
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select day" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 31 }, (_, i) => (
+                            <SelectItem key={i + 1} value={(i + 1).toString()}>
+                              {i + 1}{getOrdinalSuffix(i + 1)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="dueDate"
+                render={({ field }) => (
+                  <FormItem className="p-4">
+                    <FormLabel>Due Date</FormLabel>
+                    <FormDescription>
+                      Day of the month when payment is due
+                    </FormDescription>
+                    <FormControl>
+                      <Select
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        defaultValue={field.value?.toString()}
+                        disabled={isUpdating}  
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select day" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 31 }, (_, i) => (
+                            <SelectItem key={i + 1} value={(i + 1).toString()}>
+                              {i + 1}{getOrdinalSuffix(i + 1)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <SheetFooter>
                 <Button
-                  variant="outline"
-                  className='hover:text-white'
+                  type="submit"
                   disabled={isUpdating}
                 >
-                  Cancel
+                  {isUpdating ? "Updating credit card" : "Update credit card"}
                 </Button>
-              </SheetClose>
-            </SheetFooter>
-          </form>
-        </Form>
-        )}
-      </SheetContent>
-    </Sheet>
+                <SheetClose asChild>
+                  <Button
+                    variant="outline"
+                    className='hover:text-white'
+                    disabled={isUpdating}
+                  >
+                    Cancel
+                  </Button>
+                </SheetClose>
+              </SheetFooter>
+
+              <Separator className='mt-2 mb-6' />
+
+              <div className='px-4 pb-4'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  className="w-full text-error-700 hover:text-error-600 hover:bg-error-50 border-error-300"
+                  onClick={handleDeleteClick}
+                  disabled={isUpdating || isDeleting}
+                >
+                  {isDeleting ? "Deleting..." : "Delete account"}
+                </Button>
+              </div>
+
+            </form>
+          </Form>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <DeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Card"
+        itemName={cardData?.name}
+        isDeleting={isDeleting}
+      />
+    </>
   )
 }
 

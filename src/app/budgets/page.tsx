@@ -170,8 +170,10 @@ const Budgets = () => {
       ) : (
         <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'
         >
-          {sortedBudgets.map((budget) => {
-            const spentAmount = calculateMonthlySpent(expenseTransactions, budget.id);
+          {sortedBudgets.
+            filter(budget => budget.name.toLocaleLowerCase() !== 'uncategorized')
+            .map((budget) => {
+              const spentAmount = calculateMonthlySpent(expenseTransactions, budget.id);
             
             return (
               <BudgetCard
@@ -181,7 +183,7 @@ const Budgets = () => {
                 spentAmount={spentAmount}
                 onClick={() => handleExpenseTypeClick(budget.id)}
               />
-            );
+            )
           })}
         </div>
       )}

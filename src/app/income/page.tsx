@@ -2,9 +2,11 @@
 
 import CreateIncomeTypeDrawer from '@/components/forms/CreateIncomeTypeDrawer';
 import CreateIncomeTypeSheet from '@/components/forms/CreateIncomeTypeSheet';
+import EditIncomeDrawer from '@/components/forms/EditIncomeDrawer';
 import EditIncomeTypeDrawer from '@/components/forms/EditIncomeTypeDrawer';
 import EditIncomeTypeSheet from '@/components/forms/EditIncomeTypeSheet';
 import { Icons } from '@/components/icons';
+import IncomeCard from '@/components/shared/IncomeCard';
 import IncomeTypeCard from '@/components/shared/IncomeTypeCard';
 import SkeletonIncomeTypeCard from '@/components/shared/SkeletonIncomeTypeCard';
 import IncomeTable from '@/components/tables/income/IncomeTable';
@@ -43,6 +45,8 @@ const Income = () => {
   const [editIncomeTypeSheetOpen, setEditIncomeTypeSheetOpen] = useState(false);
   const [editIncomeTypeDrawerOpen, setEditIncomeTypeDrawerOpen] = useState(false);
   const [selectedIncomeTypeId, setSelectedIncomeTypeId] = useState<string>('');
+  const [selectedIncomeTransactionId, setSelectedIncomeTransactionId] = useState<string>('');
+  const [editIncomeTransactionDrawerOpen, setEditIncomeTransactionDrawerOpen] = useState(false);
 
   const sortedIncomeTypes = [...incomeTypes].sort((a, b) => {
     if (a.monthlyTarget && b.monthlyTarget) {
@@ -66,6 +70,11 @@ const Income = () => {
       setEditIncomeTypeDrawerOpen(true);
     }
   }
+
+  const handleIncomeTransactionCardClick = (incomeTransactionId: string) => {
+    setSelectedIncomeTransactionId(incomeTransactionId);
+    setEditIncomeTransactionDrawerOpen(true);
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
@@ -165,19 +174,21 @@ const Income = () => {
       </div>
       ) : (
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
-        {sortedIncomeTypes.map((income) => {
-          const incomeEarned = calculateMonthlyEarned(incomeTransactions, income.id);
+        {sortedIncomeTypes
+          .filter(income => income.name.toLowerCase() !== 'uncategorized')
+          .map((income) => {
+            const incomeEarned = calculateMonthlyEarned(incomeTransactions, income.id);
 
-          return (
-            <IncomeTypeCard
-              key={income.id}
-              name={income.name}
-              monthlyTarget={income.monthlyTarget}
-              incomeAmount={incomeEarned}
-              onClick={() => handleIncomeTypeClick(income.id)}
-            />
-          )
-        })}
+            return (
+              <IncomeTypeCard
+                key={income.id}
+                name={income.name}
+                monthlyTarget={income.monthlyTarget}
+                incomeAmount={incomeEarned}
+                onClick={() => handleIncomeTypeClick(income.id)}
+              />
+            )
+          })}
       </div>
       )}
 
@@ -191,10 +202,33 @@ const Income = () => {
           </p>
         </div>
 
+        <div className="md:hidden space-y-4">
+          {incomeTransactions?.map((income) => (
+            <IncomeCard
+              key={income.id}
+              id={income.id}
+              name={income.name}
+              amount={income.amount.toString()}
+              date={income.date}
+              description={income.description}
+              account={income.account}
+              incomeType={income.incomeType}
+              onClick={() => handleIncomeTransactionCardClick(income.id)}
+            />
+          ))}
+        </div>
+
         <div className="hidden md:block mb-4">
           <IncomeTable />
         </div>
       </div>
+
+      <EditIncomeDrawer
+        open={editIncomeTransactionDrawerOpen}
+        onOpenChange={setEditIncomeTransactionDrawerOpen}
+        className='block md:hidden'
+        incomeTransactionId={selectedIncomeTransactionId}
+      />
     </div>
   )
 }

@@ -38,14 +38,17 @@ const updateTransferType = async ({ id, ...transferTypeData }: any): Promise<Tra
   return response.json();
 }
 
-const deleteTransferType = async (id: string): Promise<void> => {
+const deleteTransferType = async (id: string): Promise<{ message: string; reassignedCount: number }> => {
   const response = await fetch(`/api/transfer-types/${id}`, {
     method: 'DELETE',
   });
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.error || 'Failed to delete transfer type');
   }
+
+  return response.json();
 };
 
 export const useTransferTypesQuery = () => {
@@ -79,6 +82,7 @@ export const useTransferTypesQuery = () => {
     mutationFn: deleteTransferType,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.transferTypes });
+      queryClient.invalidateQueries({ queryKey: ['transfers'] })
     },
   });
 
