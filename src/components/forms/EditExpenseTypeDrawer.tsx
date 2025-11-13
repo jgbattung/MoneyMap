@@ -2,7 +2,7 @@
 
 import { ExpenseTypeValidation } from '@/lib/validations/expense';
 import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { z } from "zod"
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
@@ -12,6 +12,8 @@ import { Input } from '../ui/input';
 import { toast } from 'sonner';
 import SkeletonEditBudgetDrawerForm from '../shared/SkeletonEditBudgetDrawerForm';
 import { useExpenseTypesQuery, useExpenseTypeQuery } from '@/hooks/useExpenseTypesQuery';
+import { Separator } from '../ui/separator';
+import DeleteDialog from '../shared/DeleteDialog';
 
 interface EditExpenseTypeDrawerProps {
   open: boolean;
@@ -21,8 +23,9 @@ interface EditExpenseTypeDrawerProps {
 }
 
 const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId }: EditExpenseTypeDrawerProps)  => {
-  const { updateBudget, isUpdating } = useExpenseTypesQuery();
+  const { updateBudget, isUpdating, deleteBudget, isDeleting } = useExpenseTypesQuery();
   const { budgetData, isFetching, error } = useExpenseTypeQuery(budgetId);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const form = useForm<z.infer<typeof ExpenseTypeValidation>>({
     resolver: zodResolver(ExpenseTypeValidation),
@@ -59,112 +62,166 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId }: Edit
     }
   };
 
+  const handleDeleteClick = async () => {
+    setDeleteDialogOpen(true);
+  }
+
+  const handleDeleteConfirm = async () => {
+    try {
+      const result = await deleteBudget(budgetId);
+
+      setDeleteDialogOpen(false);
+      onOpenChange(false);
+
+      toast.success("Budget deleted successfully", {
+        description: result.reassignedCount > 0 
+          ? `${result.reassignedCount} transaction(s) reassigned to 'Uncategorized'.`
+          : `${budgetData?.name} has been deleted.`,
+      });
+    } catch (error: any) {
+      toast.error("Failed to delete budget", {
+        description: error instanceof Error ? error.message : "Please try again.",
+        duration: 6000
+      });
+    }
+  }
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent
-        onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
-        className={`${className}`}
-      >
-       {isFetching ? (
-        <SkeletonEditBudgetDrawerForm />
-       ) : error ? (
-          <>
-            <DrawerHeader className='text-center'>
-              <DrawerTitle className='text-xl'>Unable to load account</DrawerTitle>
-              <DrawerDescription>
-                {error || 'Something went wrong while loading your account details.'}
-              </DrawerDescription>
-            </DrawerHeader>
-            
-            <DrawerFooter>
-              <Button
-                onClick={() => window.location.reload()}
-                className="w-full"
-              >
-                Try again
-              </Button>
-              <DrawerClose asChild>
+    <>
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent
+          onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
+          className={`${className}`}
+        >
+        {isFetching ? (
+          <SkeletonEditBudgetDrawerForm />
+        ) : error ? (
+            <>
+              <DrawerHeader className='text-center'>
+                <DrawerTitle className='text-xl'>Unable to load account</DrawerTitle>
+                <DrawerDescription>
+                  {error || 'Something went wrong while loading your account details.'}
+                </DrawerDescription>
+              </DrawerHeader>
+              
+              <DrawerFooter>
                 <Button
-                  variant="outline"
-                  className="w-full hover:text-white"
+                  onClick={() => window.location.reload()}
+                  className="w-full"
                 >
-                  Close
+                  Try again
                 </Button>
-              </DrawerClose>
-            </DrawerFooter>
-          </>
-        ) : (
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DrawerHeader>
-              <DrawerTitle className='text-xl'>
-                Edit budget
-              </DrawerTitle>
-              <DrawerDescription>
-                Update your budget details
-              </DrawerDescription>
-            </DrawerHeader>
+                <DrawerClose asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full hover:text-white"
+                  >
+                    Close
+                  </Button>
+                </DrawerClose>
+              </DrawerFooter>
+            </>
+          ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <DrawerHeader>
+                <DrawerTitle className='text-xl'>
+                  Edit budget
+                </DrawerTitle>
+                <DrawerDescription>
+                  Update your budget details
+                </DrawerDescription>
+              </DrawerHeader>
 
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem className='p-4'>
-                  <FormLabel>Budget name</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder='e.g., Groceries, transportation, entertainment, shopping'
-                      {...field}
-                      disabled={isUpdating}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem className='p-4'>
+                    <FormLabel>Budget name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder='e.g., Groceries, transportation, entertainment, shopping'
+                        {...field}
+                        disabled={isUpdating}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="monthlyBudget"
-              render={({ field }) => (
-                <FormItem className='p-4'>
-                  <FormLabel>Monthly budget</FormLabel>
-                  <FormDescription>
-                    Set a monthly spending limit for this category (optional).
-                  </FormDescription>
-                  <FormControl>
-                    <Input
-                      placeholder='e.g., Groceries, transportation, entertainment, shopping'
-                      {...field}
-                      disabled={isUpdating}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="monthlyBudget"
+                render={({ field }) => (
+                  <FormItem className='p-4'>
+                    <FormLabel>Monthly budget</FormLabel>
+                    <FormDescription>
+                      Set a monthly spending limit for this category (optional).
+                    </FormDescription>
+                    <FormControl>
+                      <Input
+                        placeholder='e.g., Groceries, transportation, entertainment, shopping'
+                        {...field}
+                        disabled={isUpdating}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-            <DrawerFooter>
-              <Button
-                type="submit"
-                disabled={isUpdating}
-              >
-                {isUpdating ? "Updating budget" : "Update budget"}
-              </Button>
-              <DrawerClose asChild>
+              <DrawerFooter>
                 <Button
-                  variant="outline"
-                  className='hover:text-white'
+                  type="submit"
                   disabled={isUpdating}
                 >
-                  Cancel
+                  {isUpdating ? "Updating budget" : "Update budget"}
                 </Button>
-              </DrawerClose>
-            </DrawerFooter>
-          </form>
-        </Form>
-       )}
-      </DrawerContent>
-    </Drawer>
+                <DrawerClose asChild>
+                  <Button
+                    variant="outline"
+                    className='hover:text-white'
+                    disabled={isUpdating}
+                  >
+                    Cancel
+                  </Button>
+                </DrawerClose>
+              </DrawerFooter>
+
+              <Separator className='mt-2 mb-6' />
+
+              <div className='px-4 pb-4'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  className="w-full text-error-700 hover:text-error-600 hover:bg-error-50 border-error-300"
+                  onClick={handleDeleteClick}
+                  disabled={isUpdating || isDeleting}
+                >
+                  {isDeleting ? "Deleting..." : "Delete budget"}
+                </Button>
+              </div>
+
+            </form>
+          </Form>
+        )}
+        </DrawerContent>
+      </Drawer>
+
+      <DeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        description={
+          <>
+            Are you sure you want to delete <span className="font-semibold">{budgetData?.name}</span>? 
+            Any transactions using this budget will be reassigned to &apos;Uncategorized&apos;. This action cannot be undone.
+          </>
+        }
+        title="Delete income type"
+        isDeleting={isDeleting}
+      />
+    </>
   )
 }
 
