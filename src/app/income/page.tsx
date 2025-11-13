@@ -166,7 +166,7 @@ const Income = () => {
       ) : (
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
         {sortedIncomeTypes
-          .filter(income => income.name.toLowerCase() !== 'uncategorized') // Add this
+          .filter(income => income.name.toLowerCase() !== 'uncategorized')
           .map((income) => {
             const incomeEarned = calculateMonthlyEarned(incomeTransactions, income.id);
 

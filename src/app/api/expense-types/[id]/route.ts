@@ -123,32 +123,79 @@ export async function DELETE(
       );
     }
 
-    const existingExpenseType = await db.expenseType.findUnique({
+    const expenseTypeToDelete = await db.expenseType.findUnique({
       where: {
         id: id,
         userId: session.user.id
       },
     });
 
-    if (!existingExpenseType) {
+    if (!expenseTypeToDelete) {
       return NextResponse.json(
         { error: 'Expense type not found' },
         { status: 404 }
       );
     }
 
-    await db.expenseType.delete({
-      where: {
-        id: id,
-        userId: session.user.id,
-      },
-    });
+    if (expenseTypeToDelete.name.toLocaleLowerCase() === "uncategorized") {
+      return NextResponse.json(
+        { error: 'Cannot delete Uncategorized expense type' },
+        { status: 400 }
+      );
+    }
+
+    const result = await db.$transaction(async (tx) => {
+      let uncategorizedType = await tx.expenseType.findFirst({
+        where: {
+          userId: session.user.id,
+          name: 'Uncategorized',
+        }
+      });
+
+      if (!uncategorizedType) {
+        uncategorizedType = await tx.expenseType.create({
+          data: {
+            userId: session.user.id,
+            name: "Uncategorized",
+            monthlyBudget: null,
+          }
+        });
+      }
+
+      const transactionCount = await tx.expenseTransaction.count({
+        where: {
+          expenseTypeId: id,
+        }
+      });
+
+      if (transactionCount > 0) {
+        await tx.expenseTransaction.updateMany({
+          where: {
+            expenseTypeId: id,
+          },
+          data: {
+            expenseTypeId: uncategorizedType.id,
+          }
+        });
+      }
+
+      await tx.expenseType.delete({
+        where: {
+          id: id,
+          userId: session.user.id,
+        }
+      });
+
+      return { transactionCount };
+    })
 
     return NextResponse.json(
-      { message: 'Expense type deleted successfully' },
+      {
+        message: 'Budget deleted successfully',
+        reassignedCount: result.transactionCount,
+      },
       { status: 200 }
     );
-
 
   } catch (error) {
     console.error('Error deleting expense type: ', error);
