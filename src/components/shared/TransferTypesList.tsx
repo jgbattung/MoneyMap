@@ -127,8 +127,14 @@ const TransferTypesList = () => {
     if (!typeToDelete) return;
     
     try {
-      await deleteTransferType(typeToDelete.id);
-      toast.success(`${typeToDelete.name} has been deleted`);
+      const result = await deleteTransferType(typeToDelete.id); // Add result capture
+
+      toast.success("Transfer type deleted successfully", {
+        description: result.reassignedCount > 0 
+          ? `${result.reassignedCount} transaction(s) reassigned to 'Uncategorized'.`
+          : `${typeToDelete.name} has been deleted.`,
+      });
+
       setDeleteDialogOpen(false);
       setTypeToDelete(null);
     } catch (error) {
@@ -213,7 +219,9 @@ const TransferTypesList = () => {
 
         {/* Transfer Types List */}
         <div className="space-y-2">
-          {transferTypes.map((transferType) => (
+          {transferTypes
+            .filter(type => type.name.toLocaleLowerCase() !== "uncategorized")
+            .map((transferType) => (
             <div
               key={transferType.id}
               className="flex items-center justify-between p-3 border border-border rounded-md hover:bg-muted/50 transition-colors"
@@ -287,7 +295,8 @@ const TransferTypesList = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Transfer Type</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <span className="font-semibold">{typeToDelete?.name}</span>? This action cannot be undone.
+              Are you sure you want to delete <span className="font-semibold">{typeToDelete?.name}</span>? 
+              Any transactions using this type will be reassigned to &apos;Uncategorized&apos;. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

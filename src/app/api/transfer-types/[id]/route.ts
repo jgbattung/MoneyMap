@@ -121,29 +121,76 @@ export async function DELETE(
       );
     }
 
-    const existingTransferType = await db.transferType.findUnique({
+    const transferTypeToDelete = await db.transferType.findUnique({
       where: {
         id: id,
         userId: session.user.id
       },
     });
 
-    if (!existingTransferType) {
+    if (!transferTypeToDelete) {
       return NextResponse.json(
         { error: 'Transfer type not found' },
         { status: 404 }
       );
     }
 
-    await db.transferType.delete({
-      where: {
-        id: id,
-        userId: session.user.id,
-      },
+    if (transferTypeToDelete.name.toLocaleLowerCase() === "uncategorized") {
+      return NextResponse.json(
+        { error: 'Cannot delete the Uncategorized transfer type' },
+        { status: 400 }
+      );
+    }
+
+    const result = await db.$transaction(async (tx) => {
+      let uncategorizedType = await tx.transferType.findFirst({
+        where: {
+          userId: session.user.id,
+          name: 'Uncategorized',
+        }
+      });
+
+      if (!uncategorizedType) {
+        uncategorizedType = await tx.transferType.create({
+          data: {
+            userId: session.user.id,
+            name: "Uncategorized",
+          }
+        });
+      }
+
+      const transactionCount = await tx.transferTransaction.count({
+        where: {
+          transferTypeId: id,
+        }
+      });
+
+      if (transactionCount > 0) {
+        await tx.transferTransaction.updateMany({
+          where: {
+            transferTypeId: id,
+          },
+          data: {
+            transferTypeId: uncategorizedType.id,
+          }
+        });
+      }
+
+      await tx.transferType.delete({
+        where: {
+          id: id,
+          userId: session.user.id,
+        }
+      });
+
+      return { transactionCount }
     });
 
     return NextResponse.json(
-      { message: 'Transfer type deleted successfully' },
+      {
+        message: 'Transfer type deleted successfully',
+        reassignedCount: result.transactionCount,
+      },
       { status: 200 }
     );
 

@@ -62,10 +62,10 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
     }
   };
 
-    const handleDeleteClick = async () => {
-      setDeleteDialogOpen(true);
-    }
-  
+  const handleDeleteClick = async () => {
+    setDeleteDialogOpen(true);
+  }
+
   const handleDeleteConfirm = async () => {
     try {
       const result = await deleteIncomeType(incomeTypeId);
