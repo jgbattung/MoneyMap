@@ -117,7 +117,7 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId }: EditAcc
         description:`${accountData?.name} has been deleted.`,
         duration: 5000
       });
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to delete account", {
         description: error instanceof Error ? error.message : "Please try again.",
         duration: 6000

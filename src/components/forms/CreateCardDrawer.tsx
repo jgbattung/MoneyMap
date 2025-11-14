@@ -38,9 +38,6 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
     const checkScroll = () => {
       const scrollElement = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
       
-      console.log('🔍 [CreateCardDrawer] checkScroll called');
-      console.log('  - scrollElement exists:', !!scrollElement);
-      
       if (scrollElement) {
         const { scrollTop, scrollHeight, clientHeight } = scrollElement;
         const isScrollable = scrollHeight > clientHeight;

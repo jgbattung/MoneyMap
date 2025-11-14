@@ -1,11 +1,11 @@
 import { useIncomeTransactionQuery, useIncomeTransactionsQuery } from '@/hooks/useIncomeTransactionsQuery';
 import { IncomeTransactionValidation } from '@/lib/validations/income-transactions';
 import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { z } from "zod"
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
-import { Form, FormControl, FormField, FormItem, FormLabel } from '../ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Button } from '../ui/button';
@@ -35,8 +35,9 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
   const { accounts } = useAccountsQuery();
   const { incomeTypes } = useIncomeTypesQuery();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
   const [calendarOpen, setCalendarOpen] = React.useState(false);
+  const [showGradient, setShowGradient] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<z.infer<typeof IncomeTransactionValidation>>({
     resolver: zodResolver(IncomeTransactionValidation),
@@ -62,6 +63,26 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
       })
     }
   }, [incomeTransactionData, form])
+
+  useEffect(() => {
+    const checkScroll = () => {
+      const scrollElement = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollElement) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+        const isAtBottom = scrollTop + clientHeight >= scrollHeight - 5;
+        setShowGradient(!isAtBottom);
+      }
+    };
+
+    checkScroll();
+
+    const scrollElement = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    scrollElement?.addEventListener('scroll', checkScroll);
+
+    return () => {
+      scrollElement?.removeEventListener('scroll', checkScroll);
+    };
+  }, [incomeTransactionData]);
 
   const onSubmit = async (values: z.infer<typeof IncomeTransactionValidation>) => {
     try {
@@ -95,7 +116,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
       toast.success("Income transaction deleted successfully", {
         duration: 5000
       });
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to delete income transaction", {
         description: error instanceof Error ? error.message : "Please try again.",
         duration: 6000
@@ -139,7 +160,10 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
           </>
         ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85vh]'>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className='flex flex-col h-full max-h-[85vh]'
+            >  
               <DrawerHeader className='flex-shrink-0'>
                 <DrawerTitle className='text-xl'>
                   Edit Income Transaction
@@ -149,149 +173,156 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                 </DrawerDescription>
               </DrawerHeader>
 
-              <ScrollArea className="flex-1 min-h-0 scrollbar-hide">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem className="p-4">
-                      <FormLabel>Income name</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder='e.g., Salary, Freelance work, Bonus'
-                          {...field}
-                          disabled={isUpdating}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem className="p-4">
-                      <FormLabel>Amount</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                          {...field}
-                          disabled={isUpdating}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="accountId"
-                  render={({ field }) => (
-                    <FormItem className="p-4">
-                      <FormLabel>Account</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isUpdating}>
+              <div className="relative flex-1 min-h-0">
+                <ScrollArea ref={scrollRef} className="h-full scrollbar-hide">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem className="p-4">
+                        <FormLabel>Income name</FormLabel>
                         <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select account" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {accounts.map((account) => (
-                            <SelectItem key={account.id} value={account.id}>
-                              {account.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="incomeTypeId"
-                  render={({ field }) => (
-                    <FormItem className="p-4">
-                      <FormLabel>Income type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isUpdating}>
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select income type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {incomeTypes.map((income) => (
-                            <SelectItem key={income.id} value={income.id}>
-                              {income.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem className="p-4">
-                      <FormLabel>Date</FormLabel>
-                      <Popover open={calendarOpen} onOpenChange={setCalendarOpen} modal>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-between font-normal hover:text-white"
-                              disabled={isUpdating}
-                            >
-                              {field.value ? (
-                                format(field.value, "MMMM, d, yyyy")
-                              ) : (
-                                <span className="text-muted-foreground">Select date</span>
-                              )}
-                              <ChevronDownIcon className="h-4 w-4" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            captionLayout="dropdown"
-                            onDayClick={(date) => {
-                              field.onChange(date);
-                              setCalendarOpen(false)
-                            }}
-                            disabled={(date) => date > new Date()}
+                          <Input
+                            placeholder='e.g., Salary, Freelance work, Bonus'
+                            {...field}
+                            disabled={isUpdating}
                           />
-                        </PopoverContent>
-                      </Popover>
-                    </FormItem>
-                  )}
-                />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem className="p-4">
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                          {...field}
-                          disabled={isUpdating}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem className="p-4">
+                        <FormLabel>Amount</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+                            {...field}
+                            disabled={isUpdating}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
 
-              </ScrollArea>
+                  <FormField
+                    control={form.control}
+                    name="accountId"
+                    render={({ field }) => (
+                      <FormItem className="p-4">
+                        <FormLabel>Account</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isUpdating}>
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select account" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <FormMessage />
+                          <SelectContent>
+                            {accounts.map((account) => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="incomeTypeId"
+                    render={({ field }) => (
+                      <FormItem className="p-4">
+                        <FormLabel>Income type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isUpdating}>
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select income type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {incomeTypes.map((income) => (
+                              <SelectItem key={income.id} value={income.id}>
+                                {income.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="date"
+                    render={({ field }) => (
+                      <FormItem className="p-4">
+                        <FormLabel>Date</FormLabel>
+                        <Popover open={calendarOpen} onOpenChange={setCalendarOpen} modal>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className="w-full justify-between font-normal hover:text-white"
+                                disabled={isUpdating}
+                              >
+                                {field.value ? (
+                                  format(field.value, "MMMM, d, yyyy")
+                                ) : (
+                                  <span className="text-muted-foreground">Select date</span>
+                                )}
+                                <ChevronDownIcon className="h-4 w-4" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              captionLayout="dropdown"
+                              onDayClick={(date) => {
+                                field.onChange(date);
+                                setCalendarOpen(false)
+                              }}
+                              disabled={(date) => date > new Date()}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem className="p-4">
+                        <FormLabel>Description<span className='text-xs text-muted-foreground'>(optional)</span></FormLabel>
+                        <FormControl>
+                          <Textarea
+                            className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+                            {...field}
+                            disabled={isUpdating}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                </ScrollArea>
+
+                {showGradient && (
+                  <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent" />
+                )}
+              </div>
 
               <DrawerFooter className='flex-shrink-0'>
                 <Button
@@ -309,22 +340,21 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                     Cancel
                   </Button>
                 </DrawerClose>
+
+                <Separator className='my-2' />
+
+                <div className='px-4 pb-4'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    className="w-full text-error-700 hover:text-error-600 hover:bg-error-50 border-error-300"
+                    onClick={handleDeleteClick}
+                    disabled={isUpdating || isDeleting}
+                  >
+                    {isDeleting ? "Deleting..." : "Delete income"}
+                  </Button>
+                </div>
               </DrawerFooter>
-
-              <Separator className='mt-2 mb-6' />
-
-              <div className='px-4 pb-4'>
-                <Button
-                  type='button'
-                  variant='outline'
-                  className="w-full text-error-700 hover:text-error-600 hover:bg-error-50 border-error-300"
-                  onClick={handleDeleteClick}
-                  disabled={isUpdating || isDeleting}
-                >
-                  {isDeleting ? "Deleting..." : "Delete income"}
-                </Button>
-              </div>
-
             </form>
           </Form>
         )}
