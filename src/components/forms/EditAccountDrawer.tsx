@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Button } from '../ui/button'
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -16,6 +16,7 @@ import SkeletonEditAccountDrawerForm from '../shared/SkeletonEditAccountDrawerFo
 import { useAccountQuery, useAccountsQuery } from '@/hooks/useAccountsQuery'
 import { Separator } from '../ui/separator'
 import DeleteDialog from '../shared/DeleteDialog'
+import { ScrollArea } from '../ui/scroll-area'
 
 interface EditAccountDrawerProps {
   open: boolean;
@@ -28,6 +29,8 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId }: EditAcc
   const { updateAccount, isUpdating, deleteAccount, isDeleting } = useAccountsQuery();
   const { data: accountData, isFetching, error } = useAccountQuery(accountId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [showGradient, setShowGradient] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<z.infer<typeof AccountValidation>>({
       resolver: zodResolver(AccountValidation),
@@ -48,6 +51,26 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId }: EditAcc
       });
     }
   }, [accountData, form]);
+
+  useEffect(() => {
+    const checkScroll = () => {
+      const scrollElement = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollElement) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+        const isAtBottom = scrollTop + clientHeight >= scrollHeight - 5;
+        setShowGradient(!isAtBottom);
+      }
+    };
+
+    checkScroll();
+
+    const scrollElement = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    scrollElement?.addEventListener('scroll', checkScroll);
+
+    return () => {
+      scrollElement?.removeEventListener('scroll', checkScroll);
+    };
+  }, [accountData]);
 
   const onSubmit = async (values: z.infer<typeof AccountValidation>) => {
     try {
@@ -139,114 +162,122 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId }: EditAcc
             </>
           ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <DrawerHeader>
+            <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85vh]'>
+              <DrawerHeader className='flex-shrink-0'>
                 <DrawerTitle className='text-xl'>Edit account</DrawerTitle>
                 <DrawerDescription>
                   Update your account details and information.
                 </DrawerDescription>
               </DrawerHeader>
 
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem className='p-4'>
-                    <FormLabel>Account name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder='e.g., BPI, GCash, Wallet'
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="relative flex-1 min-h-0">
+                <ScrollArea ref={scrollRef} className="h-full scrollbar-hide">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem className='p-4'>
+                        <FormLabel>Account name</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder='e.g., BPI, GCash, Wallet'
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="accountType"
-                render={({ field }) => (
-                  <FormItem className="p-4">
-                    <FormLabel>Account type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isUpdating}>
-                      <FormControl>
-                        <SelectTrigger className='w-full'>
-                          <SelectValue placeholder="Select account type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="CHECKING">Checking</SelectItem>
-                        <SelectItem value="SAVINGS">Savings</SelectItem>
-                        <SelectItem value="INVESTMENT">Investment</SelectItem>
-                        <SelectItem value="CASH">Cash</SelectItem>
-                        <SelectItem value="CRYPTO">Crypto</SelectItem>
-                        <SelectItem value="RETIREMENT">Retirement</SelectItem>
-                        <SelectItem value="REAL_ESTATE">Real Estate</SelectItem>
-                        <SelectItem value="OTHER">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  <FormField
+                    control={form.control}
+                    name="accountType"
+                    render={({ field }) => (
+                      <FormItem className="p-4">
+                        <FormLabel>Account type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isUpdating}>
+                          <FormControl>
+                            <SelectTrigger className='w-full'>
+                              <SelectValue placeholder="Select account type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="CHECKING">Checking</SelectItem>
+                            <SelectItem value="SAVINGS">Savings</SelectItem>
+                            <SelectItem value="INVESTMENT">Investment</SelectItem>
+                            <SelectItem value="CASH">Cash</SelectItem>
+                            <SelectItem value="CRYPTO">Crypto</SelectItem>
+                            <SelectItem value="RETIREMENT">Retirement</SelectItem>
+                            <SelectItem value="REAL_ESTATE">Real Estate</SelectItem>
+                            <SelectItem value="OTHER">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="initialBalance"
-                render={({ field }) => (
-                  <FormItem className='p-4'>
-                    <FormLabel>Initial balance</FormLabel>
-                    <FormControl>
-                      <Input
-                        type='number'
-                        placeholder='0'
-                        className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                        disabled={isUpdating}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  <FormField
+                    control={form.control}
+                    name="initialBalance"
+                    render={({ field }) => (
+                      <FormItem className='p-4'>
+                        <FormLabel>Initial balance</FormLabel>
+                        <FormControl>
+                          <Input
+                            type='number'
+                            placeholder='0'
+                            className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+                            disabled={isUpdating}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <div className="p-4 flex flex-col gap-2">
-                <FormLabel>Current balance</FormLabel>
-                <Input
-                  value={`${parseFloat(accountData?.currentBalance || "0").toLocaleString('en-PH', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  })}`}
-                  disabled={true}
-                  className="bg-muted text-muted-foreground cursor-not-allowed"
-                />
+                  <div className="p-4 flex flex-col gap-2">
+                    <FormLabel>Current balance</FormLabel>
+                    <Input
+                      value={`${parseFloat(accountData?.currentBalance || "0").toLocaleString('en-PH', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      })}`}
+                      disabled={true}
+                      className="bg-muted text-muted-foreground cursor-not-allowed"
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="addToNetWorth"
+                    render={({ field }) => (
+                      <FormItem className="p-4 flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isUpdating}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Include in net worth calculation</FormLabel>
+                          <FormDescription>
+                            This account will be included when calculating your total net worth
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </ScrollArea>
+
+                {showGradient && (
+                  <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent" />
+                )}
               </div>
 
-              <FormField
-                control={form.control}
-                name="addToNetWorth"
-                render={({ field }) => (
-                  <FormItem className="p-4 flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={isUpdating}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Include in net worth calculation</FormLabel>
-                      <FormDescription>
-                        This account will be included when calculating your total net worth
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
-
-              <DrawerFooter>
+              <DrawerFooter className='flex-shrink-0'>
                 <Button
                   type="submit"
                   disabled={isUpdating}
@@ -262,22 +293,21 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId }: EditAcc
                     Cancel
                   </Button>
                 </DrawerClose>
+
+                <Separator className='my-2' />
+
+                <div className='px-4 pb-4'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    className="w-full text-error-700 hover:text-error-600 hover:bg-error-50 border-error-300"
+                    onClick={handleDeleteClick}
+                    disabled={isUpdating || isDeleting}
+                  >
+                    {isDeleting ? "Deleting..." : "Delete account"}
+                  </Button>
+                </div>
               </DrawerFooter>
-
-              <Separator className='mt-2 mb-6' />
-
-              <div className='px-4 pb-4'>
-                <Button
-                  type='button'
-                  variant='outline'
-                  className="w-full text-error-700 hover:text-error-600 hover:bg-error-50 border-error-300"
-                  onClick={handleDeleteClick}
-                  disabled={isUpdating || isDeleting}
-                >
-                  {isDeleting ? "Deleting..." : "Delete account"}
-                </Button>
-              </div>
-
             </form>
           </Form>
           )}

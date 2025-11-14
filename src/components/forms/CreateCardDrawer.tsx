@@ -52,9 +52,7 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
 
     let scrollElement: Element | null = null;
 
-    const timeout = setTimeout(() => {
-      console.log('⏰ [CreateCardDrawer] Timeout fired');
-      
+    const timeout = setTimeout(() => {      
       scrollElement = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') ?? null;
       
       if (scrollElement) {
@@ -209,9 +207,9 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
                 />
               </ScrollArea>
               
-                {showGradient && (
-                  <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent" />
-                )}
+              {showGradient && (
+                <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent" />
+              )}
             </div>
 
             <DrawerFooter className='flex-shrink-0'>
