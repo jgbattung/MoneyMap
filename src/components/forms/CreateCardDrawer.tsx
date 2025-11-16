@@ -54,7 +54,6 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
       
       if (scrollElement) {
         scrollElement.addEventListener('scroll', checkScroll);
-        console.log('✅ [CreateCardDrawer] Scroll listener added');
         checkScroll();
       }
     }, 100);
@@ -82,8 +81,6 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
       });
     }
   }
-
-  console.log('🎨 [CreateCardDrawer] Render, showGradient:', showGradient, 'open:', open);
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
