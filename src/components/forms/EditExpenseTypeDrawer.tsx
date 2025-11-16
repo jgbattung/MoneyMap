@@ -78,7 +78,7 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId }: Edit
           ? `${result.reassignedCount} transaction(s) reassigned to 'Uncategorized'.`
           : `${budgetData?.name} has been deleted.`,
       });
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to delete budget", {
         description: error instanceof Error ? error.message : "Please try again.",
         duration: 6000
@@ -123,7 +123,7 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId }: Edit
             </>
           ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85vh]'>
               <DrawerHeader>
                 <DrawerTitle className='text-xl'>
                   Edit budget
@@ -133,44 +133,46 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId }: Edit
                 </DrawerDescription>
               </DrawerHeader>
 
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem className='p-4'>
-                    <FormLabel>Budget name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder='e.g., Groceries, transportation, entertainment, shopping'
-                        {...field}
-                        disabled={isUpdating}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+              <div className="flex-1 min-h-0">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className='p-4'>
+                      <FormLabel>Budget name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder='e.g., Groceries, transportation, entertainment, shopping'
+                          {...field}
+                          disabled={isUpdating}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="monthlyBudget"
-                render={({ field }) => (
-                  <FormItem className='p-4'>
-                    <FormLabel>Monthly budget</FormLabel>
-                    <FormDescription>
-                      Set a monthly spending limit for this category (optional).
-                    </FormDescription>
-                    <FormControl>
-                      <Input
-                        placeholder='e.g., Groceries, transportation, entertainment, shopping'
-                        {...field}
-                        disabled={isUpdating}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="monthlyBudget"
+                  render={({ field }) => (
+                    <FormItem className='p-4'>
+                      <FormLabel>Monthly budget</FormLabel>
+                      <FormDescription>
+                        Set a monthly spending limit for this category (optional).
+                      </FormDescription>
+                      <FormControl>
+                        <Input
+                          placeholder='e.g., Groceries, transportation, entertainment, shopping'
+                          {...field}
+                          disabled={isUpdating}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-              <DrawerFooter>
+              <DrawerFooter className='flex-shrink-0'>
                 <Button
                   type="submit"
                   disabled={isUpdating}
@@ -186,11 +188,9 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId }: Edit
                     Cancel
                   </Button>
                 </DrawerClose>
-              </DrawerFooter>
 
-              <Separator className='mt-2 mb-6' />
+                <Separator className='my-2' />
 
-              <div className='px-4 pb-4'>
                 <Button
                   type='button'
                   variant='outline'
@@ -200,7 +200,7 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, className, budgetId }: Edit
                 >
                   {isDeleting ? "Deleting..." : "Delete budget"}
                 </Button>
-              </div>
+              </DrawerFooter>
 
             </form>
           </Form>

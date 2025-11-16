@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import React from 'react'
+import React, { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { z } from "zod"
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
@@ -53,7 +53,7 @@ const CreateIncomeTypeDrawer = ({ open, onOpenChange, className }: CreateIncomeT
         onEscapeKeyDown={(e) => isCreating && e.preventDefault()} className={`${className}`}
       >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85vh]'>
             <DrawerHeader>
               <DrawerTitle className='text-xl'>
                 Add Income Type
@@ -63,46 +63,48 @@ const CreateIncomeTypeDrawer = ({ open, onOpenChange, className }: CreateIncomeT
               </DrawerDescription>
             </DrawerHeader>
 
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem className='p-4'>
-                  <FormLabel>Income name</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder='e.g., Salary, Investment, Interest, Reimbursement'
-                      {...field}
-                      disabled={isCreating}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+            <div className="flex-1 min-h-0">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem className='p-4'>
+                    <FormLabel>Income name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder='e.g., Salary, Investment, Interest, Reimbursement'
+                        {...field}
+                        disabled={isCreating}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="monthlyTarget"
-              render={({ field }) => (
-                <FormItem className='p-4'>
-                  <FormLabel>Monthly target</FormLabel>
-                  <FormDescription>
-                    Set a monthly income goal for this category (optional).
-                  </FormDescription>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                      {...field}
-                      disabled={isCreating}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="monthlyTarget"
+                render={({ field }) => (
+                  <FormItem className='p-4'>
+                    <FormLabel>Monthly target</FormLabel>
+                    <FormDescription>
+                      Set a monthly income goal for this category (optional).
+                    </FormDescription>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+                        {...field}
+                        disabled={isCreating}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
 
-            <DrawerFooter>
+            <DrawerFooter className='flex-shrink-0'>
               <Button
                 type="submit"
                 disabled={isCreating}

@@ -2,7 +2,7 @@
 
 import { CardValidation } from '@/lib/validations/account';
 import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useForm } from 'react-hook-form';
 import { z } from "zod"
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
@@ -16,7 +16,7 @@ import SkeletonEditCardDrawerForm from '../shared/SkeletonEditCardDrawerForm';
 import { useCardQuery, useCardsQuery } from '@/hooks/useCardsQuery';
 import { ScrollArea } from '../ui/scroll-area';
 import DeleteDialog from '../shared/DeleteDialog';
-import { Separator } from '@radix-ui/react-select';
+import { Separator } from '../ui/separator';
 
 
 interface EditCardDrawerProps {
@@ -30,6 +30,8 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
   const { updateCard, isUpdating, deleteCard, isDeleting } = useCardsQuery();
   const { cardData, isFetching, error } = useCardQuery(cardId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [showGradient, setShowGradient] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<z.infer<typeof CardValidation>>({
     resolver: zodResolver(CardValidation),
@@ -51,6 +53,26 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
       });
     }
   }, [cardData, form])
+
+  useEffect(() => {
+    const checkScroll = () => {
+      const scrollElement = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollElement) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+        const isAtBottom = scrollTop + clientHeight >= scrollHeight - 5;
+        setShowGradient(!isAtBottom);
+      }
+    };
+
+    checkScroll();
+
+    const scrollElement = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    scrollElement?.addEventListener('scroll', checkScroll);
+
+    return () => {
+      scrollElement?.removeEventListener('scroll', checkScroll);
+    };
+  }, [cardData]);
 
   const onSubmit = async (values: z.infer<typeof CardValidation>) => {
     try {
@@ -97,7 +119,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
         description:`${cardData?.name} has been deleted.`,
         duration: 5000
       });
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to delete card", {
         description: error instanceof Error ? error.message : "Please try again.",
         duration: 6000
@@ -152,121 +174,129 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
                 </DrawerDescription>
               </DrawerHeader>
 
-              <ScrollArea className="flex-1 min-h-0 scrollbar-hide">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem className='p-4'>
-                      <FormLabel>Card name</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder='e.g., BPI Blue Mastercard, Metrobank Rewards Plus'
-                          {...field}
-                          disabled={isUpdating}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="p-4 flex flex-col gap-2">
-                  <FormLabel>Current outstanding balance</FormLabel>
-                  <FormDescription>
-                    Current debt on this card including all transactions. Updates automatically.
-                  </FormDescription>
-                  <Input
-                    value={cardData?.currentBalance || '0'}
-                    disabled={true}
-                    className="bg-muted text-muted-foreground cursor-not-allowed"
+              {/* Wrapper for ScrollArea with gradient indicator */}
+              <div className="relative flex-1 min-h-0">
+                <ScrollArea ref={scrollRef} className="h-full scrollbar-hide">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem className='p-4'>
+                        <FormLabel>Card name</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder='e.g., BPI Blue Mastercard, Metrobank Rewards Plus'
+                            {...field}
+                            disabled={isUpdating}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
 
-                <FormField
-                  control={form.control}
-                  name="initialBalance"
-                  render={({ field }) => (
-                    <FormItem className='p-4'>
-                      <FormLabel>Initial outstanding balance</FormLabel>
-                      <FormDescription>
-                        Starting debt when card was added. Edit to correct initial amount.
-                      </FormDescription>
-                      <FormControl>
-                        <Input
-                          type='number'
-                          className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                          disabled={isUpdating}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <div className="p-4 flex flex-col gap-2">
+                    <FormLabel>Current outstanding balance</FormLabel>
+                    <FormDescription>
+                      Current debt on this card including all transactions. Updates automatically.
+                    </FormDescription>
+                    <Input
+                      value={cardData?.currentBalance || '0'}
+                      disabled={true}
+                      className="bg-muted text-muted-foreground cursor-not-allowed"
+                    />
+                  </div>
 
-                <FormField
-                  control={form.control}
-                  name="statementDate"
-                  render={({ field }) => (
-                    <FormItem className="p-4">
-                      <FormLabel>Statement Date</FormLabel>
-                      <FormDescription>
-                        Day of the month when your statement is generated
-                      </FormDescription>
-                      <FormControl>
-                        <Select
-                          onValueChange={(value) => field.onChange(parseInt(value))}
-                          defaultValue={field.value?.toString()}
-                          disabled={isUpdating}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select day" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 31 }, (_, i) => (
-                              <SelectItem key={i + 1} value={(i + 1).toString()}>
-                                {i + 1}{getOrdinalSuffix(i + 1)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="initialBalance"
+                    render={({ field }) => (
+                      <FormItem className='p-4'>
+                        <FormLabel>Initial outstanding balance</FormLabel>
+                        <FormDescription>
+                          Starting debt when card was added. Edit to correct initial amount.
+                        </FormDescription>
+                        <FormControl>
+                          <Input
+                            type='number'
+                            className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+                            disabled={isUpdating}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="dueDate"
-                  render={({ field }) => (
-                    <FormItem className="p-4">
-                      <FormLabel>Due Date</FormLabel>
-                      <FormDescription>
-                        Day of the month when payment is due
-                      </FormDescription>
-                      <FormControl>
-                        <Select
-                          onValueChange={(value) => field.onChange(parseInt(value))}
-                          defaultValue={field.value?.toString()}
-                          disabled={isUpdating}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select day" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 31 }, (_, i) => (
-                              <SelectItem key={i + 1} value={(i + 1).toString()}>
-                                {i + 1}{getOrdinalSuffix(i + 1)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </ScrollArea>
+                  <FormField
+                    control={form.control}
+                    name="statementDate"
+                    render={({ field }) => (
+                      <FormItem className="p-4">
+                        <FormLabel>Statement Date</FormLabel>
+                        <FormDescription>
+                          Day of the month when your statement is generated
+                        </FormDescription>
+                        <FormControl>
+                          <Select
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            defaultValue={field.value?.toString()}
+                            disabled={isUpdating}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select day" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 31 }, (_, i) => (
+                                <SelectItem key={i + 1} value={(i + 1).toString()}>
+                                  {i + 1}{getOrdinalSuffix(i + 1)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="dueDate"
+                    render={({ field }) => (
+                      <FormItem className="p-4">
+                        <FormLabel>Due Date</FormLabel>
+                        <FormDescription>
+                          Day of the month when payment is due
+                        </FormDescription>
+                        <FormControl>
+                          <Select
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            defaultValue={field.value?.toString()}
+                            disabled={isUpdating}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select day" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 31 }, (_, i) => (
+                                <SelectItem key={i + 1} value={(i + 1).toString()}>
+                                  {i + 1}{getOrdinalSuffix(i + 1)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </ScrollArea>
+
+                {/* Gradient overlay indicator - only shows when not at bottom */}
+                {showGradient && (
+                  <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent" />
+                )}
+              </div>
 
               <DrawerFooter className='flex-shrink-0'>
                 <Button
@@ -284,11 +314,9 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
                     Cancel
                   </Button>
                 </DrawerClose>
-              </DrawerFooter>
 
-              <Separator className='mt-2 mb-6' />
+                <Separator className='my-2' />
 
-              <div className='px-4 pb-4'>
                 <Button
                   type='button'
                   variant='outline'
@@ -298,8 +326,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
                 >
                   {isDeleting ? "Deleting..." : "Delete account"}
                 </Button>
-              </div>
-
+              </DrawerFooter>
             </form>
           </Form>
           )}
