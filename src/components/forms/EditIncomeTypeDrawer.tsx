@@ -2,7 +2,7 @@
 
 import { IncomeTypeValidation } from '@/lib/validations/income';
 import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { z } from "zod"
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
@@ -78,7 +78,7 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
           ? `${result.reassignedCount} transaction(s) reassigned to 'Uncategorized'.`
           : `${incomeTypeData?.name} has been deleted.`,
       });
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to delete income type", {
         description: error instanceof Error ? error.message : "Please try again.",
         duration: 6000
@@ -123,7 +123,7 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
             </>
           ) : (
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85vh]'>
                 <DrawerHeader>
                   <DrawerTitle className='text-xl'>
                     Edit income type
@@ -133,46 +133,48 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
                   </DrawerDescription>
                 </DrawerHeader>
 
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem className='p-4'>
-                      <FormLabel>Income type name</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder='e.g., Salary, Investment, Interest, Reimbursement'
-                          {...field}
-                          disabled={isUpdating}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                <div className="flex-1 min-h-0">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem className='p-4'>
+                        <FormLabel>Income type name</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder='e.g., Salary, Investment, Interest, Reimbursement'
+                            {...field}
+                            disabled={isUpdating}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="monthlyTarget"
-                  render={({ field }) => (
-                    <FormItem className='p-4'>
-                      <FormLabel>Monthly target</FormLabel>
-                      <FormDescription>
-                        Set a monthly income goal for this category (optional).
-                      </FormDescription>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                          {...field}
-                          disabled={isUpdating}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="monthlyTarget"
+                    render={({ field }) => (
+                      <FormItem className='p-4'>
+                        <FormLabel>Monthly target</FormLabel>
+                        <FormDescription>
+                          Set a monthly income goal for this category (optional).
+                        </FormDescription>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+                            {...field}
+                            disabled={isUpdating}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-                <DrawerFooter>
+                <DrawerFooter className='flex-shrink-0'>
                   <Button
                     type="submit"
                     disabled={isUpdating}
@@ -188,11 +190,9 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
                       Cancel
                     </Button>
                   </DrawerClose>
-                </DrawerFooter>
+                  
+                  <Separator className='my-2' />
 
-                <Separator className='mt-2 mb-6' />
-
-                <div className='px-4 pb-4'>
                   <Button
                     type='button'
                     variant='outline'
@@ -202,7 +202,8 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
                   >
                     {isDeleting ? "Deleting..." : "Delete income type"}
                   </Button>
-                </div>
+                </DrawerFooter>
+
 
               </form>
             </Form>
