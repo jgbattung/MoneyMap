@@ -1,7 +1,7 @@
 "use client"
 
 import { mobileNavRoutes } from '@/app/constants/navigation'
-import { IconHomeFilled, IconHome, IconCashBanknoteFilled, IconCashBanknote, IconCreditCardFilled, IconCreditCard, IconDots } from '@tabler/icons-react'
+import { IconHomeFilled, IconHome, IconCashBanknoteFilled, IconCashBanknote, IconSwitchHorizontal, IconDots } from '@tabler/icons-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import React from 'react'
@@ -11,18 +11,18 @@ const BottomBar = () => {
   const pathname = usePathname();
 
   const getIcon = (routeName: string, isActive: boolean) => {
-  switch (routeName) {
-    case 'Dashboard':
-      return isActive ? IconHomeFilled : IconHome;
-    case 'Accounts':
-      return isActive ? IconCashBanknoteFilled : IconCashBanknote;
-    case 'Cards':
-      return isActive ? IconCreditCardFilled : IconCreditCard;
-    case 'More':
-      return IconDots;
-    default:
-      return IconHome;
-  }
+    switch (routeName) {
+      case 'Dashboard':
+        return isActive ? IconHomeFilled : IconHome;
+      case 'Accounts':
+        return isActive ? IconCashBanknoteFilled : IconCashBanknote;
+      case 'Transactions':
+        return IconSwitchHorizontal;
+      case 'More':
+        return IconDots;
+      default:
+        return IconHome;
+    }
   };
 
   return (
