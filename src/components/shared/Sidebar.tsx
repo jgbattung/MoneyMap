@@ -30,14 +30,14 @@ const Sidebar = () => {
   return (
     <>
       <div
-        className="hidden md:flex flex-col px-5 w-48 bg-background border-r-2 border-secondary-700">
+        className="hidden md:flex flex-col px-5 w-56 bg-background border-r-2 border-secondary-700">
         <div className='pt-6'>
           HEADER
         </div>
 
-        <div className='flex-1 flex flex-col justify-center'>
+        <div className='flex-1 flex flex-col justify-center overflow-y-auto'>
           <div className='mb-6'>
-            <p className='text-sm text-muted-foreground mb-5'>Quick actions</p>
+            <p className='text-sm text-muted-foreground mb-3'>Quick actions</p>
             <div className='flex flex-col gap-3'>
               {/* Add expense */}
               <button
@@ -83,7 +83,7 @@ const Sidebar = () => {
 
           <div className='mb-6'>
             <p className='text-sm text-muted-foreground mb-3'>Main menu</p>
-            <div className='flex flex-col gap-3'>
+            <div className='flex flex-col gap-2'>
               {navRoutes.map((route) => (
                 <Link
                   href={route.path}
