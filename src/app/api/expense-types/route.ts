@@ -16,6 +16,24 @@ export async function GET() {
       );
     }
 
+    const transferFeeExists = await db.expenseType.findFirst({
+      where: {
+        userId: session.user.id,
+        name: "Transfer fee",
+      },
+    });
+
+    if (!transferFeeExists) {
+      await db.expenseType.create({
+        data: {
+          userId: session.user.id,
+          name: "Transfer fee",
+          isSystem: true,
+          monthlyBudget: null,
+        },
+      });
+    }
+
     const expenseTypes = await db.expenseType.findMany({
       where: {
         userId: session.user.id

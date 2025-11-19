@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
           transferFeeType = await tx.expenseType.create({
             data: {
               userId: session.user.id,
-              name: "Transfer Fee",
+              name: "Transfer fee",
               isSystem: true,
               monthlyBudget: null,
             },
