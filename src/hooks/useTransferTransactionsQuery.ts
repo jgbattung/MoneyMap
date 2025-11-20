@@ -10,6 +10,8 @@ export type TransferTransaction = {
   transferTypeId: string;
   date: string;
   notes: string | null;
+  feeAmount: number | null;
+  feeExpenseId: string | null;
   createdAt: string;
   updatedAt: string;
   fromAccount: {
@@ -26,6 +28,12 @@ export type TransferTransaction = {
     id: string;
     name: string;
   };
+  feeExpense?: {
+    id: string;
+    name: string;
+    amount: number;
+    description: string | null;
+  } | null;
 }
 
 const QUERY_KEYS = {

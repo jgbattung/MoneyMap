@@ -23,6 +23,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import SkeletonEditTransferDrawerForm from "../shared/SkeletonEditTransferDrawerForm";
 import DeleteDialog from "../shared/DeleteDialog";
 import { Separator } from "../ui/separator";
+import { Checkbox } from "../ui/checkbox";
 
 interface EditTransferDrawerProps {
   open: boolean;
@@ -39,6 +40,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [showGradient, setShowGradient] = useState(true);
+  const [hasFee, setHasFee] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<z.infer<typeof TransferTransactionValidation>>({
@@ -51,11 +53,14 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
       transferTypeId: "",
       date: undefined,
       notes: "",
+      feeAmount: "",
     }
   });
 
   useEffect(() => {
     if (transactionData) {
+      const hasFeeAmount = transactionData.feeAmount !== null && transactionData.feeAmount !== undefined;
+
       form.reset({
         name: transactionData.name,
         amount: transactionData.amount.toString(),
@@ -64,7 +69,9 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
         transferTypeId: transactionData.transferTypeId,
         date: new Date(transactionData.date),
         notes: transactionData.notes || "",
-      });
+        feeAmount: hasFeeAmount && transactionData.feeAmount !== null ? transactionData.feeAmount.toString() : "",      });
+
+      setHasFee(hasFeeAmount);
     }
   }, [transactionData, form]);
 
@@ -91,6 +98,13 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
     };
   }, [transactionData]);
 
+  const handleFeeCheckboxChange = (checked: boolean) => {
+    setHasFee(checked);
+    if (!checked) {
+      form.setValue("feeAmount", "");
+    }
+  };
+
   const onSubmit = async (values: z.infer<typeof TransferTransactionValidation>) => {
     try {
       const updatedTransfer = await updateTransfer({ id: transferId, ...values });
@@ -100,6 +114,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
         duration: 5000
       });
       form.reset();
+      setHasFee(false);
       onOpenChange(false);
     } catch (error) {
       toast.error("Failed to update transfer", {
@@ -215,6 +230,44 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                         </FormItem>
                       )}
                     />
+
+                    <div className="px-4 pb-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="hasFee" 
+                          checked={hasFee}
+                          onCheckedChange={handleFeeCheckboxChange}
+                          disabled={isUpdating}
+                        />
+                        <label
+                          htmlFor="hasFee"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          This transfer has a fee
+                        </label>
+                      </div>
+
+                      {hasFee && (
+                        <FormField
+                          control={form.control}
+                          name="feeAmount"
+                          render={({ field }) => (
+                            <FormItem className="mt-4">
+                              <FormLabel>Fee Amount</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  placeholder="0"
+                                  className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+                                  {...field}
+                                  disabled={isUpdating}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                    </div>
 
                     {/* Side-by-side From and To Accounts */}
                     <div className="flex items-center gap-3 p-4">
