@@ -18,6 +18,7 @@ import { ArrowRight, ChevronDownIcon } from "lucide-react";
 import { Textarea } from "../ui/textarea";
 import { format } from "date-fns";
 import { TransferTransactionValidation } from "@/lib/validations/transfer-transactions";
+import { Checkbox } from "../ui/checkbox";
 
 interface CreateTransferSheetProps {
   open: boolean;
@@ -30,7 +31,7 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
   const { accounts } = useAccountsQuery();
   const { transferTypes } = useTransferTypesQuery();
   const [calendarOpen, setCalendarOpen] = React.useState(false);
-  
+  const [hasFee, setHasFee] = React.useState(false);  
 
   const form = useForm<z.infer<typeof TransferTransactionValidation>> ({
     resolver: zodResolver(TransferTransactionValidation),
@@ -42,11 +43,19 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
       transferTypeId: "",
       date: undefined,
       notes: "",
+      feeAmount: "",
     }
   });
 
   const selectedFromAccountId = form.watch("fromAccountId");
   const selectedToAccountId = form.watch("toAccountId");
+
+  const handleFeeCheckboxChange = (checked: boolean) => {
+    setHasFee(checked);
+    if (!checked) {
+      form.setValue("feeAmount", "");
+    }
+  };
 
   const onSubmit = async (values: z.infer<typeof TransferTransactionValidation>) => {
     try {
@@ -115,6 +124,44 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
                 </FormItem>
               )}
             />
+
+            <div className="px-4 pb-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasFee"
+                  checked={hasFee}
+                  onCheckedChange={handleFeeCheckboxChange}
+                  disabled={isCreating}
+                />
+                <label
+                  htmlFor="hasFee"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  This transfer has a fee
+                </label>
+              </div>
+
+              {hasFee && (
+                <FormField
+                  control={form.control}
+                  name="feeAmount"
+                  render={({ field }) => (
+                    <FormItem className="mt-4">
+                      <FormLabel>Fee Amount</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+                          {...field}
+                          disabled={isCreating}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
 
             {/* Side-by-side From and To Accounts */}
             <div className="flex items-center gap-3 p-4">

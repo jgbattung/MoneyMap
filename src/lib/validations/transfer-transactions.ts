@@ -25,6 +25,15 @@ export const TransferTransactionValidation = z.object({
   }),
   
   notes: z.string().optional(),
+
+  feeAmount: z.string()
+  .optional()
+  .refine((val) => {
+    if (!val || val === "") return true;
+    return !isNaN(Number(val)) && Number(val) > 0;
+  }, {
+    message: "Fee amount must be a positive number",
+  }),
 }).refine((data) => data.fromAccountId !== data.toAccountId, {
   message: "From account and to account must be different",
   path: ["toAccountId"],

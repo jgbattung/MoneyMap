@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const { name, amount, fromAccountId, toAccountId, transferTypeId, date, notes } = body;
+    const { name, amount, fromAccountId, toAccountId, transferTypeId, date, notes, feeAmount  } = body;
 
     if (!name || !amount || !fromAccountId || !toAccountId || !transferTypeId || !date) {
       return NextResponse.json(
@@ -72,6 +72,53 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await db.$transaction(async (tx) => {
+      let feeExpenseId = null;
+
+      if (feeAmount && parseFloat(feeAmount) > 0) {
+        let transferFeeType = await tx.expenseType.findFirst({
+          where: {
+            userId: session.user.id,
+            name: "Transfer fee",
+          },
+        });
+
+        if (!transferFeeType) {
+          transferFeeType = await tx.expenseType.create({
+            data: {
+              userId: session.user.id,
+              name: "Transfer fee",
+              isSystem: true,
+              monthlyBudget: null,
+            },
+          });
+        }
+
+        const fromAccount = await tx.financialAccount.findUnique({
+          where: { id: fromAccountId },
+          select: { name: true },
+        });
+
+        const feeExpense = await tx.expenseTransaction.create({
+          data: {
+            userId: session.user.id,
+            accountId: fromAccountId,
+            expenseTypeId: transferFeeType.id,
+            name: `Transfer fee: ${name}`,
+            amount: parseFloat(feeAmount),
+            date: new Date(date),
+            description: `Deducted from ${fromAccount?.name}`,
+          },
+        });
+
+        feeExpenseId = feeExpense.id;
+
+        await tx.financialAccount.update({
+          where: { id: fromAccountId },
+          data: { currentBalance: { decrement: parseFloat(feeAmount) } }
+        })
+
+      }
+
       // Create the transfer transaction
       const transfer = await tx.transferTransaction.create({
         data: {
@@ -83,11 +130,14 @@ export async function POST(request: NextRequest) {
           transferTypeId,
           date: new Date(date),
           notes: notes || null,
+          feeAmount: feeAmount ? parseFloat(feeAmount) : null,
+          feeExpenseId: feeExpenseId,
         },
         include: {
           fromAccount: true,
           toAccount: true,
           transferType: true,
+          feeExpense: true,
         }
       });
 

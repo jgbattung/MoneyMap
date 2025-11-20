@@ -123,6 +123,7 @@ model ExpenseType {
   userId        String    @map("user_id")
   name          String    @db.VarChar(50)
   monthlyBudget Decimal?  @map("monthly_budget") @db.Decimal(15, 2)
+  isSystem      Boolean   @default(false) @map("is_system")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   
@@ -160,6 +161,7 @@ model ExpenseTransaction {
   user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   account               FinancialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   expenseType           ExpenseType     @relation(fields: [expenseTypeId], references: [id], onDelete: Restrict)
+  linkedTransfer        TransferTransaction? @relation("TransferFee")
   
   @@map("expense_transactions")
 }
@@ -224,6 +226,8 @@ model TransferTransaction {
   transferTypeId  String   @map("transfer_type_id")
   date            DateTime
   notes           String?  @db.Text
+  feeAmount       Decimal?           @map("fee_amount") @db.Decimal(15, 2)
+  feeExpenseId    String?            @map("fee_expense_id") @unique
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -231,6 +235,8 @@ model TransferTransaction {
   fromAccount  FinancialAccount      @relation("TransferFrom", fields: [fromAccountId], references: [id], onDelete: Cascade)
   toAccount    FinancialAccount      @relation("TransferTo", fields: [toAccountId], references: [id], onDelete: Cascade)
   transferType TransferType @relation(fields: [transferTypeId], references: [id])
+  feeExpense   ExpenseTransaction? @relation("TransferFee", fields: [feeExpenseId], references: [id], onDelete: SetNull)
+
 
   @@map("transfer_transactions")
 }
