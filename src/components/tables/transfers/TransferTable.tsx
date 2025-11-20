@@ -61,6 +61,14 @@ const CellContent = ({ getValue, row, column, table }: any) => {
     }
     
     if (columnMeta?.type === "number") {
+      if (column.id === "feeAmount") {
+        if (!value || value === "" || value === "0" || value === null) {
+          return <span className="text-muted-foreground">—</span>;
+        }
+        const amount = parseFloat(value);
+        return <span>{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
+      }
+
       const amount = parseFloat(value);
       return <span>{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
     }
@@ -165,6 +173,7 @@ const EditCell = ({ row, table }: any) => {
         transferTypeId: updatedRow.transferTypeId,
         date: updatedRow.date,
         notes: updatedRow.notes,
+        feeAmount: updatedRow.feeAmount,
       };
 
       await meta?.updateTransfer(updatePayload);
@@ -346,6 +355,13 @@ const TransferTable = () => {
     }),
     columnHelper.accessor("amount", {
       header: "Amount",
+      cell: CellContent,
+      meta: {
+        type: "number"
+      },
+    }),
+    columnHelper.accessor("feeAmount", {
+      header: "Fee",
       cell: CellContent,
       meta: {
         type: "number"

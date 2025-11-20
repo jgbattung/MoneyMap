@@ -114,7 +114,7 @@ export async function PATCH(
       if (oldFeeAmount === null && newFeeAmount !== null) {
         let transferFeeType = await tx.expenseType.findFirst({
           where: {
-            id: session.user.id,
+            userId: session.user.id,
             name: "Transfer fee",
           },
         });
@@ -123,7 +123,7 @@ export async function PATCH(
           transferFeeType = await tx.expenseType.create({
             data: {
               userId: session.user.id,
-              name: "Transfer Fee",
+              name: "Transfer fee",
               isSystem: true,
               monthlyBudget: null,
             },
