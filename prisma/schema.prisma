@@ -34,6 +34,9 @@ model User {
   transferTransactions TransferTransaction[]
   expenseTransactions ExpenseTransaction[]
 
+  netWorthTarget     Decimal?  @db.Decimal(15, 2)
+  netWorthTargetDate DateTime?
+
   @@unique([email])
   @@map("user")
 }
