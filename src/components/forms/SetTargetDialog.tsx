@@ -24,7 +24,9 @@ const SetTargetDialog = ({ open, onOpenChange, currentTarget, currentTargetDate 
   
   const [targetAmount, setTargetAmount] = useState<string>('');
   const [targetDate, setTargetDate] = useState<Date | undefined>(undefined);
+  const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
 
+  // Initialize form values when dialog opens or current values change
   useEffect(() => {
     if (open) {
       setTargetAmount(currentTarget ? currentTarget.toString() : '');
@@ -94,7 +96,7 @@ const SetTargetDialog = ({ open, onOpenChange, currentTarget, currentTargetDate 
           <div className="grid gap-4 py-4">
             {/* Target Amount */}
             <div className="grid gap-2">
-              <Label htmlFor="target-amount">Target Amount</Label>
+              <Label htmlFor="target-amount">Target amount</Label>
               <Input
                 id="target-amount"
                 type="number"
@@ -108,24 +110,29 @@ const SetTargetDialog = ({ open, onOpenChange, currentTarget, currentTargetDate 
 
             {/* Target Date */}
             <div className="grid gap-2">
-              <Label htmlFor="target-date">Target Date (Optional)</Label>
-              <Popover>
+              <Label htmlFor="target-date">Target date <span className='text-muted-foreground'>(optional)</span></Label>
+              <Popover open={calendarDialogOpen} onOpenChange={setCalendarDialogOpen} modal>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     disabled={isUpdating}
-                    className="justify-start text-left font-normal"
+                    className="justify-start text-left font-normal hover:text-white"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {targetDate ? format(targetDate, 'PPP') : 'Pick a date'}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto overflow-hidden p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={targetDate}
-                    onSelect={setTargetDate}
-                    initialFocus
+                    selected={targetDate ?? undefined}
+                    captionLayout="dropdown"
+                    startMonth={new Date()}
+                    endMonth={new Date(new Date().getFullYear() + 10, 11)}
+                    onDayClick={(date) => {
+                      setTargetDate(date);
+                      setCalendarDialogOpen(false);
+                    }}
                     disabled={(date) => date < new Date()}
                   />
                 </PopoverContent>
@@ -151,7 +158,7 @@ const SetTargetDialog = ({ open, onOpenChange, currentTarget, currentTargetDate 
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={isUpdating}
-                className="flex-1 sm:flex-none"
+                className="flex-1 sm:flex-none hover:text-white"
               >
                 Cancel
               </Button>

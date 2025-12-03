@@ -77,9 +77,9 @@ const NetWorthCard = () => {
             variant="outline"
             size="sm"
             onClick={() => setTargetDialogOpen(true)}
-            className='text-xs md:text-sm'
+            className='text-xs md:text-sm hover:text-white'
           >
-            {target ? 'Edit Target' : 'Set Target'}
+            {target ? 'Edit target' : 'Set target'}
           </Button>
         </div>
 
