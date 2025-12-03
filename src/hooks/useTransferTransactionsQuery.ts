@@ -94,7 +94,8 @@ export const useTransfersQuery = () => {
     mutationFn: createTransfer,
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: QUERY_KEYS.transfers });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
     },
   });
 
@@ -102,7 +103,8 @@ export const useTransfersQuery = () => {
     mutationFn: updateTransfer,
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: QUERY_KEYS.transfers });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
     }
   });
 
@@ -111,6 +113,7 @@ export const useTransfersQuery = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.transfers });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
     },
   });
 
