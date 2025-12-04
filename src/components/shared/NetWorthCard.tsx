@@ -72,7 +72,7 @@ const NetWorthCard = () => {
       <div className='flex flex-col max-w-5xl gap-3 bg-card border border-border rounded-md p-4 shadow-md'>
         {/* Header Section */}
         <div className='flex items-center justify-between'>
-          <p className='text-foreground font-light text-lg'>Total Net Worth</p>
+          <p className='text-foreground font-light md:text-md lg:text-xl '>Total Net Worth</p>
           <Button
             variant="outline"
             size="sm"
