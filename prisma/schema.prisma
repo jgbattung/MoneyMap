@@ -34,6 +34,9 @@ model User {
   transferTransactions TransferTransaction[]
   expenseTransactions ExpenseTransaction[]
 
+  netWorthTarget     Decimal?  @db.Decimal(15, 2)
+  netWorthTargetDate DateTime?
+
   @@unique([email])
   @@map("user")
 }
@@ -164,6 +167,8 @@ model ExpenseTransaction {
   linkedTransfer        TransferTransaction? @relation("TransferFee")
   
   @@map("expense_transactions")
+  @@index([accountId, date])
+  @@index([userId, date])
 }
 
 model IncomeType {
@@ -199,6 +204,8 @@ model IncomeTransaction {
   incomeType  IncomeType       @relation(fields: [incomeTypeId], references: [id], onDelete: Cascade)
   
   @@map("income_transactions")
+  @@index([accountId, date])
+  @@index([userId, date])
 }
 
 model TransferType {
@@ -239,4 +246,7 @@ model TransferTransaction {
 
 
   @@map("transfer_transactions")
+  @@index([fromAccountId, date])
+  @@index([toAccountId, date])
+  @@index([userId, date])
 }

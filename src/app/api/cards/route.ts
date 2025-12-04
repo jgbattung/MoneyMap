@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const { name, initialBalance, addToNetWorth, statementDate, dueDate } = body;
+    const { name, initialBalance, statementDate, dueDate } = body;
 
     if (!name ||  initialBalance === undefined) {
       return NextResponse.json(
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
         accountType: 'CREDIT_CARD',
         initialBalance: parseFloat(initialBalance),
         currentBalance: parseFloat(initialBalance),
-        addToNetWorth: addToNetWorth ?? false,
+        addToNetWorth: true,
         statementDate: statementDate ? parseInt(statementDate) : null,
         dueDate: dueDate ? parseInt(dueDate) : null,
       },

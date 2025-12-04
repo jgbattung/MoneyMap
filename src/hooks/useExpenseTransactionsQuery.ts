@@ -86,6 +86,7 @@ export const useExpenseTransactionsQuery = () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenseTransactions });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['cards'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
     },
   });
 
@@ -95,6 +96,7 @@ export const useExpenseTransactionsQuery = () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenseTransactions });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['cards'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
     },
   });
 
@@ -104,6 +106,7 @@ export const useExpenseTransactionsQuery = () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenseTransactions });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['cards'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
     }
   })
 

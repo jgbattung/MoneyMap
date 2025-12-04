@@ -80,7 +80,8 @@ export const useIncomeTransactionsQuery = () => {
     mutationFn: createIncomeTransaction,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.incomeTransactions });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
     },
   });
 
@@ -88,7 +89,8 @@ export const useIncomeTransactionsQuery = () => {
     mutationFn: updateIncomeTransaction,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.incomeTransactions });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
     },
   });
 
@@ -96,7 +98,8 @@ export const useIncomeTransactionsQuery = () => {
     mutationFn: deleteIncomeTransaction,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.incomeTransactions });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
     }
   })
 

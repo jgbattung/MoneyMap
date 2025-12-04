@@ -16,6 +16,7 @@ import {
   IconCreditCard,
   IconMoneybag,
   IconBuildingBank,
+  IconChartBarPopular,
 } from '@tabler/icons-react';
 
 
@@ -38,4 +39,5 @@ export const Icons = {
   creditCardIcon: IconCreditCard,
   money: IconMoneybag,
   bank: IconBuildingBank,
+  trendingUp: IconChartBarPopular,
 }
