@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { calculateMonthlyChange, calculateNetWorth } from "@/lib/net-worth";
+import { calculateCurrentNetWorth, calculateMonthlyChange } from "@/lib/net-worth";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -16,7 +16,7 @@ export async function GET() {
       );
     }
 
-    const currentNetWorth = await calculateNetWorth(session.user.id);
+    const currentNetWorth = await calculateCurrentNetWorth(session.user.id);
 
     const monthlyChange = await calculateMonthlyChange(session.user.id);
 
@@ -30,12 +30,12 @@ export async function GET() {
       },
       { status: 200 }
     );
-    
+
   } catch (error) {
-    console.error('Error calculating net worth: ', error);
+    console.error('Error calculating net worth:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

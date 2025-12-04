@@ -1,74 +1,87 @@
-import { db } from "./prisma";
+import { db } from "@/lib/prisma";
+
+export async function calculateCurrentNetWorth(userId: string): Promise<number> {
+  const result = await db.financialAccount.aggregate({
+    where: {
+      userId,
+      addToNetWorth: true,
+    },
+    _sum: {
+      currentBalance: true,
+    },
+  });
+
+  return result._sum.currentBalance 
+    ? parseFloat(result._sum.currentBalance.toString()) 
+    : 0;
+}
 
 export async function calculateAccountBalanceAtDate(
   accountId: string,
   date: Date
 ): Promise<number> {
-  const account = await db.financialAccount.findUnique({
-    where: { id: accountId },
-    select: { initialBalance: true },
-  });
+  const [account, incomeSum, expenseSum, transfersInSum, transfersOutData] = await Promise.all([
+    db.financialAccount.findUnique({
+      where: { id: accountId },
+      select: { initialBalance: true },
+    }),
+    db.incomeTransaction.aggregate({
+      where: {
+        accountId,
+        date: { lte: date },
+      },
+      _sum: { amount: true },
+    }),
+    db.expenseTransaction.aggregate({
+      where: {
+        accountId,
+        date: { lte: date },
+      },
+      _sum: { amount: true },
+    }),
+    db.transferTransaction.aggregate({
+      where: {
+        toAccountId: accountId,
+        date: { lte: date },
+      },
+      _sum: { amount: true },
+    }),
+    db.transferTransaction.findMany({
+      where: {
+        fromAccountId: accountId,
+        date: { lte: date },
+      },
+      select: {
+        amount: true,
+        feeAmount: true,
+      },
+    }),
+  ]);
 
   if (!account) {
-    throw new Error('Account not found');
+    throw new Error(`Account with id ${accountId} not found`);
   }
-
-  // Get all income transactions up to the date
-  const incomeTransactions = await db.incomeTransaction.findMany({
-    where: {
-      accountId,
-      date: { lte: date },
-    },
-    select: { amount: true },
-  });
-
-  // Get all expense transactions up to the date
-  const expenseTransactions = await db.expenseTransaction.findMany({
-    where: {
-      accountId,
-      date: { lte: date },
-    },
-    select: { amount: true },
-  });
-
-  // Get all transfers TO this account up to the date
-  const transfersIn = await db.transferTransaction.findMany({
-    where: {
-      toAccountId: accountId,
-      date: { lte: date },
-    },
-    select: { amount: true },
-  });
-
-  // Get all transfers FROM this account up to the date
-  const transfersOut = await db.transferTransaction.findMany({
-    where: {
-      fromAccountId: accountId,
-      date: { lte: date },
-    },
-    select: { amount: true, feeAmount: true },
-  });
 
   // Calculate balance
   let balance = parseFloat(account.initialBalance.toString());
 
   // Add income
-  for (const income of incomeTransactions) {
-    balance += parseFloat(income.amount.toString());
+  if (incomeSum._sum.amount) {
+    balance += parseFloat(incomeSum._sum.amount.toString());
   }
 
   // Subtract expenses
-  for (const expense of expenseTransactions) {
-    balance -= parseFloat(expense.amount.toString());
+  if (expenseSum._sum.amount) {
+    balance -= parseFloat(expenseSum._sum.amount.toString());
   }
 
   // Add transfers in
-  for (const transfer of transfersIn) {
-    balance += transfer.amount;
+  if (transfersInSum._sum.amount) {
+    balance += transfersInSum._sum.amount;
   }
 
   // Subtract transfers out and fees
-  for (const transfer of transfersOut) {
+  for (const transfer of transfersOutData) {
     balance -= transfer.amount;
     if (transfer.feeAmount) {
       balance -= parseFloat(transfer.feeAmount.toString());
@@ -78,49 +91,48 @@ export async function calculateAccountBalanceAtDate(
   return balance;
 }
 
-export async function calculateNetWorth(
+export async function calculateNetWorthAtDate(
   userId: string,
-  date?: Date
+  date: Date
 ): Promise<number> {
-  const targetDate = date || new Date();
-
   const accounts = await db.financialAccount.findMany({
     where: {
       userId,
       addToNetWorth: true,
     },
-    select: {
-      id: true,
-    },
+    select: { id: true },
   });
 
-  let totalNetWorth = 0;
+  // Calculate balances in parallel
+  const balances = await Promise.all(
+    accounts.map(account => calculateAccountBalanceAtDate(account.id, date))
+  );
 
-  for (const account of accounts) {
-    const balance= await calculateAccountBalanceAtDate(account.id, targetDate);
-    totalNetWorth += balance;
-  }
+  const totalNetWorth = balances.reduce((sum, balance) => sum + balance, 0);
 
   return totalNetWorth;
 }
 
 export async function calculateMonthlyChange(userId: string): Promise<{
-  change: number,
-  percentage: number
+  change: number;
+  percentage: number;
 }> {
   const today = new Date();
 
+  // Get end of previous month
   const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
   endOfLastMonth.setHours(23, 59, 59, 999);
-  
-  const previousNetWorth = await calculateNetWorth(userId, endOfLastMonth);
 
-  const currentNetWorth = await calculateNetWorth(userId);
+  // Calculate both net worths in parallel
+  const [previousNetWorth, currentNetWorth] = await Promise.all([
+    calculateNetWorthAtDate(userId, endOfLastMonth),
+    calculateCurrentNetWorth(userId),
+  ]);
 
   const change = currentNetWorth - previousNetWorth;
 
   const percentage =
-  previousNetWorth !== 0 ? (change / Math.abs(previousNetWorth)) * 100 : 0;
+    previousNetWorth !== 0 ? (change / Math.abs(previousNetWorth)) * 100 : 0;
 
   return {
     change: parseFloat(change.toFixed(2)),
