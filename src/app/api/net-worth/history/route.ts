@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import prisma from "@/lib/prisma";
+import { db } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     const userId = session.user.id;
 
-    const accounts = await prisma.financialAccount.findMany({
+    const accounts = await db.financialAccount.findMany({
       where: {
         userId,
         addToNetWorth: true,
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     const accountIds = accounts.map(a => a.id);
 
     const [incomeTransactions, expenseTransactions, transferTransactions] = await Promise.all([
-      prisma.incomeTransaction.findMany({
+      db.incomeTransaction.findMany({
         where: {
           userId,
           accountId: { in: accountIds }
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
           date: true,
         }
       }),
-      prisma.expenseTransaction.findMany({
+      db.expenseTransaction.findMany({
         where: {
           userId,
           accountId: { in: accountIds }
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
           date: true,
         }
       }),
-      prisma.transferTransaction.findMany({
+      db.transferTransaction.findMany({
         where: {
           userId,
           OR: [
