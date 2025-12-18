@@ -66,7 +66,7 @@ const NetWorthHistoryChart = () => {
     <div className='flex flex-col gap-3'>
       {/* Chart Title */}
       <div className='flex items-center justify-between'>
-        <p className='text-foreground font-light text-sm md:text-base'>
+        <p className='text-foreground font-light text-sm md:text-base mt-6'>
           Net Worth Over Time
         </p>
         <p className='text-muted-foreground text-xs md:text-sm'>

@@ -11,7 +11,7 @@ const AssetCategoriesChart = () => {
   if (isLoading) {
     return (
       <div className='flex flex-col gap-3'>
-        <p className='text-foreground font-light text-sm md:text-base'>Asset Categories</p>
+        <p className='text-foreground font-semibold text-sm md:text-base'>Asset Categories</p>
         <div className='flex items-center justify-center py-12'>
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
@@ -22,7 +22,7 @@ const AssetCategoriesChart = () => {
   if (error) {
     return (
       <div className='flex flex-col gap-3'>
-        <p className='text-foreground font-light text-sm md:text-base'>Asset Categories</p>
+        <p className='text-foreground font-semibold text-sm md:text-base'>Asset Categories</p>
         <div className='flex flex-col items-center justify-center py-12 text-center'>
           <p className='text-error-600 font-semibold text-sm'>Failed to load categories</p>
           <p className='text-muted-foreground text-xs mt-1'>{error}</p>
@@ -36,7 +36,7 @@ const AssetCategoriesChart = () => {
   if (categories.length === 0) {
     return (
       <div className='flex flex-col gap-3'>
-        <p className='text-foreground font-light text-sm md:text-base'>Asset Categories</p>
+        <p className='text-foreground font-semibold text-sm md:text-base'>Asset Categories</p>
         <div className='flex flex-col items-center justify-center py-12 text-center'>
           <p className='text-muted-foreground text-sm'>No asset categories</p>
           <p className='text-muted-foreground text-xs mt-1'>
@@ -50,7 +50,7 @@ const AssetCategoriesChart = () => {
   return (
     <div className='flex flex-col gap-4'>
       {/* Title */}
-      <p className='text-foreground font-light text-sm md:text-base'>Asset Categories</p>
+      <p className='text-foreground font-semibold text-sm md:text-base'>Asset Categories</p>
 
       {/* Segmented Bar */}
       <div className='flex w-full h-4 rounded-md overflow-hidden'>
