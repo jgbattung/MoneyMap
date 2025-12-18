@@ -1,28 +1,8 @@
 "use client"
 
 import React from 'react'
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { Loader2 } from 'lucide-react'
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart"
+import { TrendingUp, TrendingDown, Minus, Loader2 } from 'lucide-react'
 import { useMonthlySummary } from '@/hooks/useMonthlySummary'
-
-const chartConfig = {
-  lastMonth: {
-    label: "Last Month",
-    color: "var(--chart-2)",
-  },
-  currentMonth: {
-    label: "This Month",
-    color: "var(--chart-1)",
-  },
-} satisfies ChartConfig
 
 const MonthlySummaryChart = () => {
   const { summary, isLoading, error } = useMonthlySummary();
@@ -68,20 +48,6 @@ const MonthlySummaryChart = () => {
     );
   }
 
-  // Prepare data for grouped bar chart
-  const chartData = [
-    {
-      category: "Income",
-      lastMonth: summary.lastMonth.income,
-      currentMonth: summary.currentMonth.income,
-    },
-    {
-      category: "Expenses",
-      lastMonth: summary.lastMonth.expenses,
-      currentMonth: summary.currentMonth.expenses,
-    },
-  ];
-
   // Calculate percentage changes
   const incomeChange = summary.lastMonth.income > 0
     ? ((summary.currentMonth.income - summary.lastMonth.income) / summary.lastMonth.income) * 100
@@ -91,85 +57,70 @@ const MonthlySummaryChart = () => {
     ? ((summary.currentMonth.expenses - summary.lastMonth.expenses) / summary.lastMonth.expenses) * 100
     : 0;
 
-  const savingsColor = summary.currentMonth.savings >= 0 
-    ? 'text-success-600' 
-    : 'text-error-600';
+  const getChangeIcon = (change: number) => {
+    if (change > 0) return TrendingUp;
+    if (change < 0) return TrendingDown;
+    return Minus;
+  };
+
+  const getChangeColor = (change: number, isExpense = false) => {
+    if (isExpense) {
+      // For expenses, negative is good (less spending)
+      if (change < 0) return 'text-success-600';
+      if (change > 0) return 'text-error-600';
+      return 'text-muted-foreground';
+    }
+    // For income, positive is good
+    if (change > 0) return 'text-success-600';
+    if (change < 0) return 'text-error-600';
+    return 'text-muted-foreground';
+  };
+
+  const IncomeIcon = getChangeIcon(incomeChange);
+  const ExpenseIcon = getChangeIcon(expenseChange);
 
   return (
     <div className='flex flex-col gap-4'>
       {/* Title */}
       <p className='text-foreground font-light text-sm md:text-base'>Monthly Summary</p>
 
-      {/* Grouped Bar Chart */}
-      <ChartContainer config={chartConfig} className="h-[180px] md:h-[200px] w-full">
-        <BarChart
-          accessibilityLayer
-          data={chartData}
-          margin={{
-            top: 10,
-            right: 10,
-            left: 10,
-            bottom: 0,
-          }}
-        >
-          <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          <XAxis
-            dataKey="category"
-            tickLine={false}
-            axisLine={false}
-            tickMargin={8}
-          />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            tickMargin={8}
-            tickFormatter={formatCurrency}
-          />
-          <ChartTooltip
-            content={
-              <ChartTooltipContent
-                formatter={(value) => formatCurrency(value as number)}
-              />
-            }
-          />
-          <ChartLegend content={<ChartLegendContent />} />
-          <Bar
-            dataKey="lastMonth"
-            fill="var(--color-lastMonth)"
-            radius={[4, 4, 0, 0]}
-          />
-          <Bar
-            dataKey="currentMonth"
-            fill="var(--color-currentMonth)"
-            radius={[4, 4, 0, 0]}
-          />
-        </BarChart>
-      </ChartContainer>
-
-      {/* Percentage Changes */}
-      <div className='grid grid-cols-2 gap-2 text-xs'>
-        <div className='flex flex-col'>
-          <span className='text-muted-foreground'>Income Change</span>
-          <span className={incomeChange >= 0 ? 'text-success-600' : 'text-error-600'}>
-            {incomeChange >= 0 ? '+' : ''}{incomeChange.toFixed(1)}%
-          </span>
+      {/* Income & Expense Cards */}
+      <div className='grid grid-cols-2 gap-3'>
+        {/* Income Card */}
+        <div className='flex flex-col gap-1 p-3 rounded-md bg-success-950/20 border border-success-900/30'>
+          <span className='text-muted-foreground text-xs'>Income</span>
+          <div className='flex items-end gap-1'>
+            <span className='text-foreground text-lg font-semibold'>
+              {formatCurrency(summary.currentMonth.income)}
+            </span>
+          </div>
+          <div className={`flex items-center gap-1 text-xs ${getChangeColor(incomeChange)}`}>
+            <IncomeIcon className='w-3 h-3' />
+            <span>{Math.abs(incomeChange).toFixed(0)}% from {formatCurrency(summary.lastMonth.income)}</span>
+          </div>
         </div>
-        <div className='flex flex-col'>
-          <span className='text-muted-foreground'>Expense Change</span>
-          <span className={expenseChange <= 0 ? 'text-success-600' : 'text-error-600'}>
-            {expenseChange >= 0 ? '+' : ''}{expenseChange.toFixed(1)}%
-          </span>
+
+        {/* Expense Card */}
+        <div className='flex flex-col gap-1 p-3 rounded-md bg-error-950/20 border border-error-900/30'>
+          <span className='text-muted-foreground text-xs'>Expenses</span>
+          <div className='flex items-end gap-1'>
+            <span className='text-foreground text-lg font-semibold'>
+              {formatCurrency(summary.currentMonth.expenses)}
+            </span>
+          </div>
+          <div className={`flex items-center gap-1 text-xs ${getChangeColor(expenseChange, true)}`}>
+            <ExpenseIcon className='w-3 h-3' />
+            <span>{Math.abs(expenseChange).toFixed(0)}% from {formatCurrency(summary.lastMonth.expenses)}</span>
+          </div>
         </div>
       </div>
 
-      {/* Current Month Savings */}
-      <div className='border-t border-border pt-3'>
-        <div className='flex items-center justify-between'>
-          <span className='text-muted-foreground text-sm'>Net Savings This Month</span>
-          <span className={`text-base font-semibold ${savingsColor}`}>
-            {formatCurrency(summary.currentMonth.savings)}
-          </span>
-        </div>
+      {/* Net Savings */}
+      <div className='flex items-center justify-between p-3 rounded-md bg-secondary-950/50 border border-border'>
+        <span className='text-muted-foreground text-sm'>Net savings this month</span>
+        <span className={`text-xl font-bold ${summary.currentMonth.savings >= 0 ? 'text-success-600' : 'text-error-600'}`}>
+          {formatCurrency(summary.currentMonth.savings)}
+        </span>
       </div>
     </div>
   );
