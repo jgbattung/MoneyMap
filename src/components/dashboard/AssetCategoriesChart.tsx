@@ -70,15 +70,15 @@ const AssetCategoriesChart = () => {
       {/* Labels */}
       <div className='grid grid-cols-2 sm:grid-cols-3 gap-3'>
         {categories.map((category) => (
-          <div key={category.name} className='flex items-center gap-2'>
+          <div key={category.name} className='flex items-start gap-2'>
             {/* Color Indicator */}
             <div
-              className='w-3 h-3 rounded-full flex-shrink-0'
+              className='w-2 h-2 rounded-full flex-shrink-0 mt-1'
               style={{ backgroundColor: category.color }}
             />
             
             {/* Name and Percentage */}
-            <div className='flex flex-col min-w-0'>
+            <div className='flex flex-col min-w-0 gap-2'>
               <p className='text-foreground text-xs font-medium truncate'>
                 {category.name}
               </p>
