@@ -4,6 +4,10 @@ type ExpenseType = {
   id: string;
   name: string;
   monthlyBudget?: string | null;
+  subcategories?: Array<{
+    id: string;
+    name: string;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
