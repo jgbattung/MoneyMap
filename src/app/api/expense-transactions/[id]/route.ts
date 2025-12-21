@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
-  requst: NextRequest,
+  request: NextRequest,
   { params } : { params: { id: string } }
 ) {
   try {
@@ -25,6 +25,11 @@ export async function GET(
       where: {
         id: id,
         userId: session.user.id,
+      },
+      include: {
+        account: true,
+        expenseType: true,
+        expenseSubcategory: true,
       },
     });
 
@@ -69,7 +74,8 @@ export async function PATCH(
       name, 
       amount, 
       accountId, 
-      expenseTypeId, 
+      expenseTypeId,
+      expenseSubcategoryId, 
       date, 
       description,
       isInstallment,
@@ -92,11 +98,40 @@ export async function PATCH(
       );
     }
 
+    // Validate subcategory belongs to expense type if provided
+    if (expenseSubcategoryId !== undefined) {
+      if (expenseSubcategoryId !== null) {
+        const subcategory = await db.expenseSubcategory.findUnique({
+          where: {
+            id: expenseSubcategoryId,
+            userId: session.user.id,
+          },
+        });
+
+        if (!subcategory) {
+          return NextResponse.json(
+            { error: 'Subcategory not found' },
+            { status: 404 }
+          );
+        }
+
+        const targetExpenseTypeId = expenseTypeId !== undefined ? expenseTypeId : existingExpense.expenseTypeId;
+
+        if (subcategory.expenseTypeId !== targetExpenseTypeId) {
+          return NextResponse.json(
+            { error: 'Subcategory does not belong to the selected expense type' },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     const result = await db.$transaction(async (tx) => {
       const updateData: any = {};
 
       if (name !== undefined) updateData.name = name;
       if (expenseTypeId !== undefined) updateData.expenseTypeId = expenseTypeId;
+      if (expenseSubcategoryId !== undefined) updateData.expenseSubcategoryId = expenseSubcategoryId;
       if (date !== undefined) updateData.date = new Date(date);
       if (description !== undefined) updateData.description = description || null;
       if (isInstallment !== undefined) updateData.isInstallment = isInstallment;

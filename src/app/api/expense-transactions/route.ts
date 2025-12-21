@@ -25,6 +25,7 @@ export async function GET() {
       include: {
         account: true,
         expenseType: true,
+        expenseSubcategory: true,
       },
       orderBy: {
         date: 'desc',
@@ -60,7 +61,8 @@ export async function POST(request: NextRequest) {
       name, 
       amount, 
       accountId, 
-      expenseTypeId, 
+      expenseTypeId,
+      expenseSubcategoryId, 
       date, 
       description,
       isInstallment,
@@ -72,8 +74,9 @@ export async function POST(request: NextRequest) {
 
     if (!name || !amount || !accountId || !expenseTypeId) {
       return NextResponse.json(
-        { error: 'Missing required fileds: name, amount, accountId, expenseTypeId, date' }
-      )
+        { error: 'Missing required fields: name, amount, accountId, expenseTypeId' },
+        { status: 400 }
+      );
     }
 
     if (!isInstallment && !date) {
@@ -88,6 +91,30 @@ export async function POST(request: NextRequest) {
         { error: 'Installment duration and start date are required for installment expenses' },
         { status: 400 }
       )
+    }
+
+    // Validate subcategory belongs to expense type if provided
+    if (expenseSubcategoryId) {
+      const subcategory = await db.expenseSubcategory.findUnique({
+        where: {
+          id: expenseSubcategoryId,
+          userId: session.user.id,
+        },
+      });
+
+      if (!subcategory) {
+        return NextResponse.json(
+          { error: 'Subcategory not found' },
+          { status: 404 }
+        );
+      }
+
+      if (subcategory.expenseTypeId !== expenseTypeId) {
+        return NextResponse.json(
+          { error: 'Subcategory does not belong to the selected expense type' },
+          { status: 400 }
+        );
+      }
     }
 
     const result = await db.$transaction(async (tx) => {
@@ -108,6 +135,7 @@ export async function POST(request: NextRequest) {
           amount: parsedAmount,
           accountId,
           expenseTypeId,
+          expenseSubcategoryId: expenseSubcategoryId || null,
           date: isInstallment
             ? new Date(installmentStartDate)
             : new Date(date),
@@ -172,6 +200,7 @@ export async function POST(request: NextRequest) {
                 userId: session.user.id,
                 accountId,
                 expenseTypeId,
+                expenseSubcategoryId: expenseSubcategoryId || null,
                 name: `${name} (Payment 1/${installmentDuration})`,
                 amount: monthlyAmount!,
                 date: startDate,
@@ -191,7 +220,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
-    console.error('Error creating income transaction: ', error);
+    console.error('Error creating expense transaction: ', error);
 
     return NextResponse.json(
       { error: 'Internal server error' },
