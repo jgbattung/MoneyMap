@@ -93,6 +93,7 @@ export async function POST(request: NextRequest) {
               userId: installment.userId,
               accountId: installment.accountId,
               expenseTypeId: installment.expenseTypeId,
+              expenseSubcategoryId: installment.expenseSubcategoryId,
               name: `${installment.name} (Payment ${paidCount}/${installment.installmentDuration})`,
               amount: installment.monthlyAmount!,
               date: today,
