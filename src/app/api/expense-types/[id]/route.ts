@@ -26,6 +26,13 @@ export async function GET(
         id: id,
         userId: session.user.id
       },
+      include: {
+        subcategories: {
+          orderBy: {
+            name: 'asc'
+          }
+        }
+      }
     });
 
     if (!expenseType) {
@@ -66,7 +73,7 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const { name, monthlyBudget } = body;
+    const { name, monthlyBudget, subcategoryChanges } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -75,18 +82,74 @@ export async function PATCH(
       );
     }
 
-    const updatedExpenseType = await db.expenseType.update({
-      where: {
-        id: id,
-        userId: session.user.id,
-      },
-      data: {
-        name,
-        monthlyBudget: monthlyBudget ? parseFloat(monthlyBudget) : null,
+    const result = await db.$transaction(async (tx) => {
+      // Update the expense type
+      await tx.expenseType.update({
+        where: {
+          id: id,
+          userId: session.user.id,
+        },
+        data: {
+          name,
+          monthlyBudget: monthlyBudget ? parseFloat(monthlyBudget) : null,
+        }
+      });
+
+      // Handle subcategory changes if provided
+      if (subcategoryChanges) {
+        const { toCreate, toUpdate, toDelete } = subcategoryChanges;
+
+        // Create new subcategories
+        if (toCreate && Array.isArray(toCreate) && toCreate.length > 0) {
+          await tx.expenseSubcategory.createMany({
+            data: toCreate.map((sub: { name: string }) => ({
+              userId: session.user.id,
+              expenseTypeId: id,
+              name: sub.name,
+            }))
+          });
+        }
+
+        // Update existing subcategories
+        if (toUpdate && Array.isArray(toUpdate) && toUpdate.length > 0) {
+          for (const sub of toUpdate) {
+            await tx.expenseSubcategory.update({
+              where: {
+                id: sub.id,
+                userId: session.user.id,
+              },
+              data: {
+                name: sub.name,
+              }
+            });
+          }
+        }
+
+        if (toDelete && Array.isArray(toDelete) && toDelete.length > 0) {
+          await tx.expenseSubcategory.deleteMany({
+            where: {
+              id: { in: toDelete },
+              userId: session.user.id,
+            }
+          });
+        }
       }
+
+      const expenseTypeWithSubcategories = await tx.expenseType.findUnique({
+        where: { id: id },
+        include: {
+          subcategories: {
+            orderBy: {
+              name: 'asc'
+            }
+          }
+        }
+      });
+
+      return expenseTypeWithSubcategories;
     });
 
-    return NextResponse.json(updatedExpenseType, { status: 200 });
+    return NextResponse.json(result, { status: 200 });
  
   } catch (error) {
     console.error('Error updating expense type: ', error);
