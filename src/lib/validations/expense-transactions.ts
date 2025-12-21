@@ -3,6 +3,7 @@ import { z } from "zod";
 export const ExpenseTransactionValidation = z.object({
   accountId: z.string().min(1, "Account is required"),
   expenseTypeId: z.string().min(1, "Expense type is required"),
+  expenseSubcategoryId: z.string().optional(),
   name: z.string().min(1, "Name is required").max(100, "Name is too long"),
   amount: z.string()
     .min(1, "Amount is required")
