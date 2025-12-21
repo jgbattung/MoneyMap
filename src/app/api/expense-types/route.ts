@@ -38,6 +38,13 @@ export async function GET() {
       where: {
         userId: session.user.id
       },
+      include: {
+        subcategories: {
+          orderBy: {
+            name: 'asc'
+          }
+        }
+      },
       orderBy: {
         monthlyBudget: 'desc',
       }
@@ -69,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const { name, monthlyBudget } = body;
+    const { name, monthlyBudget, subcategories } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -78,15 +85,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const expenseType = await db.expenseType.create({
-      data: {
-        userId: session.user.id,
-        name,
-        monthlyBudget: monthlyBudget ? parseFloat(monthlyBudget) : null,
+    const result = await db.$transaction(async (tx) => {
+      const expenseType = await tx.expenseType.create({
+        data: {
+          userId: session.user.id,
+          name,
+          monthlyBudget: monthlyBudget ? parseFloat(monthlyBudget) : null,
+        }
+      });
+
+      if (subcategories && Array.isArray(subcategories) && subcategories.length > 0) {
+        await tx.expenseSubcategory.createMany({
+          data: subcategories.map((sub: { name: string }) => ({
+            userId: session.user.id,
+            expenseTypeId: expenseType.id,
+            name: sub.name,
+          }))
+        });
       }
+
+      const expenseTypeWithSubcategories = await tx.expenseType.findUnique({
+        where: { id: expenseType.id },
+        include: {
+          subcategories: {
+            orderBy: {
+              name: 'asc'
+            }
+          }
+        }
+      });
+
+      return expenseTypeWithSubcategories;
     });
 
-    return NextResponse.json(expenseType, { status: 201 });
+    return NextResponse.json(result, { status: 201 });
 
   } catch (error) {
     console.error('Error creating expense type: ', error);
