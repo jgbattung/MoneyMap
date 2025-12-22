@@ -279,7 +279,8 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                             <FormLabel>From Account</FormLabel>
                             <Select 
                               onValueChange={field.onChange} 
-                              defaultValue={field.value} 
+                              defaultValue={field.value}
+                              key={field.value || 'from-account-select'}
                               disabled={isUpdating}
                             >
                               <FormControl>
@@ -312,6 +313,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                             <Select 
                               onValueChange={field.onChange} 
                               defaultValue={field.value} 
+                              key={field.value || 'to-account-select'}
                               disabled={isUpdating}
                             >
                               <FormControl>
@@ -340,8 +342,13 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                       render={({ field }) => (
                         <FormItem className="p-4">
                           <FormLabel>Transfer type</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isUpdating}>
-                            <FormControl>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                            key={field.value || 'from-account-select'}
+                            disabled={isUpdating}
+                          >
+                              <FormControl>
                               <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Select transfer type" />
                               </SelectTrigger>

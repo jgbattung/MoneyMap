@@ -5,6 +5,7 @@ export type ExpenseTransaction = {
   userId: string;
   accountId: string;
   expenseTypeId: string;
+  expenseSubcategoryId?: string | null;
   name: string;
   amount: string;
   date: string;
@@ -24,6 +25,10 @@ export type ExpenseTransaction = {
     id: string;
     name: string;
   };
+  expenseSubcategory?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 const QUERY_KEYS = {

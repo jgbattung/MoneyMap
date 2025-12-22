@@ -54,6 +54,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
       amount: "",
       accountId: "",
       expenseTypeId: "",
+      expenseSubcategoryId: "none",
       date: undefined,
       description: "",
       isInstallment: false,
@@ -69,6 +70,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
         amount: expenseTransactionData.amount,
         accountId: expenseTransactionData.accountId,
         expenseTypeId: expenseTransactionData.expenseTypeId,
+        expenseSubcategoryId: expenseTransactionData.expenseSubcategoryId ?? "none",
         date: new Date(expenseTransactionData.date),
         description: expenseTransactionData.description ?? undefined,
         isInstallment: expenseTransactionData.isInstallment,
@@ -235,7 +237,12 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
                     render={({ field }) => (
                       <FormItem className="p-4">
                         <FormLabel>Account</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isUpdating}>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          key={field.value || 'account-select'}
+                          disabled={isUpdating}
+                        >
                           <FormControl>
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select account" />
@@ -344,7 +351,12 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
                     render={({ field }) => (
                       <FormItem className="p-4">
                         <FormLabel>Expense type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isUpdating}>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          key={field.value || 'expense-type-select'}
+                          disabled={isUpdating}
+                        >
                           <FormControl>
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select income type" />
