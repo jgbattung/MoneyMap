@@ -21,6 +21,10 @@ interface ExpenseCardProps {
     id: string;
     name: string;
   };
+  expenseSubcategory?: {
+    id: string;
+    name: string;
+  } | null;
   isInstallment: boolean;
   installmentDuration?: number | null;
   remainingInstallments?: number | null;
@@ -35,6 +39,7 @@ const ExpenseCard = ({
   date,
   account,
   expenseType,
+  expenseSubcategory,
   isInstallment,
   installmentDuration,
   remainingInstallments,
@@ -87,7 +92,10 @@ const ExpenseCard = ({
           Installment
         </Badge>
       )}
-      <p className='text-muted-foreground text-xs font-bold'>{expenseType.name}</p>
+      <p className='text-muted-foreground text-xs font-bold'>
+        {expenseType.name}
+        {expenseSubcategory && ` > ${expenseSubcategory.name}`}
+      </p>
 
       <div className='flex items-end justify-between'>
         {isInstallment && (
