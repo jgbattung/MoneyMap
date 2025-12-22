@@ -136,6 +136,7 @@ const Expenses = () => {
                   id: expense.expenseType.id,
                   name: expense.expenseType.name
                 }}
+                expenseSubcategory={expense.expenseSubcategory || null}
                 isInstallment={expense.isInstallment}
                 installmentDuration={expense.installmentDuration}
                 remainingInstallments={expense.remainingInstallments}

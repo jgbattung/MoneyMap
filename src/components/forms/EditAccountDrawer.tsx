@@ -195,8 +195,13 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId }: EditAcc
                     render={({ field }) => (
                       <FormItem className="p-4">
                         <FormLabel>Account type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isUpdating}>
-                          <FormControl>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          key={field.value || 'account-type-select'}
+                          disabled={isUpdating}
+                        >
+                            <FormControl>
                             <SelectTrigger className='w-full'>
                               <SelectValue placeholder="Select account type" />
                             </SelectTrigger>

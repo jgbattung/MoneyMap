@@ -25,14 +25,15 @@ model User {
   sessions      Session[]
   accounts      Account[]
 
-  financialAccounts FinancialAccount[]
-  expenseTypes      ExpenseType[]
-  incomeTypes       IncomeType[]
+  financialAccounts    FinancialAccount[]
+  expenseTypes         ExpenseType[]
+  expenseSubcategories ExpenseSubcategory[]
+  incomeTypes          IncomeType[]
 
-  incomeTransactions IncomeTransaction[]
-  transferTypes TransferType[]
-  transferTransactions TransferTransaction[]
-  expenseTransactions ExpenseTransaction[]
+  incomeTransactions     IncomeTransaction[]
+  transferTypes          TransferType[]
+  transferTransactions   TransferTransaction[]
+  expenseTransactions    ExpenseTransaction[]
 
   netWorthTarget     Decimal?  @db.Decimal(15, 2)
   netWorthTargetDate DateTime?
@@ -132,10 +133,28 @@ model ExpenseType {
   
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  subcategories       ExpenseSubcategory[]
   expenseTransactions ExpenseTransaction[]
   
   @@unique([userId, name])
   @@map("expense_types")
+}
+
+model ExpenseSubcategory {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  expenseTypeId String   @map("expense_type_id")
+  name          String   @db.VarChar(50)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenseType ExpenseType  @relation(fields: [expenseTypeId], references: [id], onDelete: Cascade)
+  
+  expenseTransactions ExpenseTransaction[]
+  
+  @@unique([expenseTypeId, name])
+  @@map("expense_subcategories")
 }
 
 model ExpenseTransaction {
@@ -143,6 +162,7 @@ model ExpenseTransaction {
   userId                String          @map("user_id")
   accountId             String          @map("account_id")
   expenseTypeId         String          @map("expense_type_id")
+  expenseSubcategoryId  String?         @map("expense_subcategory_id")
   name                  String
   amount                Decimal         @db.Decimal(15, 2)
   date                  DateTime
@@ -161,9 +181,10 @@ model ExpenseTransaction {
   createdAt             DateTime        @default(now()) @map("created_at")
   updatedAt             DateTime        @updatedAt @map("updated_at")
   
-  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  account               FinancialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  expenseType           ExpenseType     @relation(fields: [expenseTypeId], references: [id], onDelete: Restrict)
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account               FinancialAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  expenseType           ExpenseType         @relation(fields: [expenseTypeId], references: [id], onDelete: Restrict)
+  expenseSubcategory    ExpenseSubcategory? @relation(fields: [expenseSubcategoryId], references: [id], onDelete: SetNull)
   linkedTransfer        TransferTransaction? @relation("TransferFee")
   
   @@map("expense_transactions")
@@ -243,7 +264,6 @@ model TransferTransaction {
   toAccount    FinancialAccount      @relation("TransferTo", fields: [toAccountId], references: [id], onDelete: Cascade)
   transferType TransferType @relation(fields: [transferTypeId], references: [id])
   feeExpense   ExpenseTransaction? @relation("TransferFee", fields: [feeExpenseId], references: [id], onDelete: SetNull)
-
 
   @@map("transfer_transactions")
   @@index([fromAccountId, date])

@@ -1,6 +1,6 @@
 "use client"
 import { z } from "zod"
-import React from 'react'
+import React, { useEffect } from 'react'
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
@@ -37,7 +37,6 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
   const [calendarOpen, setCalendarOpen] = React.useState(false);
   const [installmentCalendarOpen, setInstallmentCalendarOpen] = React.useState(false);
 
-
   const allAccounts = [...accounts, ...cards];
 
   const form = useForm<z.infer<typeof createExpenseTransactionSchema>>({
@@ -47,6 +46,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
       amount: "",
       accountId: "",
       expenseTypeId: "",
+      expenseSubcategoryId: "none",
       date: undefined,
       description: "",
       isInstallment: false,
@@ -58,11 +58,27 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
   const selectedAccountId = form.watch("accountId");
   const selectedAccount = allAccounts.find(acc => acc.id === selectedAccountId);
   const isCreditCard = selectedAccount?.accountType === "CREDIT_CARD";
-  const isInstallment = form.watch("isInstallment")
+  const isInstallment = form.watch("isInstallment");
+
+  // Watch selected expense type
+  const selectedExpenseTypeId = form.watch("expenseTypeId");
+  const selectedExpenseType = budgets.find(budget => budget.id === selectedExpenseTypeId);
+  const hasSubcategories = selectedExpenseType?.subcategories && selectedExpenseType.subcategories.length > 0;
+
+  // Reset subcategory when expense type changes
+  useEffect(() => {
+    form.setValue("expenseSubcategoryId", "none");
+  }, [selectedExpenseTypeId, form]);
 
   const onSubmit = async (values: z.infer<typeof createExpenseTransactionSchema>) => {
     try {
-      const newExpenseTransaction = await createExpenseTransaction(values);
+      // Convert empty string to undefined for optional subcategory
+      const payload = {
+        ...values,
+        expenseSubcategoryId: values.expenseSubcategoryId === "none" ? undefined : values.expenseSubcategoryId,
+      };
+
+      const newExpenseTransaction = await createExpenseTransaction(payload);
 
       toast.success("Expense transaction created successfully", {
         description: `${newExpenseTransaction.name} has been added to your expense transactions.`,
@@ -160,87 +176,81 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
               />
 
               {isCreditCard && (
-                <FormField
-                  control={form.control}
-                  name="isInstallment"
-                  render={({ field }) => (
-                    <FormItem className="p-4 flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isCreating}
-                          />
-                          <Label>Is this an installment transaction?</Label>
-                        </div>
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              {isCreditCard && isInstallment && (
                 <>
-                  <FormField
-                    control={form.control}
-                    name="installmentDuration"
-                    render={({ field }) => (
-                      <FormItem className="p-4">
-                        <FormLabel>Installment duration (months)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            value={field.value ?? ""}
-                            placeholder="e.g., 12 months, 24 months"
-                            className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                            disabled={isCreating}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                  <div className="flex items-center gap-3 px-4 py-2">
+                    <Switch
+                      id="installment-mode"
+                      checked={isInstallment}
+                      onCheckedChange={(checked) => form.setValue("isInstallment", checked)}
+                      disabled={isCreating}
+                    />
+                    <Label htmlFor="installment-mode" className="cursor-pointer">
+                      Installment
+                    </Label>
+                  </div>
 
-                  <FormField
-                    control={form.control}
-                    name="installmentStartDate"
-                    render={({ field }) => (
-                      <FormItem className="p-4">
-                        <FormLabel>Installment start date</FormLabel>
-                        <Popover open={installmentCalendarOpen} onOpenChange={setInstallmentCalendarOpen} modal>
-                          <PopoverTrigger asChild>
+                  {isInstallment && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="installmentDuration"
+                        render={({ field }) => (
+                          <FormItem className="p-4">
+                            <FormLabel>Installment duration (months)</FormLabel>
                             <FormControl>
-                              <Button
-                                variant="outline"
-                                className="w-full justify-between font-normal hover:text-white"
+                              <Input
+                                type="number"
+                                placeholder="0"
+                                className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+                                {...field}
+                                value={field.value ?? ''}
                                 disabled={isCreating}
-                              >
-                                {field.value ? (
-                                  format(field.value, "MMMM, d, yyyy")
-                                ) : (
-                                  <span className="text-muted-foreground">Select date</span>
-                                )}
-                                <ChevronDownIcon className="h-4 w-4" />
-                              </Button>
+                              />
                             </FormControl>
-                          </PopoverTrigger>
-                        <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value ?? undefined}
-                            captionLayout="dropdown"
-                            onDayClick={(date) => {
-                              field.onChange(date);
-                              setInstallmentCalendarOpen(false)
-                            }}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      </FormItem>
-                    )}
-                  />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="installmentStartDate"
+                        render={({ field }) => (
+                          <FormItem className="p-4">
+                            <FormLabel>Installment start date</FormLabel>
+                            <Popover open={installmentCalendarOpen} onOpenChange={setInstallmentCalendarOpen} modal>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    className="w-full justify-between font-normal hover:text-white"
+                                    disabled={isCreating}
+                                  >
+                                    {field.value ? (
+                                      format(field.value, "MMMM, d, yyyy")
+                                    ) : (
+                                      <span className="text-muted-foreground">Select date</span>
+                                    )}
+                                    <ChevronDownIcon className="h-4 w-4" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={field.value ?? undefined}
+                                  captionLayout="dropdown"
+                                  onDayClick={(date) => {
+                                    field.onChange(date);
+                                    setInstallmentCalendarOpen(false)
+                                  }}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
                 </>
               )}
 
@@ -253,7 +263,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isCreating}>
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select income type" />
+                          <SelectValue placeholder="Select expense type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -267,6 +277,38 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                   </FormItem>
                 )}
               />
+
+              {/* Subcategory Dropdown - Only show if selected expense type has subcategories */}
+              {hasSubcategories && (
+                <FormField
+                  control={form.control}
+                  name="expenseSubcategoryId"
+                  render={({ field }) => (
+                    <FormItem className="p-4">
+                      <FormLabel>Subcategory (Optional)</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || "none"}  // ← Default to "none"
+                        disabled={isCreating}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select subcategory (optional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>  {/* ← Use "none" */}
+                          {selectedExpenseType?.subcategories?.map((subcategory) => (
+                            <SelectItem key={subcategory.id} value={subcategory.id}>
+                              {subcategory.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {!isInstallment && (
                 <FormField

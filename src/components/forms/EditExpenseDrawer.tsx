@@ -1,49 +1,49 @@
-import { useExpenseTransactionQuery, useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery';
-import { createExpenseTransactionSchema } from '@/lib/validations/expense-transactions';
-import { zodResolver } from '@hookform/resolvers/zod';
+"use client"
+
 import React, { useEffect, useRef, useState } from 'react'
-import { useForm } from 'react-hook-form';
-import { z } from "zod"
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
 import { Form, FormControl, FormField, FormItem, FormLabel } from '../ui/form';
+import { z } from "zod"
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { toast } from 'sonner';
 import { Button } from '../ui/button';
+import { useAccountsQuery } from '@/hooks/useAccountsQuery';
+import { useCardsQuery } from '@/hooks/useCardsQuery';
+import { useExpenseTransactionQuery, useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery';
+import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery';
+import { createExpenseTransactionSchema } from '@/lib/validations/expense-transactions';
 import { ScrollArea } from '../ui/scroll-area';
 import { Textarea } from '../ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Calendar } from '../ui/calendar';
-import { ChevronDownIcon } from 'lucide-react';
 import { format } from 'date-fns';
-import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery';
-import { useAccountsQuery } from '@/hooks/useAccountsQuery';
-import { useCardsQuery } from '@/hooks/useCardsQuery';
-import { Label } from '../ui/label';
+import { Calendar } from '../ui/calendar';
+import { ChevronDownIcon } from "lucide-react";
 import { Switch } from '../ui/switch';
-import { toast } from 'sonner';
+import { Label } from '../ui/label';
+import SkeletonEditExpenseDrawerForm from '../shared/SkeletonEditExpenseDrawerForm';
 import DeleteDialog from '../shared/DeleteDialog';
 import { Separator } from '../ui/separator';
-import SkeletonEditExpenseDrawerForm from '../shared/SkeletonEditExpenseDrawerForm';
 
 interface EditExpenseDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  className?: string;
   expenseId: string;
 }
 
-const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExpenseDrawerProps) => {
+const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerProps) => {
   const { updateExpenseTransaction, isUpdating, deleteExpenseTransaction, isDeleting } = useExpenseTransactionsQuery();
   const { expenseTransactionData, isFetching, error } = useExpenseTransactionQuery(expenseId);
   const { accounts } = useAccountsQuery();
   const { cards } = useCardsQuery();
   const { budgets } = useExpenseTypesQuery();
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [showGradient, setShowGradient] = useState(true);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
   const [calendarOpen, setCalendarOpen] = React.useState(false);
   const [installmentCalendarOpen, setInstallmentCalendarOpen] = React.useState(false);
+  const [showGradient, setShowGradient] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const allAccounts = [...accounts, ...cards];
 
@@ -54,6 +54,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
       amount: "",
       accountId: "",
       expenseTypeId: "",
+      expenseSubcategoryId: "none",
       date: undefined,
       description: "",
       isInstallment: false,
@@ -69,8 +70,11 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
         amount: expenseTransactionData.amount,
         accountId: expenseTransactionData.accountId,
         expenseTypeId: expenseTransactionData.expenseTypeId,
-        date: new Date(expenseTransactionData.date),
-        description: expenseTransactionData.description ?? undefined,
+        expenseSubcategoryId: expenseTransactionData.expenseSubcategoryId || "none",
+        description: expenseTransactionData.description || "",
+        date: expenseTransactionData.date 
+          ? new Date(expenseTransactionData.date) 
+          : undefined,
         isInstallment: expenseTransactionData.isInstallment,
         installmentDuration: expenseTransactionData.installmentDuration ?? undefined,
         installmentStartDate: expenseTransactionData.installmentStartDate 
@@ -84,6 +88,18 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
   const selectedAccount = allAccounts.find(acc => acc.id === selectedAccountId);
   const isCreditCard = selectedAccount?.accountType === "CREDIT_CARD";
   const isInstallment = form.watch("isInstallment");
+
+  // Watch selected expense type for subcategory dropdown
+  const selectedExpenseTypeId = form.watch("expenseTypeId");
+  const selectedExpenseType = budgets.find(budget => budget.id === selectedExpenseTypeId);
+  const hasSubcategories = selectedExpenseType?.subcategories && selectedExpenseType.subcategories.length > 0;
+
+  // Reset subcategory when expense type changes
+  useEffect(() => {
+    if (expenseTransactionData && selectedExpenseTypeId !== expenseTransactionData.expenseTypeId) {
+      form.setValue("expenseSubcategoryId", "none");
+    }
+  }, [selectedExpenseTypeId, expenseTransactionData, form]);
 
   useEffect(() => {
     const checkScroll = () => {
@@ -107,7 +123,14 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
 
   const onSubmit = async (values: z.infer<typeof createExpenseTransactionSchema>) => {
     try {
-      const updatedExpense = await updateExpenseTransaction({ id: expenseId, ...values });
+      // Convert "none" to undefined for optional subcategory
+      const payload = {
+        id: expenseId,
+        ...values,
+        expenseSubcategoryId: values.expenseSubcategoryId === "none" ? undefined : values.expenseSubcategoryId,
+      };
+
+      const updatedExpense = await updateExpenseTransaction(payload);
 
       toast.success("Expense has been updated successfully", {
         description: `${updatedExpense.name} has been updated.`,
@@ -149,7 +172,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
     <>
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent
-          onEscapeKeyDown={(e) => isUpdating && e.preventDefault()} className={`${className}`}
+          onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
         >
           {isFetching ? (
             <SkeletonEditExpenseDrawerForm />
@@ -158,7 +181,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
             <DrawerHeader className='text-center'>
               <DrawerTitle className='text-xl'>Unable to load expense</DrawerTitle>
               <DrawerDescription>
-                {error || 'Something went wrong while loading your account details.'}
+                {error || 'Something went wrong while loading your expense details.'}
               </DrawerDescription>
             </DrawerHeader>
             
@@ -192,7 +215,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
               </DrawerHeader>
 
               <div className="relative flex-1 min-h-0">
-                <ScrollArea className="h-full scrollbar-hide">
+                <ScrollArea ref={scrollRef} className="h-full scrollbar-hide">
                   <FormField
                     control={form.control}
                     name="name"
@@ -235,7 +258,12 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
                     render={({ field }) => (
                       <FormItem className="p-4">
                         <FormLabel>Account</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isUpdating}>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          key={field.value || 'account-select'}
+                          disabled={isUpdating}
+                        >
                           <FormControl>
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select account" />
@@ -254,87 +282,81 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
                   />
 
                   {isCreditCard && (
-                    <FormField
-                      control={form.control}
-                      name="isInstallment"
-                      render={({ field }) => (
-                        <FormItem className="p-4 flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <div className="flex items-center space-x-2">
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                disabled={isUpdating}
-                              />
-                              <Label>Is this an installment transaction?</Label>
-                            </div>
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                  {isCreditCard && isInstallment && (
                     <>
-                      <FormField
-                        control={form.control}
-                        name="installmentDuration"
-                        render={({ field }) => (
-                          <FormItem className="p-4">
-                            <FormLabel>Installment duration (months)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                {...field}
-                                value={field.value ?? ""}
-                                placeholder="e.g., 12 months, 24 months"
-                                className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                                disabled={isUpdating}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                      <div className="flex items-center gap-3 px-4 py-2">
+                        <Switch
+                          id="installment-mode"
+                          checked={isInstallment}
+                          onCheckedChange={(checked) => form.setValue("isInstallment", checked)}
+                          disabled={isUpdating}
+                        />
+                        <Label htmlFor="installment-mode" className="cursor-pointer">
+                          Installment
+                        </Label>
+                      </div>
 
-                      <FormField
-                        control={form.control}
-                        name="installmentStartDate"
-                        render={({ field }) => (
-                          <FormItem className="p-4">
-                            <FormLabel>Installment start date</FormLabel>
-                            <Popover open={installmentCalendarOpen} onOpenChange={setInstallmentCalendarOpen} modal>
-                              <PopoverTrigger asChild>
+                      {isInstallment && (
+                        <>
+                          <FormField
+                            control={form.control}
+                            name="installmentDuration"
+                            render={({ field }) => (
+                              <FormItem className="p-4">
+                                <FormLabel>Installment duration (months)</FormLabel>
                                 <FormControl>
-                                  <Button
-                                    variant="outline"
-                                    className="w-full justify-between font-normal hover:text-white"
+                                  <Input
+                                    type="number"
+                                    placeholder="0"
+                                    className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+                                    {...field}
+                                    value={field.value ?? ''}
                                     disabled={isUpdating}
-                                  >
-                                    {field.value ? (
-                                      format(field.value, "MMMM, d, yyyy")
-                                    ) : (
-                                      <span className="text-muted-foreground">Select date</span>
-                                    )}
-                                    <ChevronDownIcon className="h-4 w-4" />
-                                  </Button>
+                                  />
                                 </FormControl>
-                              </PopoverTrigger>
-                            <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value ?? undefined}
-                                captionLayout="dropdown"
-                                onDayClick={(date) => {
-                                  field.onChange(date);
-                                  setInstallmentCalendarOpen(false)
-                                }}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          </FormItem>
-                        )}
-                      />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="installmentStartDate"
+                            render={({ field }) => (
+                              <FormItem className="p-4">
+                                <FormLabel>Installment start date</FormLabel>
+                                <Popover open={installmentCalendarOpen} onOpenChange={setInstallmentCalendarOpen} modal>
+                                  <PopoverTrigger asChild>
+                                    <FormControl>
+                                      <Button
+                                        variant="outline"
+                                        className="w-full justify-between font-normal hover:text-white"
+                                        disabled={isUpdating}
+                                      >
+                                        {field.value ? (
+                                          format(field.value, "MMMM, d, yyyy")
+                                        ) : (
+                                          <span className="text-muted-foreground">Select date</span>
+                                        )}
+                                        <ChevronDownIcon className="h-4 w-4" />
+                                      </Button>
+                                    </FormControl>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={field.value ?? undefined}
+                                      captionLayout="dropdown"
+                                      onDayClick={(date) => {
+                                        field.onChange(date);
+                                        setInstallmentCalendarOpen(false)
+                                      }}
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                              </FormItem>
+                            )}
+                          />
+                        </>
+                      )}
                     </>
                   )}
 
@@ -344,10 +366,15 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
                     render={({ field }) => (
                       <FormItem className="p-4">
                         <FormLabel>Expense type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isUpdating}>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          key={field.value || 'expense-type-select'}
+                          disabled={isUpdating}
+                        >
                           <FormControl>
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select income type" />
+                              <SelectValue placeholder="Select expense type" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -361,6 +388,39 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
                       </FormItem>
                     )}
                   />
+
+                  {/* Subcategory Dropdown - Only show if selected expense type has subcategories */}
+                  {hasSubcategories && (
+                    <FormField
+                      control={form.control}
+                      name="expenseSubcategoryId"
+                      render={({ field }) => (
+                        <FormItem className="p-4">
+                          <FormLabel>Subcategory (Optional)</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value || "none"}
+                            key={field.value || 'subcategory-select'}
+                            disabled={isUpdating}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select subcategory (optional)" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              {selectedExpenseType?.subcategories?.map((subcategory) => (
+                                <SelectItem key={subcategory.id} value={subcategory.id}>
+                                  {subcategory.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
                   {!isInstallment && (
                     <FormField
@@ -454,7 +514,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, className, expenseId }: EditExp
                   onClick={handleDeleteClick}
                   disabled={isUpdating || isDeleting}
                 >
-                  {isDeleting ? "Deleting..." : "Delete transfer"}
+                  {isDeleting ? "Deleting..." : "Delete expense"}
                 </Button>
               </DrawerFooter>
 

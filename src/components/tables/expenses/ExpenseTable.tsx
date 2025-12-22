@@ -41,6 +41,10 @@ const CellContent = ({ getValue, row, column, table }: any) => {
   const onSelectChange = (newValue: string) => {
     setValue(newValue);
     tableMeta?.updateData(row.index, column.id, newValue);
+    
+    if (column.id === "expenseTypeId") {
+      tableMeta?.updateData(row.index, "expenseSubcategoryId", "");
+    }
   };
   
   const onDateChange = (date: Date | undefined) => {
@@ -67,6 +71,12 @@ const CellContent = ({ getValue, row, column, table }: any) => {
     if (columnMeta?.type === "select") {
       const option = columnMeta?.options?.find((opt: any) => opt.value === value);
       return <span>{option?.label || value}</span>;
+    }
+
+    if (column.id === "expenseSubcategoryId") {
+      if (!value) return <span className="text-muted-foreground">-</span>;
+      const subcategory = row.original.expenseSubcategory;
+      return <span>{subcategory?.name || "-"}</span>;
     }
 
     if (column.id === "description") {
@@ -103,6 +113,61 @@ const CellContent = ({ getValue, row, column, table }: any) => {
           />
         </PopoverContent>
       </Popover>
+    );
+  }
+
+  if (column.id === "expenseSubcategoryId") {
+    const currentRow = table.options.data[row.index];
+    const selectedExpenseTypeId = currentRow.expenseTypeId;
+    
+    // Find the expense type and get its subcategories
+    const expenseType = tableMeta?.budgets?.find((b: any) => b.id === selectedExpenseTypeId);
+    const subcategories = expenseType?.subcategories || [];
+    
+    // If no subcategories, show disabled field
+    if (subcategories.length === 0) {
+      return (
+        <Input
+          value="-"
+          disabled
+          className="w-full bg-muted cursor-not-allowed"
+        />
+      );
+    }
+    
+    // Build options with a "None" option to clear selection
+    // Use "__none__" as special value since empty string is not allowed
+    const subcategoryOptions = [
+      { value: "__none__", label: "None" },
+      ...subcategories.map((sub: any) => ({
+        value: sub.id,
+        label: sub.name
+      }))
+    ];
+    
+    // Convert empty/null to "__none__" for the select, and vice versa
+    const selectValue = value ? value : "__none__";
+    
+    const handleSubcategoryChange = (newValue: string) => {
+      // Convert "__none__" back to empty string for storage
+      const storageValue = newValue === "__none__" ? "" : newValue;
+      setValue(storageValue);
+      tableMeta?.updateData(row.index, column.id, storageValue);
+    };
+    
+    return (
+      <Select value={selectValue} onValueChange={handleSubcategoryChange}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Select subcategory" />
+        </SelectTrigger>
+        <SelectContent>
+          {subcategoryOptions.map((option: any) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     );
   }
 
@@ -162,6 +227,7 @@ const EditCell = ({ row, table }: any) => {
         amount: updatedRow.amount,
         accountId: updatedRow.accountId,
         expenseTypeId: updatedRow.expenseTypeId,
+        expenseSubcategoryId: updatedRow.expenseSubcategoryId || null,
         date: updatedRow.date,
         description: updatedRow.description,
         isInstallment: updatedRow.isInstallment,
@@ -326,7 +392,8 @@ const ExpenseTable = () => {
         row.name.toLowerCase().includes(searchLower) ||
         row.description?.toLowerCase().includes(searchLower) ||
         row.expenseType.name.toLowerCase().includes(searchLower) ||
-        row.account.name.toLowerCase().includes(searchLower)
+        row.account.name.toLowerCase().includes(searchLower) ||
+        row.expenseSubcategory?.name.toLowerCase().includes(searchLower)
       );
     });
   }, [data, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);
@@ -368,6 +435,13 @@ const ExpenseTable = () => {
       meta: {
         type: "select",
         options: expenseTypeOptions
+      },
+    }),
+    columnHelper.accessor("expenseSubcategoryId", {
+      header: "Subcategory",
+      cell: CellContent,
+      meta: {
+        type: "subcategory-select"
       },
     }),
     columnHelper.accessor("description", {
@@ -437,7 +511,8 @@ const ExpenseTable = () => {
     isDeleting,
     setDeleteDialogOpen,
     setTransactionToDelete,
-  }), [editedRows, updateData, revertData, updateExpenseTransaction, isUpdating, deleteExpenseTransaction, isDeleting]);
+    budgets,
+  }), [editedRows, updateData, revertData, updateExpenseTransaction, isUpdating, deleteExpenseTransaction, isDeleting, budgets]);
 
   const table = useReactTable({
     data: filteredData,

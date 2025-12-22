@@ -217,7 +217,12 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                     render={({ field }) => (
                       <FormItem className="p-4">
                         <FormLabel>Account</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isUpdating}>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          key={field.value || 'account-select'}
+                          disabled={isUpdating}
+                        >
                           <FormControl>
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select account" />
@@ -242,8 +247,13 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                     render={({ field }) => (
                       <FormItem className="p-4">
                         <FormLabel>Income type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isUpdating}>
-                          <FormControl>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          key={field.value || 'income-type-select'}
+                          disabled={isUpdating}
+                        >                          
+                        <FormControl>
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select income type" />
                             </SelectTrigger>
