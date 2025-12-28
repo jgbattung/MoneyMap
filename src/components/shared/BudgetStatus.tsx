@@ -125,7 +125,7 @@ const BudgetStatus = () => {
 
           <div className="pt-3 border-t border-border">
             <Link href="/budgets">
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full hover:text-white">
                 See All Budgets
               </Button>
             </Link>

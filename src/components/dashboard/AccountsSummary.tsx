@@ -64,7 +64,7 @@ const CreditCardItem = ({ name, balance }: CreditCardItemProps) => {
         <span className="text-xs text-muted-foreground">Credit Card</span>
       </div>
 
-      <div className="font-semibold text-sm text-error-500">
+      <div className="font-semibold text-sm text-red-500">
         ₱{formatCurrency(balance)}
       </div>
     </div>
@@ -174,7 +174,7 @@ const TopAccounts = () => {
         ))}
       </div>
 
-      <Button variant="outline" asChild className="w-full">
+      <Button variant="outline" asChild className="w-full hover:text-white">
         <Link href="/accounts">See All Accounts</Link>
       </Button>
     </div>
@@ -218,7 +218,7 @@ const TopCreditCards = () => {
         ))}
       </div>
 
-      <Button variant="outline" asChild className="w-full">
+      <Button variant="outline" asChild className="w-full hover:text-white">
         <Link href="/cards">See All Cards</Link>
       </Button>
     </div>
