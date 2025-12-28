@@ -105,7 +105,7 @@ const BudgetStatus = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Budget Status</h2>
+        <h2 className="text-foreground font-semibold text-sm md:text-base">Budget Status</h2>
         <span className="text-xs text-muted-foreground">This Month</span>
       </div>
 
