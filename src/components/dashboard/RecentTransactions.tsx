@@ -141,7 +141,7 @@ const RecentTransactions = () => {
 
       <div className="pt-3 border-t border-border">
         <Link href="/transactions">
-          <Button variant="outline" className="w-full">
+          <Button variant="outline" className="w-full hover:text-white">
             See All
           </Button>
         </Link>
