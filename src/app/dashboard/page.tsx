@@ -7,27 +7,32 @@ import AccountsSummary from '@/components/dashboard/AccountsSummary'
 import { signOut } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
 import BudgetStatus from '@/components/shared/BudgetStatus'
+import { Icons } from '@/components/icons'
 
 const Dashboard = () => {
   const router = useRouter();
+
+  const handleLogout = () => {
+    signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          router.push("/sign-in")
+        }
+      }
+    });
+  };
 
   return (
     <div className='py-6 px-4 flex flex-col gap-4 mx-auto'>
       <div className='flex justify-between items-center'>
         <h1 className='text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold'>Dashboard</h1>
         
-        {/* Quick logout button for testing */}
         <button 
-          onClick={() => signOut({
-            fetchOptions: {
-              onSuccess: () => {
-                router.push("/sign-in")
-              }
-            }
-          })}
-          className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          onClick={handleLogout}
+          className="md:hidden p-2 hover:bg-white/10 rounded-md transition-colors"
+          title="Logout"
         >
-          Logout
+          <Icons.logOut size={24} />
         </button>
       </div>
 
