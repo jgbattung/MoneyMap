@@ -45,7 +45,7 @@ export default function LoginPage() {
 
 
   return (
-    <section className="flex min-h-screen bg-zinc-50 px-4 py-16 md:py-32 dark:bg-transparent">
+    <section className="flex w-full min-h-screen items-center justify-center bg-zinc-50 px-4 dark:bg-transparent">
       <form
         className="bg-card m-auto h-fit w-full max-w-sm rounded-[calc(var(--radius)+.125rem)] border p-0.5 shadow-md dark:[--color-muted:var(--color-zinc-900)]"
         onSubmit={handleEmailSignUp}
@@ -59,7 +59,7 @@ export default function LoginPage() {
                 className='h-12 w-12'
               />
             </Link>
-            <h1 className="text-title mb-1 mt-4 text-xl font-semibold">Create a MopneyMap Account</h1>
+            <h1 className="text-title mb-1 mt-4 text-xl font-semibold">Create a MoneyMap Account</h1>
             <p className="text-sm">Welcome! Create an account to get started</p>
           </div>
 
