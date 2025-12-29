@@ -5,6 +5,7 @@ import Sidebar from "@/components/shared/Sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import BottomBar from "@/components/shared/BottomBar";
 import Providers from "./providers";
+import ConditionalLayout from "@/components/layouts/ConditionalLayout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,18 +34,10 @@ export default function RootLayout({
       >
         <Providers>
           <main className="flex h-screen">
-            {/* Desktop Sidebar */}
-            <Sidebar />
-            
-            {/* Content Area */}
-            <div className="flex-1 overflow-auto pb-14 md:pb-0">
+            <ConditionalLayout>
               {children}
-            </div>
-            
-            {/* Mobile Bottom Bar */}
-            {/* <BottomBar className="md:hidden" /> */}
+            </ConditionalLayout>
             <Toaster position="bottom-right"/>
-            <BottomBar />
           </main>
         </Providers>
       </body>
