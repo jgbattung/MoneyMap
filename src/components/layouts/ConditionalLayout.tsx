@@ -8,11 +8,7 @@ import BottomBar from '@/components/shared/BottomBar'
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const { data: session, isPending } = useSession()
 
-  if (isPending) {
-    return <>{children}</>
-  }
-
-  if (!session) {
+  if (!isPending && !session) {
     return <>{children}</>
   }
 
