@@ -184,6 +184,8 @@ const EditAccountSheet = ({ open, onOpenChange, className, accountId }: EditAcco
                         <SelectItem value="CRYPTO">Crypto</SelectItem>
                         <SelectItem value="RETIREMENT">Retirement</SelectItem>
                         <SelectItem value="REAL_ESTATE">Real Estate</SelectItem>
+                        <SelectItem value="PAYROLL">Payroll</SelectItem>
+                        <SelectItem value="E_WALLET">E-Wallet</SelectItem>
                         <SelectItem value="OTHER">Other</SelectItem>
                       </SelectContent>
                     </Select>
