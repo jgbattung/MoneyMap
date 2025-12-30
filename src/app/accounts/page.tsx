@@ -1,84 +1,84 @@
 "use client"
 
-import CreateCardDrawer from '@/components/forms/CreateCardDrawer';
-import CreateCardSheet from '@/components/forms/CreateCardSheet';
-import EditCardDrawer from '@/components/forms/EditCardDrawer';
-import EditCardSheet from '@/components/forms/EditCardSheet';
-import { Icons } from '@/components/icons';
-import CreditCardCard from '@/components/shared/CreditCardCard';
-import SkeletonCardCard from '@/components/shared/SkeletonCardCard';
-import { Button } from '@/components/ui/button';
-import { useCardsQuery } from '@/hooks/useCardsQuery';
 import React, { useState } from 'react'
+import CreateAccountSheet from '@/components/forms/CreateAccountSheet'
+import { Icons } from '@/components/icons'
+import CreateAccountDrawer from '@/components/forms/CreateAccountDrawer'
+import AccountCard from '@/components/shared/AccountCard'
+import { useAccountsQuery } from '@/hooks/useAccountsQuery'
+import { Button } from '@/components/ui/button'
+import SkeletonAccountCard from '@/components/shared/SkeletonAccountCard'
+import EditAccountSheet from '@/components/forms/EditAccountSheet'
+import EditAccountDrawer from '@/components/forms/EditAccountDrawer'
 
-const Cards = () => {
-  const { cards, isLoading, error } = useCardsQuery();
-  const [createCardsSheetOpen, setCreateCardsSheetOpen] = useState(false);
-  const [createCardsDrawerOpen, setCreateCardsDrawerOpen] = useState(false);
-  const [editCardSheetOpen, setEditCardSheetOpen] = useState(false);
-  const [editCardDrawerOpen, setEditCardDrawerOpen] = useState(false);
-  const [selectedCardId, setSelectedCardId] = useState<string>('');
+const Accounts = () => {
+  const { accounts, isLoading, error } = useAccountsQuery();
+  const [createAccountSheetOpen, setCreateAccountSheetOpen] = useState(false);
+  const [createAccountDrawerOpen, setCreateAccountDrawerOpen] = useState(false);
+  const [editAccountSheetOpen, setEditAccountSheetOpen] = useState(false);
+  const [editAccountDrawerOpen, setEditAccountDrawerOpen] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
 
-  const handleCardClick = (accountId: string) => {
-    setSelectedCardId(accountId);
-
+  const handleAccountClick = (accountId: string) => {
+    setSelectedAccountId(accountId);
+    
     if (window.innerWidth >= 768) {
-      setEditCardSheetOpen(true);
+      setEditAccountSheetOpen(true);
     } else {
-      setEditCardDrawerOpen(true);
+      setEditAccountDrawerOpen(true);
     }
   };
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
       <div className='flex items-center justify-between flex-wrap gap-4'>
-        <h1 className='text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold'>Cards</h1>
-      
+        <h1 className='text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold'>Accounts</h1>
+
         <button 
-          onClick={() => setCreateCardsSheetOpen(true)}
+          onClick={() => setCreateAccountSheetOpen(true)}
           className="hidden md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-base transition-all"
         >
           <Icons.createAccount size={20} />
-          <span>Add credit card</span>
+          <span>Add account</span>
         </button>
-        <CreateCardSheet
-          open={createCardsSheetOpen}
-          onOpenChange={setCreateCardsSheetOpen}
-          className='hidden md:block'
+        <CreateAccountSheet
+          open={createAccountSheetOpen}
+          onOpenChange={setCreateAccountSheetOpen}
+          className="hidden md:block"
         />
 
-        <button
-          onClick={() => setCreateCardsDrawerOpen(true)}
+        <button 
+          onClick={() => setCreateAccountDrawerOpen(true)}
           className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"
         >
           <Icons.createAccount size={16} />
-          <span>Add credit card</span>
+          <span>Add account</span>
         </button>
-        <CreateCardDrawer
-          open={createCardsDrawerOpen}
-          onOpenChange={setCreateCardsDrawerOpen}
-          className='block md:hidden'
+        <CreateAccountDrawer
+          open={createAccountDrawerOpen}
+          onOpenChange={setCreateAccountDrawerOpen}
+          className="block md:hidden"
         />
       </div>
 
-      <EditCardSheet
-        open={editCardSheetOpen}
-        onOpenChange={setEditCardSheetOpen}
+      <EditAccountSheet
+        open={editAccountSheetOpen}
+        onOpenChange={setEditAccountSheetOpen}
         className='hidden md:block'
-        cardId={selectedCardId}
+        accountId={selectedAccountId}
       />
 
-      <EditCardDrawer
-        open={editCardDrawerOpen}
-        onOpenChange={setEditCardDrawerOpen}
+      <EditAccountDrawer
+        open={editAccountDrawerOpen}
+        onOpenChange={setEditAccountDrawerOpen}
         className='block md:hidden'
-        cardId={selectedCardId}
+        accountId={selectedAccountId}
       />
 
       {isLoading ? (
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
-          {Array.from({ length: 3 }, (_, index) => (
-            <SkeletonCardCard key={index} />
+        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'>
+          {Array.from({ length: 4 }, (_, index) => (
+            <SkeletonAccountCard key={index} />
           ))}
         </div>
       ) : error ? (
@@ -88,7 +88,7 @@ const Cards = () => {
             strokeWidth={1.25}
           />
           <div className='flex flex-col px-4 items-center justify-center gap-3 text-center'>
-            <p className='text-2xl min-md:text-4xl font-semibold'>Failed to load credit cards</p>
+            <p className='text-2xl min-md:text-4xl font-semibold'>Failed to load accounts</p>
             <p className='text-muted-foreground'>{error}</p>
           </div>
           <Button
@@ -98,47 +98,48 @@ const Cards = () => {
             Try again
           </Button>
         </div>
-      ) : cards.length === 0 ? (
+      ) : accounts.length === 0 ? (
         <div className='flex-1 flex flex-col items-center justify-center py-16'>
-          <Icons.creditCardIcon
+          <Icons.wallet
             className='h-24 w-24 mb-10'
             strokeWidth={1.25}
           />
           <div className='flex flex-col px-4 items-center justify-center gap-3 text-center'>
-            <p className='text-2xl min-md:text-4xl font-semibold'>No credit cards, yet.</p>
-            <p className='text-muted-foreground'>You have no credit cards, yet! Start tracking your credit cards by adding one.</p>
+            <p className='text-2xl min-md:text-4xl font-semibold'>No accounts, yet.</p>
+            <p className='text-muted-foreground'>You have no accounts, yet! Start managing your finances by adding an account.</p>
           </div>
           <Button
-            onClick={() => setCreateCardsSheetOpen(true)}
+            onClick={() => setCreateAccountSheetOpen(true)}
             className="hidden md:flex mt-10 text-lg px-6 py-6"
           >
-            Add your first credit card
+            Create your first account
           </Button>
-          
+
           {/* Mobile button */}
           <Button
-            onClick={() => setCreateCardsDrawerOpen(true)}
+            onClick={() => setCreateAccountDrawerOpen(true)}
             className="flex md:hidden mt-10"
           >
-            Add your first credit card
+            Create your first account
           </Button>
         </div>
       ) : (
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
-          {cards.map((card) => (
-            <CreditCardCard
-              key={card.name}
-              name={card.name}
-              statementDate={card.statementDate}
-              dueDate={card.dueDate}
-              currentBalance={card.currentBalance}
-              onClick={() => handleCardClick(card.id)}
+        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'>
+          {accounts.map((account) => (
+            <AccountCard
+              key={account.id}
+              accountType={account.accountType}
+              addToNetWorth={account.addToNetWorth}
+              currentBalance={account.currentBalance}
+              name={account.name}
+              onClick={() => handleAccountClick(account.id)}
             />
           ))}
         </div>
       )}
+
     </div>
   )
 }
 
-export default Cards
+export default Accounts
