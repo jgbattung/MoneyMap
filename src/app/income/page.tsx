@@ -124,6 +124,15 @@ const Income = () => {
         incomeTypeId={selectedIncomeTypeId}
       />
 
+      <div className="my-3 md:my-6 lg:mt-12 lg:mb-6">
+        <h2 className="text-lg font-semibold md:text-xl lg:text-2xl">
+          Income Categories
+        </h2>
+        <p className="text-muted-foreground mt-2 text-sm md:text-base">
+          Track your income sources and monthly targets.
+        </p>
+      </div>
+
       {isLoading ? (
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
           {Array.from({ length: 4 }, (_, index) => (
@@ -173,7 +182,7 @@ const Income = () => {
         </Button>
       </div>
       ) : (
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
         {sortedIncomeTypes
           .filter(income => income.name.toLowerCase() !== 'uncategorized')
           .map((income) => {
@@ -193,7 +202,7 @@ const Income = () => {
       )}
 
       <div>
-        <div className="my-3 md:my-6 lg:my-12">
+        <div className="my-3 md:my-6 lg:mt-12 lg:mb-6">
           <h2 className="text-lg font-semibold md:text-xl lg:text-2xl">
             Income Transactions
           </h2>

@@ -98,6 +98,8 @@ const ExpenseCard = ({
       </p>
 
       <div className='flex items-end justify-between'>
+        <p className='text-muted-foreground text-xs'>{displayDate}</p>
+
         {isInstallment && (
           <div className='flex items-center justify-center'>
             <button

@@ -4,13 +4,16 @@ import React, { useState } from 'react'
 import { Icons } from '../icons'
 import { navRoutes } from '@/app/constants/navigation'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import CreateIncomeTransactionSheet from '../forms/CreateIncomeTransactionSheet'
 import CreateTransferSheet from '../forms/CreateTransferSheet'
 import CreateExpenseTransactionSheet from '../forms/CreateExpenseTransactionSheet'
+import { useSession, signOut } from '@/lib/auth-client'
 
 const Sidebar = () => {
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session } = useSession();
   const [createIncomeTransactionSheetOpen, setCreateIncomeTransactionSheetOpen] = useState(false);
   const [createTransferSheetOpen, setCreateTransferSheetOpen] = useState(false);
   const [createExpenseSheetOpen, setCreateExpenseSheetOpen] = useState(false);
@@ -27,12 +30,35 @@ const Sidebar = () => {
     setCreateExpenseSheetOpen(true);
   }
 
+  const handleLogout = () => {
+    signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          router.push("/sign-in")
+        }
+      }
+    });
+  };
+
+  const getUserInitial = () => {
+    if (session?.user?.name) {
+      return session.user.name.charAt(0).toUpperCase();
+    }
+    if (session?.user?.email) {
+      return session.user.email.charAt(0).toUpperCase();
+    }
+    return 'U';
+  };
+
   return (
     <>
       <div
         className="hidden md:flex flex-col px-5 w-56 bg-background border-r-2 border-secondary-700">
-        <div className='pt-6'>
-          HEADER
+        <div className='pt-6 pb-4'>
+          <h1 className='text-2xl font-bold tracking-tight'>
+            <span className='text-primary'>Money</span>
+            <span className='text-white'>Map</span>
+          </h1>
         </div>
 
         <div className='flex-1 flex flex-col justify-center overflow-y-auto'>
@@ -98,8 +124,24 @@ const Sidebar = () => {
           </div>
         </div>
 
-        <div className='pb-6'>
-          FOOTER
+        <div className='pb-6 flex items-center justify-between'>
+          <div className='flex items-center gap-2'>
+            <div className='w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold'>
+              {getUserInitial()}
+            </div>
+            <div className='flex flex-col'>
+              <p className='text-sm font-medium truncate max-w-[120px]'>
+                {session?.user?.name || session?.user?.email}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className='p-2 hover:bg-white/10 rounded-md transition-colors'
+            title='Logout'
+          >
+            <Icons.logOut size={20} />
+          </button>
         </div>
       </div>
       
