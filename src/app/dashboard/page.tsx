@@ -23,7 +23,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className='py-6 px-4 flex flex-col gap-4 mx-auto'>
+    <div className='py-6 px-4 pb-20 md:pb-6 flex flex-col gap-4 mx-auto'>
       <div className='flex justify-between items-center'>
         <h1 className='text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold'>Dashboard</h1>
         
