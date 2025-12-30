@@ -14,6 +14,8 @@ export const AccountValidation = z.object({
     "CRYPTO",
     "RETIREMENT",
     "REAL_ESTATE",
+    "PAYROLL",
+    "E_WALLET",
     "OTHER"
   ], {
     message: "Please select an account type"

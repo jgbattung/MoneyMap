@@ -85,6 +85,8 @@ function formatAccountType(type: string): string {
     CRYPTO: "Crypto",
     RETIREMENT: "Retirement",
     REAL_ESTATE: "Real Estate",
+    PAYROLL: "Payroll",
+    E_WALLET: "E-Wallet",
     OTHER: "Other",
   };
 

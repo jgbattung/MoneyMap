@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 type Account = {
   id: string;
   name: string;
-  accountType: "CHECKING" | "SAVINGS" | "CREDIT_CARD" | "INVESTMENT" | "CASH" | "CRYPTO" | "RETIREMENT" | "REAL_ESTATE" | "OTHER";
+  accountType: "CHECKING" | "SAVINGS" | "CREDIT_CARD" | "INVESTMENT" | "CASH" | "CRYPTO" | "RETIREMENT" | "REAL_ESTATE" | "PAYROLL" | "E_WALLET" | "OTHER";
   currentBalance: string;
   initialBalance: string;
   addToNetWorth: boolean;

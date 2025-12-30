@@ -36,6 +36,7 @@ interface AssetCategory {
 }
 
 // Color mapping for each account type
+// Color mapping for each account type
 const CATEGORY_COLORS: Record<string, string> = {
   CHECKING: "var(--chart-1)",      // Teal
   SAVINGS: "var(--chart-2)",       // Gold
@@ -44,9 +45,12 @@ const CATEGORY_COLORS: Record<string, string> = {
   CRYPTO: "var(--chart-5)",        // Slate
   RETIREMENT: "var(--chart-6)",    // Purple
   REAL_ESTATE: "var(--chart-7)",   // Orange
+  PAYROLL: "var(--chart-9)",       // Cyan
+  E_WALLET: "var(--chart-10)",     // Mint Green
   OTHER: "var(--chart-8)",         // Blue
 };
 
+// Format account type names
 // Format account type names
 function formatAccountType(type: string): string {
   const typeMap: Record<string, string> = {
@@ -57,6 +61,8 @@ function formatAccountType(type: string): string {
     CRYPTO: "Crypto",
     RETIREMENT: "Retirement",
     REAL_ESTATE: "Real Estate",
+    PAYROLL: "Payroll",
+    E_WALLET: "E-Wallet",
     OTHER: "Other",
   };
 

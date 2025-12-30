@@ -96,6 +96,8 @@ enum AccountType {
   CRYPTO
   RETIREMENT
   REAL_ESTATE
+  PAYROLL
+  E_WALLET
   OTHER
 }
 
