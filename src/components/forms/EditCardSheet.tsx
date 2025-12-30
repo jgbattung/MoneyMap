@@ -214,6 +214,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
                       <Select
                         onValueChange={(value) => field.onChange(parseInt(value))}
                         defaultValue={field.value?.toString()}
+                        key={field.value?.toString() || 'statement-date-select'}
                         disabled={isUpdating}  
                       >
                         <SelectTrigger className="w-full">
@@ -245,6 +246,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
                       <Select
                         onValueChange={(value) => field.onChange(parseInt(value))}
                         defaultValue={field.value?.toString()}
+                        key={field.value?.toString() || 'due-date-select'}
                         disabled={isUpdating}  
                       >
                         <SelectTrigger className="w-full">

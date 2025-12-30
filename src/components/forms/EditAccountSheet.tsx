@@ -170,7 +170,12 @@ const EditAccountSheet = ({ open, onOpenChange, className, accountId }: EditAcco
                 render={({ field }) => (
                   <FormItem className="p-4">
                     <FormLabel>Account type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isUpdating}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      key={field.value || 'account-type-select'}
+                      disabled={isUpdating}
+                    >
                       <FormControl>
                         <SelectTrigger className='w-full'>
                           <SelectValue placeholder="Select account type" />
