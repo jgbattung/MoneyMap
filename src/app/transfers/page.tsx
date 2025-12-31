@@ -18,7 +18,7 @@ const Transactions = () => {
   };
 
   return (
-    <div className="max-w-7xl px-4 py-6 pb-20 md:pb-6 flex flex-col">
+    <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col">
       <h1 className="text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold">Transfers</h1>
       
       <div className="my-3 md:my-6 lg:my-8">

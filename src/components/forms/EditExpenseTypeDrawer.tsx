@@ -20,6 +20,7 @@ interface EditExpenseTypeDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   budgetId: string;
+  className?: string;
 }
 
 type Subcategory = {
@@ -30,7 +31,7 @@ type Subcategory = {
   originalName?: string; // for tracking changes
 };
 
-const EditExpenseTypeDrawer = ({ open, onOpenChange, budgetId }: EditExpenseTypeDrawerProps) => {
+const EditExpenseTypeDrawer = ({ open, onOpenChange, budgetId, className }: EditExpenseTypeDrawerProps) => {
   const { updateBudget, isUpdating, deleteBudget, isDeleting } = useExpenseTypesQuery();
   const { budgetData, isFetching, error } = useExpenseTypeQuery(budgetId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -235,7 +236,7 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, budgetId }: EditExpenseType
         <DrawerContent
           onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
           onInteractOutside={(e) => isUpdating && e.preventDefault()}
-          className="h-[85vh]"
+          className={`h-[85vh] ${className || ''}`}
         >
           {isFetching ? (
             <SkeletonEditBudgetDrawerForm />
