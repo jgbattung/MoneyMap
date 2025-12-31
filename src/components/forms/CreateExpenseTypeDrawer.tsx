@@ -16,6 +16,7 @@ import { Plus, X } from "lucide-react";
 interface CreateExpenseTypeDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  className?: string;
 }
 
 type Subcategory = {
@@ -23,7 +24,7 @@ type Subcategory = {
   name: string;
 };
 
-const CreateExpenseTypeDrawer = ({ open, onOpenChange }: CreateExpenseTypeDrawerProps) => {
+const CreateExpenseTypeDrawer = ({ open, onOpenChange, className }: CreateExpenseTypeDrawerProps) => {
   const { createBudget, isCreating } = useExpenseTypesQuery();
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [newSubcategoryName, setNewSubcategoryName] = useState("");
@@ -97,7 +98,7 @@ const CreateExpenseTypeDrawer = ({ open, onOpenChange }: CreateExpenseTypeDrawer
       <DrawerContent
         onEscapeKeyDown={(e) => isCreating && e.preventDefault()}
         onInteractOutside={(e) => isCreating && e.preventDefault()}
-        className="h-[85vh]"
+        className={`h-[85vh] ${className || ''}`}
       >
         <Form {...form}>
           <form
