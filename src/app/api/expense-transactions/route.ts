@@ -73,6 +73,9 @@ export async function POST(request: NextRequest) {
       parentInstallmentId,
     } = body;
 
+    console.log('📅 Received date from client:', date);
+    console.log('📅 After normalizeToUTC:', normalizeToUTC(date));
+
     if (!name || !amount || !accountId || !expenseTypeId) {
       return NextResponse.json(
         { error: 'Missing required fields: name, amount, accountId, expenseTypeId' },
