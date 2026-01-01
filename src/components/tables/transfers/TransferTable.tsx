@@ -21,6 +21,7 @@ import { TransferTransaction, useTransfersQuery } from '@/hooks/useTransferTrans
 import { useTransferTypesQuery } from '@/hooks/useTransferTypesQuery';
 import SkeletonTransferTable from '@/components/shared/SkeletonTransferTable';
 import DeleteDialog from '@/components/shared/DeleteDialog';
+import { formatDateForAPI } from '@/lib/utils';
 
 const columnHelper = createColumnHelper<TransferTransaction>();
 
@@ -46,9 +47,9 @@ const CellContent = ({ getValue, row, column, table }: any) => {
   
   const onDateChange = (date: Date | undefined) => {
     if (date) {
-      const isoDate = date.toISOString();
-      setValue(isoDate);
-      tableMeta?.updateData(row.index, column.id, isoDate);
+      const dateString = formatDateForAPI(date);
+      setValue(dateString);
+      tableMeta?.updateData(row.index, column.id, dateString);
       setCalendarOpen(false);
     }
   }
