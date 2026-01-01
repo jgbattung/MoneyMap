@@ -114,3 +114,8 @@ export function calculateAssetCategories(accounts: Account[]): AssetCategory[] {
 
   return categories;
 }
+
+export const formatDateForAPI = (date: Date | null | undefined): string | undefined => {
+  if (!date) return undefined;
+  return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+};
