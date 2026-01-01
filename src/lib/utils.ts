@@ -114,3 +114,13 @@ export function calculateAssetCategories(accounts: Account[]): AssetCategory[] {
 
   return categories;
 }
+
+export function normalizeToUTC(dateInput: string | Date): Date {
+  const date = new Date(dateInput);
+  return new Date(Date.UTC(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    0, 0, 0, 0
+  ));
+}
