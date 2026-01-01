@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import { normalizeToUTC } from "@/lib/utils";
 
 export async function GET() {
   try {
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
           amount: parseFloat(amount),
           accountId,
           incomeTypeId,
-          date: new Date(date),
+          date: normalizeToUTC(date),
           description: description || null,
         },
         include: {

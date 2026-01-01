@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
+import { normalizeToUTC } from "@/lib/utils";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -142,7 +143,7 @@ export async function PATCH(
             expenseTypeId: transferFeeType.id,
             name: `Transfer fee: ${name}`,
             amount: newFeeAmount,
-            date: new Date(date),
+            date: normalizeToUTC(date),
             description: `Deducted from ${fromAccount?.name}`,
           },
         });
@@ -182,7 +183,7 @@ export async function PATCH(
               accountId: fromAccountId,
               name: `Transfer fee: ${name}`,
               amount: newFeeAmount,
-              date: new Date(date),
+              date: normalizeToUTC(date),
               description: `Deducted from ${fromAccount?.name}`,
             },
           });
@@ -254,7 +255,7 @@ export async function PATCH(
           fromAccountId,
           toAccountId,
           transferTypeId,
-          date: new Date(date),
+          date: normalizeToUTC(date),
           notes: notes || null,
           feeAmount: newFeeAmount,
           feeExpenseId: newFeeExpenseId,

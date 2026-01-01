@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import { normalizeToUTC } from "@/lib/utils";
 
 export async function GET() {
   try {
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
             expenseTypeId: transferFeeType.id,
             name: `Transfer fee: ${name}`,
             amount: parseFloat(feeAmount),
-            date: new Date(date),
+            date: normalizeToUTC(date),
             description: `Deducted from ${fromAccount?.name}`,
           },
         });
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
           fromAccountId,
           toAccountId,
           transferTypeId,
-          date: new Date(date),
+          date: normalizeToUTC(date),
           notes: notes || null,
           feeAmount: feeAmount ? parseFloat(feeAmount) : null,
           feeExpenseId: feeExpenseId,
