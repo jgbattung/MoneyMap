@@ -24,6 +24,7 @@ import SkeletonEditTransferDrawerForm from "../shared/SkeletonEditTransferDrawer
 import DeleteDialog from "../shared/DeleteDialog";
 import { Separator } from "../ui/separator";
 import { Checkbox } from "../ui/checkbox";
+import { formatDateForAPI } from "@/lib/utils";
 
 interface EditTransferDrawerProps {
   open: boolean;
@@ -107,7 +108,13 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
 
   const onSubmit = async (values: z.infer<typeof TransferTransactionValidation>) => {
     try {
-      const updatedTransfer = await updateTransfer({ id: transferId, ...values });
+      const payload = {
+        id: transferId,
+        ...values,
+        date: formatDateForAPI(values.date),
+      };
+
+      const updatedTransfer = await updateTransfer(payload);
 
       toast.success("Transfer updated successfully", {
         description: `${updatedTransfer.name} has been updated.`,

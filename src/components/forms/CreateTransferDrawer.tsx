@@ -20,6 +20,7 @@ import { Textarea } from "../ui/textarea";
 import { format } from "date-fns";
 import { ScrollArea } from "../ui/scroll-area";
 import { Checkbox } from "../ui/checkbox";
+import { formatDateForAPI } from "@/lib/utils";
 
 interface CreateTransferDrawerProps {
   open: boolean;
@@ -92,7 +93,12 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
 
   const onSubmit = async (values: z.infer<typeof TransferTransactionValidation>) => {
     try {
-      const newTransfer = await createTransfer(values);
+      const payload = {
+        ...values,
+        date: formatDateForAPI(values.date),
+      };
+
+      const newTransfer = await createTransfer(payload);
 
       toast.success(`${newTransfer.name} has been added to your transfer transactions`);
       form.reset();

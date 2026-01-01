@@ -22,6 +22,7 @@ import { Label } from "../ui/label";
 import { useCardsQuery } from "@/hooks/useCardsQuery";
 import { Textarea } from "../ui/textarea";
 import { ScrollArea } from "../ui/scroll-area";
+import { formatDateForAPI } from "@/lib/utils";
 
 interface CreateExpenseTransactionProps {
   open: boolean;
@@ -76,6 +77,8 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
       const payload = {
         ...values,
         expenseSubcategoryId: values.expenseSubcategoryId === "none" ? undefined : values.expenseSubcategoryId,
+        date: values.date ? formatDateForAPI(values.date) : undefined,
+        installmentStartDate: values.installmentStartDate ? formatDateForAPI(values.installmentStartDate) : null,
       };
 
       const newExpenseTransaction = await createExpenseTransaction(payload);
