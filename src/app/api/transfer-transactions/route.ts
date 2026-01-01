@@ -152,6 +152,8 @@ export async function POST(request: NextRequest) {
       });
 
       return transfer;
+    }, {
+      timeout: 10000,
     });
 
     return NextResponse.json(result, { status: 201 });
