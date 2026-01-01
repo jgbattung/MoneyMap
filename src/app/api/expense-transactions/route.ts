@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { INSTALLMENT_STATUS } from "./[id]/route";
+import { normalizeToUTC } from "@/lib/utils";
 
 export async function GET() {
   try {
@@ -137,13 +138,13 @@ export async function POST(request: NextRequest) {
           expenseTypeId,
           expenseSubcategoryId: expenseSubcategoryId || null,
           date: isInstallment
-            ? new Date(installmentStartDate)
-            : new Date(date),
+            ? normalizeToUTC(installmentStartDate)
+            : normalizeToUTC(date),
           description: description || null,
           isInstallment: isInstallment || false,
           installmentDuration: installmentDuration ? parseInt(installmentDuration) : null,
           remainingInstallments: remainingInstallments,
-          installmentStartDate: installmentStartDate ? new Date(installmentStartDate) : null,
+          installmentStartDate: installmentStartDate ? normalizeToUTC(installmentStartDate) : null,
           monthlyAmount,
           isSystemGenerated: isSystemGenerated || false,
           parentInstallmentId: parentInstallmentId || null,
@@ -167,7 +168,7 @@ export async function POST(request: NextRequest) {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
 
-          const startDate = new Date(installmentStartDate);
+          const startDate = normalizeToUTC(installmentStartDate);
           startDate.setHours(0, 0, 0, 0);
 
           if (startDate <= today) {
