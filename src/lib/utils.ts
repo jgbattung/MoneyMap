@@ -114,14 +114,3 @@ export function calculateAssetCategories(accounts: Account[]): AssetCategory[] {
 
   return categories;
 }
-
-// Helper function to normalize date to UTC midnight
-export function normalizeToUTC(dateInput: string | Date): Date {
-  const date = new Date(dateInput);
-  return new Date(Date.UTC(
-    date.getUTCFullYear(),
-    date.getUTCMonth(),
-    date.getUTCDate(),
-    0, 0, 0, 0
-  ));
-}

@@ -1,6 +1,5 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
-import { normalizeToUTC } from "@/lib/utils";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -104,7 +103,7 @@ export async function PATCH(
           amount: newAmount,
           accountId,
           incomeTypeId,
-          date: normalizeToUTC(date),
+          date: new Date(date),
           description: description || null,
         },
         include: {
