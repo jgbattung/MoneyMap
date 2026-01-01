@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery';
 import SkeletonTable from '@/components/shared/SkeletonTable';
 import DeleteDialog from '@/components/shared/DeleteDialog';
+import { formatDateForAPI } from '@/lib/utils';
 
 const columnHelper = createColumnHelper<IncomeTransaction>();
 
@@ -46,9 +47,9 @@ const CellContent = ({ getValue, row, column, table }: any) => {
   
   const onDateChange = (date: Date | undefined) => {
     if (date) {
-      const isoDate = date.toISOString();
-      setValue(isoDate);
-      tableMeta?.updateData(row.index, column.id, isoDate);
+      const dateString = formatDateForAPI(date);
+      setValue(dateString);
+      tableMeta?.updateData(row.index, column.id, dateString);
       setCalendarOpen(false);
     }
   }

@@ -23,6 +23,7 @@ import { Calendar } from '../ui/calendar';
 import { ChevronDownIcon } from "lucide-react";
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
+import { formatDateForAPI } from '@/lib/utils';
 
 interface CreateExpenseTransactionProps {
   open: boolean;
@@ -106,10 +107,12 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
   const onSubmit = async (values: z.infer<typeof createExpenseTransactionSchema>) => {
     try {
       // Convert "none" to undefined for optional subcategory
-      const payload = {
-        ...values,
-        expenseSubcategoryId: values.expenseSubcategoryId === "none" ? undefined : values.expenseSubcategoryId,
-      };
+    const payload = {
+      ...values,
+      expenseSubcategoryId: values.expenseSubcategoryId === "none" ? undefined : values.expenseSubcategoryId,
+      date: values.date ? formatDateForAPI(values.date) : undefined,
+      installmentStartDate: values.installmentStartDate ? formatDateForAPI(values.installmentStartDate) : null,
+    };
 
       const newExpenseTransaction = await createExpenseTransaction(payload);
 

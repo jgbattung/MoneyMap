@@ -26,6 +26,7 @@ import { Label } from '../ui/label';
 import SkeletonEditExpenseDrawerForm from '../shared/SkeletonEditExpenseDrawerForm';
 import DeleteDialog from '../shared/DeleteDialog';
 import { Separator } from '../ui/separator';
+import { formatDateForAPI } from '@/lib/utils';
 
 interface EditExpenseDrawerProps {
   open: boolean;
@@ -128,6 +129,8 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
         id: expenseId,
         ...values,
         expenseSubcategoryId: values.expenseSubcategoryId === "none" ? undefined : values.expenseSubcategoryId,
+        date: values.date ? formatDateForAPI(values.date) : undefined,
+        installmentStartDate: values.installmentStartDate ? formatDateForAPI(values.installmentStartDate) : null,
       };
 
       const updatedExpense = await updateExpenseTransaction(payload);

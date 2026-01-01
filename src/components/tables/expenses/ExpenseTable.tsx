@@ -14,6 +14,7 @@ import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 import { useCardsQuery } from '@/hooks/useCardsQuery';
 import { ExpenseTransaction, useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery';
 import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery';
+import { formatDateForAPI } from '@/lib/utils';
 import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
 import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
@@ -49,9 +50,9 @@ const CellContent = ({ getValue, row, column, table }: any) => {
   
   const onDateChange = (date: Date | undefined) => {
     if (date) {
-      const isoDate = date.toISOString();
-      setValue(isoDate);
-      tableMeta?.updateData(row.index, column.id, isoDate);
+      const dateString = formatDateForAPI(date);
+      setValue(dateString);
+      tableMeta?.updateData(row.index, column.id, dateString);
       setCalendarOpen(false);
     }
   }

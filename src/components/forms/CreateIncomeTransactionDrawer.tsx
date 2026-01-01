@@ -19,6 +19,7 @@ import { Calendar } from "../ui/calendar";
 import { Textarea } from "../ui/textarea";
 import { format } from "date-fns";
 import { ScrollArea } from "../ui/scroll-area";
+import { formatDateForAPI } from "@/lib/utils";
 
 interface CreateIncomeTransactionProps {
   open: boolean;
@@ -78,7 +79,12 @@ const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: Create
 
   const onSubmit = async (values: z.infer<typeof IncomeTransactionValidation>) => {
     try {
-      const newIncomeTransaction = await createIncomeTransaction(values);
+      const payload = {
+        ...values,
+        date: formatDateForAPI(values.date),
+      };
+
+      const newIncomeTransaction = await createIncomeTransaction(payload);
 
       toast.success("Income type created successfully", {
         description: `${newIncomeTransaction.name} has been added to your income transactions.`,

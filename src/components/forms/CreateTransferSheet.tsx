@@ -19,6 +19,7 @@ import { Textarea } from "../ui/textarea";
 import { format } from "date-fns";
 import { TransferTransactionValidation } from "@/lib/validations/transfer-transactions";
 import { Checkbox } from "../ui/checkbox";
+import { formatDateForAPI } from "@/lib/utils";
 
 interface CreateTransferSheetProps {
   open: boolean;
@@ -59,7 +60,12 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
 
   const onSubmit = async (values: z.infer<typeof TransferTransactionValidation>) => {
     try {
-      const newTransfer = await createTransfer(values);
+      const payload = {
+        ...values,
+        date: formatDateForAPI(values.date),
+      };
+
+      const newTransfer = await createTransfer(payload);
 
       toast.success(`${newTransfer.name} has been added to your transfer transactions`);
       form.reset();
