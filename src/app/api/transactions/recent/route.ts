@@ -97,7 +97,7 @@ export async function GET() {
       accountName: transfer.fromAccount.name,
       categoryId: transfer.transferTypeId,
       categoryName: transfer.transferType.name,
-      toAccountId: transfer.toAccountId,
+      toAccountId: transfer.toAccountId, 
       toAccountName: transfer.toAccount.name,
     }));
 
