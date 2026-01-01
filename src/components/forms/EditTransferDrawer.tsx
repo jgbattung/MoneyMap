@@ -107,7 +107,13 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
 
   const onSubmit = async (values: z.infer<typeof TransferTransactionValidation>) => {
     try {
-      const updatedTransfer = await updateTransfer({ id: transferId, ...values });
+      const payload = {
+        id: transferId,
+        ...values,
+        date: values.date.toISOString().split('T')[0],
+      };
+
+      const updatedTransfer = await updateTransfer(payload);
 
       toast.success("Transfer updated successfully", {
         description: `${updatedTransfer.name} has been updated.`,

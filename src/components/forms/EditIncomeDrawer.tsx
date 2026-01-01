@@ -86,7 +86,13 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
 
   const onSubmit = async (values: z.infer<typeof IncomeTransactionValidation>) => {
     try {
-      const updatedIncome = await updateIncomeTransaction({ id: incomeTransactionId, ...values });
+      const payload = {
+        id: incomeTransactionId,
+        ...values,
+        date: values.date.toISOString().split('T')[0],
+      };
+
+      const updatedIncome = await updateIncomeTransaction(payload);
 
       toast.success("Income has been updated successfully", {
         description: `${updatedIncome.name} has been updated.`,

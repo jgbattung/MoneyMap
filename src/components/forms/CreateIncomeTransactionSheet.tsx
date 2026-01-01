@@ -46,7 +46,12 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
 
   const onSubmit = async (values: z.infer<typeof IncomeTransactionValidation>) => {
     try {
-      const newIncomeTransaction = await createIncomeTransaction(values);
+      const payload = {
+        ...values,
+        date: values.date.toISOString().split('T')[0],
+      };
+
+      const newIncomeTransaction = await createIncomeTransaction(payload);
 
       toast.success("Income transaction created successfully", {
         description: `${newIncomeTransaction.name} has been added to your income transactions.`,

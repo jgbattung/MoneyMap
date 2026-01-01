@@ -46,9 +46,9 @@ const CellContent = ({ getValue, row, column, table }: any) => {
   
   const onDateChange = (date: Date | undefined) => {
     if (date) {
-      const isoDate = date.toISOString();
-      setValue(isoDate);
-      tableMeta?.updateData(row.index, column.id, isoDate);
+      const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD
+      setValue(dateString);
+      tableMeta?.updateData(row.index, column.id, dateString);
       setCalendarOpen(false);
     }
   }

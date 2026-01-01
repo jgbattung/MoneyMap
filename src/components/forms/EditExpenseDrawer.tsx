@@ -124,11 +124,13 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
   const onSubmit = async (values: z.infer<typeof createExpenseTransactionSchema>) => {
     try {
       // Convert "none" to undefined for optional subcategory
-      const payload = {
-        id: expenseId,
-        ...values,
-        expenseSubcategoryId: values.expenseSubcategoryId === "none" ? undefined : values.expenseSubcategoryId,
-      };
+    const payload = {
+      id: expenseId,
+      ...values,
+      expenseSubcategoryId: values.expenseSubcategoryId === "none" ? undefined : values.expenseSubcategoryId,
+      date: values.date ? values.date.toISOString().split('T')[0] : undefined,
+      installmentStartDate: values.installmentStartDate ? values.installmentStartDate.toISOString().split('T')[0] : null,
+    };
 
       const updatedExpense = await updateExpenseTransaction(payload);
 

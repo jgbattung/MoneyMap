@@ -59,7 +59,12 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
 
   const onSubmit = async (values: z.infer<typeof TransferTransactionValidation>) => {
     try {
-      const newTransfer = await createTransfer(values);
+      const payload = {
+        ...values,
+        date: values.date.toISOString().split('T')[0],
+      };
+      
+      const newTransfer = await createTransfer(payload);
 
       toast.success(`${newTransfer.name} has been added to your transfer transactions`);
       form.reset();

@@ -76,6 +76,8 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
       const payload = {
         ...values,
         expenseSubcategoryId: values.expenseSubcategoryId === "none" ? undefined : values.expenseSubcategoryId,
+        date: values.date ? values.date.toISOString().split('T')[0] : undefined,
+        installmentStartDate: values.installmentStartDate ? values.installmentStartDate.toISOString().split('T')[0] : null,
       };
 
       const newExpenseTransaction = await createExpenseTransaction(payload);
