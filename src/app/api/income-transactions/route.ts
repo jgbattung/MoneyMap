@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
           amount: parseFloat(amount),
           accountId,
           incomeTypeId,
-          date: new Date(date),
+          date: date,
           description: description || null,
         },
         include: {

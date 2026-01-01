@@ -142,7 +142,7 @@ export async function PATCH(
             expenseTypeId: transferFeeType.id,
             name: `Transfer fee: ${name}`,
             amount: newFeeAmount,
-            date: new Date(date),
+            date: date,
             description: `Deducted from ${fromAccount?.name}`,
           },
         });
@@ -182,7 +182,7 @@ export async function PATCH(
               accountId: fromAccountId,
               name: `Transfer fee: ${name}`,
               amount: newFeeAmount,
-              date: new Date(date),
+              date: date,
               description: `Deducted from ${fromAccount?.name}`,
             },
           });
@@ -254,7 +254,7 @@ export async function PATCH(
           fromAccountId,
           toAccountId,
           transferTypeId,
-          date: new Date(date),
+          date: date,
           notes: notes || null,
           feeAmount: newFeeAmount,
           feeExpenseId: newFeeExpenseId,

@@ -140,13 +140,13 @@ export async function POST(request: NextRequest) {
           expenseTypeId,
           expenseSubcategoryId: expenseSubcategoryId || null,
           date: isInstallment
-            ? new Date(installmentStartDate)
-            : new Date(date),
+            ? installmentStartDate
+            : date,
           description: description || null,
           isInstallment: isInstallment || false,
           installmentDuration: installmentDuration ? parseInt(installmentDuration) : null,
           remainingInstallments: remainingInstallments,
-          installmentStartDate: installmentStartDate ? new Date(installmentStartDate) : null,
+          installmentStartDate: installmentStartDate || null,
           monthlyAmount,
           isSystemGenerated: isSystemGenerated || false,
           parentInstallmentId: parentInstallmentId || null,
@@ -167,11 +167,8 @@ export async function POST(request: NextRequest) {
             },
           });
         } else {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-
-          const startDate = new Date(installmentStartDate);
-          startDate.setHours(0, 0, 0, 0);
+          const today = new Date().toISOString().split('T')[0];
+          const startDate = installmentStartDate;
 
           if (startDate <= today) {
             await tx.financialAccount.update({
@@ -191,7 +188,7 @@ export async function POST(request: NextRequest) {
                 id: expenseTransaction.id,
               },
               data: {
-                lastProcessedDate: startDate,
+                lastProcessedDate: installmentStartDate,
                 remainingInstallments: {
                   decrement: 1,
                 }

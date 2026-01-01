@@ -28,8 +28,11 @@ export async function GET(req: NextRequest) {
     const userId = session.user.id;
 
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+    const startOfMonth = `${year}-${month}-01`;
+    const endOfMonth = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
 
     const expenseTypes = await db.expenseType.findMany({
       where: {

@@ -20,11 +20,21 @@ export async function GET(req: NextRequest) {
 
     // Calculate date ranges
     const now = new Date();
-    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-    
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+
+    // Current month
+    const currentYear = now.getFullYear();
+    const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+    const currentMonthLastDay = new Date(currentYear, now.getMonth() + 1, 0).getDate();
+    const currentMonthStart = `${currentYear}-${currentMonth}-01`;
+    const currentMonthEnd = `${currentYear}-${currentMonth}-${String(currentMonthLastDay).padStart(2, '0')}`;
+
+    // Last month
+    const lastMonthDate = new Date(currentYear, now.getMonth() - 1, 1);
+    const lastYear = lastMonthDate.getFullYear();
+    const lastMonth = String(lastMonthDate.getMonth() + 1).padStart(2, '0');
+    const lastMonthLastDay = new Date(lastYear, lastMonthDate.getMonth() + 1, 0).getDate();
+    const lastMonthStart = `${lastYear}-${lastMonth}-01`;
+    const lastMonthEnd = `${lastYear}-${lastMonth}-${String(lastMonthLastDay).padStart(2, '0')}`;
 
     // Fetch current month transactions
     const [currentMonthIncome, currentMonthExpenses] = await Promise.all([

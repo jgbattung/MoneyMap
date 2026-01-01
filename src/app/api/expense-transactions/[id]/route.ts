@@ -132,10 +132,10 @@ export async function PATCH(
       if (name !== undefined) updateData.name = name;
       if (expenseTypeId !== undefined) updateData.expenseTypeId = expenseTypeId;
       if (expenseSubcategoryId !== undefined) updateData.expenseSubcategoryId = expenseSubcategoryId;
-      if (date !== undefined) updateData.date = new Date(date);
+      if (date !== undefined) updateData.date = date;
       if (description !== undefined) updateData.description = description || null;
       if (isInstallment !== undefined) updateData.isInstallment = isInstallment;
-      if (installmentStartDate !== undefined) updateData.installmentStartDate = installmentStartDate ? new Date(installmentStartDate) : null;
+      if (installmentStartDate !== undefined) updateData.installmentStartDate = installmentStartDate || null;
       if (remainingInstallments !== undefined) updateData.remainingInstallments = parseInt(remainingInstallments);
 
       if (amount !== undefined) {

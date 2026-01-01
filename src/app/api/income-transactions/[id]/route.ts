@@ -103,7 +103,7 @@ export async function PATCH(
           amount: newAmount,
           accountId,
           incomeTypeId,
-          date: new Date(date),
+          date: date,
           description: description || null,
         },
         include: {
