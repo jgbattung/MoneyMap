@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -36,7 +33,7 @@ model User {
   expenseTransactions    ExpenseTransaction[]
 
   netWorthTarget     Decimal?  @db.Decimal(15, 2)
-  netWorthTargetDate DateTime?
+  netWorthTargetDate String?   // CHANGED: DateTime? → String?
 
   @@unique([email])
   @@map("user")
@@ -167,15 +164,15 @@ model ExpenseTransaction {
   expenseSubcategoryId  String?         @map("expense_subcategory_id")
   name                  String
   amount                Decimal         @db.Decimal(15, 2)
-  date                  DateTime
+  date                  String          // CHANGED: DateTime → String
   description           String?
   
   isInstallment         Boolean         @default(false) @map("is_installment")
   installmentDuration   Int?            @map("installment_duration")
   remainingInstallments Int?            @map("remaining_installments")
-  installmentStartDate  DateTime?       @map("installment_start_date")
+  installmentStartDate  String?         @map("installment_start_date")  // CHANGED: DateTime? → String?
   monthlyAmount         Decimal?        @map("monthly_amount") @db.Decimal(15, 2)
-  lastProcessedDate     DateTime?       @map("last_processed_date")
+  lastProcessedDate     String?         @map("last_processed_date")  // CHANGED: DateTime? → String?
   isSystemGenerated     Boolean         @default(false) @map("is_system_generated")
   parentInstallmentId   String?         @map("parent_installment_id")
   installmentStatus     String?         @default("ACTIVE") @map("installment_status")
@@ -217,7 +214,7 @@ model IncomeTransaction {
   incomeTypeId  String          @map("income_type_id")
   name          String          @db.VarChar(100)
   amount        Decimal         @db.Decimal(15, 2)
-  date          DateTime
+  date          String          // CHANGED: DateTime → String
   description   String?         @db.Text
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
@@ -254,7 +251,7 @@ model TransferTransaction {
   fromAccountId   String   @map("from_account_id")
   toAccountId     String   @map("to_account_id")
   transferTypeId  String   @map("transfer_type_id")
-  date            DateTime
+  date            String
   notes           String?  @db.Text
   feeAmount       Decimal?           @map("fee_amount") @db.Decimal(15, 2)
   feeExpenseId    String?            @map("fee_expense_id") @unique
