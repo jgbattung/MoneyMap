@@ -3,7 +3,6 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { INSTALLMENT_STATUS } from "./[id]/route";
-import { normalizeToUTC } from "@/lib/utils";
 
 export async function GET() {
   try {
@@ -74,7 +73,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     console.log('📅 Received date from client:', date);
-    console.log('📅 After normalizeToUTC:', normalizeToUTC(date));
+    console.log('📅 After new Date:', new Date(date));
 
     if (!name || !amount || !accountId || !expenseTypeId) {
       return NextResponse.json(
@@ -141,13 +140,13 @@ export async function POST(request: NextRequest) {
           expenseTypeId,
           expenseSubcategoryId: expenseSubcategoryId || null,
           date: isInstallment
-            ? normalizeToUTC(installmentStartDate)
-            : normalizeToUTC(date),
+            ? new Date(installmentStartDate)
+            : new Date(date),
           description: description || null,
           isInstallment: isInstallment || false,
           installmentDuration: installmentDuration ? parseInt(installmentDuration) : null,
           remainingInstallments: remainingInstallments,
-          installmentStartDate: installmentStartDate ? normalizeToUTC(installmentStartDate) : null,
+          installmentStartDate: installmentStartDate ? new Date(installmentStartDate) : null,
           monthlyAmount,
           isSystemGenerated: isSystemGenerated || false,
           parentInstallmentId: parentInstallmentId || null,
@@ -171,7 +170,7 @@ export async function POST(request: NextRequest) {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
 
-          const startDate = normalizeToUTC(installmentStartDate);
+          const startDate = new Date(installmentStartDate);
           startDate.setHours(0, 0, 0, 0);
 
           if (startDate <= today) {

@@ -1,6 +1,5 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
-import { normalizeToUTC } from "@/lib/utils";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -133,7 +132,7 @@ export async function PATCH(
       if (name !== undefined) updateData.name = name;
       if (expenseTypeId !== undefined) updateData.expenseTypeId = expenseTypeId;
       if (expenseSubcategoryId !== undefined) updateData.expenseSubcategoryId = expenseSubcategoryId;
-      if (date !== undefined) updateData.date = normalizeToUTC(date);
+      if (date !== undefined) updateData.date = new Date(date);
       if (description !== undefined) updateData.description = description || null;
       if (isInstallment !== undefined) updateData.isInstallment = isInstallment;
       if (installmentStartDate !== undefined) updateData.installmentStartDate = installmentStartDate ? new Date(installmentStartDate) : null;
