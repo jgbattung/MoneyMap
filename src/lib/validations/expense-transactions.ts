@@ -10,7 +10,9 @@ export const ExpenseTransactionValidation = z.object({
     .refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
       message: "Amount must be a positive number",
     }),
-  date: z.date().optional(),
+  date: z.string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+    .optional(),
   description: z.string().optional(),
   
   isInstallment: z.boolean(),
@@ -19,7 +21,10 @@ export const ExpenseTransactionValidation = z.object({
     .positive("Duration must be positive")
     .optional()
     .nullable(),
-  installmentStartDate: z.date().optional().nullable(),
+  installmentStartDate: z.string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+    .optional()
+    .nullable(),
 });
 
 export const createExpenseTransactionSchema = ExpenseTransactionValidation.refine(
