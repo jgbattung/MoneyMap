@@ -268,6 +268,8 @@ export async function PATCH(
       });
 
       return updatedTransfer;
+    }, {
+      timeout: 10000,
     });
 
     return NextResponse.json(result, { status: 200 });
