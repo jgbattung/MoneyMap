@@ -82,6 +82,10 @@ export const useIncomeTransactionsQuery = () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.incomeTransactions });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['netWorth'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
     },
   });
 
@@ -91,6 +95,10 @@ export const useIncomeTransactionsQuery = () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.incomeTransactions });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['netWorth'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
     },
   });
 
@@ -100,6 +108,10 @@ export const useIncomeTransactionsQuery = () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.incomeTransactions });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['netWorth'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
     }
   })
 
@@ -113,6 +125,7 @@ export const useIncomeTransactionsQuery = () => {
     isCreating: createIncomeTransactionMutation.isPending,
     isUpdating: updateIncomeTransactionMutation.isPending,
     isDeleting: deleteIncomeTransactionMutation.isPending,
+  
   };
 };
 
