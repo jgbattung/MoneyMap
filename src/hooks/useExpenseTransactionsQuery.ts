@@ -92,6 +92,10 @@ export const useExpenseTransactionsQuery = () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['cards'] });
       queryClient.invalidateQueries({ queryKey: ['netWorth'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
     },
   });
 
@@ -102,6 +106,10 @@ export const useExpenseTransactionsQuery = () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['cards'] });
       queryClient.invalidateQueries({ queryKey: ['netWorth'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
     },
   });
 
@@ -112,6 +120,10 @@ export const useExpenseTransactionsQuery = () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['cards'] });
       queryClient.invalidateQueries({ queryKey: ['netWorth'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
     }
   })
 

@@ -96,6 +96,10 @@ export const useTransfersQuery = () => {
       queryClient.invalidateQueries({queryKey: QUERY_KEYS.transfers });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['netWorth'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
     },
   });
 
@@ -105,6 +109,10 @@ export const useTransfersQuery = () => {
       queryClient.invalidateQueries({queryKey: QUERY_KEYS.transfers });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['netWorth'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
     }
   });
 
@@ -114,6 +122,10 @@ export const useTransfersQuery = () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.transfers });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['netWorth'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
     },
   });
 
