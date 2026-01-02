@@ -3,10 +3,10 @@
 import React from 'react'
 import { Loader2 } from 'lucide-react'
 import { calculateAssetCategories } from '@/lib/utils'
-import useAccounts from '@/hooks/useAccounts';
+import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 
 const AssetCategoriesChart = () => {
-  const { accounts, isLoading, error } = useAccounts();
+  const { accounts, isLoading, error } = useAccountsQuery();
 
   if (isLoading) {
     return (
