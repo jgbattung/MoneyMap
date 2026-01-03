@@ -21,13 +21,24 @@ export type IncomeTransaction = {
   };
 }
 
+type IncomeTransactionsResponse = {
+  transactions: IncomeTransaction[];
+  total: number;
+  hasMore: boolean;
+}
+
 const QUERY_KEYS = {
   incomeTransactions: ['incomeTransactions'] as const,
   incomeTransaction: (id: string) => ['incomeTransactions', id] as const,
 }
 
-const fetchIncomeTransactions = async (): Promise<IncomeTransaction[]> => {
-  const response = await fetch('/api/income-transactions');
+const fetchIncomeTransactions = async (skip?: number, take?: number): Promise<IncomeTransactionsResponse> => {
+  const params = new URLSearchParams();
+  if (skip !== undefined) params.append('skip', skip.toString());
+  if (take !== undefined) params.append('take', take.toString());
+  
+  const url = `/api/income-transactions${params.toString() ? `?${params.toString()}` : ''}`;
+  const response = await fetch(url);
   if (!response.ok) throw new Error('Failed to fetch income transactions');
   return response.json();
 }
@@ -57,22 +68,24 @@ const deleteIncomeTransaction = async (id: string): Promise<void> => {
     method: 'DELETE',
   });
 
-    if (!response.ok) {
+  if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.error || 'Failed to income transfer transaction')
   }
 }
 
-export const useIncomeTransactionsQuery = () => {
+export const useIncomeTransactionsQuery = (skip?: number, take?: number) => {
   const queryClient = useQueryClient();
 
   const {
-    data: incomeTransactions = [],
+    data,
     isPending,
     error,
   } = useQuery({
-    queryKey: QUERY_KEYS.incomeTransactions,
-    queryFn: fetchIncomeTransactions,
+    queryKey: skip !== undefined || take !== undefined 
+      ? [...QUERY_KEYS.incomeTransactions, { skip, take }]
+      : QUERY_KEYS.incomeTransactions,
+    queryFn: () => fetchIncomeTransactions(skip, take),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -116,7 +129,11 @@ export const useIncomeTransactionsQuery = () => {
   })
 
   return {
-    incomeTransactions,
+    // Return transactions array for backward compatibility
+    incomeTransactions: data?.transactions || [],
+    // Add new metadata fields
+    total: data?.total || 0,
+    hasMore: data?.hasMore || false,
     isLoading: isPending,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
     createIncomeTransaction: createIncomeTransactionMutation.mutateAsync,
@@ -125,7 +142,6 @@ export const useIncomeTransactionsQuery = () => {
     isCreating: createIncomeTransactionMutation.isPending,
     isUpdating: updateIncomeTransactionMutation.isPending,
     isDeleting: deleteIncomeTransactionMutation.isPending,
-  
   };
 };
 

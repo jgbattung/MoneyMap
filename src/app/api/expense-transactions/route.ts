@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { INSTALLMENT_STATUS } from "./[id]/route";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -17,11 +17,27 @@ export async function GET() {
       );
     }
 
+    // Get pagination params from URL
+    const { searchParams } = new URL(request.url);
+    const skip = searchParams.get('skip');
+    const take = searchParams.get('take');
+
+    const skipNumber = skip ? parseInt(skip) : undefined;
+    const takeNumber = take ? parseInt(take) : undefined;
+
+    const whereClause = {
+      userId: session.user.id,
+      isInstallment: false,
+    };
+
+    // Get total count
+    const total = await db.expenseTransaction.count({
+      where: whereClause,
+    });
+
+    // Get transactions with optional pagination
     const expenseTransactions = await db.expenseTransaction.findMany({
-      where: {
-        userId: session.user.id,
-        isInstallment: false,
-      },
+      where: whereClause,
       include: {
         account: true,
         expenseType: true,
@@ -30,9 +46,19 @@ export async function GET() {
       orderBy: {
         date: 'desc',
       },
+      ...(skipNumber !== undefined && { skip: skipNumber }),
+      ...(takeNumber !== undefined && { take: takeNumber }),
     });
 
-    return NextResponse.json(expenseTransactions, { status: 200 });
+    // Calculate hasMore
+    const currentCount = (skipNumber || 0) + expenseTransactions.length;
+    const hasMore = currentCount < total;
+
+    return NextResponse.json({
+      transactions: expenseTransactions,
+      total,
+      hasMore,
+    }, { status: 200 });
   } catch (error) {
     console.error('Error getting expense transactions: ', error);
     return NextResponse.json(

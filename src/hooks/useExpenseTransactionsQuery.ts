@@ -31,13 +31,24 @@ export type ExpenseTransaction = {
   } | null;
 }
 
+type ExpenseTransactionsResponse = {
+  transactions: ExpenseTransaction[];
+  total: number;
+  hasMore: boolean;
+}
+
 const QUERY_KEYS = {
   expenseTransactions: ['expenseTransactions'] as const,
   expenseTransaction: (id: string) => ['expenseTransactions', id] as const,
 }
 
-const fetchExpenseTransactions = async (): Promise<ExpenseTransaction[]> => {
-  const response = await fetch('/api/expense-transactions');
+const fetchExpenseTransactions = async (skip?: number, take?: number): Promise<ExpenseTransactionsResponse> => {
+  const params = new URLSearchParams();
+  if (skip !== undefined) params.append('skip', skip.toString());
+  if (take !== undefined) params.append('take', take.toString());
+  
+  const url = `/api/expense-transactions${params.toString() ? `?${params.toString()}` : ''}`;
+  const response = await fetch(url);
   if (!response.ok) throw new Error('Failed to fetch expense transactions');
   return response.json();
 }
@@ -72,16 +83,18 @@ const deleteExpenseTransaction = async (id: string): Promise<void> => {
   }
 }
 
-export const useExpenseTransactionsQuery = () => {
+export const useExpenseTransactionsQuery = (skip?: number, take?: number) => {
   const queryClient = useQueryClient();
 
   const {
-    data: expenseTransactions = [],
+    data,
     isPending,
     error,
   } = useQuery({
-    queryKey: QUERY_KEYS.expenseTransactions,
-    queryFn: fetchExpenseTransactions,
+    queryKey: skip !== undefined || take !== undefined 
+      ? [...QUERY_KEYS.expenseTransactions, { skip, take }]
+      : QUERY_KEYS.expenseTransactions,
+    queryFn: () => fetchExpenseTransactions(skip, take),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -128,7 +141,9 @@ export const useExpenseTransactionsQuery = () => {
   })
 
   return {
-    expenseTransactions,
+    expenseTransactions: data?.transactions || [],
+    total: data?.total || 0,
+    hasMore: data?.hasMore || false,
     isLoading: isPending,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
     createExpenseTransaction: createExpenseTransactionMutation.mutateAsync,
