@@ -66,7 +66,7 @@ const CreditCardItem = ({ name, balance }: CreditCardItemProps) => {
         <span className="text-xs text-muted-foreground">Credit Card</span>
       </div>
 
-      <div className="font-semibold text-sm text-red-500">
+      <div className="font-semibold text-sm text-white">
         ₱{formatCurrency(balance)}
       </div>
     </div>
@@ -188,6 +188,7 @@ const TopCreditCards = () => {
 
   const topCards = cards
     .sort((a, b) => {
+      // Sort by absolute value to show highest debt first
       const balanceA = Math.abs(parseFloat(a.currentBalance.toString()));
       const balanceB = Math.abs(parseFloat(b.currentBalance.toString()));
       return balanceB - balanceA;
@@ -211,13 +212,18 @@ const TopCreditCards = () => {
       <h2 className="text-lg font-semibold">Credit Cards</h2>
 
       <div className="space-y-3">
-        {topCards.map(card => (
-          <CreditCardItem
-            key={card.id}
-            name={card.name}
-            balance={Math.abs(parseFloat(card.currentBalance.toString()))}
-          />
-        ))}
+        {topCards.map(card => {
+          const dbBalance = parseFloat(card.currentBalance.toString());
+          const displayBalance = -dbBalance;
+          
+          return (
+            <CreditCardItem
+              key={card.id}
+              name={card.name}
+              balance={displayBalance}
+            />
+          );
+        })}
       </div>
 
       <Button variant="outline" asChild className="w-full hover:text-white">

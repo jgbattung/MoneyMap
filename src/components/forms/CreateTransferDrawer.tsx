@@ -30,7 +30,7 @@ interface CreateTransferDrawerProps {
 
 const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferDrawerProps) => {
   const { createTransfer, isCreating } = useTransfersQuery();
-  const { accounts } = useAccountsQuery();
+  const { accounts } = useAccountsQuery({ includeCards: true });
   const { transferTypes } = useTransferTypesQuery();
   const [calendarOpen, setCalendarOpen] = React.useState(false);
   const [showGradient, setShowGradient] = useState(true);

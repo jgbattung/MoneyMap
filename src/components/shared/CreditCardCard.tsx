@@ -11,7 +11,13 @@ interface CreditCardCardProps {
 }
 
 const CreditCardCard = ({ currentBalance, name, statementDate, dueDate, onClick }: CreditCardCardProps) => {
-  const formattedBalance = parseFloat(currentBalance).toLocaleString('en-PH', {
+  // Banking convention: negate the DB value
+  // DB: -25000 (debt) → Display: 25000
+  // DB: +500 (credit) → Display: -500
+  const dbBalance = parseFloat(currentBalance);
+  const displayBalance = -dbBalance;
+  
+  const formattedBalance = displayBalance.toLocaleString('en-PH', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });

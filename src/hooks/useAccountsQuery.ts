@@ -9,13 +9,21 @@ type Account = {
   addToNetWorth: boolean;
 };
 
+interface UseAccountsQueryOptions {
+  includeCards?: boolean;
+}
+
 const QUERY_KEYS = {
-  accounts: ['accounts'] as const,
+  accounts: (includeCards?: boolean) => ['accounts', { includeCards }] as const,
   account: (id: string) => ['accounts', id] as const,
 };
 
-const fetchAccounts = async (): Promise<Account[]> => {
-  const response = await fetch('/api/accounts');
+const fetchAccounts = async (includeCards: boolean = false): Promise<Account[]> => {
+  const url = includeCards 
+    ? '/api/accounts?includeCards=true' 
+    : '/api/accounts';
+  
+  const response = await fetch(url);
   if (!response.ok) throw new Error('Failed to fetch accounts');
   return response.json();
 };
@@ -57,37 +65,38 @@ const deleteAccount = async (id: string): Promise<void> => {
   return response.json();
 }
 
-export const useAccountsQuery = () => {
+export const useAccountsQuery = (options?: UseAccountsQueryOptions) => {
   const queryClient = useQueryClient();
+  const includeCards = options?.includeCards ?? false;
 
   const {
     data: accounts = [],
     isPending,
     error,
   } = useQuery({
-    queryKey: QUERY_KEYS.accounts,
-    queryFn: fetchAccounts,
+    queryKey: QUERY_KEYS.accounts(includeCards),
+    queryFn: () => fetchAccounts(includeCards),
     staleTime: 5 * 60 * 1000,
   });
 
   const createAccountMutation = useMutation({
     mutationFn: createAccount,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.accounts });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
     },
   });
 
   const updateAccountMutation = useMutation({
     mutationFn: updateAccount,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.accounts });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
     },
   });
 
   const deleteAccountMutation = useMutation({
     mutationFn: deleteAccount,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.accounts });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
     }
   });
 

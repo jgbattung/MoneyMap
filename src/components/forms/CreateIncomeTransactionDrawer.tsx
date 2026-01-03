@@ -29,7 +29,7 @@ interface CreateIncomeTransactionProps {
 
 const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: CreateIncomeTransactionProps) => {
   const { createIncomeTransaction, isCreating } = useIncomeTransactionsQuery();
-  const { accounts } = useAccountsQuery();
+  const { accounts } = useAccountsQuery({ includeCards: true });
   const { incomeTypes } = useIncomeTypesQuery();
   const [calendarOpen, setCalendarOpen] = React.useState(false);
   const [showGradient, setShowGradient] = useState(true);

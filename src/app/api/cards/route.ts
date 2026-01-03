@@ -28,8 +28,8 @@ export async function GET() {
 
     const transformedCards = cards.map(card => ({
       ...card,
-      initialBalance: Math.abs(parseFloat(card.initialBalance.toString())),
-      currentBalance: Math.abs(parseFloat(card.currentBalance.toString()))
+      initialBalance: parseFloat(card.initialBalance.toString()),
+      currentBalance: parseFloat(card.currentBalance.toString())
     }));
 
     return NextResponse.json(transformedCards, { status: 200 });
