@@ -3,7 +3,7 @@ import { db } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
       headers: await headers()
@@ -16,12 +16,14 @@ export async function GET() {
       );
     }
 
+    const { searchParams } = new URL(request.url);
+    const includeCards = searchParams.get('includeCards') === 'true';
+
     const accounts = await db.financialAccount.findMany({
       where: {
         userId: session.user.id,
-        accountType: {
-          not: "CREDIT_CARD"
-        },
+        // Only exclude credit cards if includeCards is false
+        accountType: includeCards ? undefined : { not: "CREDIT_CARD" }
       },
       orderBy: {
         currentBalance: 'desc',
