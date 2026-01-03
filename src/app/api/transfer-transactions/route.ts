@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -16,10 +16,27 @@ export async function GET() {
       );
     }
 
+    // Get pagination params from URL
+    const { searchParams } = new URL(request.url);
+    const skip = searchParams.get('skip');
+    const take = searchParams.get('take');
+
+    const skipNumber = skip ? parseInt(skip) : undefined;
+    const takeNumber = take ? parseInt(take) : undefined;
+
+    // Build the where clause
+    const whereClause = {
+      userId: session.user.id,
+    };
+
+    // Get total count
+    const total = await db.transferTransaction.count({
+      where: whereClause,
+    });
+
+    // Get transactions with optional pagination
     const transferTransactions = await db.transferTransaction.findMany({
-      where: {
-        userId: session.user.id,
-      },
+      where: whereClause,
       include: {
         fromAccount: true,
         toAccount: true,
@@ -28,9 +45,19 @@ export async function GET() {
       orderBy: {
         date: 'desc'
       },
+      ...(skipNumber !== undefined && { skip: skipNumber }),
+      ...(takeNumber !== undefined && { take: takeNumber }),
     });
 
-    return NextResponse.json(transferTransactions, { status: 200 });
+    // Calculate hasMore
+    const currentCount = (skipNumber || 0) + transferTransactions.length;
+    const hasMore = currentCount < total;
+
+    return NextResponse.json({
+      transactions: transferTransactions,
+      total,
+      hasMore,
+    }, { status: 200 });
   } catch (error) {
     console.error('Error getting transfer transactions: ', error);
     return NextResponse.json(

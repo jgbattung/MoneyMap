@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -16,10 +16,27 @@ export async function GET() {
       );
     }
 
+    // Get pagination params from URL
+    const { searchParams } = new URL(request.url);
+    const skip = searchParams.get('skip');
+    const take = searchParams.get('take');
+
+    const skipNumber = skip ? parseInt(skip) : undefined;
+    const takeNumber = take ? parseInt(take) : undefined;
+
+    // Build the where clause
+    const whereClause = {
+      userId: session.user.id,
+    };
+
+    // Get total count
+    const total = await db.incomeTransaction.count({
+      where: whereClause,
+    });
+
+    // Get transactions with optional pagination
     const incomeTransactions = await db.incomeTransaction.findMany({
-      where: {
-        userId: session.user.id,
-      },
+      where: whereClause,
       include: {
         account: true,
         incomeType: true,
@@ -27,9 +44,19 @@ export async function GET() {
       orderBy: {
         date: 'desc',
       },
+      ...(skipNumber !== undefined && { skip: skipNumber }),
+      ...(takeNumber !== undefined && { take: takeNumber }),
     });
 
-    return NextResponse.json(incomeTransactions, { status: 200 });
+    // Calculate hasMore
+    const currentCount = (skipNumber || 0) + incomeTransactions.length;
+    const hasMore = currentCount < total;
+
+    return NextResponse.json({
+      transactions: incomeTransactions,
+      total,
+      hasMore,
+    }, { status: 200 });
   } catch (error) {
     console.error('Error getting income transactions: ', error);
     return NextResponse.json(
