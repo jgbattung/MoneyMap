@@ -1,4 +1,5 @@
 import TransactionsDesktopView from '@/components/transactions/TransactionsDesktopView'
+import TransactionsMobileView from '@/components/transactions/TransactionsMobileView'
 import React from 'react'
 
 const Transactions = () => {
@@ -8,12 +9,10 @@ const Transactions = () => {
         Transactions
       </h1>
 
-      {/* Mobile View - Placeholder */}
       <div className="block md:hidden">
-        {/* TransactionsMobileView will go here */}
+        <TransactionsMobileView />
       </div>
 
-      {/* Desktop View */}
       <div className="hidden md:block">
         <TransactionsDesktopView />
       </div>

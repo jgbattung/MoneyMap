@@ -83,6 +83,8 @@ const TransactionsMobileView = () => {
         <ToggleGroup
           type="single"
           value={activeTab}
+          variant="outline"
+          size="sm"
           onValueChange={(value) => value && setActiveTab(value as TabType)}
           className="justify-start"
         >
