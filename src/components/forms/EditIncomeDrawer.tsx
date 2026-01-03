@@ -33,7 +33,7 @@ interface EditIncomeDrawerProps {
 const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }: EditIncomeDrawerProps) => {
   const { updateIncomeTransaction, isUpdating, deleteIncomeTransaction, isDeleting } = useIncomeTransactionsQuery();
   const { incomeTransactionData, isFetching, error } = useIncomeTransactionQuery(incomeTransactionId);
-  const { accounts } = useAccountsQuery();
+  const { accounts } = useAccountsQuery({ includeCards: true });
   const { incomeTypes } = useIncomeTypesQuery();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = React.useState(false);

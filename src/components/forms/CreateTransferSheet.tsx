@@ -29,7 +29,7 @@ interface CreateTransferSheetProps {
 
 const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSheetProps) => {
   const { createTransfer, isCreating } = useTransfersQuery();
-  const { accounts } = useAccountsQuery();
+  const { accounts } = useAccountsQuery({ includeCards: true });
   const { transferTypes } = useTransferTypesQuery();
   const [calendarOpen, setCalendarOpen] = React.useState(false);
   const [hasFee, setHasFee] = React.useState(false);  
