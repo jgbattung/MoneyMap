@@ -36,13 +36,24 @@ export type TransferTransaction = {
   } | null;
 }
 
+type TransferTransactionsResponse = {
+  transactions: TransferTransaction[];
+  total: number;
+  hasMore: boolean;
+}
+
 const QUERY_KEYS = {
   transfers: ['transfers'] as const,
   transfer: (id: string) => ['transfers', id] as const,
 }
 
-const fetchTransfers = async (): Promise<TransferTransaction[]> => {
-  const response = await fetch('/api/transfer-transactions');
+const fetchTransfers = async (skip?: number, take?: number): Promise<TransferTransactionsResponse> => {
+  const params = new URLSearchParams();
+  if (skip !== undefined) params.append('skip', skip.toString());
+  if (take !== undefined) params.append('take', take.toString());
+  
+  const url = `/api/transfer-transactions${params.toString() ? `?${params.toString()}` : ''}`;
+  const response = await fetch(url);
   if (!response.ok) throw new Error('Failed to fetch transactions');
   return response.json();
 }
@@ -77,16 +88,18 @@ const deleteTransfer = async (id: string): Promise<void> => {
   }
 };
 
-export const useTransfersQuery = () => {
+export const useTransfersQuery = (skip?: number, take?: number) => {
   const queryClient = useQueryClient();
 
   const {
-    data: transfers = [],
+    data,
     isPending,
     error,
   } = useQuery({
-    queryKey: QUERY_KEYS.transfers,
-    queryFn: fetchTransfers,
+    queryKey: skip !== undefined || take !== undefined 
+      ? [...QUERY_KEYS.transfers, { skip, take }]
+      : QUERY_KEYS.transfers,
+    queryFn: () => fetchTransfers(skip, take),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -130,7 +143,9 @@ export const useTransfersQuery = () => {
   });
 
   return {
-    transfers,
+    transfers: data?.transactions || [],
+    total: data?.total || 0,
+    hasMore: data?.hasMore || false,
     isLoading: isPending,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
     createTransfer: createTransferMutation.mutateAsync,
@@ -162,4 +177,3 @@ export const useTransferQuery = (id: string) => {
     error: error ? error.message : null,
   };
 }
- 
