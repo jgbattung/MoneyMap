@@ -10,7 +10,6 @@ import { Spinner } from '@/components/ui/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
-import { useCardsQuery } from '@/hooks/useCardsQuery';
 import { IncomeTransaction, useIncomeTransactionsQuery } from '@/hooks/useIncomeTransactionsQuery';
 import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
 import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
@@ -230,8 +229,7 @@ const EditCell = ({ row, table }: any) => {
 
 const IncomeTable = () => {
   const { incomeTransactions, updateIncomeTransaction, isUpdating, deleteIncomeTransaction, isDeleting } = useIncomeTransactionsQuery();
-  const { accounts, isLoading: accountsLoading } = useAccountsQuery();
-  const { cards, isLoading: cardsLoading } = useCardsQuery();
+  const { accounts, isLoading: accountsLoading } = useAccountsQuery({ includeCards: true });
   const { incomeTypes, isLoading: incomeTypesLoading } = useIncomeTypesQuery();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -269,16 +267,13 @@ const IncomeTable = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Memoize the combined accounts array
-  const allAccounts = useMemo(() => [...accounts, ...cards], [accounts, cards]);
-
   // Memoize the options arrays
   const accountOptions = useMemo(() => 
-    allAccounts.map(acc => ({
+    accounts.map(acc => ({
       value: acc.id,
       label: acc.name
     })), 
-    [allAccounts]
+    [accounts]
   );
 
   const incomeTypeOptions = useMemo(() => 
@@ -449,7 +444,7 @@ const IncomeTable = () => {
     },
   });
 
-  const isLoadingData = accountsLoading || cardsLoading || incomeTypesLoading;
+  const isLoadingData = accountsLoading || incomeTypesLoading;
 
   if (isLoadingData) {
     return (

@@ -10,7 +10,6 @@ import { Spinner } from '@/components/ui/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
-import { useCardsQuery } from '@/hooks/useCardsQuery';
 import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
 import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
@@ -240,8 +239,7 @@ const EditCell = ({ row, table }: any) => {
 
 const TransferTable = () => {
   const { transfers, updateTransfer, isUpdating, deleteTransfer, isDeleting } = useTransfersQuery();
-  const { accounts, isLoading: accountsLoading } = useAccountsQuery();
-  const { cards, isLoading: cardsLoading } = useCardsQuery();
+  const { accounts, isLoading: accountsLoading } = useAccountsQuery({ includeCards: true });
   const { transferTypes, isLoading: transferTypesLoading } = useTransferTypesQuery();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -279,16 +277,13 @@ const TransferTable = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Memoize the combined accounts array
-  const allAccounts = useMemo(() => [...accounts, ...cards], [accounts, cards]);
-
   // Memoize the options arrays
   const accountOptions = useMemo(() => 
-    allAccounts.map(acc => ({
+    accounts.map(acc => ({
       value: acc.id,
       label: acc.name
     })), 
-    [allAccounts]
+    [accounts]
   );
 
   const transferTypeOptions = useMemo(() => 
@@ -474,7 +469,7 @@ const TransferTable = () => {
     },
   });
 
-  const isLoadingData = accountsLoading || cardsLoading || transferTypesLoading;
+  const isLoadingData = accountsLoading || transferTypesLoading;
 
   if (isLoadingData) {
     return (
