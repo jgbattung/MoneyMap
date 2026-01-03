@@ -42,9 +42,12 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
 
   useEffect(() => {
     if (cardData) {
+      const dbInitialBalance = parseFloat(cardData.initialBalance.toString());
+      const displayInitialBalance = -dbInitialBalance;
+      
       form.reset({
         name: cardData.name,
-        initialBalance: Math.abs(parseFloat(cardData.initialBalance)).toString(),
+        initialBalance: displayInitialBalance.toString(),
         statementDate: cardData.statementDate,
         dueDate: cardData.dueDate,
       });
@@ -54,7 +57,14 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
 
   const onSubmit = async (values: z.infer<typeof CardValidation>) => {
     try {
-      const updatedCard = await updateCard({ id: cardId, ...values })
+      const displayBalance = parseFloat(values.initialBalance);
+      const dbBalance = -displayBalance;
+      
+      const updatedCard = await updateCard({ 
+        id: cardId, 
+        ...values,
+        initialBalance: dbBalance.toString()
+      });
 
       toast.success("Credit card updated successfully", {
         description: `${updatedCard.name} has been updated.`,
@@ -104,6 +114,13 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
       });
     }
   }
+
+  const formattedCurrentBalance = cardData 
+    ? (-parseFloat(cardData.currentBalance.toString())).toLocaleString('en-PH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })
+    : '0.00';
 
   return (
     <>
@@ -173,7 +190,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
                   Current debt on this card including all transactions. Updates automatically.
                 </FormDescription>
                 <Input
-                  value={cardData?.currentBalance || '0'}
+                  value={`₱${formattedCurrentBalance}`}
                   disabled={true}
                   className="bg-muted text-muted-foreground cursor-not-allowed"
                 />
