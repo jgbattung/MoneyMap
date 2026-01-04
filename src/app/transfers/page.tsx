@@ -5,20 +5,28 @@ import TransferCard from '@/components/shared/TransferCard';
 import TransferTypesList from '@/components/shared/TransferTypesList';
 import TransferTable from '@/components/tables/transfers/TransferTable';
 import { useTransfersQuery } from '@/hooks/useTransferTransactionsQuery';
+import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
+const ITEMS_PER_LOAD = 15;
+
 const Transactions = () => {
-  const { transfers } = useTransfersQuery();
+  const [displayCount, setDisplayCount] = useState(ITEMS_PER_LOAD);
+  const { transfers, hasMore } = useTransfersQuery(0, displayCount);
   const [selectedTransferId, setSelectedTransferId] = useState<string>('');
-  const [editTransferDrawerOpen, setEditTransferDrawerOpen] = useState(false)
+  const [editTransferDrawerOpen, setEditTransferDrawerOpen] = useState(false);
   
   const handleTransferCardClick = (transferId: string) => {
     setSelectedTransferId(transferId);
     setEditTransferDrawerOpen(true);
   };
 
+  const handleLoadMore = () => {
+    setDisplayCount(prev => prev + ITEMS_PER_LOAD);
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col">
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
       <h1 className="text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold">Transfers</h1>
       
       <div className="my-3 md:my-6 lg:my-8">
@@ -57,6 +65,16 @@ const Transactions = () => {
               onClick={() => handleTransferCardClick(transfer.id)}
             />
           ))}
+          
+          {hasMore && (
+            <Button
+              variant="outline"
+              className="w-full mt-4"
+              onClick={handleLoadMore}
+            >
+              Load More
+            </Button>
+          )}
         </div>
 
         <div className="hidden md:block">
