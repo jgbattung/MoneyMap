@@ -12,8 +12,11 @@ import { Button } from "@/components/ui/button";
 import { useExpenseTransactionsQuery } from "@/hooks/useExpenseTransactionsQuery";
 import { useState } from "react";
 
+const ITEMS_PER_LOAD = 15;
+
 const Expenses = () => {
-  const { expenseTransactions, isLoading, error } = useExpenseTransactionsQuery();
+  const [displayCount, setDisplayCount] = useState(ITEMS_PER_LOAD);
+  const { expenseTransactions, hasMore, isLoading, error } = useExpenseTransactionsQuery(0, displayCount);
   const [createExpenseSheetOpen, setCreateExpenseSheetOpen] = useState(false);
   const [createExpenseDrawerOpen, setCreateExpenseDrawerOpen] = useState(false);
   const [editExpenseDrawerOpen, setEditExpenseDrawerOpen] = useState(false);
@@ -21,9 +24,12 @@ const Expenses = () => {
 
   const handleExpenseClick = (expenseId: string) => {
     setSelectedExpenseId(expenseId);
-
     setEditExpenseDrawerOpen(true);
   }
+
+  const handleLoadMore = () => {
+    setDisplayCount(prev => prev + ITEMS_PER_LOAD);
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col">
@@ -77,22 +83,22 @@ const Expenses = () => {
           </div>
         </>
       ) : error ? (
-      <div className='flex-1 flex flex-col items-center justify-center py-16'>
-        <Icons.error
-          className='h-24 w-24 mb-10'
-          strokeWidth={1.25}
-        />
-        <div className='flex flex-col px-4 items-center justify-center gap-3 text-center'>
-          <p className='text-2xl min-md:text-4xl font-semibold'>Failed to load expenses</p>
-          <p className='text-muted-foreground'>{error}</p>
+        <div className='flex-1 flex flex-col items-center justify-center py-16'>
+          <Icons.error
+            className='h-24 w-24 mb-10'
+            strokeWidth={1.25}
+          />
+          <div className='flex flex-col px-4 items-center justify-center gap-3 text-center'>
+            <p className='text-2xl min-md:text-4xl font-semibold'>Failed to load expenses</p>
+            <p className='text-muted-foreground'>{error}</p>
+          </div>
+          <Button
+            onClick={() => window.location.reload()}
+            className="mt-10"
+          >
+            Try again
+          </Button>
         </div>
-        <Button
-          onClick={() => window.location.reload()}
-          className="mt-10"
-        >
-          Try again
-        </Button>
-      </div>
       ) : expenseTransactions.length === 0 ? (
         <div className='flex-1 flex flex-col items-center justify-center py-16'>
           <Icons.wallet
@@ -114,12 +120,12 @@ const Expenses = () => {
             onClick={() => setCreateExpenseDrawerOpen(true)}
             className="flex md:hidden mt-10"
           >
-            Add your first income category
+            Add your first expense
           </Button>
         </div>
       ) : (
         <div className="mt-10">
-          <div className='md:hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+          <div className='md:hidden space-y-4'>
             {expenseTransactions.map((expense) => (
               <ExpenseCard
                 key={expense.id}
@@ -145,6 +151,16 @@ const Expenses = () => {
                 onClick={() => handleExpenseClick(expense.id)}
               />
             ))}
+            
+            {hasMore && (
+              <Button
+                variant="outline"
+                className="w-full mt-4"
+                onClick={handleLoadMore}
+              >
+                Load More
+              </Button>
+            )}
           </div>
           
           <div className="hidden md:block">
