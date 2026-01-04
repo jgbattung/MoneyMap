@@ -15,6 +15,8 @@ import { IncomeTransaction, useIncomeTransactionsQuery } from '@/hooks/useIncome
 import { useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery'
 import React, { useState } from 'react'
 
+const ITEMS_PER_LOAD = 15;
+
 const calculateMonthlyEarned = (
   transactions: IncomeTransaction[],
   incomeTypeId: string,
@@ -39,7 +41,8 @@ const calculateMonthlyEarned = (
 
 const Income = () => {
   const { incomeTypes, isLoading, error } = useIncomeTypesQuery();
-  const { incomeTransactions } = useIncomeTransactionsQuery();
+  const [displayCount, setDisplayCount] = useState(ITEMS_PER_LOAD);
+  const { incomeTransactions, hasMore } = useIncomeTransactionsQuery(0, displayCount);
   const [createIncomeTypeSheetOpen, setCreateIncomeTypeSheetOpen] = useState(false);
   const [createIncomeTypeDrawerOpen, setCreateIncomeTypeDrawerOpen] = useState(false);
   const [editIncomeTypeSheetOpen, setEditIncomeTypeSheetOpen] = useState(false);
@@ -74,6 +77,10 @@ const Income = () => {
   const handleIncomeTransactionCardClick = (incomeTransactionId: string) => {
     setSelectedIncomeTransactionId(incomeTransactionId);
     setEditIncomeTransactionDrawerOpen(true);
+  };
+
+  const handleLoadMore = () => {
+    setDisplayCount(prev => prev + ITEMS_PER_LOAD);
   };
 
   return (
@@ -225,6 +232,16 @@ const Income = () => {
               onClick={() => handleIncomeTransactionCardClick(income.id)}
             />
           ))}
+          
+          {hasMore && (
+            <Button
+              variant="outline"
+              className="w-full mt-4"
+              onClick={handleLoadMore}
+            >
+              Load More
+            </Button>
+          )}
         </div>
 
         <div className="hidden md:block mb-4">
