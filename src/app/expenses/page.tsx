@@ -9,18 +9,66 @@ import SkeletonIncomeTypeCard from "@/components/shared/SkeletonIncomeTypeCard";
 import SkeletonTable from "@/components/shared/SkeletonTable";
 import ExpenseTable from "@/components/tables/expenses/ExpenseTable";
 import { Button } from "@/components/ui/button";
+import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { SearchIcon } from "lucide-react";
 import { useExpenseTransactionsQuery } from "@/hooks/useExpenseTransactionsQuery";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 const ITEMS_PER_LOAD = 15;
+
+const dateFilterOptions = {
+  viewAll: "view-all",
+  thisMonth: "this-month",
+  thisYear: "this-year",
+};
 
 const Expenses = () => {
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_LOAD);
   const { expenseTransactions, hasMore, isLoading, error } = useExpenseTransactionsQuery(0, displayCount);
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
+  
   const [createExpenseSheetOpen, setCreateExpenseSheetOpen] = useState(false);
   const [createExpenseDrawerOpen, setCreateExpenseDrawerOpen] = useState(false);
   const [editExpenseDrawerOpen, setEditExpenseDrawerOpen] = useState(false);
   const [selectedExpenseId, setSelectedExpenseId] = useState<string>('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const filteredExpenses = useMemo(() => {
+    return expenseTransactions.filter((expense) => {
+      if (dateFilter !== dateFilterOptions.viewAll) {
+        const expenseDate = new Date(expense.date);
+        const now = new Date();
+
+        if (dateFilter === dateFilterOptions.thisMonth) {
+          if (expenseDate.getMonth() !== now.getMonth() || 
+              expenseDate.getFullYear() !== now.getFullYear()) return false;
+        } else if (dateFilter === dateFilterOptions.thisYear) {
+          if (expenseDate.getFullYear() !== now.getFullYear()) return false;
+        }
+      }
+
+      if (!debouncedSearchTerm) return true;
+      
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      return (
+        expense.name.toLowerCase().includes(searchLower) ||
+        expense.description?.toLowerCase().includes(searchLower) ||
+        expense.account.name.toLowerCase().includes(searchLower) ||
+        expense.expenseType.name.toLowerCase().includes(searchLower) ||
+        expense.expenseSubcategory?.name.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [expenseTransactions, dateFilter, debouncedSearchTerm]);
 
   const handleExpenseClick = (expenseId: string) => {
     setSelectedExpenseId(expenseId);
@@ -126,40 +174,88 @@ const Expenses = () => {
       ) : (
         <div className="mt-10">
           <div className='md:hidden space-y-4'>
-            {expenseTransactions.map((expense) => (
-              <ExpenseCard
-                key={expense.id}
-                id={expense.id}
-                name={expense.name}
-                amount={expense.amount}
-                date={expense.date}
-                description={expense.description}
-                account={{
-                  id: expense.account.id,
-                  name: expense.account.name,
-                }}
-                expenseType={{
-                  id: expense.expenseType.id,
-                  name: expense.expenseType.name
-                }}
-                expenseSubcategory={expense.expenseSubcategory || null}
-                isInstallment={expense.isInstallment}
-                installmentDuration={expense.installmentDuration}
-                remainingInstallments={expense.remainingInstallments}
-                installmentStartDate={expense.installmentStartDate}
-                monthlyAmount={expense.monthlyAmount}
-                onClick={() => handleExpenseClick(expense.id)}
+            <InputGroup>
+              <InputGroupInput 
+                placeholder="Search expenses..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
-            ))}
-            
-            {hasMore && (
-              <Button
-                variant="outline"
-                className="w-full mt-4"
-                onClick={handleLoadMore}
+              <InputGroupAddon>
+                <SearchIcon className="h-4 w-4" />
+              </InputGroupAddon>
+            </InputGroup>
+
+            <ToggleGroup
+              type="single"
+              value={dateFilter}
+              variant="outline"
+              size="sm"
+              onValueChange={(value) => value && setDateFilter(value)}
+              className="justify-start"
+            >
+              <ToggleGroupItem
+                value={dateFilterOptions.viewAll}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
               >
-                Load More
-              </Button>
+                View All
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value={dateFilterOptions.thisMonth}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+              >
+                This Month
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value={dateFilterOptions.thisYear}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+              >
+                This Year
+              </ToggleGroupItem>
+            </ToggleGroup>
+
+            {/* Expense Cards */}
+            {filteredExpenses.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <p className="text-muted-foreground">No results found for your search.</p>
+              </div>
+            ) : (
+              <>
+                {filteredExpenses.map((expense) => (
+                  <ExpenseCard
+                    key={expense.id}
+                    id={expense.id}
+                    name={expense.name}
+                    amount={expense.amount}
+                    date={expense.date}
+                    description={expense.description}
+                    account={{
+                      id: expense.account.id,
+                      name: expense.account.name,
+                    }}
+                    expenseType={{
+                      id: expense.expenseType.id,
+                      name: expense.expenseType.name
+                    }}
+                    expenseSubcategory={expense.expenseSubcategory || null}
+                    isInstallment={expense.isInstallment}
+                    installmentDuration={expense.installmentDuration}
+                    remainingInstallments={expense.remainingInstallments}
+                    installmentStartDate={expense.installmentStartDate}
+                    monthlyAmount={expense.monthlyAmount}
+                    onClick={() => handleExpenseClick(expense.id)}
+                  />
+                ))}
+                
+                {hasMore && filteredExpenses.length === expenseTransactions.length && (
+                  <Button
+                    variant="outline"
+                    className="w-full mt-4"
+                    onClick={handleLoadMore}
+                  >
+                    Load More
+                  </Button>
+                )}
+              </>
             )}
           </div>
           

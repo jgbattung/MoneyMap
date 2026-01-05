@@ -11,11 +11,20 @@ import IncomeTypeCard from '@/components/shared/IncomeTypeCard';
 import SkeletonIncomeTypeCard from '@/components/shared/SkeletonIncomeTypeCard';
 import IncomeTable from '@/components/tables/income/IncomeTable';
 import { Button } from '@/components/ui/button';
+import { InputGroup, InputGroupInput, InputGroupAddon } from '@/components/ui/input-group';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { SearchIcon } from 'lucide-react';
 import { IncomeTransaction, useIncomeTransactionsQuery } from '@/hooks/useIncomeTransactionsQuery';
 import { useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery'
-import React, { useState } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 
 const ITEMS_PER_LOAD = 15;
+
+const dateFilterOptions = {
+  viewAll: "view-all",
+  thisMonth: "this-month",
+  thisYear: "this-year",
+};
 
 const calculateMonthlyEarned = (
   transactions: IncomeTransaction[],
@@ -43,6 +52,11 @@ const Income = () => {
   const { incomeTypes, isLoading, error } = useIncomeTypesQuery();
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_LOAD);
   const { incomeTransactions, hasMore } = useIncomeTransactionsQuery(0, displayCount);
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
+  
   const [createIncomeTypeSheetOpen, setCreateIncomeTypeSheetOpen] = useState(false);
   const [createIncomeTypeDrawerOpen, setCreateIncomeTypeDrawerOpen] = useState(false);
   const [editIncomeTypeSheetOpen, setEditIncomeTypeSheetOpen] = useState(false);
@@ -50,6 +64,39 @@ const Income = () => {
   const [selectedIncomeTypeId, setSelectedIncomeTypeId] = useState<string>('');
   const [selectedIncomeTransactionId, setSelectedIncomeTransactionId] = useState<string>('');
   const [editIncomeTransactionDrawerOpen, setEditIncomeTransactionDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const filteredIncomeTransactions = useMemo(() => {
+    return incomeTransactions.filter((income) => {
+      if (dateFilter !== dateFilterOptions.viewAll) {
+        const incomeDate = new Date(income.date);
+        const now = new Date();
+
+        if (dateFilter === dateFilterOptions.thisMonth) {
+          if (incomeDate.getMonth() !== now.getMonth() || 
+              incomeDate.getFullYear() !== now.getFullYear()) return false;
+        } else if (dateFilter === dateFilterOptions.thisYear) {
+          if (incomeDate.getFullYear() !== now.getFullYear()) return false;
+        }
+      }
+
+      if (!debouncedSearchTerm) return true;
+      
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      return (
+        income.name.toLowerCase().includes(searchLower) ||
+        income.description?.toLowerCase().includes(searchLower) ||
+        income.account.name.toLowerCase().includes(searchLower) ||
+        income.incomeType.name.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [incomeTransactions, dateFilter, debouncedSearchTerm]);
 
   const sortedIncomeTypes = [...incomeTypes].sort((a, b) => {
     if (a.monthlyTarget && b.monthlyTarget) {
@@ -219,28 +266,80 @@ const Income = () => {
         </div>
 
         <div className="md:hidden space-y-4">
-          {incomeTransactions?.map((income) => (
-            <IncomeCard
-              key={income.id}
-              id={income.id}
-              name={income.name}
-              amount={income.amount.toString()}
-              date={income.date}
-              description={income.description}
-              account={income.account}
-              incomeType={income.incomeType}
-              onClick={() => handleIncomeTransactionCardClick(income.id)}
+          <InputGroup>
+            <InputGroupInput 
+              placeholder="Search income..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-          ))}
-          
-          {hasMore && (
-            <Button
-              variant="outline"
-              className="w-full mt-4"
-              onClick={handleLoadMore}
+            <InputGroupAddon>
+              <SearchIcon className="h-4 w-4" />
+            </InputGroupAddon>
+          </InputGroup>
+
+          <ToggleGroup
+            type="single"
+            value={dateFilter}
+            variant="outline"
+            size="sm"
+            onValueChange={(value) => value && setDateFilter(value)}
+            className="justify-start"
+          >
+            <ToggleGroupItem
+              value={dateFilterOptions.viewAll}
+              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
             >
-              Load More
-            </Button>
+              View All
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value={dateFilterOptions.thisMonth}
+              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+            >
+              This Month
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value={dateFilterOptions.thisYear}
+              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+            >
+              This Year
+            </ToggleGroupItem>
+          </ToggleGroup>
+
+          {/* Income Cards */}
+          {filteredIncomeTransactions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <p className="text-muted-foreground">
+                {incomeTransactions.length === 0 
+                  ? "No income transactions found."
+                  : "No results found for your search."}
+              </p>
+            </div>
+          ) : (
+            <>
+              {filteredIncomeTransactions.map((income) => (
+                <IncomeCard
+                  key={income.id}
+                  id={income.id}
+                  name={income.name}
+                  amount={income.amount.toString()}
+                  date={income.date}
+                  description={income.description}
+                  account={income.account}
+                  incomeType={income.incomeType}
+                  onClick={() => handleIncomeTransactionCardClick(income.id)}
+                />
+              ))}
+              
+              {hasMore && filteredIncomeTransactions.length === incomeTransactions.length && (
+                <Button
+                  variant="outline"
+                  className="w-full mt-4"
+                  onClick={handleLoadMore}
+                >
+                  Load More
+                </Button>
+              )}
+            </>
           )}
         </div>
 
