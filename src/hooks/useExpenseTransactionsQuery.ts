@@ -42,10 +42,17 @@ const QUERY_KEYS = {
   expenseTransaction: (id: string) => ['expenseTransactions', id] as const,
 }
 
-const fetchExpenseTransactions = async (skip?: number, take?: number): Promise<ExpenseTransactionsResponse> => {
+const fetchExpenseTransactions = async (
+  skip?: number, 
+  take?: number,
+  search?: string,
+  dateFilter?: string
+): Promise<ExpenseTransactionsResponse> => {
   const params = new URLSearchParams();
   if (skip !== undefined) params.append('skip', skip.toString());
   if (take !== undefined) params.append('take', take.toString());
+  if (search) params.append('search', search);
+  if (dateFilter && dateFilter !== 'view-all') params.append('dateFilter', dateFilter);
   
   const url = `/api/expense-transactions${params.toString() ? `?${params.toString()}` : ''}`;
   const response = await fetch(url);
@@ -83,7 +90,12 @@ const deleteExpenseTransaction = async (id: string): Promise<void> => {
   }
 }
 
-export const useExpenseTransactionsQuery = (skip?: number, take?: number) => {
+export const useExpenseTransactionsQuery = (
+  skip?: number, 
+  take?: number,
+  search?: string,
+  dateFilter?: string
+) => {
   const queryClient = useQueryClient();
 
   const {
@@ -91,10 +103,11 @@ export const useExpenseTransactionsQuery = (skip?: number, take?: number) => {
     isPending,
     error,
   } = useQuery({
-    queryKey: skip !== undefined || take !== undefined 
-      ? [...QUERY_KEYS.expenseTransactions, { skip, take }]
-      : QUERY_KEYS.expenseTransactions,
-    queryFn: () => fetchExpenseTransactions(skip, take),
+    queryKey: [
+      ...QUERY_KEYS.expenseTransactions, 
+      { skip, take, search, dateFilter }
+    ],
+    queryFn: () => fetchExpenseTransactions(skip, take, search, dateFilter),
     staleTime: 5 * 60 * 1000,
   });
 

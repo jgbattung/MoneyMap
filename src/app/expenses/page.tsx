@@ -13,7 +13,7 @@ import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/in
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { SearchIcon } from "lucide-react";
 import { useExpenseTransactionsQuery } from "@/hooks/useExpenseTransactionsQuery";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 
 const ITEMS_PER_LOAD = 15;
 
@@ -25,50 +25,40 @@ const dateFilterOptions = {
 
 const Expenses = () => {
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_LOAD);
-  const { expenseTransactions, hasMore, isLoading, error } = useExpenseTransactionsQuery(0, displayCount);
   
+  // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
   
+  // Pass search and dateFilter to the hook
+  const { expenseTransactions, hasMore, isLoading, error } = useExpenseTransactionsQuery(
+    0, 
+    displayCount,
+    debouncedSearchTerm,
+    dateFilter
+  );
+  
+  // Drawer/Sheet states
   const [createExpenseSheetOpen, setCreateExpenseSheetOpen] = useState(false);
   const [createExpenseDrawerOpen, setCreateExpenseDrawerOpen] = useState(false);
   const [editExpenseDrawerOpen, setEditExpenseDrawerOpen] = useState(false);
   const [selectedExpenseId, setSelectedExpenseId] = useState<string>('');
 
+  // Debounce effect - increased to 500ms to prevent triggering on slow backspace
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 300);
+    }, 500);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const filteredExpenses = useMemo(() => {
-    return expenseTransactions.filter((expense) => {
-      if (dateFilter !== dateFilterOptions.viewAll) {
-        const expenseDate = new Date(expense.date);
-        const now = new Date();
-
-        if (dateFilter === dateFilterOptions.thisMonth) {
-          if (expenseDate.getMonth() !== now.getMonth() || 
-              expenseDate.getFullYear() !== now.getFullYear()) return false;
-        } else if (dateFilter === dateFilterOptions.thisYear) {
-          if (expenseDate.getFullYear() !== now.getFullYear()) return false;
-        }
-      }
-
-      if (!debouncedSearchTerm) return true;
-      
-      const searchLower = debouncedSearchTerm.toLowerCase();
-      return (
-        expense.name.toLowerCase().includes(searchLower) ||
-        expense.description?.toLowerCase().includes(searchLower) ||
-        expense.account.name.toLowerCase().includes(searchLower) ||
-        expense.expenseType.name.toLowerCase().includes(searchLower) ||
-        expense.expenseSubcategory?.name.toLowerCase().includes(searchLower)
-      );
-    });
-  }, [expenseTransactions, dateFilter, debouncedSearchTerm]);
+  // Reset displayCount when search or filter changes
+  useEffect(() => {
+    if (debouncedSearchTerm || dateFilter !== dateFilterOptions.viewAll) {
+      setDisplayCount(ITEMS_PER_LOAD);
+    }
+  }, [debouncedSearchTerm, dateFilter]);
 
   const handleExpenseClick = (expenseId: string) => {
     setSelectedExpenseId(expenseId);
@@ -78,6 +68,9 @@ const Expenses = () => {
   const handleLoadMore = () => {
     setDisplayCount(prev => prev + ITEMS_PER_LOAD);
   };
+
+  // Determine if we're currently searching/filtering
+  const isFiltering = debouncedSearchTerm.length > 0 || dateFilter !== dateFilterOptions.viewAll;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col">
@@ -119,18 +112,7 @@ const Expenses = () => {
         expenseId={selectedExpenseId}
       />
 
-      {isLoading ? (
-        <>
-          <div className='md:hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
-            {Array.from({ length: 4 }, (_, index) => (
-              <SkeletonIncomeTypeCard key={index} />
-            ))}
-          </div>
-          <div className='hidden md:block mt-10'>
-            <SkeletonTable tableType="expense" />
-          </div>
-        </>
-      ) : error ? (
+      {error ? (
         <div className='flex-1 flex flex-col items-center justify-center py-16'>
           <Icons.error
             className='h-24 w-24 mb-10'
@@ -147,7 +129,7 @@ const Expenses = () => {
             Try again
           </Button>
         </div>
-      ) : expenseTransactions.length === 0 ? (
+      ) : expenseTransactions.length === 0 && !isFiltering && !isLoading ? (
         <div className='flex-1 flex flex-col items-center justify-center py-16'>
           <Icons.wallet
             className='h-24 w-24 mb-10'
@@ -179,6 +161,7 @@ const Expenses = () => {
                 placeholder="Search expenses..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                disabled={isLoading}
               />
               <InputGroupAddon>
                 <SearchIcon className="h-4 w-4" />
@@ -190,37 +173,46 @@ const Expenses = () => {
               value={dateFilter}
               variant="outline"
               size="sm"
-              onValueChange={(value) => value && setDateFilter(value)}
+              onValueChange={(value) => !isLoading && value && setDateFilter(value)}
               className="justify-start"
+              disabled={isLoading}
             >
               <ToggleGroupItem
                 value={dateFilterOptions.viewAll}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+                disabled={isLoading}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 View All
               </ToggleGroupItem>
               <ToggleGroupItem
                 value={dateFilterOptions.thisMonth}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+                disabled={isLoading}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 This Month
               </ToggleGroupItem>
               <ToggleGroupItem
                 value={dateFilterOptions.thisYear}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+                disabled={isLoading}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 This Year
               </ToggleGroupItem>
             </ToggleGroup>
 
-            {/* Expense Cards */}
-            {filteredExpenses.length === 0 ? (
+            {isLoading ? (
+              <div className='grid grid-cols-1 gap-4'>
+                {Array.from({ length: 4 }, (_, index) => (
+                  <SkeletonIncomeTypeCard key={index} />
+                ))}
+              </div>
+            ) : expenseTransactions.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8">
                 <p className="text-muted-foreground">No results found for your search.</p>
               </div>
             ) : (
               <>
-                {filteredExpenses.map((expense) => (
+                {expenseTransactions.map((expense) => (
                   <ExpenseCard
                     key={expense.id}
                     id={expense.id}
@@ -246,7 +238,7 @@ const Expenses = () => {
                   />
                 ))}
                 
-                {hasMore && filteredExpenses.length === expenseTransactions.length && (
+                {!isFiltering && hasMore && (
                   <Button
                     variant="outline"
                     className="w-full mt-4"
@@ -260,7 +252,11 @@ const Expenses = () => {
           </div>
           
           <div className="hidden md:block">
-            <ExpenseTable />
+            {isLoading ? (
+              <SkeletonTable tableType="expense" />
+            ) : (
+              <ExpenseTable />
+            )}
           </div>
         </div>
       )}
