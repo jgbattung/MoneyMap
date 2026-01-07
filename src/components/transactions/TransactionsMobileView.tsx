@@ -194,6 +194,7 @@ const TransactionsMobileView = () => {
                 placeholder="Search expenses..." 
                 value={expenseSearchTerm}
                 onChange={(e) => setExpenseSearchTerm(e.target.value)}
+                className="text-sm h-8 py-1" 
                 disabled={expensesLoading}
               />
               <InputGroupAddon>
@@ -283,6 +284,7 @@ const TransactionsMobileView = () => {
                 placeholder="Search income..." 
                 value={incomeSearchTerm}
                 onChange={(e) => setIncomeSearchTerm(e.target.value)}
+                className="text-sm h-8 py-1" 
                 disabled={incomeLoading}
               />
               <InputGroupAddon>
@@ -370,6 +372,7 @@ const TransactionsMobileView = () => {
                 placeholder="Search transfers..." 
                 value={transferSearchTerm}
                 onChange={(e) => setTransferSearchTerm(e.target.value)}
+                className="text-sm h-8 py-1" 
                 disabled={transfersLoading}
               />
               <InputGroupAddon>

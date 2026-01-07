@@ -161,6 +161,7 @@ const Expenses = () => {
                 placeholder="Search expenses..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                className="text-sm h-8 py-1" 
                 disabled={isLoading}
               />
               <InputGroupAddon>
