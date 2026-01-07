@@ -116,7 +116,6 @@ const Income = () => {
     setDisplayCount(prev => prev + ITEMS_PER_LOAD);
   };
 
-  // Determine if we're currently searching/filtering
   const isFiltering = debouncedSearchTerm.length > 0 || dateFilter !== dateFilterOptions.viewAll;
 
   return (
@@ -254,9 +253,7 @@ const Income = () => {
           </p>
         </div>
 
-        {/* Mobile View with Search and Filters */}
         <div className="md:hidden space-y-4">
-          {/* Search - Always visible, disabled when loading */}
           <InputGroup>
             <InputGroupInput 
               placeholder="Search income..." 
@@ -269,7 +266,6 @@ const Income = () => {
             </InputGroupAddon>
           </InputGroup>
 
-          {/* Date Filter - Always visible, disabled when loading */}
           <ToggleGroup
             type="single"
             value={dateFilter}
@@ -302,7 +298,6 @@ const Income = () => {
             </ToggleGroupItem>
           </ToggleGroup>
 
-          {/* Loading State */}
           {isLoading ? (
             <div className='grid grid-cols-1 gap-4'>
               {Array.from({ length: 4 }, (_, index) => (
@@ -329,7 +324,6 @@ const Income = () => {
                 />
               ))}
               
-              {/* Load More - only show when NOT searching/filtering */}
               {!isFiltering && hasMore && (
                 <Button
                   variant="outline"
@@ -343,7 +337,6 @@ const Income = () => {
           )}
         </div>
 
-        {/* Desktop View */}
         <div className="hidden md:block mb-4">
           <IncomeTable />
         </div>
