@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,25 +18,84 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get pagination params from URL
     const { searchParams } = new URL(request.url);
     const skip = searchParams.get('skip');
     const take = searchParams.get('take');
+    const search = searchParams.get('search');
+    const dateFilter = searchParams.get('dateFilter');
 
     const skipNumber = skip ? parseInt(skip) : undefined;
     const takeNumber = take ? parseInt(take) : undefined;
 
-    // Build the where clause
-    const whereClause = {
+    const whereClause: Prisma.IncomeTransactionWhereInput = {
       userId: session.user.id,
     };
 
-    // Get total count
+    if (search && search.trim().length > 0) {
+      whereClause.OR = [
+        {
+          name: {
+            contains: search,
+            mode: 'insensitive' as Prisma.QueryMode,
+          },
+        },
+        {
+          description: {
+            contains: search,
+            mode: 'insensitive' as Prisma.QueryMode,
+          },
+        },
+        {
+          account: {
+            name: {
+              contains: search,
+              mode: 'insensitive' as Prisma.QueryMode,
+            },
+          },
+        },
+        {
+          incomeType: {
+            name: {
+              contains: search,
+              mode: 'insensitive' as Prisma.QueryMode,
+            },
+          },
+        },
+      ];
+    }
+
+    if (dateFilter && dateFilter !== 'view-all') {
+      const now = new Date();
+      
+      if (dateFilter === 'this-month') {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        
+        whereClause.date = {
+          gte: startOfMonth,
+          lte: endOfMonth,
+        };
+      } else if (dateFilter === 'this-year') {
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        
+        whereClause.date = {
+          gte: startOfYear,
+          lte: endOfYear,
+        };
+      }
+    }
+
     const total = await db.incomeTransaction.count({
       where: whereClause,
     });
 
-    // Get transactions with optional pagination
+    // Determine limit - if searching, return more results (up to 100)
+    let effectiveTake = takeNumber;
+    if (search && search.trim().length > 0) {
+      effectiveTake = 100;
+    }
+
     const incomeTransactions = await db.incomeTransaction.findMany({
       where: whereClause,
       include: {
@@ -45,7 +106,7 @@ export async function GET(request: NextRequest) {
         date: 'desc',
       },
       ...(skipNumber !== undefined && { skip: skipNumber }),
-      ...(takeNumber !== undefined && { take: takeNumber }),
+      ...(effectiveTake !== undefined && { take: effectiveTake }),
     });
 
     // Calculate hasMore
