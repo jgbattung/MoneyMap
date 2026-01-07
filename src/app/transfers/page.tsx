@@ -3,13 +3,14 @@
 import EditTransferDrawer from '@/components/forms/EditTransferDrawer';
 import TransferCard from '@/components/shared/TransferCard';
 import TransferTypesList from '@/components/shared/TransferTypesList';
+import SkeletonIncomeTypeCard from '@/components/shared/SkeletonIncomeTypeCard';
 import TransferTable from '@/components/tables/transfers/TransferTable';
 import { useTransfersQuery } from '@/hooks/useTransferTransactionsQuery';
 import { Button } from '@/components/ui/button';
 import { InputGroup, InputGroupInput, InputGroupAddon } from '@/components/ui/input-group';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { SearchIcon } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 
 const ITEMS_PER_LOAD = 15;
 
@@ -21,11 +22,17 @@ const dateFilterOptions = {
 
 const Transactions = () => {
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_LOAD);
-  const { transfers, hasMore } = useTransfersQuery(0, displayCount);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
+  
+  const { transfers, hasMore, isLoading } = useTransfersQuery(
+    0, 
+    displayCount,
+    debouncedSearchTerm,
+    dateFilter
+  );
   
   const [selectedTransferId, setSelectedTransferId] = useState<string>('');
   const [editTransferDrawerOpen, setEditTransferDrawerOpen] = useState(false);
@@ -33,36 +40,15 @@ const Transactions = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 300);
+    }, 500);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const filteredTransfers = useMemo(() => {
-    return transfers.filter((transfer) => {
-      if (dateFilter !== dateFilterOptions.viewAll) {
-        const transferDate = new Date(transfer.date);
-        const now = new Date();
-
-        if (dateFilter === dateFilterOptions.thisMonth) {
-          if (transferDate.getMonth() !== now.getMonth() || 
-              transferDate.getFullYear() !== now.getFullYear()) return false;
-        } else if (dateFilter === dateFilterOptions.thisYear) {
-          if (transferDate.getFullYear() !== now.getFullYear()) return false;
-        }
-      }
-
-      if (!debouncedSearchTerm) return true;
-      
-      const searchLower = debouncedSearchTerm.toLowerCase();
-      return (
-        transfer.name.toLowerCase().includes(searchLower) ||
-        transfer.notes?.toLowerCase().includes(searchLower) ||
-        transfer.fromAccount.name.toLowerCase().includes(searchLower) ||
-        transfer.toAccount.name.toLowerCase().includes(searchLower) ||
-        transfer.transferType.name.toLowerCase().includes(searchLower)
-      );
-    });
-  }, [transfers, dateFilter, debouncedSearchTerm]);
+  useEffect(() => {
+    if (debouncedSearchTerm || dateFilter !== dateFilterOptions.viewAll) {
+      setDisplayCount(ITEMS_PER_LOAD);
+    }
+  }, [debouncedSearchTerm, dateFilter]);
   
   const handleTransferCardClick = (transferId: string) => {
     setSelectedTransferId(transferId);
@@ -72,6 +58,8 @@ const Transactions = () => {
   const handleLoadMore = () => {
     setDisplayCount(prev => prev + ITEMS_PER_LOAD);
   };
+
+  const isFiltering = debouncedSearchTerm.length > 0 || dateFilter !== dateFilterOptions.viewAll;
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
@@ -105,6 +93,7 @@ const Transactions = () => {
               placeholder="Search transfers..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              disabled={isLoading}
             />
             <InputGroupAddon>
               <SearchIcon className="h-4 w-4" />
@@ -116,41 +105,46 @@ const Transactions = () => {
             value={dateFilter}
             variant="outline"
             size="sm"
-            onValueChange={(value) => value && setDateFilter(value)}
+            onValueChange={(value) => !isLoading && value && setDateFilter(value)}
             className="justify-start"
+            disabled={isLoading}
           >
             <ToggleGroupItem
               value={dateFilterOptions.viewAll}
-              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+              disabled={isLoading}
+              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
             >
               View All
             </ToggleGroupItem>
             <ToggleGroupItem
               value={dateFilterOptions.thisMonth}
-              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+              disabled={isLoading}
+              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
             >
               This Month
             </ToggleGroupItem>
             <ToggleGroupItem
               value={dateFilterOptions.thisYear}
-              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+              disabled={isLoading}
+              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
             >
               This Year
             </ToggleGroupItem>
           </ToggleGroup>
 
-          {/* Transfer Cards */}
-          {filteredTransfers.length === 0 ? (
+          {isLoading ? (
+            <div className='grid grid-cols-1 gap-4'>
+              {Array.from({ length: 4 }, (_, index) => (
+                <SkeletonIncomeTypeCard key={index} />
+              ))}
+            </div>
+          ) : transfers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8">
-              <p className="text-muted-foreground">
-                {transfers.length === 0 
-                  ? "No transfer transactions found."
-                  : "No results found for your search."}
-              </p>
+              <p className="text-muted-foreground">No results found for your search.</p>
             </div>
           ) : (
             <>
-              {filteredTransfers.map((transfer) => (
+              {transfers.map((transfer) => (
                 <TransferCard
                   key={transfer.id}
                   id={transfer.id}
@@ -164,7 +158,7 @@ const Transactions = () => {
                 />
               ))}
               
-              {hasMore && filteredTransfers.length === transfers.length && (
+              {!isFiltering && hasMore && (
                 <Button
                   variant="outline"
                   className="w-full mt-4"
