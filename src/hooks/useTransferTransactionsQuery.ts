@@ -47,10 +47,17 @@ const QUERY_KEYS = {
   transfer: (id: string) => ['transfers', id] as const,
 }
 
-const fetchTransfers = async (skip?: number, take?: number): Promise<TransferTransactionsResponse> => {
+const fetchTransfers = async (
+  skip?: number,
+  take?: number,
+  search?: string,
+  dateFilter?: string
+): Promise<TransferTransactionsResponse> => {
   const params = new URLSearchParams();
   if (skip !== undefined) params.append('skip', skip.toString());
   if (take !== undefined) params.append('take', take.toString());
+  if (search) params.append('search', search);
+  if (dateFilter && dateFilter !== 'view-all') params.append('dateFilter', dateFilter);
   
   const url = `/api/transfer-transactions${params.toString() ? `?${params.toString()}` : ''}`;
   const response = await fetch(url);
@@ -88,7 +95,12 @@ const deleteTransfer = async (id: string): Promise<void> => {
   }
 };
 
-export const useTransfersQuery = (skip?: number, take?: number) => {
+export const useTransfersQuery = (
+  skip?: number,
+  take?: number,
+  search?: string,
+  dateFilter?: string
+) => {
   const queryClient = useQueryClient();
 
   const {
@@ -96,10 +108,11 @@ export const useTransfersQuery = (skip?: number, take?: number) => {
     isPending,
     error,
   } = useQuery({
-    queryKey: skip !== undefined || take !== undefined 
-      ? [...QUERY_KEYS.transfers, { skip, take }]
-      : QUERY_KEYS.transfers,
-    queryFn: () => fetchTransfers(skip, take),
+    queryKey: [
+      ...QUERY_KEYS.transfers, 
+      { skip, take, search, dateFilter }
+    ],
+    queryFn: () => fetchTransfers(skip, take, search, dateFilter),
     staleTime: 5 * 60 * 1000,
   });
 

@@ -2,11 +2,11 @@
 
 "use client"
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
 import { InputGroup, InputGroupInput, InputGroupAddon } from '@/components/ui/input-group';
-import { SearchIcon } from 'lucide-react';
+import { SearchIcon, Loader2 } from 'lucide-react';
 import CompactTransactionCard from './CompactTransactionCard';
 import { useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery';
 import { useIncomeTransactionsQuery } from '@/hooks/useIncomeTransactionsQuery';
@@ -14,7 +14,6 @@ import { useTransfersQuery } from '@/hooks/useTransferTransactionsQuery';
 import EditExpenseDrawer from '@/components/forms/EditExpenseDrawer';
 import EditIncomeDrawer from '@/components/forms/EditIncomeDrawer';
 import EditTransferDrawer from '@/components/forms/EditTransferDrawer';
-import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 type TabType = 'expenses' | 'income' | 'transfers';
@@ -23,7 +22,6 @@ const ITEMS_PER_LOAD = 15;
 
 const dateFilterOptions = {
   viewAll: "view-all",
-  thisWeek: "this-week",
   thisMonth: "this-month",
   thisYear: "this-year",
 };
@@ -56,135 +54,73 @@ const TransactionsMobileView = () => {
     expenseTransactions, 
     hasMore: expensesHasMore, 
     isLoading: expensesLoading 
-  } = useExpenseTransactionsQuery(0, expensesDisplayCount);
+  } = useExpenseTransactionsQuery(
+    0, 
+    expensesDisplayCount,
+    debouncedExpenseSearch,
+    expenseDateFilter
+  );
 
   const { 
     incomeTransactions, 
     hasMore: incomeHasMore, 
     isLoading: incomeLoading 
-  } = useIncomeTransactionsQuery(0, incomeDisplayCount);
+  } = useIncomeTransactionsQuery(
+    0, 
+    incomeDisplayCount,
+    debouncedIncomeSearch,
+    incomeDateFilter
+  );
 
   const { 
     transfers, 
     hasMore: transfersHasMore, 
     isLoading: transfersLoading 
-  } = useTransfersQuery(0, transfersDisplayCount);
+  } = useTransfersQuery(
+    0, 
+    transfersDisplayCount,
+    debouncedTransferSearch,
+    transferDateFilter
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedExpenseSearch(expenseSearchTerm);
-    }, 300);
+    }, 500);
     return () => clearTimeout(timer);
   }, [expenseSearchTerm]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedIncomeSearch(incomeSearchTerm);
-    }, 300);
+    }, 500);
     return () => clearTimeout(timer);
   }, [incomeSearchTerm]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedTransferSearch(transferSearchTerm);
-    }, 300);
+    }, 500);
     return () => clearTimeout(timer);
   }, [transferSearchTerm]);
 
-  const filteredExpenses = useMemo(() => {
-    return expenseTransactions.filter((expense) => {
-      if (expenseDateFilter !== dateFilterOptions.viewAll) {
-        const expenseDate = new Date(expense.date);
-        const now = new Date();
+  useEffect(() => {
+    if (debouncedExpenseSearch || expenseDateFilter !== dateFilterOptions.viewAll) {
+      setExpensesDisplayCount(ITEMS_PER_LOAD);
+    }
+  }, [debouncedExpenseSearch, expenseDateFilter]);
 
-        if (expenseDateFilter === dateFilterOptions.thisWeek) {
-          const weekStart = new Date(now);
-          weekStart.setDate(now.getDate() - now.getDay());
-          weekStart.setHours(0, 0, 0, 0);
-          if (expenseDate < weekStart) return false;
-        } else if (expenseDateFilter === dateFilterOptions.thisMonth) {
-          if (expenseDate.getMonth() !== now.getMonth() || 
-              expenseDate.getFullYear() !== now.getFullYear()) return false;
-        } else if (expenseDateFilter === dateFilterOptions.thisYear) {
-          if (expenseDate.getFullYear() !== now.getFullYear()) return false;
-        }
-      }
+  useEffect(() => {
+    if (debouncedIncomeSearch || incomeDateFilter !== dateFilterOptions.viewAll) {
+      setIncomeDisplayCount(ITEMS_PER_LOAD);
+    }
+  }, [debouncedIncomeSearch, incomeDateFilter]);
 
-      if (!debouncedExpenseSearch) return true;
-      
-      const searchLower = debouncedExpenseSearch.toLowerCase();
-      return (
-        expense.name.toLowerCase().includes(searchLower) ||
-        expense.description?.toLowerCase().includes(searchLower) ||
-        expense.account.name.toLowerCase().includes(searchLower) ||
-        expense.expenseType.name.toLowerCase().includes(searchLower) ||
-        expense.expenseSubcategory?.name.toLowerCase().includes(searchLower)
-      );
-    });
-  }, [expenseTransactions, expenseDateFilter, debouncedExpenseSearch]);
-
-  const filteredIncome = useMemo(() => {
-    return incomeTransactions.filter((income) => {
-      if (incomeDateFilter !== dateFilterOptions.viewAll) {
-        const incomeDate = new Date(income.date);
-        const now = new Date();
-
-        if (incomeDateFilter === dateFilterOptions.thisWeek) {
-          const weekStart = new Date(now);
-          weekStart.setDate(now.getDate() - now.getDay());
-          weekStart.setHours(0, 0, 0, 0);
-          if (incomeDate < weekStart) return false;
-        } else if (incomeDateFilter === dateFilterOptions.thisMonth) {
-          if (incomeDate.getMonth() !== now.getMonth() || 
-              incomeDate.getFullYear() !== now.getFullYear()) return false;
-        } else if (incomeDateFilter === dateFilterOptions.thisYear) {
-          if (incomeDate.getFullYear() !== now.getFullYear()) return false;
-        }
-      }
-
-      if (!debouncedIncomeSearch) return true;
-      
-      const searchLower = debouncedIncomeSearch.toLowerCase();
-      return (
-        income.name.toLowerCase().includes(searchLower) ||
-        income.description?.toLowerCase().includes(searchLower) ||
-        income.account.name.toLowerCase().includes(searchLower) ||
-        income.incomeType.name.toLowerCase().includes(searchLower)
-      );
-    });
-  }, [incomeTransactions, incomeDateFilter, debouncedIncomeSearch]);
-
-  const filteredTransfers = useMemo(() => {
-    return transfers.filter((transfer) => {
-      if (transferDateFilter !== dateFilterOptions.viewAll) {
-        const transferDate = new Date(transfer.date);
-        const now = new Date();
-
-        if (transferDateFilter === dateFilterOptions.thisWeek) {
-          const weekStart = new Date(now);
-          weekStart.setDate(now.getDate() - now.getDay());
-          weekStart.setHours(0, 0, 0, 0);
-          if (transferDate < weekStart) return false;
-        } else if (transferDateFilter === dateFilterOptions.thisMonth) {
-          if (transferDate.getMonth() !== now.getMonth() || 
-              transferDate.getFullYear() !== now.getFullYear()) return false;
-        } else if (transferDateFilter === dateFilterOptions.thisYear) {
-          if (transferDate.getFullYear() !== now.getFullYear()) return false;
-        }
-      }
-
-      if (!debouncedTransferSearch) return true;
-      
-      const searchLower = debouncedTransferSearch.toLowerCase();
-      return (
-        transfer.name.toLowerCase().includes(searchLower) ||
-        transfer.notes?.toLowerCase().includes(searchLower) ||
-        transfer.fromAccount.name.toLowerCase().includes(searchLower) ||
-        transfer.toAccount.name.toLowerCase().includes(searchLower) ||
-        transfer.transferType.name.toLowerCase().includes(searchLower)
-      );
-    });
-  }, [transfers, transferDateFilter, debouncedTransferSearch]);
+  useEffect(() => {
+    if (debouncedTransferSearch || transferDateFilter !== dateFilterOptions.viewAll) {
+      setTransfersDisplayCount(ITEMS_PER_LOAD);
+    }
+  }, [debouncedTransferSearch, transferDateFilter]);
 
   const handleLoadMoreExpenses = () => {
     setExpensesDisplayCount(prev => prev + ITEMS_PER_LOAD);
@@ -212,6 +148,11 @@ const TransactionsMobileView = () => {
     setSelectedTransactionId(id);
     setEditTransferDrawerOpen(true);
   };
+
+  // Determine if filtering is active for each tab
+  const isExpenseFiltering = debouncedExpenseSearch.length > 0 || expenseDateFilter !== dateFilterOptions.viewAll;
+  const isIncomeFiltering = debouncedIncomeSearch.length > 0 || incomeDateFilter !== dateFilterOptions.viewAll;
+  const isTransferFiltering = debouncedTransferSearch.length > 0 || transferDateFilter !== dateFilterOptions.viewAll;
 
   return (
     <>
@@ -248,42 +189,46 @@ const TransactionsMobileView = () => {
         {/* Expenses Tab */}
         {activeTab === 'expenses' && (
           <div className="space-y-4">
-            {/* Search */}
             <InputGroup>
               <InputGroupInput 
                 placeholder="Search expenses..." 
                 value={expenseSearchTerm}
                 onChange={(e) => setExpenseSearchTerm(e.target.value)}
+                className="text-sm h-8 py-1" 
+                disabled={expensesLoading}
               />
               <InputGroupAddon>
                 <SearchIcon className="h-4 w-4" />
               </InputGroupAddon>
             </InputGroup>
 
-            {/* Date Filter */}
             <ToggleGroup
               type="single"
               value={expenseDateFilter}
               variant="outline"
               size="sm"
-              onValueChange={(value) => value && setExpenseDateFilter(value)}
+              onValueChange={(value) => !expensesLoading && value && setExpenseDateFilter(value)}
               className="justify-start"
+              disabled={expensesLoading}
             >
               <ToggleGroupItem
                 value={dateFilterOptions.viewAll}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+                disabled={expensesLoading}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 View All
               </ToggleGroupItem>
               <ToggleGroupItem
                 value={dateFilterOptions.thisMonth}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+                disabled={expensesLoading}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 This Month
               </ToggleGroupItem>
               <ToggleGroupItem
                 value={dateFilterOptions.thisYear}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+                disabled={expensesLoading}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 This Year
               </ToggleGroupItem>
@@ -295,17 +240,13 @@ const TransactionsMobileView = () => {
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : filteredExpenses.length === 0 ? (
+              ) : expenseTransactions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8">
-                  <p className="text-muted-foreground">
-                    {expenseTransactions.length === 0 
-                      ? "No expense transactions found."
-                      : "No results found for your search."}
-                  </p>
+                  <p className="text-muted-foreground">No results found for your search.</p>
                 </div>
               ) : (
                 <>
-                  {filteredExpenses.map((expense) => (
+                  {expenseTransactions.map((expense) => (
                     <CompactTransactionCard
                       key={expense.id}
                       id={expense.id}
@@ -319,7 +260,7 @@ const TransactionsMobileView = () => {
                       onClick={() => handleExpenseClick(expense.id)}
                     />
                   ))}
-                  {expensesHasMore && filteredExpenses.length === expenseTransactions.length && (
+                  {!isExpenseFiltering && expensesHasMore && (
                     <Button
                       variant="outline"
                       className="w-full mt-4"
@@ -337,42 +278,47 @@ const TransactionsMobileView = () => {
         {/* Income Tab */}
         {activeTab === 'income' && (
           <div className="space-y-4">
-            {/* Search */}
+            {/* Search - Always visible, disabled when loading */}
             <InputGroup>
               <InputGroupInput 
                 placeholder="Search income..." 
                 value={incomeSearchTerm}
                 onChange={(e) => setIncomeSearchTerm(e.target.value)}
+                className="text-sm h-8 py-1" 
+                disabled={incomeLoading}
               />
               <InputGroupAddon>
                 <SearchIcon className="h-4 w-4" />
               </InputGroupAddon>
             </InputGroup>
 
-            {/* Date Filter */}
             <ToggleGroup
               type="single"
               value={incomeDateFilter}
               variant="outline"
               size="sm"
-              onValueChange={(value) => value && setIncomeDateFilter(value)}
+              onValueChange={(value) => !incomeLoading && value && setIncomeDateFilter(value)}
               className="justify-start"
+              disabled={incomeLoading}
             >
               <ToggleGroupItem
                 value={dateFilterOptions.viewAll}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+                disabled={incomeLoading}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 View All
               </ToggleGroupItem>
               <ToggleGroupItem
                 value={dateFilterOptions.thisMonth}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+                disabled={incomeLoading}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 This Month
               </ToggleGroupItem>
               <ToggleGroupItem
                 value={dateFilterOptions.thisYear}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+                disabled={incomeLoading}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 This Year
               </ToggleGroupItem>
@@ -384,17 +330,13 @@ const TransactionsMobileView = () => {
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : filteredIncome.length === 0 ? (
+              ) : incomeTransactions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8">
-                  <p className="text-muted-foreground">
-                    {incomeTransactions.length === 0 
-                      ? "No income transactions found."
-                      : "No results found for your search."}
-                  </p>
+                  <p className="text-muted-foreground">No results found for your search.</p>
                 </div>
               ) : (
                 <>
-                  {filteredIncome.map((income) => (
+                  {incomeTransactions.map((income) => (
                     <CompactTransactionCard
                       key={income.id}
                       id={income.id}
@@ -407,7 +349,7 @@ const TransactionsMobileView = () => {
                       onClick={() => handleIncomeClick(income.id)}
                     />
                   ))}
-                  {incomeHasMore && filteredIncome.length === incomeTransactions.length && (
+                  {!isIncomeFiltering && incomeHasMore && (
                     <Button
                       variant="outline"
                       className="w-full mt-4"
@@ -425,42 +367,46 @@ const TransactionsMobileView = () => {
         {/* Transfers Tab */}
         {activeTab === 'transfers' && (
           <div className="space-y-4">
-            {/* Search */}
             <InputGroup>
               <InputGroupInput 
                 placeholder="Search transfers..." 
                 value={transferSearchTerm}
                 onChange={(e) => setTransferSearchTerm(e.target.value)}
+                className="text-sm h-8 py-1" 
+                disabled={transfersLoading}
               />
               <InputGroupAddon>
                 <SearchIcon className="h-4 w-4" />
               </InputGroupAddon>
             </InputGroup>
 
-            {/* Date Filter */}
             <ToggleGroup
               type="single"
               value={transferDateFilter}
               variant="outline"
               size="sm"
-              onValueChange={(value) => value && setTransferDateFilter(value)}
+              onValueChange={(value) => !transfersLoading && value && setTransferDateFilter(value)}
               className="justify-start"
+              disabled={transfersLoading}
             >
               <ToggleGroupItem
                 value={dateFilterOptions.viewAll}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+                disabled={transfersLoading}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 View All
               </ToggleGroupItem>
               <ToggleGroupItem
                 value={dateFilterOptions.thisMonth}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+                disabled={transfersLoading}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 This Month
               </ToggleGroupItem>
               <ToggleGroupItem
                 value={dateFilterOptions.thisYear}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap"
+                disabled={transfersLoading}
+                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 This Year
               </ToggleGroupItem>
@@ -472,17 +418,13 @@ const TransactionsMobileView = () => {
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : filteredTransfers.length === 0 ? (
+              ) : transfers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8">
-                  <p className="text-muted-foreground">
-                    {transfers.length === 0 
-                      ? "No transfer transactions found."
-                      : "No results found for your search."}
-                  </p>
+                  <p className="text-muted-foreground">No results found for your search.</p>
                 </div>
               ) : (
                 <>
-                  {filteredTransfers.map((transfer) => (
+                  {transfers.map((transfer) => (
                     <CompactTransactionCard
                       key={transfer.id}
                       id={transfer.id}
@@ -496,7 +438,7 @@ const TransactionsMobileView = () => {
                       onClick={() => handleTransferClick(transfer.id)}
                     />
                   ))}
-                  {transfersHasMore && filteredTransfers.length === transfers.length && (
+                  {!isTransferFiltering && transfersHasMore && (
                     <Button
                       variant="outline"
                       className="w-full mt-4"
