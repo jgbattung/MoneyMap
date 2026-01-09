@@ -31,7 +31,9 @@ const NetWorthHistoryChart = () => {
     return (
       <div className='flex flex-col gap-3'>
         <div className='flex items-center justify-between mt-6'>
-          <div className="h-4 w-32 md:h-5 md:w-40 bg-secondary-500 rounded animate-pulse" />
+          <p className='text-foreground font-light text-sm md:text-base mt-6'>
+            Net Worth Over Time
+          </p>
           <div className="h-3 w-20 md:h-4 md:w-24 bg-secondary-500 rounded animate-pulse" />
         </div>
 
