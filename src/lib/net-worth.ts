@@ -16,85 +16,19 @@ export async function calculateCurrentNetWorth(userId: string): Promise<number> 
     : 0;
 }
 
-export async function calculateAccountBalanceAtDate(
-  accountId: string,
-  date: Date
-): Promise<number> {
-  const [account, incomeSum, expenseSum, transfersInSum, transfersOutData] = await Promise.all([
-    db.financialAccount.findUnique({
-      where: { id: accountId },
-      select: { initialBalance: true },
-    }),
-    db.incomeTransaction.aggregate({
-      where: {
-        accountId,
-        date: { lte: date },
-      },
-      _sum: { amount: true },
-    }),
-    db.expenseTransaction.aggregate({
-      where: {
-        accountId,
-        date: { lte: date },
-      },
-      _sum: { amount: true },
-    }),
-    db.transferTransaction.aggregate({
-      where: {
-        toAccountId: accountId,
-        date: { lte: date },
-      },
-      _sum: { amount: true },
-    }),
-    db.transferTransaction.findMany({
-      where: {
-        fromAccountId: accountId,
-        date: { lte: date },
-      },
-      select: {
-        amount: true,
-        feeAmount: true,
-      },
-    }),
-  ]);
+export async function calculateMonthlyChange(userId: string): Promise<{
+  change: number;
+  percentage: number;
+}> {
+  const today = new Date();
+  
+  // Get start and end of current month
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
 
-  if (!account) {
-    throw new Error(`Account with id ${accountId} not found`);
-  }
+  // Get current net worth
+  const currentNetWorth = await calculateCurrentNetWorth(userId);
 
-  // Calculate balance
-  let balance = parseFloat(account.initialBalance.toString());
-
-  // Add income
-  if (incomeSum._sum.amount) {
-    balance += parseFloat(incomeSum._sum.amount.toString());
-  }
-
-  // Subtract expenses
-  if (expenseSum._sum.amount) {
-    balance -= parseFloat(expenseSum._sum.amount.toString());
-  }
-
-  // Add transfers in
-  if (transfersInSum._sum.amount) {
-    balance += transfersInSum._sum.amount;
-  }
-
-  // Subtract transfers out and fees
-  for (const transfer of transfersOutData) {
-    balance -= transfer.amount;
-    if (transfer.feeAmount) {
-      balance -= parseFloat(transfer.feeAmount.toString());
-    }
-  }
-
-  return balance;
-}
-
-export async function calculateNetWorthAtDate(
-  userId: string,
-  date: Date
-): Promise<number> {
   const accounts = await db.financialAccount.findMany({
     where: {
       userId,
@@ -103,36 +37,60 @@ export async function calculateNetWorthAtDate(
     select: { id: true },
   });
 
-  // Calculate balances in parallel
-  const balances = await Promise.all(
-    accounts.map(account => calculateAccountBalanceAtDate(account.id, date))
-  );
+  if (accounts.length === 0) {
+    return {
+      change: 0,
+      percentage: 0,
+    };
+  }
 
-  const totalNetWorth = balances.reduce((sum, balance) => sum + balance, 0);
+  const accountIds = accounts.map(a => a.id);
 
-  return totalNetWorth;
-}
-
-export async function calculateMonthlyChange(userId: string): Promise<{
-  change: number;
-  percentage: number;
-}> {
-  const today = new Date();
-
-  // Get end of previous month
-  const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-  endOfLastMonth.setHours(23, 59, 59, 999);
-
-  // Calculate both net worths in parallel
-  const [previousNetWorth, currentNetWorth] = await Promise.all([
-    calculateNetWorthAtDate(userId, endOfLastMonth),
-    calculateCurrentNetWorth(userId),
+  const [incomeThisMonth, expensesThisMonth] = await Promise.all([
+    db.incomeTransaction.aggregate({
+      where: {
+        userId,
+        accountId: { in: accountIds },
+        date: {
+          gte: startOfMonth,
+          lte: endOfMonth,
+        },
+      },
+      _sum: { amount: true },
+    }),
+    db.expenseTransaction.aggregate({
+      where: {
+        userId,
+        accountId: { in: accountIds },
+        date: {
+          gte: startOfMonth,
+          lte: endOfMonth,
+        },
+      },
+      _sum: { amount: true },
+    }),
   ]);
 
-  const change = currentNetWorth - previousNetWorth;
+  // Calculate this month's net change
+  const income = incomeThisMonth._sum.amount 
+    ? parseFloat(incomeThisMonth._sum.amount.toString()) 
+    : 0;
+  
+  const expenses = expensesThisMonth._sum.amount 
+    ? parseFloat(expensesThisMonth._sum.amount.toString()) 
+    : 0;
 
-  const percentage =
-    previousNetWorth !== 0 ? (change / Math.abs(previousNetWorth)) * 100 : 0;
+  // Net change this month = income - expenses
+  const thisMonthChange = income - expenses;
+
+  // Previous month's net worth = current - this month's change
+  const previousNetWorth = currentNetWorth - thisMonthChange;
+
+  // Calculate change and percentage
+  const change = currentNetWorth - previousNetWorth;
+  const percentage = previousNetWorth !== 0 
+    ? (change / Math.abs(previousNetWorth)) * 100 
+    : 0;
 
   return {
     change: parseFloat(change.toFixed(2)),
