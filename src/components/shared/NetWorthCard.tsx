@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react'
 import { Button } from '../ui/button'
-import { ArrowUp, ArrowDown, ArrowRight, Loader2 } from 'lucide-react'
+import { ArrowUp, ArrowDown, ArrowRight } from 'lucide-react'
 import { Progress } from '../ui/progress'
+import { Skeleton } from '../ui/skeleton'
 import { useNetWorth } from '@/hooks/useNetWorth'
 import { useNetWorthTarget } from '@/hooks/useNetWorthTarget'
 import SetTargetDialog from '../forms/SetTargetDialog'
@@ -49,8 +50,28 @@ const NetWorthCard = () => {
   if (isLoading) {
     return (
       <div className='flex flex-col max-w-5xl gap-3 bg-card border border-border rounded-md p-4 shadow-md'>
-        <div className='flex items-center justify-center py-12'>
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        {/* Header Section Skeleton */}
+        <div className='flex items-center justify-between'>
+          <Skeleton className='h-5 w-32 md:h-6 md:w-36 bg-secondary-500' />
+          <Skeleton className='h-8 w-24 rounded-md bg-secondary-500' />
+        </div>
+
+        {/* Main Net Worth Display Skeleton */}
+        <div className='flex flex-col items-start gap-1'>
+          <Skeleton className='h-3 w-10 bg-secondary-500' />
+          <Skeleton className='h-10 w-48 md:h-12 md:w-64 bg-secondary-500' />
+        </div>
+
+        {/* Monthly Change Indicator Skeleton */}
+        <Skeleton className='h-4 w-56 md:h-5 md:w-64 bg-secondary-500' />
+
+        {/* Progress Section Skeleton */}
+        <div className="space-y-2 pt-2 border-t border-border">
+          <div className="flex items-center justify-between">
+            <Skeleton className='h-3 w-40 md:h-4 md:w-48 bg-secondary-500' />
+            <Skeleton className='h-3 w-12 bg-secondary-500' />
+          </div>
+          <Skeleton className='h-2 w-full rounded-full bg-secondary-500' />
         </div>
       </div>
     );
