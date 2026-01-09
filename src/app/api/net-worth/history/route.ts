@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
 
     const userId = session.user.id;
 
+    // Get all accounts with initialBalance
     const accounts = await db.financialAccount.findMany({
       where: {
         userId,
@@ -35,14 +36,20 @@ export async function GET(req: NextRequest) {
 
     const accountIds = accounts.map(a => a.id);
 
-    const [incomeTransactions, expenseTransactions, transferTransactions] = await Promise.all([
+    // Calculate total initial balance across all accounts
+    const totalInitialBalance = accounts.reduce(
+      (sum, account) => sum + parseFloat(account.initialBalance.toString()),
+      0
+    );
+
+    // Bulk fetch ALL transactions
+    const [incomeTransactions, expenseTransactions] = await Promise.all([
       db.incomeTransaction.findMany({
         where: {
           userId,
           accountId: { in: accountIds }
         },
         select: {
-          accountId: true,
           amount: true,
           date: true,
         }
@@ -53,66 +60,32 @@ export async function GET(req: NextRequest) {
           accountId: { in: accountIds }
         },
         select: {
-          accountId: true,
           amount: true,
           date: true,
         }
       }),
-      db.transferTransaction.findMany({
-        where: {
-          userId,
-          OR: [
-            { fromAccountId: { in: accountIds } },
-            { toAccountId: { in: accountIds } }
-          ]
-        },
-        select: {
-          fromAccountId: true,
-          toAccountId: true,
-          amount: true,
-          date: true,
-        }
-      })
     ]);
 
     const months: { month: string; netWorth: number }[] = [];
     const now = new Date();
 
+    // Calculate net worth for each of the last 12 months
     for (let i = 11; i >= 0; i--) {
-      // First day of the target month
       const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      // Last moment of the target month
       const endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999);
       
-      let totalNetWorth = 0;
+      // Filter and sum income up to end of this month
+      const totalIncome = incomeTransactions
+        .filter(t => new Date(t.date) <= endOfMonth)
+        .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
 
-      // Calculate net worth for each account at end of this month
-      for (const account of accounts) {
-        let balance = parseFloat(account.initialBalance.toString());
+      // Filter and sum expenses up to end of this month
+      const totalExpenses = expenseTransactions
+        .filter(t => new Date(t.date) <= endOfMonth)
+        .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
 
-        // Add income up to end of month
-        const incomeUpToDate = incomeTransactions
-          .filter(t => t.accountId === account.id && new Date(t.date) <= endOfMonth)
-          .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
-
-        // Subtract expenses up to end of month
-        const expensesUpToDate = expenseTransactions
-          .filter(t => t.accountId === account.id && new Date(t.date) <= endOfMonth)
-          .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
-
-        // Handle transfers (subtract from source, add to destination)
-        const transfersOut = transferTransactions
-          .filter(t => t.fromAccountId === account.id && new Date(t.date) <= endOfMonth)
-          .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
-
-        const transfersIn = transferTransactions
-          .filter(t => t.toAccountId === account.id && new Date(t.date) <= endOfMonth)
-          .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
-
-        // Calculate final balance for this account
-        balance = balance + incomeUpToDate - expensesUpToDate - transfersOut + transfersIn;
-        totalNetWorth += balance;
-      }
+      // Net worth = initial balance + income - expenses
+      const netWorth = totalInitialBalance + totalIncome - totalExpenses;
 
       const monthLabel = targetDate.toLocaleDateString('en-US', { 
         month: 'short', 
@@ -121,7 +94,7 @@ export async function GET(req: NextRequest) {
 
       months.push({
         month: monthLabel,
-        netWorth: Math.round(totalNetWorth * 100) / 100 // Round to 2 decimal places
+        netWorth: Math.round(netWorth * 100) / 100
       });
     }
 
