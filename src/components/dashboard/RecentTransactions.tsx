@@ -3,8 +3,8 @@
 import React from 'react';
 import { useRecentTransactions, TransactionType } from '@/hooks/useRecentTransactions';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { IconArrowDown, IconArrowUp, IconArrowRight } from '@tabler/icons-react';
-import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 
@@ -64,9 +64,35 @@ const RecentTransactions = () => {
 
   if (isLoading) {
     return (
-      <div className='flex flex-col gap-3'>
-        <div className='flex items-center justify-center py-8'>
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className='flex flex-col gap-4'>
+        <p className='text-foreground font-semibold text-sm md:text-base'>Recent Transactions</p>
+
+        <div className='flex flex-col gap-3'>
+          {[...Array(5)].map((_, index) => (
+            <div key={index} className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {/* Icon Box Skeleton */}
+                <Skeleton className="h-10 w-10 rounded-md bg-secondary-500" />
+
+                {/* Name and Account Skeleton */}
+                <div className="flex flex-col gap-1">
+                  <Skeleton className="h-4 w-32 bg-secondary-500" />
+                  <Skeleton className="h-3 w-24 bg-secondary-500" />
+                </div>
+              </div>
+
+              {/* Amount and Date Skeleton */}
+              <div className="flex flex-col items-end gap-1">
+                <Skeleton className="h-4 w-20 bg-secondary-500" />
+                <Skeleton className="h-3 w-24 bg-secondary-500" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Button Skeleton */}
+        <div className="pt-3 border-t border-border">
+          <Skeleton className="h-10 w-full rounded-md bg-secondary-500" />
         </div>
       </div>
     );
