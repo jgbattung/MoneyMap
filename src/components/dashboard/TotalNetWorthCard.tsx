@@ -1,8 +1,9 @@
 "use client"
 
 import React from 'react'
-import { ArrowUp, ArrowDown, ArrowRight, Loader2 } from 'lucide-react'
+import { ArrowUp, ArrowDown, ArrowRight } from 'lucide-react'
 import { useNetWorth } from '@/hooks/useNetWorth'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const TotalNetWorthCard = () => {
   const { netWorth, monthlyChange, isLoading, error } = useNetWorth();
@@ -27,8 +28,16 @@ const TotalNetWorthCard = () => {
   if (isLoading) {
     return (
       <div className='flex flex-col gap-3'>
-        <div className='flex items-center justify-center py-8'>
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className='flex items-center justify-between'>
+          <Skeleton className="h-6 w-32 md:h-7 md:w-40 bg-secondary-500" />
+          <Skeleton className="h-4 w-24 md:h-5 md:w-32 bg-secondary-500" />
+        </div>
+
+        <div className='flex flex-col items-start'>
+          <div className='flex items-end gap-2'>
+            <Skeleton className="h-4 w-8 md:h-5 md:w-10 bg-secondary-500" />
+            <Skeleton className="h-10 w-48 md:h-12 md:w-64 lg:h-14 lg:w-80 bg-secondary-500" />
+          </div>
         </div>
       </div>
     );

@@ -2,7 +2,6 @@
 
 import React from 'react'
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { Loader2 } from 'lucide-react'
 import {
   ChartConfig,
   ChartContainer,
@@ -31,8 +30,20 @@ const NetWorthHistoryChart = () => {
   if (isLoading) {
     return (
       <div className='flex flex-col gap-3'>
-        <div className='flex items-center justify-center py-16'>
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className='flex items-center justify-between mt-6'>
+          <div className="h-4 w-32 md:h-5 md:w-40 bg-secondary-500 rounded animate-pulse" />
+          <div className="h-3 w-20 md:h-4 md:w-24 bg-secondary-500 rounded animate-pulse" />
+        </div>
+
+        <div className="relative h-[200px] md:h-[250px] w-full bg-secondary-500/20 rounded animate-pulse overflow-hidden">
+          <div className="absolute inset-0 flex flex-col justify-between p-4">
+            <div className="h-px bg-secondary-500/40" />
+            <div className="h-px bg-secondary-500/40" />
+            <div className="h-px bg-secondary-500/40" />
+            <div className="h-px bg-secondary-500/40" />
+          </div>
+          
+          <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-secondary-500/30 to-transparent" />
         </div>
       </div>
     );
