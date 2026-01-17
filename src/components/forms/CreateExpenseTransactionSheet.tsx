@@ -207,6 +207,10 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                                 className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
                                 {...field}
                                 value={field.value ?? ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  field.onChange(value === '' ? null : parseInt(value, 10));
+                                }}
                                 disabled={isCreating}
                               />
                             </FormControl>

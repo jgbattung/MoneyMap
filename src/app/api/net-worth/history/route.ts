@@ -57,7 +57,8 @@ export async function GET(req: NextRequest) {
       db.expenseTransaction.findMany({
         where: {
           userId,
-          accountId: { in: accountIds }
+          accountId: { in: accountIds },
+          isInstallment: false,
         },
         select: {
           amount: true,
