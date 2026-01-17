@@ -33,7 +33,10 @@ export async function GET() {
     const userId = session.user.id;
 
     const expenses = await db.expenseTransaction.findMany({
-      where: { userId },
+      where: { 
+        userId,
+        isInstallment: false,
+      },
       include: {
         account: true,
         expenseType: true,
