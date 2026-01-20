@@ -2,8 +2,7 @@ name: Process Installments
 
 on:
   schedule:
-  # Runs daily
-  - cron: '0 0 * * *'
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 jobs:
@@ -15,4 +14,4 @@ jobs:
         run: |
           curl -X POST ${{ secrets.APP_URL }}/api/cron/process-installments \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json
+            -H "Content-Type: application/json"
