@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Call process installments endpoint
         run: |
-          curl -X POST ${{ secrets.APP_URL }}/api/cron/process-installments \
+          response=$(curl -v -X POST ${{ secrets.APP_URL }}/api/cron/process-installments \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json"
+            -H "Content-Type: application/json" 2>&1)
+          echo "Response:"
+          echo "$response"
