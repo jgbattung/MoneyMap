@@ -17,6 +17,9 @@ import {
   IconMoneybag,
   IconBuildingBank,
   IconChartBarPopular,
+  IconDotsVertical,
+  IconPencil,
+  IconTrash,
 } from '@tabler/icons-react';
 
 
@@ -40,4 +43,7 @@ export const Icons = {
   money: IconMoneybag,
   bank: IconBuildingBank,
   trendingUp: IconChartBarPopular,
+  ellipsis: IconDotsVertical,
+  edit: IconPencil,
+  trash: IconTrash,
 }
