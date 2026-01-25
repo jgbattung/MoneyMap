@@ -1,5 +1,3 @@
-// app/transactions/components/TransactionsMobileView.tsx
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -26,7 +24,11 @@ const dateFilterOptions = {
   thisYear: "this-year",
 };
 
-const TransactionsMobileView = () => {
+interface TransactionsMobileViewProps {
+  accountId?: string;
+}
+
+const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {}) => {
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
   
   const [expensesDisplayCount, setExpensesDisplayCount] = useState(ITEMS_PER_LOAD);
@@ -54,34 +56,37 @@ const TransactionsMobileView = () => {
     expenseTransactions, 
     hasMore: expensesHasMore, 
     isLoading: expensesLoading 
-  } = useExpenseTransactionsQuery(
-    0, 
-    expensesDisplayCount,
-    debouncedExpenseSearch,
-    expenseDateFilter
-  );
+  } = useExpenseTransactionsQuery({
+    skip: 0,
+    take: expensesDisplayCount,
+    search: debouncedExpenseSearch,
+    dateFilter: expenseDateFilter,
+    accountId
+  });
 
   const { 
     incomeTransactions, 
     hasMore: incomeHasMore, 
     isLoading: incomeLoading 
-  } = useIncomeTransactionsQuery(
-    0, 
-    incomeDisplayCount,
-    debouncedIncomeSearch,
-    incomeDateFilter
-  );
+  } = useIncomeTransactionsQuery({
+    skip: 0,
+    take: incomeDisplayCount,
+    search: debouncedIncomeSearch,
+    dateFilter: incomeDateFilter,
+    accountId
+  });
 
   const { 
     transfers, 
     hasMore: transfersHasMore, 
     isLoading: transfersLoading 
-  } = useTransfersQuery(
-    0, 
-    transfersDisplayCount,
-    debouncedTransferSearch,
-    transferDateFilter
-  );
+  } = useTransfersQuery({
+    skip: 0,
+    take: transfersDisplayCount,
+    search: debouncedTransferSearch,
+    dateFilter: transferDateFilter,
+    accountId
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => {
