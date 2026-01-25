@@ -27,12 +27,12 @@ const Transactions = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
   
-  const { transfers, hasMore, isLoading } = useTransfersQuery(
-    0, 
-    displayCount,
-    debouncedSearchTerm,
+  const { transfers, hasMore, isLoading } = useTransfersQuery({
+    skip: 0,
+    take: displayCount,
+    search: debouncedSearchTerm,
     dateFilter
-  );
+  });
   
   const [selectedTransferId, setSelectedTransferId] = useState<string>('');
   const [editTransferDrawerOpen, setEditTransferDrawerOpen] = useState(false);
