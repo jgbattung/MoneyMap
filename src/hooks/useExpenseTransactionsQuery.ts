@@ -37,6 +37,14 @@ type ExpenseTransactionsResponse = {
   hasMore: boolean;
 }
 
+interface UseExpenseTransactionsOptions {
+  skip?: number;
+  take?: number;
+  search?: string;
+  dateFilter?: string;
+  accountId?: string;
+}
+
 const QUERY_KEYS = {
   expenseTransactions: ['expenseTransactions'] as const,
   expenseTransaction: (id: string) => ['expenseTransactions', id] as const,
@@ -46,13 +54,15 @@ const fetchExpenseTransactions = async (
   skip?: number, 
   take?: number,
   search?: string,
-  dateFilter?: string
+  dateFilter?: string,
+  accountId?: string
 ): Promise<ExpenseTransactionsResponse> => {
   const params = new URLSearchParams();
   if (skip !== undefined) params.append('skip', skip.toString());
   if (take !== undefined) params.append('take', take.toString());
   if (search) params.append('search', search);
   if (dateFilter && dateFilter !== 'view-all') params.append('dateFilter', dateFilter);
+  if (accountId) params.append('accountId', accountId);
   
   const url = `/api/expense-transactions${params.toString() ? `?${params.toString()}` : ''}`;
   const response = await fetch(url);
@@ -90,12 +100,8 @@ const deleteExpenseTransaction = async (id: string): Promise<void> => {
   }
 }
 
-export const useExpenseTransactionsQuery = (
-  skip?: number, 
-  take?: number,
-  search?: string,
-  dateFilter?: string
-) => {
+export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptions = {}) => {
+  const { skip, take, search, dateFilter, accountId } = options;
   const queryClient = useQueryClient();
 
   const {
@@ -105,9 +111,9 @@ export const useExpenseTransactionsQuery = (
   } = useQuery({
     queryKey: [
       ...QUERY_KEYS.expenseTransactions, 
-      { skip, take, search, dateFilter }
+      { skip, take, search, dateFilter, accountId }
     ],
-    queryFn: () => fetchExpenseTransactions(skip, take, search, dateFilter),
+    queryFn: () => fetchExpenseTransactions(skip, take, search, dateFilter, accountId),
     staleTime: 5 * 60 * 1000,
   });
 
