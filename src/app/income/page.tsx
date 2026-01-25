@@ -56,12 +56,12 @@ const Income = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
   
-  const { incomeTransactions, hasMore, isLoading } = useIncomeTransactionsQuery(
-    0, 
-    displayCount,
-    debouncedSearchTerm,
+  const { incomeTransactions, hasMore, isLoading } = useIncomeTransactionsQuery({
+    skip: 0,
+    take: displayCount,
+    search: debouncedSearchTerm,
     dateFilter
-  );
+  });
   
   const [createIncomeTypeSheetOpen, setCreateIncomeTypeSheetOpen] = useState(false);
   const [createIncomeTypeDrawerOpen, setCreateIncomeTypeDrawerOpen] = useState(false);

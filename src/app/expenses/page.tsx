@@ -32,12 +32,12 @@ const Expenses = () => {
   const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
   
   // Pass search and dateFilter to the hook
-  const { expenseTransactions, hasMore, isLoading, error } = useExpenseTransactionsQuery(
-    0, 
-    displayCount,
-    debouncedSearchTerm,
+  const { expenseTransactions, hasMore, isLoading, error } = useExpenseTransactionsQuery({
+    skip: 0,
+    take: displayCount,
+    search: debouncedSearchTerm,
     dateFilter
-  );
+  });
   
   // Drawer/Sheet states
   const [createExpenseSheetOpen, setCreateExpenseSheetOpen] = useState(false);

@@ -24,6 +24,10 @@ import { toast } from 'sonner';
 
 const columnHelper = createColumnHelper<ExpenseTransaction>();
 
+interface ExpenseTableProps {
+  accountId?: string;
+}
+
 const CellContent = ({ getValue, row, column, table }: any) => {
   const initialValue = getValue();
   const columnMeta = column.columnDef.meta;
@@ -298,8 +302,8 @@ const EditCell = ({ row, table }: any) => {
   )
 }
 
-const ExpenseTable = () => {
-  const { expenseTransactions, updateExpenseTransaction, isUpdating, deleteExpenseTransaction, isDeleting } = useExpenseTransactionsQuery();
+const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
+  const { expenseTransactions, updateExpenseTransaction, isUpdating, deleteExpenseTransaction, isDeleting } = useExpenseTransactionsQuery({ accountId });
   const { accounts } = useAccountsQuery();
   const { cards } = useCardsQuery();
   const { budgets } = useExpenseTypesQuery();

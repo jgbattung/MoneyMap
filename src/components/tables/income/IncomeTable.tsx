@@ -24,6 +24,10 @@ import { formatDateForAPI } from '@/lib/utils';
 
 const columnHelper = createColumnHelper<IncomeTransaction>();
 
+interface IncomeTableProps {
+  accountId?: string;
+}
+
 const CellContent = ({ getValue, row, column, table }: any) => {
   const initialValue = getValue();
   const columnMeta = column.columnDef.meta;
@@ -227,8 +231,8 @@ const EditCell = ({ row, table }: any) => {
   )
 }
 
-const IncomeTable = () => {
-  const { incomeTransactions, updateIncomeTransaction, isUpdating, deleteIncomeTransaction, isDeleting } = useIncomeTransactionsQuery();
+const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
+  const { incomeTransactions, updateIncomeTransaction, isUpdating, deleteIncomeTransaction, isDeleting } = useIncomeTransactionsQuery({ accountId });
   const { accounts, isLoading: accountsLoading } = useAccountsQuery({ includeCards: true });
   const { incomeTypes, isLoading: incomeTypesLoading } = useIncomeTypesQuery();
 

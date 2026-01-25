@@ -42,6 +42,14 @@ type TransferTransactionsResponse = {
   hasMore: boolean;
 }
 
+interface UseTransfersOptions {
+  skip?: number;
+  take?: number;
+  search?: string;
+  dateFilter?: string;
+  accountId?: string;
+}
+
 const QUERY_KEYS = {
   transfers: ['transfers'] as const,
   transfer: (id: string) => ['transfers', id] as const,
@@ -51,13 +59,15 @@ const fetchTransfers = async (
   skip?: number,
   take?: number,
   search?: string,
-  dateFilter?: string
+  dateFilter?: string,
+  accountId?: string
 ): Promise<TransferTransactionsResponse> => {
   const params = new URLSearchParams();
   if (skip !== undefined) params.append('skip', skip.toString());
   if (take !== undefined) params.append('take', take.toString());
   if (search) params.append('search', search);
   if (dateFilter && dateFilter !== 'view-all') params.append('dateFilter', dateFilter);
+  if (accountId) params.append('accountId', accountId);
   
   const url = `/api/transfer-transactions${params.toString() ? `?${params.toString()}` : ''}`;
   const response = await fetch(url);
@@ -95,12 +105,8 @@ const deleteTransfer = async (id: string): Promise<void> => {
   }
 };
 
-export const useTransfersQuery = (
-  skip?: number,
-  take?: number,
-  search?: string,
-  dateFilter?: string
-) => {
+export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
+  const { skip, take, search, dateFilter, accountId } = options;
   const queryClient = useQueryClient();
 
   const {
@@ -110,9 +116,9 @@ export const useTransfersQuery = (
   } = useQuery({
     queryKey: [
       ...QUERY_KEYS.transfers, 
-      { skip, take, search, dateFilter }
+      { skip, take, search, dateFilter, accountId }
     ],
-    queryFn: () => fetchTransfers(skip, take, search, dateFilter),
+    queryFn: () => fetchTransfers(skip, take, search, dateFilter, accountId),
     staleTime: 5 * 60 * 1000,
   });
 

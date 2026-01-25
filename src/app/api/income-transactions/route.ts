@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     const take = searchParams.get('take');
     const search = searchParams.get('search');
     const dateFilter = searchParams.get('dateFilter');
+    const accountId = searchParams.get('accountId');
 
     const skipNumber = skip ? parseInt(skip) : undefined;
     const takeNumber = take ? parseInt(take) : undefined;
@@ -84,6 +85,10 @@ export async function GET(request: NextRequest) {
           lte: endOfYear,
         };
       }
+    }
+
+    if (accountId) {
+      whereClause.accountId = accountId;
     }
 
     const total = await db.incomeTransaction.count({

@@ -10,22 +10,65 @@ import { Button } from '@/components/ui/button'
 import SkeletonAccountCard from '@/components/shared/SkeletonAccountCard'
 import EditAccountSheet from '@/components/forms/EditAccountSheet'
 import EditAccountDrawer from '@/components/forms/EditAccountDrawer'
+import DeleteDialog from '@/components/shared/DeleteDialog'
+import { toast } from 'sonner'
 
 const Accounts = () => {
-  const { accounts, isLoading, error } = useAccountsQuery();
+  const { accounts, isLoading, error, deleteAccount, isDeleting } = useAccountsQuery();
   const [createAccountSheetOpen, setCreateAccountSheetOpen] = useState(false);
   const [createAccountDrawerOpen, setCreateAccountDrawerOpen] = useState(false);
   const [editAccountSheetOpen, setEditAccountSheetOpen] = useState(false);
   const [editAccountDrawerOpen, setEditAccountDrawerOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [selectedAccountName, setSelectedAccountName] = useState<string>('');
 
-  const handleAccountClick = (accountId: string) => {
+  const handleEdit = (accountId: string) => {
     setSelectedAccountId(accountId);
     
     if (window.innerWidth >= 768) {
       setEditAccountSheetOpen(true);
     } else {
       setEditAccountDrawerOpen(true);
+    }
+  };
+
+  const handleDelete = async (accountId: string, accountName: string) => {
+    setSelectedAccountId(accountId);
+    setSelectedAccountName(accountName);
+
+    // Check for associated transactions first
+    const response = await fetch(`/api/accounts/${accountId}/transaction-count`);
+    const { count } = await response.json();
+
+    if (count > 0) {
+      toast.error("Cannot delete account with existing transactions", {
+        description: `Please delete the ${count} transactions first.`,
+        duration: 10000,
+      });
+      return;
+    }
+
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await deleteAccount(selectedAccountId);
+
+      setDeleteDialogOpen(false);
+      setSelectedAccountId('');
+      setSelectedAccountName('');
+
+      toast.success("Account deleted successfully", {
+        description: `${selectedAccountName} has been deleted.`,
+        duration: 5000
+      });
+    } catch (error) {
+      toast.error("Failed to delete account", {
+        description: error instanceof Error ? error.message : "Please try again.",
+        duration: 6000
+      });
     }
   };
 
@@ -73,6 +116,15 @@ const Accounts = () => {
         onOpenChange={setEditAccountDrawerOpen}
         className='block md:hidden'
         accountId={selectedAccountId}
+      />
+
+      <DeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Account"
+        itemName={selectedAccountName}
+        isDeleting={isDeleting}
       />
 
       {isLoading ? (
@@ -128,11 +180,13 @@ const Accounts = () => {
           {accounts.map((account) => (
             <AccountCard
               key={account.id}
+              id={account.id}
               accountType={account.accountType}
               addToNetWorth={account.addToNetWorth}
               currentBalance={account.currentBalance}
               name={account.name}
-              onClick={() => handleAccountClick(account.id)}
+              onEdit={() => handleEdit(account.id)}
+              onDelete={() => handleDelete(account.id, account.name)}
             />
           ))}
         </div>

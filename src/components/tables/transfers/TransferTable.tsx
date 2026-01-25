@@ -24,6 +24,10 @@ import { formatDateForAPI } from '@/lib/utils';
 
 const columnHelper = createColumnHelper<TransferTransaction>();
 
+interface TransferTableProps {
+  accountId?: string;
+}
+
 const CellContent = ({ getValue, row, column, table }: any) => {
   const initialValue = getValue();
   const columnMeta = column.columnDef.meta;
@@ -237,8 +241,8 @@ const EditCell = ({ row, table }: any) => {
   )
 }
 
-const TransferTable = () => {
-  const { transfers, updateTransfer, isUpdating, deleteTransfer, isDeleting } = useTransfersQuery();
+const TransferTable = ({ accountId }: TransferTableProps = {}) => {
+  const { transfers, updateTransfer, isUpdating, deleteTransfer, isDeleting } = useTransfersQuery({ accountId });
   const { accounts, isLoading: accountsLoading } = useAccountsQuery({ includeCards: true });
   const { transferTypes, isLoading: transferTypesLoading } = useTransferTypesQuery();
 
