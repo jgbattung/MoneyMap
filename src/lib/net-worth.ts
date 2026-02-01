@@ -62,6 +62,7 @@ export async function calculateMonthlyChange(userId: string): Promise<{
       where: {
         userId,
         accountId: { in: accountIds },
+        isInstallment: { not: true },
         date: {
           gte: startOfMonth,
           lte: endOfMonth,
