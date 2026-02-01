@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { onTransferTransactionChange } from "@/lib/statement-recalculator";
 
 export async function GET(request: NextRequest) {
   try {
@@ -260,6 +261,8 @@ export async function POST(request: NextRequest) {
     }, {
       timeout: 10000,
     });
+
+    await onTransferTransactionChange(result.toAccountId, result.transferTypeId, result.date);
 
     return NextResponse.json(result, { status: 201 });
 

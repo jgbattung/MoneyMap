@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { INSTALLMENT_STATUS } from "./[id]/route";
 import { Prisma } from "@prisma/client";
+import { onExpenseTransactionChange } from "@/lib/statement-recalculator";
 
 export async function GET(request: NextRequest) {
   try {
@@ -320,6 +321,8 @@ export async function POST(request: NextRequest) {
 
       return expenseTransaction;
     })
+
+    await onExpenseTransactionChange(result.accountId, result.date);
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

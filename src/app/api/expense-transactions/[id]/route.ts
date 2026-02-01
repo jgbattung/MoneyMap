@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
+import { onExpenseTransactionChange } from "@/lib/statement-recalculator";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -245,6 +246,10 @@ export async function PATCH(
 
       return updatedExpense;
     });
+
+    await onExpenseTransactionChange(existingExpense.accountId, existingExpense.date);
+    await onExpenseTransactionChange(result.accountId, result.date);
+
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
     console.error('Error updating expense transaction: ', error);
@@ -339,6 +344,8 @@ export async function DELETE(
         },
       });
     });
+
+    await onExpenseTransactionChange(existingExpense.accountId, existingExpense.date);
 
     return NextResponse.json(
       { message: 'Expense deleted successfully', deleted: true },

@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
+import { onTransferTransactionChange } from "@/lib/statement-recalculator";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -272,6 +273,9 @@ export async function PATCH(
       timeout: 10000,
     });
 
+    await onTransferTransactionChange(existingTransfer.toAccountId, existingTransfer.transferTypeId, existingTransfer.date);
+    await onTransferTransactionChange(result.toAccountId, result.transferTypeId, result.date);
+
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
     console.error('Error updating transfer transaction: ', error);
@@ -348,6 +352,8 @@ export async function DELETE(
         },
       });
     });
+
+    await onTransferTransactionChange(existingTransfer.toAccountId, existingTransfer.transferTypeId, existingTransfer.date);
 
     return NextResponse.json(
       { message: 'Transfer transaction deleted successfully' },
