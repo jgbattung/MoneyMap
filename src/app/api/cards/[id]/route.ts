@@ -72,7 +72,7 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const { name, initialBalance, statementDate, dueDate } = body;
+    const { name, initialBalance, statementDate, dueDate, cardGroup } = body;
 
     if (!name || initialBalance === undefined) {
       return NextResponse.json(
@@ -93,6 +93,7 @@ export async function PATCH(
         currentBalance: parseFloat(initialBalance),
         statementDate: statementDate ? parseInt(statementDate) : null,
         dueDate: dueDate ? parseInt(dueDate) : null,
+        cardGroup: cardGroup || null,
       }
     });
 
