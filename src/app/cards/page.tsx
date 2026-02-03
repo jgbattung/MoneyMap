@@ -6,18 +6,22 @@ import EditCardDrawer from '@/components/forms/EditCardDrawer';
 import EditCardSheet from '@/components/forms/EditCardSheet';
 import { Icons } from '@/components/icons';
 import CreditCardCard from '@/components/shared/CreditCardCard';
+import GroupCard from '@/components/shared/GroupCard';
 import SkeletonCardCard from '@/components/shared/SkeletonCardCard';
 import { Button } from '@/components/ui/button';
 import { useCardsQuery } from '@/hooks/useCardsQuery';
-import React, { useState } from 'react'
+import { useRouter } from 'next/navigation';
+import React, { useState, useMemo } from 'react'
 
 const Cards = () => {
+  const router = useRouter();
   const { cards, isLoading, error } = useCardsQuery();
   const [createCardsSheetOpen, setCreateCardsSheetOpen] = useState(false);
   const [createCardsDrawerOpen, setCreateCardsDrawerOpen] = useState(false);
   const [editCardSheetOpen, setEditCardSheetOpen] = useState(false);
   const [editCardDrawerOpen, setEditCardDrawerOpen] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState<string>('');
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   const handleCardClick = (accountId: string) => {
     setSelectedCardId(accountId);
@@ -28,6 +32,81 @@ const Cards = () => {
       setEditCardDrawerOpen(true);
     }
   };
+
+  const handleToggleExpand = (groupName: string) => {
+    setExpandedGroups((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupName)) {
+        newSet.delete(groupName);
+      } else {
+        newSet.add(groupName);
+      }
+      return newSet;
+    });
+  };
+
+  const handleGroupClick = (groupName: string) => {
+    router.push(`/cards/groups/${encodeURIComponent(groupName)}`);
+  };
+
+  // Group cards and sort by total balance
+  const { groupedCards, ungroupedCards } = useMemo(() => {
+    const groups = new Map<string, typeof cards>();
+    const ungrouped: typeof cards = [];
+
+    cards.forEach((card) => {
+      if (card.cardGroup) {
+        const existing = groups.get(card.cardGroup) || [];
+        groups.set(card.cardGroup, [...existing, card]);
+      } else {
+        ungrouped.push(card);
+      }
+    });
+
+    // Sort cards within each group by balance (most negative first)
+    groups.forEach((groupCards, groupName) => {
+      groups.set(
+        groupName,
+        groupCards.sort((a, b) => parseFloat(a.currentBalance) - parseFloat(b.currentBalance))
+      );
+    });
+
+    // Sort ungrouped cards by balance
+    ungrouped.sort((a, b) => parseFloat(a.currentBalance) - parseFloat(b.currentBalance));
+
+    return { groupedCards: groups, ungroupedCards: ungrouped };
+  }, [cards]);
+
+  // Create array of all items (groups + ungrouped) sorted by total balance
+  const sortedItems = useMemo(() => {
+    const items: Array<
+      | { type: "group"; groupName: string; cards: typeof cards; totalBalance: number }
+      | { type: "card"; card: typeof cards[0] }
+    > = [];
+
+    // Add groups
+    groupedCards.forEach((groupCards, groupName) => {
+      const totalBalance = groupCards.reduce(
+        (sum, card) => sum + parseFloat(card.currentBalance),
+        0
+      );
+      items.push({ type: "group", groupName, cards: groupCards, totalBalance });
+    });
+
+    // Add ungrouped cards
+    ungroupedCards.forEach((card) => {
+      items.push({ type: "card", card });
+    });
+
+    // Sort all by balance (most negative = highest debt first)
+    items.sort((a, b) => {
+      const aBalance = a.type === "group" ? a.totalBalance : parseFloat(a.card.currentBalance);
+      const bBalance = b.type === "group" ? b.totalBalance : parseFloat(b.card.currentBalance);
+      return aBalance - bBalance;
+    });
+
+    return items;
+  }, [groupedCards, ungroupedCards]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col">
@@ -115,7 +194,6 @@ const Cards = () => {
             Add your first credit card
           </Button>
           
-          {/* Mobile button */}
           <Button
             onClick={() => setCreateCardsDrawerOpen(true)}
             className="flex md:hidden mt-10"
@@ -125,16 +203,46 @@ const Cards = () => {
         </div>
       ) : (
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
-          {cards.map((card) => (
-            <CreditCardCard
-              key={card.name}
-              name={card.name}
-              statementDate={card.statementDate}
-              dueDate={card.dueDate}
-              currentBalance={card.currentBalance}
-              onClick={() => handleCardClick(card.id)}
-            />
-          ))}
+          {sortedItems.map((item, index) => {
+            if (item.type === "group") {
+              const isExpanded = expandedGroups.has(item.groupName);
+              return (
+                <React.Fragment key={`group-${item.groupName}`}>
+                  <GroupCard
+                    groupName={item.groupName}
+                    totalBalance={item.totalBalance}
+                    cardCount={item.cards.length}
+                    isExpanded={isExpanded}
+                    onToggleExpand={() => handleToggleExpand(item.groupName)}
+                    onGroupClick={() => handleGroupClick(item.groupName)}
+                  />
+                  {isExpanded &&
+                    item.cards.map((card) => (
+                      <div key={card.id} className="md:col-start-1 md:pl-6">
+                        <CreditCardCard
+                          name={card.name}
+                          statementDate={card.statementDate}
+                          dueDate={card.dueDate}
+                          currentBalance={card.currentBalance}
+                          onClick={() => handleCardClick(card.id)}
+                        />
+                      </div>
+                    ))}
+                </React.Fragment>
+              );
+            } else {
+              return (
+                <CreditCardCard
+                  key={item.card.id}
+                  name={item.card.name}
+                  statementDate={item.card.statementDate}
+                  dueDate={item.card.dueDate}
+                  currentBalance={item.card.currentBalance}
+                  onClick={() => handleCardClick(item.card.id)}
+                />
+              );
+            }
+          })}
         </div>
       )}
     </div>
