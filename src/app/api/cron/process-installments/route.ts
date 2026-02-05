@@ -49,7 +49,13 @@ export async function POST(request: NextRequest) {
           (today.getTime() - lastProcessed.getTime()) / (1000 * 60 * 60 * 24)
         );
 
-        if (daysSinceLastProcessed < 30) {
+
+        const isFirstPayment = !installment.lastProcessedDate;
+        const shouldProcess = isFirstPayment 
+          ? daysSinceLastProcessed >= 0
+          : daysSinceLastProcessed >= 30;
+
+        if (!shouldProcess) {
           console.log(`Installment ${installment.id} not due yet (${daysSinceLastProcessed} days)`);
           continue;
         }
