@@ -12,24 +12,71 @@ import { Button } from '@/components/ui/button';
 import { useCardsQuery } from '@/hooks/useCardsQuery';
 import { useRouter } from 'next/navigation';
 import React, { useState, useMemo } from 'react'
+import DeleteDialog from '@/components/shared/DeleteDialog';
+import { toast } from 'sonner';
 
 const Cards = () => {
   const router = useRouter();
-  const { cards, isLoading, error } = useCardsQuery();
+  const { cards, isLoading, error, deleteCard, isDeleting } = useCardsQuery();
   const [createCardsSheetOpen, setCreateCardsSheetOpen] = useState(false);
   const [createCardsDrawerOpen, setCreateCardsDrawerOpen] = useState(false);
   const [editCardSheetOpen, setEditCardSheetOpen] = useState(false);
   const [editCardDrawerOpen, setEditCardDrawerOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState<string>('');
+  const [selectedCardName, setSelectedCardName] = useState<string>('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-  const handleCardClick = (accountId: string) => {
-    setSelectedCardId(accountId);
+  const handleCardClick = (cardId: string) => {
+    router.push(`/cards/${cardId}`);
+  };
+
+  const handleEdit = (cardId: string) => {
+    setSelectedCardId(cardId);
 
     if (window.innerWidth >= 768) {
       setEditCardSheetOpen(true);
     } else {
       setEditCardDrawerOpen(true);
+    }
+  };
+
+  const handleDelete = async (cardId: string, cardName: string) => {
+    setSelectedCardId(cardId);
+    setSelectedCardName(cardName);
+
+    // Check for associated transactions first
+    const response = await fetch(`/api/cards/${cardId}/transaction-count`);
+    const { count } = await response.json();
+
+    if (count > 0) {
+      toast.error("Cannot delete card with existing transactions", {
+        description: `Please delete the ${count} transactions first.`,
+        duration: 10000,
+      });
+      return;
+    }
+
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await deleteCard(selectedCardId);
+
+      setDeleteDialogOpen(false);
+      setSelectedCardId('');
+      setSelectedCardName('');
+
+      toast.success("Card deleted successfully", {
+        description: `${selectedCardName} has been deleted.`,
+        duration: 5000
+      });
+    } catch (error) {
+      toast.error("Failed to delete card", {
+        description: error instanceof Error ? error.message : "Please try again.",
+        duration: 6000
+      });
     }
   };
 
@@ -154,6 +201,15 @@ const Cards = () => {
         cardId={selectedCardId}
       />
 
+      <DeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Card"
+        itemName={selectedCardName}
+        isDeleting={isDeleting}
+      />
+
       {isLoading ? (
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
           {Array.from({ length: 3 }, (_, index) => (
@@ -220,11 +276,14 @@ const Cards = () => {
                     item.cards.map((card) => (
                       <div key={card.id} className="md:col-start-1 md:pl-6">
                         <CreditCardCard
+                          id={card.id}
                           name={card.name}
                           statementDate={card.statementDate}
                           dueDate={card.dueDate}
                           currentBalance={card.currentBalance}
                           onClick={() => handleCardClick(card.id)}
+                          onEdit={() => handleEdit(card.id)}
+                          onDelete={() => handleDelete(card.id, card.name)}
                         />
                       </div>
                     ))}
@@ -234,11 +293,14 @@ const Cards = () => {
               return (
                 <CreditCardCard
                   key={item.card.id}
+                  id={item.card.id}
                   name={item.card.name}
                   statementDate={item.card.statementDate}
                   dueDate={item.card.dueDate}
                   currentBalance={item.card.currentBalance}
                   onClick={() => handleCardClick(item.card.id)}
+                  onEdit={() => handleEdit(item.card.id)}
+                  onDelete={() => handleDelete(item.card.id, item.card.name)}
                 />
               );
             }
