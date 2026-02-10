@@ -7,6 +7,7 @@ import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import CreditCardCard from '@/components/shared/CreditCardCard';
 import SkeletonCardCard from '@/components/shared/SkeletonCardCard';
+import { getOrdinalSuffix } from '@/lib/utils';
 
 const CardGroupPage = () => {
   const params = useParams();
@@ -102,7 +103,7 @@ const CardGroupPage = () => {
           />
           <div className='flex flex-col px-4 items-center justify-center gap-3 text-center'>
             <p className='text-2xl md:text-4xl font-semibold'>No cards found in this group</p>
-            <p className='text-muted-foreground'>This card group doesn't exist or has no cards.</p>
+            <p className='text-muted-foreground'>This card group doesn&apos;t exist or has no cards.</p>
           </div>
           <Button
             onClick={() => router.push('/cards')}
@@ -220,6 +221,7 @@ const CardGroupPage = () => {
           {cardGroupData.cards.map((card) => (
             <CreditCardCard
               key={card.id}
+              id={card.id}
               name={card.name}
               statementDate={card.statementDate}
               dueDate={card.dueDate}
@@ -232,16 +234,5 @@ const CardGroupPage = () => {
     </div>
   );
 };
-
-// Helper function for ordinal suffix
-function getOrdinalSuffix(day: number): string {
-  if (day > 3 && day < 21) return 'th';
-  switch (day % 10) {
-    case 1: return 'st';
-    case 2: return 'nd';
-    case 3: return 'rd';
-    default: return 'th';
-  }
-}
 
 export default CardGroupPage;
