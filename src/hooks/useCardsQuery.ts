@@ -9,11 +9,15 @@ type Card = {
   addToNetWorth: boolean;
   statementDate?: number;
   dueDate?: number;
+  cardGroup?: string | null;
+  statementBalance?: string | null;
+  lastStatementCalculationDate?: string | null;
 };
 
 const QUERY_KEYS = {
   cards: ['cards'] as const,
   card: (id: string) => ['cards', id] as const,
+  cardGroup: (groupName: string) => ['cards', 'groups', groupName] as const,
 }
 
 const fetchCards = async (): Promise<Card[]> => {
@@ -134,4 +138,34 @@ export const useCardQuery = (id: string) => {
     isFetching: isPending,
     error: error ? error.message : null,
   };
-} 
+}
+
+type CardGroup = {
+  groupName: string;
+  totalOutstandingBalance: number;
+  totalStatementBalance: number | null;
+  statementDate: number | null;
+  lastStatementCalculationDate: string | null;
+  cards: Card[];
+};
+
+const fetchCardGroup = async (groupName: string): Promise<CardGroup> => {
+  const response = await fetch(`/api/cards/groups/${encodeURIComponent(groupName)}`);
+  if (!response.ok) throw new Error('Failed to fetch card group');
+  return response.json();
+}
+
+export const useCardGroupQuery = (groupName: string) => {
+  const { data, isPending, error } = useQuery({
+    queryKey: QUERY_KEYS.cardGroup(groupName),
+    queryFn: () => fetchCardGroup(groupName),
+    enabled: !!groupName,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return {
+    cardGroupData: data,
+    isFetching: isPending,
+    error: error ? error.message : null,
+  };
+}

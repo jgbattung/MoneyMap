@@ -1,0 +1,19 @@
+name: Process Statements
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  process-statements:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call process statements endpoint
+        run: |
+          response=$(curl -v -X POST ${{ secrets.APP_URL }}/api/cron/process-statements \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" 2>&1)
+          echo "Response:"
+          echo "$response"

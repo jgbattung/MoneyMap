@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { z } from "zod"
@@ -11,9 +11,12 @@ import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
-import { getOrdinalSuffix } from '@/lib/utils';
+import { getOrdinalSuffix, cn } from '@/lib/utils';
 import { useCardsQuery } from '@/hooks/useCardsQuery';
 import { ScrollArea } from '../ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
 
 interface CreateCardDrawerProps {
   open: boolean;
@@ -22,15 +25,31 @@ interface CreateCardDrawerProps {
 }
 
 const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerProps) => {
-  const { createCard, isCreating } = useCardsQuery();
+  const { cards, createCard, isCreating } = useCardsQuery();
   const [showGradient, setShowGradient] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [groupPopoverOpen, setGroupPopoverOpen] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+  const previousValueRef = useRef<string>("");
+  const committedRef = useRef<boolean>(false);
+
+  // Extract unique card groups from existing cards
+  const existingGroups = useMemo(() => {
+    const groups = new Set<string>();
+    cards.forEach(card => {
+      if (card.cardGroup) {
+        groups.add(card.cardGroup);
+      }
+    });
+    return Array.from(groups).sort();
+  }, [cards]);
 
   const form = useForm<z.infer<typeof CardValidation>>({
     resolver: zodResolver(CardValidation),
     defaultValues: {
       name: '',
       initialBalance: '',
+      cardGroup: '',
     }
   });
 
@@ -135,6 +154,119 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
                           {...field}
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="cardGroup"
+                  render={({ field }) => (
+                    <FormItem className="p-4">
+                      <FormLabel>Card Group (Optional)</FormLabel>
+                      <FormDescription>
+                        Group cards from the same bank together
+                      </FormDescription>
+                      <Popover 
+                        open={groupPopoverOpen} 
+                        onOpenChange={(open) => {
+                          if (open) {
+                            previousValueRef.current = field.value || "";
+                            committedRef.current = false;
+                            setInputValue("");
+                          } else {
+                            if (!committedRef.current) {
+                              field.onChange(previousValueRef.current);
+                            }
+                            setInputValue("");
+                            committedRef.current = false;
+                          }
+                          setGroupPopoverOpen(open);
+                        }}
+                      >
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              disabled={isCreating}
+                              className={cn(
+                                "w-full justify-between hover:text-secondary-400 font-medium",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value || "Select or create a group"}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[350px] p-0">
+                          <Command>
+                            <CommandInput
+                              placeholder="Search or type new group name..."
+                              value={inputValue}
+                              onValueChange={(value) => {
+                                setInputValue(value);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && inputValue.trim()) {
+                                  e.preventDefault();
+                                  field.onChange(inputValue.trim());
+                                  committedRef.current = true;
+                                  setGroupPopoverOpen(false);
+                                }
+                              }}
+                            />
+                            <CommandList>
+                              <CommandEmpty>
+                                <div className="p-2 text-sm text-muted-foreground">
+                                  {inputValue.trim() 
+                                    ? `Press Enter to create "${inputValue.trim()}"` 
+                                    : "Type to search existing groups or create a new one"}
+                                </div>
+                              </CommandEmpty>
+                              {existingGroups.length > 0 && (
+                                <CommandGroup heading="Existing Groups">
+                                  {existingGroups.map((group) => (
+                                    <CommandItem
+                                      key={group}
+                                      value={group}
+                                      onSelect={() => {
+                                        field.onChange(group);
+                                        committedRef.current = true;
+                                        setGroupPopoverOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          field.value === group ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {group}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              )}
+                              {field.value && (
+                                <CommandGroup>
+                                  <CommandItem
+                                    value=""
+                                    onSelect={() => {
+                                      field.onChange("");
+                                      committedRef.current = true;
+                                      setGroupPopoverOpen(false);
+                                    }}
+                                  >
+                                    Clear selection
+                                  </CommandItem>
+                                </CommandGroup>
+                              )}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}

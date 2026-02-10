@@ -60,4 +60,8 @@ export const CardValidation = z.object({
     .min(1, "Due date must be between 1-31") 
     .max(31, "Due date must be between 1-31")
     .optional(),
+
+  cardGroup: z.string()
+    .max(50, "Card group name must be less than 50 characters")
+    .optional(),
 })

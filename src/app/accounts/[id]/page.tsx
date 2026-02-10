@@ -17,7 +17,7 @@ const AccountDetailSkeleton = () => {
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-20 md:pb-6 flex flex-col">
       {/* Header Skeleton */}
       <div className="mb-6 md:mb-8">
-        <div className="bg-gradient-to-br from-primary/5 via-primary/3 to-transparent border border-border rounded-lg md:rounded-xl p-4 md:p-8">
+        <div className="bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border-border/50 border rounded-lg md:rounded-xl p-4 md:p-8">
           {/* Mobile skeleton */}
           <div className="flex md:hidden flex-col gap-3">
             <div className="flex items-center justify-between">
@@ -126,7 +126,7 @@ const AccountDetailPage = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-20 md:pb-6 flex flex-col">
       <div className="mb-6 md:mb-8">
-        <div className="bg-gradient-to-br from-primary/5 via-primary/3 to-transparent border border-border rounded-lg md:rounded-xl p-4 md:p-8 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border-border/50 border rounded-lg md:rounded-xl p-4 md:p-8 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex md:hidden flex-col gap-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
