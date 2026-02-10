@@ -33,7 +33,7 @@ const CreditCardCard = ({
   // DB: -25000 (debt) → Display: 25000
   // DB: +500 (credit) → Display: -500
   const dbBalance = parseFloat(currentBalance);
-  const displayBalance = -dbBalance;
+  const displayBalance = dbBalance === 0 ? 0 : -dbBalance;
   
   const formattedBalance = displayBalance.toLocaleString('en-PH', {
     minimumFractionDigits: 2,
