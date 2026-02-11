@@ -112,7 +112,7 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
   }
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer repositionInputs={false} open={open} onOpenChange={onOpenChange}>
       <DrawerContent
         onEscapeKeyDown={(e) => isCreating && e.preventDefault()} 
         className={`${className}`}

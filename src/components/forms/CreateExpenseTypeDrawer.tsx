@@ -94,7 +94,7 @@ const CreateExpenseTypeDrawer = ({ open, onOpenChange, className }: CreateExpens
   }
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer repositionInputs={false} open={open} onOpenChange={onOpenChange}>
       <DrawerContent
         onEscapeKeyDown={(e) => isCreating && e.preventDefault()}
         onInteractOutside={(e) => isCreating && e.preventDefault()}

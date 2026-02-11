@@ -131,7 +131,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
   }
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer repositionInputs={false} open={open} onOpenChange={onOpenChange}>
       <DrawerContent
         onEscapeKeyDown={(e) => isCreating && e.preventDefault()} 
         className={`${className}`}
