@@ -232,7 +232,7 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, budgetId, className }: Edit
 
   return (
     <>
-      <Drawer open={open} onOpenChange={onOpenChange}>
+      <Drawer repositionInputs={false} open={open} onOpenChange={onOpenChange}>
         <DrawerContent
           onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
           onInteractOutside={(e) => isUpdating && e.preventDefault()}

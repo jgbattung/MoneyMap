@@ -173,7 +173,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
 
   return (
     <>
-      <Drawer open={open} onOpenChange={onOpenChange}>
+      <Drawer repositionInputs={false} open={open} onOpenChange={onOpenChange}>
         <DrawerContent
           onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
         >

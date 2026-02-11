@@ -155,7 +155,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
 
   return (
     <>
-      <Drawer open={open} onOpenChange={onOpenChange}>
+      <Drawer repositionInputs={false} open={open} onOpenChange={onOpenChange}>
         <DrawerContent
           onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
           className={`${className}`}
