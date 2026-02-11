@@ -236,7 +236,7 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, budgetId, className }: Edit
         <DrawerContent
           onEscapeKeyDown={(e) => isUpdating && e.preventDefault()}
           onInteractOutside={(e) => isUpdating && e.preventDefault()}
-          className={`h-[85vh] ${className || ''}`}
+          className={`h-[85dvh] ${className || ''}`}
         >
           {isFetching ? (
             <SkeletonEditBudgetDrawerForm />

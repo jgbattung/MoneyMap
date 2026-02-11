@@ -118,7 +118,7 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
         className={`${className}`}
       >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85vh]'>
+          <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85dvh]'>
             <DrawerHeader className="flex-shrink-0">
               <DrawerTitle className='text-xl'>
                 Add Transfer Transaction

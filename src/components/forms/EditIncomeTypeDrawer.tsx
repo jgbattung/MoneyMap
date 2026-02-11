@@ -123,7 +123,7 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
             </>
           ) : (
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85vh]'>
+              <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85dvh]'>
                 <DrawerHeader>
                   <DrawerTitle className='text-xl'>
                     Edit income type
