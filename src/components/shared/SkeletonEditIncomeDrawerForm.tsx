@@ -5,7 +5,7 @@ import { ScrollArea } from '../ui/scroll-area'
 
 const SkeletonEditIncomeDrawerForm = () => {
   return (
-    <div className='flex flex-col h-full max-h-[85vh]'>
+    <div className='flex flex-col h-full max-h-[85dvh]'>
       <DrawerHeader className='flex-shrink-0'>
         <DrawerTitle className='text-xl'>
           Edit Income Transaction

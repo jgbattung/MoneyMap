@@ -98,7 +98,7 @@ const CreateExpenseTypeDrawer = ({ open, onOpenChange, className }: CreateExpens
       <DrawerContent
         onEscapeKeyDown={(e) => isCreating && e.preventDefault()}
         onInteractOutside={(e) => isCreating && e.preventDefault()}
-        className={`h-[85vh] ${className || ''}`}
+        className={`h-[85dvh] ${className || ''}`}
       >
         <Form {...form}>
           <form

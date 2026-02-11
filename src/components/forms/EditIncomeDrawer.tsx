@@ -169,7 +169,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className='flex flex-col h-full max-h-[85vh]'
+              className='flex flex-col h-full max-h-[85dvh]'
             >  
               <DrawerHeader className='flex-shrink-0'>
                 <DrawerTitle className='text-xl'>
