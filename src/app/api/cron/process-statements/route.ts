@@ -87,11 +87,14 @@ export async function POST(request: NextRequest) {
           `Card "${card.name}" (${card.id}): calculating cycle ${cycleStart.toISOString()} → ${cycleEnd.toISOString()}`
         );
 
-        const balance = await calculateStatementBalance(card.id, cycleStart, cycleEnd);
+        const previousBalance = Number(card.statementBalance ?? 0);
+
+        const balance = await calculateStatementBalance(card.id, cycleStart, cycleEnd, previousBalance);
 
         await db.financialAccount.update({
           where: { id: card.id },
           data: {
+            previousStatementBalance: previousBalance,
             statementBalance: balance,
             lastStatementCalculationDate: new Date(),
           },
