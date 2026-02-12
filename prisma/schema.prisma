@@ -88,6 +88,7 @@ model FinancialAccount {
   dueDate             Int?                  @map("due_date")
   cardGroup                    String?      @map("card_group")
   statementBalance             Decimal?     @map("statement_balance") @db.Decimal(15, 2)
+  previousStatementBalance     Decimal?     @map("previous_statement_balance") @db.Decimal(15, 2)
   lastStatementCalculationDate DateTime?    @map("last_statement_calculation_date") @db.Timestamp(6)
   createdAt           DateTime              @default(now()) @map("created_at")
   updatedAt           DateTime              @updatedAt @map("updated_at")

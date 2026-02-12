@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
+import { onIncomeTransactionChange } from "@/lib/statement-recalculator";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -129,6 +130,12 @@ export async function PATCH(
       return updatedTransaction;
     });
 
+    await onIncomeTransactionChange(
+      accountId,
+      new Date(date),
+      existingTransaction.date
+    );
+
     return NextResponse.json(result, { status: 200 });
 
   } catch (error) {
@@ -195,6 +202,11 @@ export async function DELETE(
         },
       });
     });
+
+    await onIncomeTransactionChange(
+      existingTransaction.accountId,
+      existingTransaction.date
+    );
 
     return NextResponse.json(
       { message: 'Income transaction deleted successfully' },

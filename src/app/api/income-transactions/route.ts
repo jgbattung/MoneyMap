@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { onIncomeTransactionChange } from "@/lib/statement-recalculator";
 
 
 export async function GET(request: NextRequest) {
@@ -187,6 +188,8 @@ export async function POST(request: NextRequest) {
 
       return incomeTransaction;
     });
+
+    await onIncomeTransactionChange(accountId, new Date(date));
 
     return NextResponse.json(result, { status: 201 });
 
