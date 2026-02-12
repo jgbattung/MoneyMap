@@ -81,32 +81,41 @@ export async function onExpenseTransactionChange(
 
 /**
  * Hook for transfer transaction changes.
- * Only relevant if the transfer is a Credit Card Payment — checks the toAccountId.
+ * Recalculates statement balance for:
+ * - CC Payments: affects the toAccountId (card being paid)
+ * - Non-CC-Payment transfers FROM a credit card: affects the fromAccountId
  *
- * @param toAccountId - The card being paid
- * @param transferTypeId - The TransferType id (used to check if it's a Credit Card Payment)
+ * @param fromAccountId - The source account
+ * @param toAccountId - The destination account
+ * @param transferTypeId - The TransferType id
  * @param transactionDate - The date of the transfer
  * @param oldDate - (edit only) The previous date, if the date was changed
  */
 export async function onTransferTransactionChange(
+  fromAccountId: string,
   toAccountId: string,
   transferTypeId: string,
   transactionDate: Date,
   oldDate?: Date
 ): Promise<void> {
-  // Only Credit Card Payments affect statement balance
   const transferType = await db.transferType.findUnique({
     where: { id: transferTypeId },
   });
 
-  if (!transferType || transferType.name !== "Credit Card Payment") {
-    return;
-  }
+  if (!transferType) return;
 
-  await recalculateForCard(toAccountId, transactionDate);
+  if (transferType.name === "Credit Card Payment") {
+    await recalculateForCard(toAccountId, transactionDate);
 
-  if (oldDate && new Date(oldDate).getTime() !== new Date(transactionDate).getTime()) {
-    await recalculateForCard(toAccountId, oldDate);
+    if (oldDate && new Date(oldDate).getTime() !== new Date(transactionDate).getTime()) {
+      await recalculateForCard(toAccountId, oldDate);
+    }
+  } else {
+    await recalculateForCard(fromAccountId, transactionDate);
+
+    if (oldDate && new Date(oldDate).getTime() !== new Date(transactionDate).getTime()) {
+      await recalculateForCard(fromAccountId, oldDate);
+    }
   }
 }
 

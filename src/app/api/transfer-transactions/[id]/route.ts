@@ -273,8 +273,8 @@ export async function PATCH(
       timeout: 10000,
     });
 
-    await onTransferTransactionChange(existingTransfer.toAccountId, existingTransfer.transferTypeId, existingTransfer.date);
-    await onTransferTransactionChange(result.toAccountId, result.transferTypeId, result.date);
+    await onTransferTransactionChange(existingTransfer.fromAccountId, existingTransfer.toAccountId, existingTransfer.transferTypeId, existingTransfer.date);
+    await onTransferTransactionChange(result.fromAccountId, result.toAccountId, result.transferTypeId, result.date);
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
