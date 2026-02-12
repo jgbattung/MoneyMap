@@ -47,7 +47,8 @@ async function recalculateForCard(cardId: string, transactionDate: Date): Promis
 
   console.log(`Recalculating statement balance for card "${card.name}" (${card.id}), cycle: ${cycleStart.toISOString()} → ${cycleEnd.toISOString()}`);
 
-  const newBalance = await calculateStatementBalance(card.id, cycleStart, cycleEnd);
+  const previousBalance = Number(card.previousStatementBalance ?? 0);
+  const newBalance = await calculateStatementBalance(card.id, cycleStart, cycleEnd, previousBalance);
 
   await db.financialAccount.update({
     where: { id: card.id },
@@ -106,5 +107,25 @@ export async function onTransferTransactionChange(
 
   if (oldDate && new Date(oldDate).getTime() !== new Date(transactionDate).getTime()) {
     await recalculateForCard(toAccountId, oldDate);
+  }
+}
+
+/**
+ * Hook for income transaction changes on credit cards (rebates, credits).
+ * Recalculates statement balance for the affected credit card.
+ *
+ * @param accountId - The card the income is on
+ * @param transactionDate - The date of the income
+ * @param oldDate - (edit only) The previous date, if the date was changed
+ */
+export async function onIncomeTransactionChange(
+  accountId: string,
+  transactionDate: Date,
+  oldDate?: Date
+): Promise<void> {
+  await recalculateForCard(accountId, transactionDate);
+
+  if (oldDate && new Date(oldDate).getTime() !== new Date(transactionDate).getTime()) {
+    await recalculateForCard(accountId, oldDate);
   }
 }
