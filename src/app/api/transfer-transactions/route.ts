@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
       timeout: 10000,
     });
 
-    await onTransferTransactionChange(result.toAccountId, result.transferTypeId, result.date);
+    await onTransferTransactionChange(result.fromAccountId, result.toAccountId, result.transferTypeId, result.date);
 
     return NextResponse.json(result, { status: 201 });
 
