@@ -5,6 +5,7 @@ import ExpenseBreakdownChart from '@/components/shared/ExpenseBreakdownChart'
 import React, { useState } from 'react'
 
 const Reports = () => {
+  // Initialize with current month and year
   const now = new Date()
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1) // 1-indexed
   const [selectedYear, setSelectedYear] = useState(now.getFullYear())
@@ -15,7 +16,7 @@ const Reports = () => {
   }
 
   return (
-    <div className="h-dvh max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
+    <div className="h-dvh max-w-7xl mx-auto px-4 md:px-8 py-6 pb-20 md:pb-6 flex flex-col overflow-y-auto">
       {/* Page Header */}
       <div className='flex items-center justify-between flex-wrap gap-4'>
         <h1 className='text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold'>Reports</h1>

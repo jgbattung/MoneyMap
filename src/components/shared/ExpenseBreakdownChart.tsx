@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { Pie, PieChart, Cell } from "recharts"
+import { Pie, PieChart, Cell, Legend, ResponsiveContainer } from "recharts"
 import {
   ChartConfig,
   ChartContainer,
@@ -98,9 +98,9 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
     return (
       <div className='flex flex-col max-w-5xl gap-4 bg-card border border-border rounded-md p-4 shadow-md'>
         {/* Header skeleton */}
-        <div className='flex items-center justify-between'>
+        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
           <p className='text-foreground font-semibold text-sm md:text-base'>Expense Breakdown</p>
-          <Skeleton className='h-9 w-[180px] bg-secondary-500' />
+          <Skeleton className='h-9 w-full sm:w-[180px] bg-secondary-500' />
         </div>
 
         {/* Chart skeleton */}
@@ -121,10 +121,10 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
   if (error) {
     return (
       <div className='flex flex-col max-w-5xl gap-4 bg-card border border-border rounded-md p-4 shadow-md'>
-        <div className='flex items-center justify-between'>
+        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
           <p className='text-foreground font-semibold text-sm md:text-base'>Expense Breakdown</p>
           <Select value={selectedValue} onValueChange={handleMonthSelect}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -148,10 +148,10 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
   if (!breakdown || breakdown.data.length === 0) {
     return (
       <div className='flex flex-col max-w-5xl gap-4 bg-card border border-border rounded-md p-4 shadow-md'>
-        <div className='flex items-center justify-between'>
+        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
           <p className='text-foreground font-semibold text-sm md:text-base'>Expense Breakdown</p>
           <Select value={selectedValue} onValueChange={handleMonthSelect}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -173,10 +173,10 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
   return (
     <div className='flex flex-col max-w-5xl gap-4 bg-card border border-border rounded-md p-4 shadow-md'>
       {/* Header with title and month picker */}
-      <div className='flex items-center justify-between'>
+      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
         <p className='text-foreground font-semibold text-sm md:text-base'>Expense Breakdown</p>
         <Select value={selectedValue} onValueChange={handleMonthSelect}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -190,7 +190,7 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
       </div>
 
       {/* Chart */}
-      <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[300px]">
+      <ChartContainer config={chartConfig} className="h-[300px] md:h-[350px] w-full">
         <PieChart>
           <ChartTooltip
             content={
@@ -223,21 +223,28 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
             innerRadius={60}
             outerRadius={90}
             paddingAngle={2}
+            label={({
+              cx,
+              cy,
+            }) => {
+              return (
+                <text
+                  x={cx}
+                  y={cy}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  className="fill-foreground text-xl font-bold"
+                >
+                  {formatCurrency(breakdown.totalSpent)}
+                </text>
+              );
+            }}
+            labelLine={false}
           >
             {chartData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.fill} />
             ))}
           </Pie>
-          {/* Center label showing total spent */}
-          <text
-            x="50%"
-            y="50%"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="fill-foreground text-xl font-bold"
-          >
-            {formatCurrency(breakdown.totalSpent)}
-          </text>
           <ChartLegend
             content={<ChartLegendContent nameKey="name" />}
             className="flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
