@@ -12,6 +12,8 @@ export interface ExpenseBreakdownData {
   year: number;
   totalSpent: number;
   data: ExpenseBreakdownItem[];
+  earliestMonth: number | null;
+  earliestYear: number | null;
 }
 
 interface UseExpenseBreakdownReturn {

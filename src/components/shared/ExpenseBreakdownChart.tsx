@@ -39,16 +39,16 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
     })}`
   }
 
-  // Generate month options from January 2025 to current month
+  // Generate month options from earliest transaction to current month
   const generateMonthOptions = () => {
     const options: { label: string; month: number; year: number }[] = []
     const now = new Date()
     const currentMonth = now.getMonth() + 1 // 1-indexed
     const currentYear = now.getFullYear()
     
-    // Start from January 2025
-    const startYear = 2025
-    const startMonth = 1
+    // Use earliest transaction date if available, otherwise default to January 2025
+    const startYear = breakdown?.earliestYear ?? 2025
+    const startMonth = breakdown?.earliestMonth ?? 1
 
     let iterYear = startYear
     let iterMonth = startMonth

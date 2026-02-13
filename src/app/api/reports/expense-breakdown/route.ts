@@ -15,6 +15,8 @@ interface ExpenseBreakdownResponse {
   year: number;
   totalSpent: number;
   data: ExpenseBreakdownItem[];
+  earliestMonth: number | null;
+  earliestYear: number | null;
 }
 
 export async function GET(req: NextRequest) {
@@ -80,6 +82,30 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    // Find the earliest expense transaction for this user
+    const earliestTransaction = await db.expenseTransaction.findFirst({
+      where: {
+        userId,
+        isInstallment: false,
+      },
+      orderBy: {
+        date: 'asc',
+      },
+      select: {
+        date: true,
+      },
+    });
+
+    // Extract earliest month/year
+    let earliestMonth: number | null = null;
+    let earliestYear: number | null = null;
+
+    if (earliestTransaction) {
+      const earliestDate = new Date(earliestTransaction.date);
+      earliestMonth = earliestDate.getMonth() + 1; // 1-indexed
+      earliestYear = earliestDate.getFullYear();
+    }
+
     // Fetch all non-installment expense transactions within the date range
     const expenseTransactions = await db.expenseTransaction.findMany({
       where: {
@@ -136,6 +162,8 @@ export async function GET(req: NextRequest) {
       year,
       totalSpent: Math.round(totalSpent * 100) / 100,
       data,
+      earliestMonth,
+      earliestYear,
     };
 
     return NextResponse.json(response);
