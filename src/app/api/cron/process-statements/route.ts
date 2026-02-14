@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
           `Card "${card.name}" (${card.id}): calculating cycle ${cycleStart.toISOString()} → ${cycleEnd.toISOString()}`
         );
 
-        const previousBalance = Number(card.statementBalance ?? 0);
+        const previousBalance = Number(card.statementBalance ?? card.previousStatementBalance ?? 0);
 
         const balance = await calculateStatementBalance(card.id, cycleStart, cycleEnd, previousBalance);
 
