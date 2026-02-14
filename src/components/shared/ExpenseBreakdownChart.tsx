@@ -1,14 +1,13 @@
 "use client"
 
 import React from 'react'
-import { Pie, PieChart, Cell, Legend, ResponsiveContainer } from "recharts"
+import { Pie, PieChart, Cell } from "recharts"
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
   ChartLegend,
-  ChartLegendContent,
 } from "@/components/ui/chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -189,8 +188,9 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
         </Select>
       </div>
 
-      {/* Chart */}
-      <ChartContainer config={chartConfig} className="h-[300px] md:h-[350px] w-full">
+      {/* Chart - wrapped with padding to prevent cutoff */}
+      <div className="py-6">
+        <ChartContainer config={chartConfig} className="h-[350px] md:h-[350px] w-full">
         <PieChart>
           <ChartTooltip
             content={
@@ -246,11 +246,32 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
             ))}
           </Pie>
           <ChartLegend
-            content={<ChartLegendContent nameKey="name" />}
-            className="flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+            content={({ payload }) => {
+              if (!payload || payload.length === 0) return null
+              
+              return (
+                <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center mt-4">
+                  {payload.map((entry, index) => {
+                    const item = chartData.find(d => d.name === entry.value)
+                    return (
+                      <div key={`legend-${index}`} className="flex items-center gap-2">
+                        <div
+                          className="h-3 w-3 rounded-sm shrink-0"
+                          style={{ backgroundColor: entry.color }}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {entry.value} ({item?.percentage.toFixed(1)}%)
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            }}
           />
         </PieChart>
       </ChartContainer>
+      </div>
     </div>
   )
 }
