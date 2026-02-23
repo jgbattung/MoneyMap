@@ -4,6 +4,7 @@ import NetWorthCard from '@/components/shared/NetWorthCard'
 import CategoryBreakdownChart from '@/components/shared/CategoryBreakdownChart'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useEarliestTransaction } from '@/hooks/useEarliestTransaction'
 import React, { useState } from 'react'
 
 const Reports = () => {
@@ -12,21 +13,22 @@ const Reports = () => {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1) // 1-indexed
   const [selectedYear, setSelectedYear] = useState(now.getFullYear())
 
+  const { earliestMonth, earliestYear } = useEarliestTransaction()
+
   const handleMonthChange = (month: number, year: number) => {
     setSelectedMonth(month)
     setSelectedYear(year)
   }
 
-  // Generate month options
-  // TODO: Once both hooks load, we could use the earliest date from either.
-  // For now, default to January 2025 as the starting point.
+  // Generate month options from earliest transaction to current month
   const generateMonthOptions = () => {
     const options: { label: string; month: number; year: number }[] = []
     const currentMonth = now.getMonth() + 1
     const currentYear = now.getFullYear()
 
-    const startYear = 2025
-    const startMonth = 1
+    // Use earliest transaction date, fallback to current month if no data yet
+    const startYear = earliestYear ?? currentYear
+    const startMonth = earliestMonth ?? currentMonth
 
     let iterYear = startYear
     let iterMonth = startMonth
