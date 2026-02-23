@@ -7,7 +7,6 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
 } from "@/components/ui/chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -188,89 +187,108 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
         </Select>
       </div>
 
-      {/* Chart - wrapped with padding to prevent cutoff */}
-      <div className="py-6">
-        <ChartContainer config={chartConfig} className="h-[350px] md:h-[350px] w-full">
-        <PieChart>
-          <ChartTooltip
-            content={
-              <ChartTooltipContent
-                hideLabel
-                formatter={(value, name, item) => (
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: item.payload.fill }}
-                      />
-                      <span className="font-medium">{name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{formatCurrency(value as number)}</span>
-                      <span>({item.payload.percentage.toFixed(1)}%)</span>
-                    </div>
-                  </div>
-                )}
-              />
-            }
-          />
-          <Pie
-            data={chartData}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            innerRadius={60}
-            outerRadius={90}
-            paddingAngle={2}
-            label={({
-              cx,
-              cy,
-            }) => {
-              return (
-                <text
-                  x={cx}
-                  y={cy}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  className="fill-foreground text-xl font-bold"
-                >
-                  {formatCurrency(breakdown.totalSpent)}
-                </text>
-              );
-            }}
-            labelLine={false}
-          >
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.fill} />
-            ))}
-          </Pie>
-          <ChartLegend
-            content={({ payload }) => {
-              if (!payload || payload.length === 0) return null
-              
-              return (
-                <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center mt-4">
-                  {payload.map((entry, index) => {
-                    const item = chartData.find(d => d.name === entry.value)
-                    return (
-                      <div key={`legend-${index}`} className="flex items-center gap-2">
+    {/* Chart */}
+      <div>
+        <ChartContainer config={chartConfig} className="h-[250px] md:h-[300px] w-full">
+          <PieChart>
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  hideLabel
+                  formatter={(value, name, item) => (
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
                         <div
-                          className="h-3 w-3 rounded-sm shrink-0"
-                          style={{ backgroundColor: entry.color }}
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: item.payload.fill }}
                         />
-                        <span className="text-xs text-muted-foreground">
-                          {entry.value} ({item?.percentage.toFixed(1)}%)
-                        </span>
+                        <span className="font-medium">{name}</span>
                       </div>
-                    )
-                  })}
-                </div>
-              )
-            }}
-          />
-        </PieChart>
-      </ChartContainer>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{formatCurrency(value as number)}</span>
+                        <span>({item.payload.percentage.toFixed(1)}%)</span>
+                      </div>
+                    </div>
+                  )}
+                />
+              }
+            />
+            <Pie
+              data={chartData}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={90}
+              paddingAngle={2}
+              label={({
+                cx,
+                cy,
+              }) => {
+                return (
+                  <text
+                    x={cx}
+                    y={cy}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    className="fill-foreground text-xl font-bold"
+                  >
+                    {formatCurrency(breakdown.totalSpent)}
+                  </text>
+                );
+              }}
+              labelLine={false}
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.fill} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ChartContainer>
+      </div>
+
+      {/* Legend - rendered outside chart for full layout control */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 min-md:place-items-center">
+        {chartData.map((item, index) => (
+          <div key={`legend-${index}`} className="flex items-center gap-2">
+            <div
+              className="h-3 w-3 rounded-sm shrink-0"
+              style={{ backgroundColor: item.fill }}
+            />
+            <span className="text-xs text-muted-foreground">
+              {item.name} ({item.percentage.toFixed(1)}%)
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-border" />
+
+      {/* Expense breakdown list */}
+      <div className="flex flex-col">
+        {chartData.map((item, index) => (
+          <div
+            key={`breakdown-${index}`}
+            className={`flex items-center justify-between py-3 px-3 ${
+              index < chartData.length - 1 ? 'border-b border-border' : ''
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <span
+                className="text-xs font-semibold px-2 py-0.5 rounded min-w-[40px] text-center text-primary-950"
+                style={{ backgroundColor: item.fill }}
+              >
+                {Math.round(item.percentage)}%
+              </span>
+              <span className="text-sm text-foreground">{item.name}</span>
+            </div>
+            <span className="text-sm text-foreground">
+              {formatCurrency(item.value)}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   )
