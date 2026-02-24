@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAnnualSummary, type AnnualSummaryMonth } from "@/hooks/useAnnualSummary";
 
@@ -117,11 +117,9 @@ export default function AnnualSummaryTable() {
                   onClick={() => toggleYear(year.year)}
                 >
                   <div className="flex items-center gap-1 font-semibold text-xs md:text-sm text-foreground">
-                    {isExpanded ? (
-                      <ChevronDown className="h-4 w-4 shrink-0" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 shrink-0" />
-                    )}
+                    <ChevronRight
+                      className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
+                    />
                     {year.year}
                   </div>
                   <span className="text-xs md:text-sm text-foreground text-right">
@@ -137,27 +135,35 @@ export default function AnnualSummaryTable() {
                   </span>
                 </div>
 
-                {/* Month rows */}
-                {isExpanded &&
-                  year.months.map((month: AnnualSummaryMonth) => (
-                    <div
-                      key={month.month}
-                      className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 px-2 py-2.5 border-b border-border/50"
-                    >
-                      <span className="text-xs md:text-sm text-muted-foreground pl-7">
-                        {MONTH_NAMES[month.month - 1]}
-                      </span>
-                      <span className="text-xs md:text-sm text-muted-foreground text-right">
-                        {formatCurrency(month.totalIncome)}
-                      </span>
-                      <span className="text-xs md:text-sm text-muted-foreground text-right">
-                        {formatCurrency(month.totalExpenses)}
-                      </span>
-                      <span className={`text-xs md:text-sm text-right ${getSavingsColorClass(month.totalSavings) || "text-muted-foreground"}`}>
-                        {formatCurrency(month.totalSavings)}
-                      </span>
-                    </div>
-                  ))}
+                {/* Month rows - animated container */}
+                <div
+                  className="grid overflow-hidden transition-[grid-template-rows] duration-200 ease-out"
+                  style={{
+                    gridTemplateRows: isExpanded ? "1fr" : "0fr",
+                  }}
+                >
+                  <div className="min-h-0">
+                    {year.months.map((month: AnnualSummaryMonth) => (
+                      <div
+                        key={month.month}
+                        className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 px-2 py-2.5 border-b border-border/50"
+                      >
+                        <span className="text-xs md:text-sm text-muted-foreground pl-7">
+                          {MONTH_NAMES[month.month - 1]}
+                        </span>
+                        <span className="text-xs md:text-sm text-muted-foreground text-right">
+                          {formatCurrency(month.totalIncome)}
+                        </span>
+                        <span className="text-xs md:text-sm text-muted-foreground text-right">
+                          {formatCurrency(month.totalExpenses)}
+                        </span>
+                        <span className={`text-xs md:text-sm text-right ${getSavingsColorClass(month.totalSavings) || "text-muted-foreground"}`}>
+                          {formatCurrency(month.totalSavings)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             );
           })}
