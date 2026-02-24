@@ -16,7 +16,7 @@ const formatCurrency = (value: number): string => {
 
 const getSavingsColorClass = (savings: number): string => {
   if (savings > 0) return "text-success-600";
-  if (savings < 0) return "text-error-600";
+  if (savings < 0) return "text-error-400";
   return "";
 };
 
@@ -40,13 +40,23 @@ export default function AnnualSummaryTable() {
     });
   };
 
+  // Calculate totals across all years
+  const totals = years.reduce(
+    (acc, year) => ({
+      totalIncome: acc.totalIncome + year.totalIncome,
+      totalExpenses: acc.totalExpenses + year.totalExpenses,
+      totalSavings: acc.totalSavings + year.totalSavings,
+    }),
+    { totalIncome: 0, totalExpenses: 0, totalSavings: 0 }
+  );
+
   if (error) {
     return (
       <div className="bg-card border border-border rounded-md p-4 shadow-md max-w-5xl">
         <h2 className="text-foreground font-semibold text-sm md:text-base mb-4">
           Annual Summary
         </h2>
-        <p className="text-error-600 text-sm text-center py-8">
+        <p className="text-error-400 text-sm text-center py-8">
           Failed to load annual summary.
         </p>
       </div>
@@ -64,18 +74,9 @@ export default function AnnualSummaryTable() {
         <span className="text-muted-foreground text-xs md:text-sm text-left">
           Year
         </span>
-        <span className="text-muted-foreground text-xs md:text-sm text-right">
-          <span className="hidden md:inline">Income</span>
-          <span className="md:hidden">Inc.</span>
-        </span>
-        <span className="text-muted-foreground text-xs md:text-sm text-right">
-          <span className="hidden md:inline">Expenses</span>
-          <span className="md:hidden">Exp.</span>
-        </span>
-        <span className="text-muted-foreground text-xs md:text-sm text-right">
-          <span className="hidden md:inline">Savings</span>
-          <span className="md:hidden">Sav.</span>
-        </span>
+        <span className="text-muted-foreground text-xs md:text-sm text-right">Income</span>
+        <span className="text-muted-foreground text-xs md:text-sm text-right">Expenses</span>
+        <span className="text-muted-foreground text-xs md:text-sm text-right">Savings</span>
       </div>
 
       {/* Loading state */}
@@ -115,7 +116,7 @@ export default function AnnualSummaryTable() {
                   className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 px-2 py-3 cursor-pointer hover:bg-muted/50 border-b border-border/50"
                   onClick={() => toggleYear(year.year)}
                 >
-                  <div className="flex items-center gap-1 font-semibold text-sm md:text-base text-foreground">
+                  <div className="flex items-center gap-1 font-semibold text-xs md:text-sm text-foreground">
                     {isExpanded ? (
                       <ChevronDown className="h-4 w-4 shrink-0" />
                     ) : (
@@ -123,14 +124,14 @@ export default function AnnualSummaryTable() {
                     )}
                     {year.year}
                   </div>
-                  <span className="text-sm md:text-base text-foreground text-right font-semibold">
+                  <span className="text-xs md:text-sm text-foreground text-right">
                     {formatCurrency(year.totalIncome)}
                   </span>
-                  <span className="text-sm md:text-base text-foreground text-right font-semibold">
+                  <span className="text-xs md:text-sm text-foreground text-right">
                     {formatCurrency(year.totalExpenses)}
                   </span>
                   <span
-                    className={`text-sm md:text-base text-right font-semibold ${getSavingsColorClass(year.totalSavings)}`}
+                    className={`text-xs md:text-sm text-right ${getSavingsColorClass(year.totalSavings)}`}
                   >
                     {formatCurrency(year.totalSavings)}
                   </span>
@@ -143,18 +144,16 @@ export default function AnnualSummaryTable() {
                       key={month.month}
                       className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 px-2 py-2.5 border-b border-border/50"
                     >
-                      <span className="text-sm text-foreground pl-7">
+                      <span className="text-xs md:text-sm text-muted-foreground pl-7">
                         {MONTH_NAMES[month.month - 1]}
                       </span>
-                      <span className="text-sm text-foreground text-right">
+                      <span className="text-xs md:text-sm text-muted-foreground text-right">
                         {formatCurrency(month.totalIncome)}
                       </span>
-                      <span className="text-sm text-foreground text-right">
+                      <span className="text-xs md:text-sm text-muted-foreground text-right">
                         {formatCurrency(month.totalExpenses)}
                       </span>
-                      <span
-                        className={`text-sm text-right ${getSavingsColorClass(month.totalSavings)}`}
-                      >
+                      <span className={`text-xs md:text-sm text-right ${getSavingsColorClass(month.totalSavings) || "text-muted-foreground"}`}>
                         {formatCurrency(month.totalSavings)}
                       </span>
                     </div>
@@ -162,6 +161,22 @@ export default function AnnualSummaryTable() {
               </div>
             );
           })}
+
+          {/* Totals row */}
+          <div className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 px-2 py-3 border-t border-border">
+            <span className="text-xs md:text-sm text-foreground font-semibold pl-5">
+              Total
+            </span>
+            <span className="text-xs md:text-sm text-foreground text-right font-semibold">
+              {formatCurrency(Math.round(totals.totalIncome * 100) / 100)}
+            </span>
+            <span className="text-xs md:text-sm text-foreground text-right font-semibold">
+              {formatCurrency(Math.round(totals.totalExpenses * 100) / 100)}
+            </span>
+            <span className={`text-xs md:text-sm text-right font-semibold ${getSavingsColorClass(totals.totalSavings)}`}>
+              {formatCurrency(Math.round(totals.totalSavings * 100) / 100)}
+            </span>
+          </div>
         </div>
       )}
     </div>
