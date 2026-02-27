@@ -6,6 +6,7 @@
 
 1. **Lint** — Run `npm run lint` and fix any errors.
 2. **Build** — Run `npm run build` and ensure zero errors.
-3. **Update task file** — Check off completed items in the relevant `/docs/*-tasks.md` file and note which files were modified.
-4. **Update Key Docs** — If new files or patterns were introduced, ensure `CLAUDE.md` references them if relevant.
-5. **Commit** — Follow the conventions in `.agents/conventions/commit-conventions.md`. Wait for user to request a commit before committing.
+3. **QA** — Spawn the `qa-pipeline` agent for every file introduced or significantly changed. Pass the file path(s) and a brief description of what the feature does. Wait for the agent to return a green report before proceeding.
+4. **Update task file** — Check off completed items in `PROJECT.md` or the active `{phase_num}-{N}-PLAN.md` file and note which files were modified.
+5. **Update Key Docs** — If new files or patterns were introduced, ensure `CLAUDE.md` references them if relevant.
+6. **Commit** — Follow the conventions in `.agents/conventions/commit-conventions.md`. Wait for user to request a commit before committing.
