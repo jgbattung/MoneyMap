@@ -13,6 +13,7 @@ You are responsible for:
 
 ## Coding Standards
 
+- **NEVER commit directly to the `main` branch.** Always checkout a valid feature branch before creating commits.
 - Follow existing patterns in the codebase — match the style of surrounding code.
 - Use TypeScript strictly (no `any` unless absolutely necessary).
 - Prefer named exports over default exports.
