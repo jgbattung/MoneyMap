@@ -12,6 +12,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npx prisma migrate dev` — Run database migrations in development
 - `npx prisma studio` — Open Prisma database browser
 
+## Database Safety (CRITICAL — DO NOT OVERRIDE)
+
+There is **no separate test database**. The only database is the live production database used by the deployed app.
+
+**Claude Code MUST NEVER run any of the following commands**, directly or indirectly, without explicit written confirmation from the user in that session:
+
+- `prisma migrate dev`
+- `prisma migrate deploy`
+- `prisma migrate reset`
+- `prisma db push`
+- `prisma db seed`
+- `prisma migrate resolve`
+- Any command that creates, drops, alters, or seeds database tables or data
+
+**Safe Prisma commands** (allowed without confirmation):
+- `prisma generate` — only regenerates the TypeScript client, touches no data
+- `prisma studio` — read-only browser, but only open if user explicitly asks
+- `prisma validate` — validates schema syntax only
+- `prisma format` — formats schema file only
+
+**If a spec or plan includes a migration step**, stop and tell the user:
+> "This task requires a database migration (`[command]`). Since this will affect the live production database, please run it manually and confirm before I proceed."
+
+Never run migrations as part of automated plan execution, post-execution checklists, or QA pipelines.
+
 ## Architecture
 
 See `.agents/conventions/tech-stack.md` for the full shared tech stack and architecture reference. Quick summary:

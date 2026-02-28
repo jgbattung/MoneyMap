@@ -10,4 +10,13 @@
 4. **Update task file** — Check off completed `<task>` items in the active `[feature]-plan.xml` file.
 5. **Verify Work** — Generate the `/docs/[feature]-verification.md` file proving the work is tested and complete.
 6. **Update Key Docs** — If new files or patterns were introduced, ensure `CLAUDE.md` references them if relevant.
-7. **Commit** — Create atomic commits for each completed `<task>` following `.agents/conventions/commit-conventions.md`. Do not wait for the user to request a commit; commit immediately upon passing tests.
+7. **Commit** — Follow `.agents/conventions/commit-conventions.md`. Wait for the user to request a commit before committing.
+
+## Database Migration Warning
+
+**NEVER run database commands as part of this checklist.** There is no test database — all migrations affect the live production database.
+
+If the completed work introduced Prisma schema changes, stop here and tell the user:
+> "The implementation is complete. It includes a schema change that requires a migration. Please run `npx prisma migrate dev --name <migration-name>` manually in your terminal, then confirm so I can proceed."
+
+Do not proceed past this point until the user confirms the migration ran successfully.
