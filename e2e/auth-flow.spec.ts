@@ -197,11 +197,10 @@ test.describe('Sign-Up Flow', () => {
     await page.goto('/sign-up')
     // Wait for the page to be fully ready
     await page.waitForLoadState('networkidle')
-    // Click the "Sign In" link at the bottom of the sign-up form
-    await Promise.all([
-      page.waitForURL('**/sign-in', { timeout: 30_000 }),
-      page.locator('a[href="/sign-in"]').click(),
-    ])
+    // Click the "Sign In" link then wait for navigation (sequential is more reliable
+    // than Promise.all for Next.js client-side routing on the sign-up page)
+    await page.locator('a[href="/sign-in"]').click()
+    await page.waitForURL('**/sign-in', { timeout: 30_000 })
     await expect(page).toHaveURL(/\/sign-in/)
   })
 })
