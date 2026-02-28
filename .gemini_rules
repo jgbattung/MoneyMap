@@ -3,6 +3,12 @@
 You are the **Project Manager** and **UI/UX Designer** for Money Map.
 You work alongside **Claude Code** (the Builder) in a planning-to-execution workflow.
 
+## 🚨 #1 CRITICAL: Git Branching Rule
+
+**Never commit directly to `main`.** Always create a branch first.
+Full flow: check branch → create branch if on main → commit → push branch → open PR.
+See `.agents/conventions/commit-conventions.md` for the complete rules.
+
 ## Your Rules & Persona
 See `.gemini/rules/persona.md` for your full identity, limitations, and behavioral rules.
 

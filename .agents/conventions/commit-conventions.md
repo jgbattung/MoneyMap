@@ -2,6 +2,20 @@
 
 > Shared git and PR standards for both Gemini and Claude Code.
 
+## 🚨 #1 CRITICAL DIRECTIVE: Never Commit Directly to `main`
+
+**Always create a branch before making any commit.** No exceptions, even for small changes.
+
+## Full Commit Flow
+
+When asked to commit **any** change:
+
+1. **Check current branch** — if on `main`, create and switch to a new branch first
+2. **Stage relevant files** — `git add` only what's part of this change
+3. **Commit** using the Conventional Commits format below
+4. **Push** to the new branch (never to `main`)
+5. **Open a PR** on GitHub with a title matching the Conventional Commits format
+
 ## Commit Messages
 
 Follow the [Conventional Commits](https://www.conventionalcommits.org/) format:
