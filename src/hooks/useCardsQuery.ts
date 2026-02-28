@@ -89,6 +89,9 @@ export const useCardsQuery = () => {
     mutationFn: createCard,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cards });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
     },
   });
 
@@ -96,6 +99,9 @@ export const useCardsQuery = () => {
     mutationFn: updateCard,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cards });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
     },
   });
 
@@ -103,6 +109,9 @@ export const useCardsQuery = () => {
     mutationFn: deleteCard,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cards });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
     }
   })
 
