@@ -3,8 +3,9 @@
     "allow": [
       "Bash(npm *)",
       "Bash(npx prisma generate*)",
+      "Bash(npx prisma validate*)",
+      "Bash(npx prisma format*)",
       "Bash(npx prisma studio*)",
-      "Bash(npx prisma db seed*)",
       "Bash(git status*)",
       "Bash(git log*)",
       "Bash(git diff*)",
@@ -20,14 +21,21 @@
     "ask": [
       "Bash(git push*)",
       "Bash(git reset*)",
-      "Bash(rm *)",
-      "Bash(npx prisma migrate*)"
+      "Bash(rm *)"
     ],
     "deny": [
       "Bash(sudo *)",
       "Bash(git push --force*)",
       "Bash(git push -f *)",
-      "Read(.env*)"
+      "Read(.env*)",
+      "Bash(npx prisma migrate*)",
+      "Bash(npx prisma db push*)",
+      "Bash(npx prisma db seed*)",
+      "Bash(npx prisma db reset*)",
+      "Bash(prisma migrate*)",
+      "Bash(prisma db push*)",
+      "Bash(prisma db seed*)",
+      "Bash(prisma db reset*)"
     ]
   },
   "hooks": {
@@ -60,30 +68,6 @@
           }
         ]
       }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node .claude/hooks/gsd-check-update.js"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node .claude/hooks/gsd-context-monitor.js"
-          }
-        ]
-      }
     ]
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "node .claude/hooks/gsd-statusline.js"
   }
 }
