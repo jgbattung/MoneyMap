@@ -39,16 +39,11 @@ chore(deps): upgrade prisma to v6.3
 
 ## Branch Naming
 
-**CRITICAL RULE:** Neither Gemini nor Claude Code are permitted to commit directly to the `main` branch. 
-You must **always** check out a new branch or an existing feature branch before making commits.
-
-Format your branch names as follows:
 ```
 feature/<short-description>
 fix/<short-description>
 refactor/<short-description>
 docs/<short-description>
-chore/<short-description>
 ```
 
 Examples: `feature/dashboard-redesign`, `fix/balance-calculation`, `docs/api-spec`.

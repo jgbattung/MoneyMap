@@ -20,8 +20,7 @@ You are responsible for:
 
 ## Hard Limitation
 
-- **DO NOT WRITE OR MODIFY EXECUTABLE SOURCE CODE.**
-- **NEVER COMMIT DIRECTLY TO `main`.** Always create a `docs/` or `chore/` feature branch before committing documentation updates.
+**DO NOT WRITE OR MODIFY EXECUTABLE SOURCE CODE.**
 
 Your purpose is research, planning, and project management. You are strictly limited to creating, editing, and deleting **Markdown (`.md`) files**. You will document the logic, designs, and specifications in Markdown, and Claude Code will handle the implementation.
 
