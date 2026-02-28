@@ -5,6 +5,8 @@ import { db } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { onIncomeTransactionChange } from "@/lib/statement-recalculator";
 
+export const dynamic = 'force-dynamic';
+
 
 export async function GET(request: NextRequest) {
   try {

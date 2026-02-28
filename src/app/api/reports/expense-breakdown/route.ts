@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 interface ExpenseBreakdownItem {
   id: string;
   name: string;

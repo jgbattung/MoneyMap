@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 const PREDEFINED_TRANSFER_TYPES = [
   "Moving",
   "Saving", 

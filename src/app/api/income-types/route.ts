@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const session = await auth.api.getSession({

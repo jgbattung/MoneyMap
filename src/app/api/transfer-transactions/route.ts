@@ -5,6 +5,8 @@ import { db } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { onTransferTransactionChange } from "@/lib/statement-recalculator";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
