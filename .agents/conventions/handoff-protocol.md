@@ -44,9 +44,10 @@ When Claude Code executes a `-plan.xml`:
 
 1. **Read the full `-spec.md`** first to understand the context before writing any code.
 2. **Execute tasks sequentially or in parallel** depending on dependencies.
-3. **Atomic Commits:** CREATE A SEPARATE GIT COMMIT for *each* completed `<task>`. Do NOT bundle all changes into one large commit at the end. Use a message like `feat: <task name>`.
-4. **Generate Verification Document:** Upon completing all tasks, Claude Code must create `/docs/[feature]-verification.md` detailing the test results or manual steps taken to prove the feature works.
-5. **Do not skip items** — if a task is blocked, halt execution and note the blocker in the verification document.
+3. **Atomic Commits:** CREATE A SEPARATE GIT COMMIT for *each* completed `<task>`. Do NOT bundle all changes into one large commit at the end. Use a message like `feat: <task name>`. Commit immediately upon passing verification.
+4. **Database Safety:** If a task involves changing the Prisma schema, you must NOT run `npx prisma migrate` or any other DB commands. You must stop and ask the user to run the migration manually.
+5. **Generate Verification Document:** Upon completing all tasks, Claude Code must create `/docs/[feature]-verification.md` detailing the test results or manual steps taken to prove the feature works.
+6. **Do not skip items** — if a task is blocked, halt execution and note the blocker in the verification document.
 
 This guarantees granular rollbacks if an execution step fails, and allows Gemini to quickly verify the execution during the Review phase.
 

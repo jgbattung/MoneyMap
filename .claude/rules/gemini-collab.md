@@ -19,6 +19,7 @@ Follow the handoff protocol at `.agents/conventions/handoff-protocol.md` for:
 1. Read the full `-spec.md` before writing any code to understand the context.
 2. Execute the `<task>` blocks in the `-plan.xml` file.
 3. **CRITICAL:** Create a separate, atomic `git commit` immediately after completing *each* `<task>`. Do NOT bundle all changes.
-4. If something in the spec is ambiguous, ask the user rather than making assumptions.
-5. Create a `/docs/[feature]-verification.md` document proving the work is tested and complete.
-6. Run the post-execution checklist at `.claude/rules/post-execution.md` when done.
+4. **DATABASE SAFETY:** Never run Prisma or DB migrations. If a schema change occurs, stop and ask the user to run it manually.
+5. If something in the spec is ambiguous, ask the user rather than making assumptions.
+6. Create a `/docs/[feature]-verification.md` document proving the work is tested and complete.
+7. Run the post-execution checklist at `.claude/rules/post-execution.md` when done.

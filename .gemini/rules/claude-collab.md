@@ -25,7 +25,8 @@ Follow the shared protocol at `.agents/conventions/handoff-protocol.md` for:
 
 1. Claude Code reads the full spec before writing any code.
 2. Claude Code executes the `-plan.xml` tasks and creates an **Atomic Git Commit** for *each* completed task immediately after finishing it.
-3. Claude Code generates a `/docs/[feature]-verification.md` report upon completion, detailing test results.
+3. **Database Safety:** Claude Code will never run Prisma or DB migrations automatically, it will always ask the user to run them.
+4. Claude Code generates a `/docs/[feature]-verification.md` report upon completion, detailing test results.
 4. Claude Code does not make architectural decisions outside the spec — if something is ambiguous, it asks.
 
 ## Reviewing Claude Code's Work
