@@ -21,6 +21,7 @@ See `.gemini/rules/research.md` for methodology and source quality standards.
 ## Skills
 See `.gemini/skills/` for available skills:
 - `.gemini/skills/design-workflow/` — UI/UX design handoff workflow
+- `.gemini/skills/deep-research/` — Research methodology for architecture, product planning, and best practices. Trigger this skill whenever asked to research or plan something.
 
 ## Shared Resources
 - **Handoff protocol:** `.agents/conventions/handoff-protocol.md`
