@@ -105,8 +105,9 @@ export async function GET(req: NextRequest) {
       earliestYear = earliestDate.getFullYear();
     }
 
-    // Fetch all income transactions within the date range
-    const incomeTransactions = await db.incomeTransaction.findMany({
+    // Use groupBy to let PostgreSQL aggregate earnings per income type
+    const earningGroups = await db.incomeTransaction.groupBy({
+      by: ['incomeTypeId'],
       where: {
         userId,
         date: {
@@ -114,24 +115,12 @@ export async function GET(req: NextRequest) {
           lte: endOfMonth,
         },
       },
-      select: {
-        incomeTypeId: true,
-        amount: true,
-      },
+      _sum: { amount: true },
     });
 
-    // Group and sum amounts by incomeTypeId
     const earningsByType: Record<string, number> = {};
-
-    for (const transaction of incomeTransactions) {
-      const typeId = transaction.incomeTypeId;
-      const amount = parseFloat(transaction.amount.toString());
-
-      if (!earningsByType[typeId]) {
-        earningsByType[typeId] = 0;
-      }
-
-      earningsByType[typeId] += amount;
+    for (const group of earningGroups) {
+      earningsByType[group.incomeTypeId] = parseFloat((group._sum.amount ?? 0).toString());
     }
 
     // Calculate total earnings
