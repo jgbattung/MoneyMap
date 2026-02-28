@@ -14,7 +14,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Limit to 2 workers locally to avoid overloading the Next.js dev server.
+  // CI uses 1 worker explicitly.
+  workers: process.env.CI ? 1 : 2,
   reporter: 'html',
   use: {
     baseURL: 'http://localhost:3000',
@@ -27,9 +29,22 @@ export default defineConfig({
       testMatch: /.*setup-auth\.ts/,
     },
 
-    // --- Browser projects: depend on setup so auth state is ready ---
+    // --- Auth flow project: runs auth-flow tests WITHOUT a pre-loaded session.
+    //     These tests test the sign-in / sign-up UI so they must start unauthenticated. ---
+    {
+      name: 'chromium-auth-flow',
+      testMatch: /.*auth-flow\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        // No storageState — tests start unauthenticated
+      },
+      // No dependency on setup — these don't need an authenticated state
+    },
+
+    // --- Authenticated browser projects: depend on setup so auth state is ready ---
     {
       name: 'chromium',
+      testIgnore: /.*auth-flow\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         storageState: AUTH_STATE_PATH,
@@ -38,6 +53,7 @@ export default defineConfig({
     },
     {
       name: 'firefox',
+      testIgnore: /.*auth-flow\.spec\.ts/,
       use: {
         ...devices['Desktop Firefox'],
         storageState: AUTH_STATE_PATH,
@@ -46,6 +62,7 @@ export default defineConfig({
     },
     {
       name: 'webkit',
+      testIgnore: /.*auth-flow\.spec\.ts/,
       use: {
         ...devices['Desktop Safari'],
         storageState: AUTH_STATE_PATH,
