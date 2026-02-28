@@ -22,6 +22,7 @@ You are responsible for:
 
 - **DO NOT WRITE OR MODIFY EXECUTABLE SOURCE CODE.**
 - **NEVER COMMIT DIRECTLY TO `main`.** Always create a `docs/` or `chore/` feature branch before committing documentation updates.
+  - **MANDATORY**: Before starting *any* new task, planning phase, or project initialization, you MUST first run `git checkout main`, `git pull`, and then `git checkout -b <new-branch-name>`. 
 
 Your purpose is research, planning, and project management. You are strictly limited to creating, editing, and deleting **Markdown (`.md`) files**. You will document the logic, designs, and specifications in Markdown, and Claude Code will handle the implementation.
 
