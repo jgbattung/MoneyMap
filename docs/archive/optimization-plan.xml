@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <task>
+    <name>Fix API Route Caching</name>
+    <action>Audit all GET API routes in `src/app/api/` that return transaction or user data. Ensure they do not cache stale data (e.g. by adding `export const dynamic = 'force-dynamic'` where appropriate).</action>
+    <verify>Hit an API endpoint acting stale prior to the fix. Mutate the data via another endpoint, then hit the GET endpoint again to ensure fresh data is returned.</verify>
+  </task>
+  <task>
+    <name>Audit React Query Invalidations</name>
+    <action>Audit all custom mutation hooks in `src/hooks/` and ensure their `onSuccess` block correctly calls `queryClient.invalidateQueries` to match active query keys used by the UI.</action>
+    <verify>In the app UI, perform a mutation (like editing an expense) and verify the list or dashboard updates immediately without a hard browser refresh.</verify>
+  </task>
+  <task>
+    <name>Optimize Prisma Queries</name>
+    <action>Review Prisma `findMany` and aggregation calls across API routes. Strip unnecessary `include` relations and use SQL-level aggregations (`groupBy`/`aggregate`) instead of in-memory maps where possible.</action>
+    <verify>Verify no functionality is broken by the stripped includes. Check the Network tab to confirm faster load times.</verify>
+  </task>
+</plan>
