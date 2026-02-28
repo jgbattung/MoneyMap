@@ -8,7 +8,7 @@ progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/ROADMAP.md (updated 2026-02-28)
 
 Phase: 1 of 1 (Testing Infrastructure)
 Plan: 2 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-28 — Completed 01-01 (Vitest + Playwright + GitHub Actions setup)
+Status: Complete — awaiting verification
+Last activity: 2026-02-28 — Completed 01-02 (Foundational tests: hooks, utils, E2E auth + dashboard)
 
-Progress: [█░░░░░░░░░] 50% (1/2 plans complete)
+Progress: [██████████] 100% (2/2 plans complete)
 
 ## Performance Metrics
 
@@ -57,6 +57,9 @@ Progress: [█░░░░░░░░░] 50% (1/2 plans complete)
 - [Phase 1-01]: Disabled CSS processing in Vitest to bypass Tailwind 4 / Vite 5 PostCSS conflict
 - [Phase 1-01]: vitest-mock-extended pinned to 2.0.2 (v3.x requires vitest>=3.0.0)
 - [Phase 1-01]: Chromium-only in CI to reduce E2E test build times
+- [Phase 1-02]: No tests for src/components/ui/ — Shadcn primitives are pre-built, not custom logic
+- [Phase 1-02]: Sequential click()+waitForURL() preferred over Promise.all for Next.js navigation in E2E
+- [Phase 1-02]: chromium-auth-flow Playwright project runs auth tests with no storageState (unauthenticated)
 
 ### Pending Todos
 
@@ -69,6 +72,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-28 09:52
-Stopped at: Completed 01-01-PLAN.md — testing infrastructure setup (Vitest + Playwright + CI)
+Last session: 2026-02-28
+Stopped at: Completed 01-02-PLAN.md — foundational tests (hooks, utils, E2E auth + dashboard). All plans done, phase verification pending.
 Resume file: None
