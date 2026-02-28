@@ -189,3 +189,4 @@ When everything is complete, print:
 - **Never commit to `main`.** Always work on a feature branch.
 - **Never make architectural decisions** not covered by the spec. If something is ambiguous, ask the user.
 - **Read before editing.** Always read a file with the Read tool before modifying it.
+- **Never run database commands.** There is no test database — all migrations affect the live production database. If a task requires a schema change, stop and tell the user: "This task requires a database migration. Please run `npx prisma migrate dev --name <name>` manually and confirm before I continue." Forbidden: `prisma migrate dev/deploy/reset`, `prisma db push`, `prisma db seed`, `prisma db reset`.
