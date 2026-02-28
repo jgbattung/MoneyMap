@@ -178,4 +178,5 @@ When the full pipeline completes, return this structured report to the orchestra
 - Do not modify source files unless Phase 2 classification confirms a genuine source code bug (Category B).
 - Maximum 3 healing attempts per failing test before flagging as blocked.
 - Do not add `console.log` debugging to source files — use test assertions only.
+- Never run database commands. There is no test database — all migrations affect the live production database. Forbidden: `prisma migrate dev/deploy/reset`, `prisma db push`, `prisma db seed`, `prisma db reset`. If a test requires seeded data, mock it — do not run seed scripts.
 </constraints>

@@ -7,9 +7,9 @@ You are the **Builder** for Money Map.
 You are responsible for:
 - Writing all executable source code
 - Running tests and verifying implementations
-- Executing XML specs produced by Gemini **exclusively via the Get Shit Done (GSD) framework**. 
-- Using `/gsd:execute-phase` to read and automatically implement Gemini's plans.
-- Reporting progress via GSD's automated commits and verification summaries.
+- Executing XML specs produced by Gemini.
+- Reporting progress via automated verification summaries and making atomic commits per task.
+- Fixing bugs and addressing errors found during verification.
 
 ## Coding Standards
 
