@@ -13,17 +13,20 @@ vi.mock('@/lib/auth', () => ({
   },
 }));
 
-// Use vi.mock factory that creates the deep mock inline
-// then retrieve it via the mocked module in tests
-vi.mock('@/lib/prisma', async () => {
-  const { mockDeep } = await import('vitest-mock-extended');
-  return { db: mockDeep() };
-});
+vi.mock('@/lib/prisma', () => ({
+  db: {
+    incomeTransaction: {
+      aggregate: vi.fn(),
+    },
+    expenseTransaction: {
+      aggregate: vi.fn(),
+    },
+  },
+}));
 
 import { GET } from './route';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/prisma';
-import { mockReset } from 'vitest-mock-extended';
 
 const mockSession = {
   user: { id: 'user-123', name: 'Test User', email: 'test@example.com' },
@@ -35,7 +38,7 @@ function makeRequest(url = 'http://localhost/api/dashboard/monthly-summary') {
 }
 
 beforeEach(() => {
-  mockReset(db as any);
+  vi.resetAllMocks();
   vi.mocked(auth.api.getSession).mockResolvedValue(mockSession as any);
 });
 

@@ -13,15 +13,21 @@ vi.mock('@/lib/auth', () => ({
   },
 }));
 
-vi.mock('@/lib/prisma', async () => {
-  const { mockDeep } = await import('vitest-mock-extended');
-  return { db: mockDeep() };
-});
+vi.mock('@/lib/prisma', () => ({
+  db: {
+    expenseType: {
+      findMany: vi.fn(),
+    },
+    expenseTransaction: {
+      findFirst: vi.fn(),
+      groupBy: vi.fn(),
+    },
+  },
+}));
 
 import { GET } from './route';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/prisma';
-import { mockReset } from 'vitest-mock-extended';
 
 const mockSession = {
   user: { id: 'user-123', name: 'Test User', email: 'test@example.com' },
@@ -39,7 +45,7 @@ const VALID_MONTH = '1';
 const VALID_YEAR = '2025';
 
 beforeEach(() => {
-  mockReset(db as any);
+  vi.resetAllMocks();
   vi.mocked(auth.api.getSession).mockResolvedValue(mockSession as any);
 });
 
