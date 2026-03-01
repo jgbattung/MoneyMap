@@ -70,7 +70,7 @@ const fetchExpenseTransactions = async (
   return response.json();
 }
 
-const createExpenseTransaction = async (expenseTransactionData: any): Promise<ExpenseTransaction> => {
+const createExpenseTransaction = async (expenseTransactionData: Record<string, unknown>): Promise<ExpenseTransaction> => {
   const response = await fetch('/api/expense-transactions', {
     method: 'POST',
     headers: { 'Content-Type' : 'application/json' },
@@ -80,7 +80,7 @@ const createExpenseTransaction = async (expenseTransactionData: any): Promise<Ex
   return response.json();
 };
 
-const updateExpenseTransaction = async ({ id, ...expenseTransactionData }: any): Promise<ExpenseTransaction> => {
+const updateExpenseTransaction = async ({ id, ...expenseTransactionData }: { id: string; [key: string]: unknown }): Promise<ExpenseTransaction> => {
   const response = await fetch(`/api/expense-transactions/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type' : 'application/json' },

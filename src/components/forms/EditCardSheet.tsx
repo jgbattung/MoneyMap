@@ -1,4 +1,5 @@
 "use client"
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { CardValidation } from "@/lib/validations/account";
 import { zodResolver } from "@hookform/resolvers/zod";

@@ -23,7 +23,7 @@ const fetchBudgets = async (): Promise<ExpenseType[]> => {
   return response.json();
 }
 
-const createBudget = async (budgetData: any): Promise<ExpenseType> => {
+const createBudget = async (budgetData: Record<string, unknown>): Promise<ExpenseType> => {
   const response = await fetch('/api/expense-types', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -33,7 +33,7 @@ const createBudget = async (budgetData: any): Promise<ExpenseType> => {
   return response.json();
 };
 
-const updateBudget = async ({ id, ...budgetData }: any): Promise<ExpenseType> => {
+const updateBudget = async ({ id, ...budgetData }: { id: string; [key: string]: unknown }): Promise<ExpenseType> => {
   const response = await fetch(`/api/expense-types/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

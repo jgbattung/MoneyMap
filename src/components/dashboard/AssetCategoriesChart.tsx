@@ -71,7 +71,7 @@ const AssetCategoriesChart = () => {
 
       {/* Segmented Bar */}
       <div className='flex w-full h-4 rounded-md overflow-hidden'>
-        {categories.map((category, index) => (
+        {categories.map((category, _index) => (
           <div
             key={category.name}
             style={{

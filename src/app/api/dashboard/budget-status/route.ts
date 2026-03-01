@@ -14,7 +14,7 @@ interface BudgetStatusItem {
   isOverBudget: boolean;
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const session = await auth.api.getSession({
       headers: await headers()
