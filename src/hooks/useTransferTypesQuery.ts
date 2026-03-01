@@ -18,7 +18,7 @@ const fetchTransferTypes = async (): Promise<TransferType[]> => {
   return response.json();
 }
 
-const createTransferType = async (transferTypeData: any): Promise<TransferType> => {
+const createTransferType = async (transferTypeData: Record<string, unknown>): Promise<TransferType> => {
   const response = await fetch('/api/transfer-types', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -28,7 +28,7 @@ const createTransferType = async (transferTypeData: any): Promise<TransferType> 
   return response.json();
 };
 
-const updateTransferType = async ({ id, ...transferTypeData }: any): Promise<TransferType> => {
+const updateTransferType = async ({ id, ...transferTypeData }: { id: string; [key: string]: unknown }): Promise<TransferType> => {
   const response = await fetch(`/api/transfer-types/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

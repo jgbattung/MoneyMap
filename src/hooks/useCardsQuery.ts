@@ -26,7 +26,7 @@ const fetchCards = async (): Promise<Card[]> => {
   return response.json();
 };
 
-const createCard = async (cardData: any): Promise<Card> => {
+const createCard = async (cardData: Record<string, unknown>): Promise<Card> => {
   const transformedData = {
     ...cardData,
     initialBalance: cardData.initialBalance ? (-Math.abs(parseFloat(cardData.initialBalance))).toString() : '0'
@@ -42,7 +42,7 @@ const createCard = async (cardData: any): Promise<Card> => {
   return response.json();
 }
 
-const updateCard = async ({ id, ...cardData }: any): Promise<Card> => {
+const updateCard = async ({ id, ...cardData }: { id: string; [key: string]: unknown }): Promise<Card> => {
   const transformedData = {
     ...cardData,
     initialBalance: cardData.initialBalance ? (-Math.abs(parseFloat(cardData.initialBalance))).toString() : cardData.initialBalance
@@ -64,6 +64,7 @@ const deleteCard = async (id: string): Promise<void> => {
 
   if (!response.ok) {
     const errorData = await response.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const error: any = new Error(errorData.error || "Failed to delete account");
     if (errorData.transactionCount) {
       error.transactionCount = errorData.transactionCount;

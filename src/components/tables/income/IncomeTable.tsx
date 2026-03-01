@@ -1,4 +1,6 @@
 "use client"
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';

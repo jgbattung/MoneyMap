@@ -75,7 +75,7 @@ const fetchTransfers = async (
   return response.json();
 }
 
-const createTransfer = async (transferData: any): Promise<TransferTransaction> => {
+const createTransfer = async (transferData: Record<string, unknown>): Promise<TransferTransaction> => {
   const response = await fetch('/api/transfer-transactions', {
     method: 'POST',
     headers: { 'Content-Type' : 'application/json' },
@@ -85,7 +85,7 @@ const createTransfer = async (transferData: any): Promise<TransferTransaction> =
   return response.json();
 };
 
-const updateTransfer = async ({ id, ...transferData }: any): Promise<TransferTransaction> => {
+const updateTransfer = async ({ id, ...transferData }: { id: string; [key: string]: unknown }): Promise<TransferTransaction> => {
   const response = await fetch(`/api/transfer-transactions/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type' : 'application/json' },

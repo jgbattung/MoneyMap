@@ -19,7 +19,7 @@ const fetchIncomeTypes = async (): Promise<IncomeType[]> => {
   return response.json();
 }
 
-const createIncomeType = async (incomeTypeData: any): Promise<IncomeType> => {
+const createIncomeType = async (incomeTypeData: Record<string, unknown>): Promise<IncomeType> => {
   const response = await fetch('/api/income-types', {
     method: 'POST',
     headers: { 'Content-Type' : 'application/json' },
@@ -29,7 +29,7 @@ const createIncomeType = async (incomeTypeData: any): Promise<IncomeType> => {
   return response.json();
 };
 
-const updateIncomeType = async ({ id, ...incomeTypeData }: any): Promise<IncomeType> => {
+const updateIncomeType = async ({ id, ...incomeTypeData }: { id: string; [key: string]: unknown }): Promise<IncomeType> => {
   const response = await fetch(`/api/income-types/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

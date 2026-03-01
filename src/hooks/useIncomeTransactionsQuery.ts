@@ -60,7 +60,7 @@ const fetchIncomeTransactions = async (
   return response.json();
 }
 
-const createIncomeTransaction = async (incomeTransactionData: any): Promise<IncomeTransaction> => {
+const createIncomeTransaction = async (incomeTransactionData: Record<string, unknown>): Promise<IncomeTransaction> => {
   const response = await fetch('/api/income-transactions', {
     method: 'POST',
     headers: { 'Content-Type' : 'application/json' },
@@ -70,7 +70,7 @@ const createIncomeTransaction = async (incomeTransactionData: any): Promise<Inco
   return response.json();
 };
 
-const updateIncomeTransaction = async ({ id, ...incomeTransactionData }: any): Promise<IncomeTransaction> => {
+const updateIncomeTransaction = async ({ id, ...incomeTransactionData }: { id: string; [key: string]: unknown }): Promise<IncomeTransaction> => {
   const response = await fetch(`/api/income-transactions/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type' : 'application/json' },

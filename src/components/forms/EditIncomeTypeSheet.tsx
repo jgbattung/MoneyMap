@@ -1,4 +1,5 @@
 "use client"
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { z } from "zod"
 import { IncomeTypeValidation } from '@/lib/validations/income';

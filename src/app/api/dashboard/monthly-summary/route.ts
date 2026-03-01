@@ -5,7 +5,7 @@ import { db } from "@/lib/prisma";
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const session = await auth.api.getSession({
       headers: await headers()

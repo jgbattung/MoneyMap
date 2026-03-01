@@ -28,7 +28,7 @@ const fetchAccounts = async (includeCards: boolean = false): Promise<Account[]> 
   return response.json();
 };
 
-const createAccount = async (accountData: any): Promise<Account> => {
+const createAccount = async (accountData: Record<string, unknown>): Promise<Account> => {
   const response = await fetch('/api/accounts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -38,7 +38,7 @@ const createAccount = async (accountData: any): Promise<Account> => {
   return response.json();
 };
 
-const updateAccount = async ({ id, ...accountData }: any): Promise<Account> => {
+const updateAccount = async ({ id, ...accountData }: { id: string; [key: string]: unknown }): Promise<Account> => {
   const response = await fetch(`/api/accounts/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -55,6 +55,7 @@ const deleteAccount = async (id: string): Promise<void> => {
 
   if (!response.ok) {
     const errorData = await response.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const error: any = new Error(errorData.error || "Failed to delete account");
     if (errorData.transactionCount) {
       error.transactionCount = errorData.transactionCount;

@@ -19,8 +19,8 @@ interface CreditCardCardProps {
   onDelete?: () => void;
 }
 
-const CreditCardCard = ({ 
-  id,
+const CreditCardCard = ({
+  id: _id,
   currentBalance, 
   name, 
   statementDate, 
