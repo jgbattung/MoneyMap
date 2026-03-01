@@ -129,6 +129,7 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
       queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
       queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
       queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['expenseBreakdown'] });
     },
   });
 
@@ -144,6 +145,7 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
       queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
       queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
       queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['expenseBreakdown'] });
     },
   });
 
@@ -159,6 +161,7 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
       queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
       queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
       queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['expenseBreakdown'] });
     }
   })
 
