@@ -55,6 +55,8 @@ This guarantees granular rollbacks if an execution step fails, and allows Gemini
 
 When Gemini creates a new spec file, it must also add a reference to it under the `## Key Docs` section in `CLAUDE.md`. If that section does not exist, Gemini must create it.
 
-## Archiving Completed Specs
+## Archiving Completed & Skipped Specs
 
 When a feature is fully implemented and verified, move its spec and task files from `/docs/` to `/docs/archive/`. Do not delete specs — archived specs serve as historical context for future planning.
+
+**Skipped/Canceled Specs:** If a planned spec is skipped or canceled by the user before execution, it MUST also be moved to `/docs/archive/`. This ensures Claude Code does not accidentally find and execute it later. You can append a note like `(Skipped)` to the top of the archived file for clarity.
