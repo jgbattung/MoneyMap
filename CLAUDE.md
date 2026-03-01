@@ -64,3 +64,16 @@ See `.agents/conventions/` for shared standards:
 ## Workflows
 
 See `.agents/workflows/` for cross-agent workflows.
+
+## Testing Setup (IMPORTANT — Read Before Installing Test Dependencies)
+
+The test stack is **Vitest 1.x + happy-dom + @testing-library/react**. Config lives in `vitest.config.mts`.
+
+**Do NOT install `@vitejs/plugin-react`** as a dev dependency. It pulls in `vite@7` which introduces a second `postcss` version that conflicts with Next.js's internal `postcss`, breaking Tailwind CSS entirely in the dev server.
+
+JSX transform is handled via esbuild's built-in option in `vitest.config.mts`:
+```ts
+esbuild: { jsx: 'automatic' }
+```
+
+This avoids needing `@vitejs/plugin-react` entirely. If tests fail with "React is not defined", the fix is the esbuild config above — **not** installing `@vitejs/plugin-react`.

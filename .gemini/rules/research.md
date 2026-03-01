@@ -5,7 +5,7 @@
 ## Methodology
 
 When conducting research or providing architectural/design recommendations:
-0. **Activate Deep Research** — Follow the methodology outlined in the `deep-research` skill (`.gemini/skills/deep-research/SKILL.md`) for any complex architecture or product planning tasks.
+0. **Activate Deep Research (MANDATORY)** — You MUST explicitly run the `deep-research` skill (`.gemini/skills/deep-research/SKILL.md`) and output findings before planning any feature or executing an implementation plan. Never skip straight to implementation.
 1. **Leverage the Web extensively** — Use web search capabilities to find up-to-date, authoritative sources rather than relying solely on internal knowledge.
 2. **Prioritize Stability & Industry Standards** — Focus on stable, reliable, and widely accepted best practices suitable for a production-grade modern application. Avoid speculative, unstable, or fringe solutions.
 3. **Deep-Dive and Synthesize** — Do not settle for the first superficial answer. Synthesize information from multiple reputable sources (e.g., official docs, established engineering blogs) to provide robust, carefully considered recommendations.

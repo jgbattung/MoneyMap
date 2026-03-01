@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 interface BudgetStatusItem {
   id: string;
   name: string;
@@ -42,7 +44,9 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const expenseTransactions = await db.expenseTransaction.findMany({
+    // Use groupBy to let PostgreSQL aggregate spending per expense type
+    const spendingGroups = await db.expenseTransaction.groupBy({
+      by: ['expenseTypeId'],
       where: {
         userId,
         date: {
@@ -51,24 +55,12 @@ export async function GET(req: NextRequest) {
         },
         isInstallment: false,
       },
-      select: {
-        expenseTypeId: true,
-        amount: true,
-      },
+      _sum: { amount: true },
     });
 
-    // Group transactions by expense type and calculate total spending
     const spendingByType: Record<string, number> = {};
-    
-    for (const transaction of expenseTransactions) {
-      const typeId = transaction.expenseTypeId;
-      const amount = parseFloat(transaction.amount.toString());
-      
-      if (!spendingByType[typeId]) {
-        spendingByType[typeId] = 0;
-      }
-      
-      spendingByType[typeId] += amount;
+    for (const group of spendingGroups) {
+      spendingByType[group.expenseTypeId] = parseFloat((group._sum.amount ?? 0).toString());
     }
 
     // Combine expense types with spending data and calculate percentages

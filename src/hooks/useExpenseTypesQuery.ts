@@ -73,6 +73,7 @@ export const useExpenseTypesQuery = () => {
     mutationFn: createBudget,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.budgets });
+      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
     },
   });
 
@@ -80,6 +81,7 @@ export const useExpenseTypesQuery = () => {
     mutationFn: updateBudget,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.budgets });
+      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
     },
   });
 

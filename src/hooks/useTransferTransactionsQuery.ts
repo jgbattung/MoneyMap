@@ -132,6 +132,8 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
       queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
       queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
       queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['expenseTransactions'] });
     },
   });
 
@@ -145,6 +147,8 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
       queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
       queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
       queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['expenseTransactions'] });
     }
   });
 
@@ -158,6 +162,8 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
       queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
       queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
       queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['expenseTransactions'] });
     },
   });
 

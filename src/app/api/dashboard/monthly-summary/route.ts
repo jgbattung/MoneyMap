@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const session = await auth.api.getSession({
@@ -26,73 +28,44 @@ export async function GET(req: NextRequest) {
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
 
-    // Fetch current month transactions
-    const [currentMonthIncome, currentMonthExpenses] = await Promise.all([
-      db.incomeTransaction.findMany({
+    // Use aggregate to let PostgreSQL do the summation instead of fetching all rows
+    const [currentMonthIncome, currentMonthExpenses, lastMonthIncome, lastMonthExpenses] = await Promise.all([
+      db.incomeTransaction.aggregate({
         where: {
           userId,
-          date: {
-            gte: currentMonthStart,
-            lte: currentMonthEnd,
-          }
+          date: { gte: currentMonthStart, lte: currentMonthEnd },
         },
-        select: { amount: true }
+        _sum: { amount: true },
       }),
-      db.expenseTransaction.findMany({
+      db.expenseTransaction.aggregate({
         where: {
           userId,
-          date: {
-            gte: currentMonthStart,
-            lte: currentMonthEnd,
-          },
-          isInstallment: false, // Only count actual expenses, not installment parents
-        },
-        select: { amount: true }
-      })
-    ]);
-
-    // Fetch last month transactions
-    const [lastMonthIncome, lastMonthExpenses] = await Promise.all([
-      db.incomeTransaction.findMany({
-        where: {
-          userId,
-          date: {
-            gte: lastMonthStart,
-            lte: lastMonthEnd,
-          }
-        },
-        select: { amount: true }
-      }),
-      db.expenseTransaction.findMany({
-        where: {
-          userId,
-          date: {
-            gte: lastMonthStart,
-            lte: lastMonthEnd,
-          },
+          date: { gte: currentMonthStart, lte: currentMonthEnd },
           isInstallment: false,
         },
-        select: { amount: true }
-      })
+        _sum: { amount: true },
+      }),
+      db.incomeTransaction.aggregate({
+        where: {
+          userId,
+          date: { gte: lastMonthStart, lte: lastMonthEnd },
+        },
+        _sum: { amount: true },
+      }),
+      db.expenseTransaction.aggregate({
+        where: {
+          userId,
+          date: { gte: lastMonthStart, lte: lastMonthEnd },
+          isInstallment: false,
+        },
+        _sum: { amount: true },
+      }),
     ]);
 
-    // Calculate totals
-    const currentIncome = currentMonthIncome.reduce(
-      (sum, t) => sum + parseFloat(t.amount.toString()), 
-      0
-    );
-    const currentExpenses = currentMonthExpenses.reduce(
-      (sum, t) => sum + parseFloat(t.amount.toString()), 
-      0
-    );
-    const lastIncome = lastMonthIncome.reduce(
-      (sum, t) => sum + parseFloat(t.amount.toString()), 
-      0
-    );
-    const lastExpenses = lastMonthExpenses.reduce(
-      (sum, t) => sum + parseFloat(t.amount.toString()), 
-      0
-    );
+    const currentIncome = parseFloat((currentMonthIncome._sum.amount ?? 0).toString());
+    const currentExpenses = parseFloat((currentMonthExpenses._sum.amount ?? 0).toString());
+    const lastIncome = parseFloat((lastMonthIncome._sum.amount ?? 0).toString());
+    const lastExpenses = parseFloat((lastMonthExpenses._sum.amount ?? 0).toString());
 
     // Calculate savings
     const currentSavings = currentIncome - currentExpenses;

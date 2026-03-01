@@ -119,6 +119,7 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
       queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
       queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
       queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['incomeBreakdown'] });
     },
   });
 
@@ -133,6 +134,7 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
       queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
       queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
       queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['incomeBreakdown'] });
     },
   });
 
@@ -147,6 +149,7 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
       queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
       queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
       queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['incomeBreakdown'] });
     }
   })
 

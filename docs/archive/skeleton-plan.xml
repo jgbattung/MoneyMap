@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- (SKIPPED PER USER REQUEST) -->
+<plan>
+  <task>
+    <name>Ensure Skeleton Component Exists</name>
+    <action>Verify if `src/components/ui/skeleton.tsx` exists. If not, generate the standard shadcn/ui Skeleton component.</action>
+    <verify>Check that `import { Skeleton } from "@/components/ui/skeleton"` works in a test file.</verify>
+  </task>
+  <task>
+    <name>Implement loading.tsx for Core Routes</name>
+    <action>Create a `loading.tsx` file inside `dashboard`, `accounts`, `cards`, `budgets`, `expenses`, `income`, `transfers`, and `reports`. Use the `Skeleton` component to build a rough mockup of what that specific page looks like (e.g., stats cards + list).</action>
+    <verify>Manually verify or write a report confirming `loading.tsx` is located next to each `page.tsx` for these 8 routes.</verify>
+  </task>
+</plan>
