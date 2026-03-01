@@ -11,6 +11,7 @@
 5. **Verify Work** — Generate the `/docs/[feature]-verification.md` file proving the work is tested and complete.
 6. **Update Key Docs** — If new files or patterns were introduced, ensure `CLAUDE.md` references them if relevant.
 7. **Commit** — Follow `.agents/conventions/commit-conventions.md`. Wait for the user to request a commit before committing.
+8. **Pre-merge gate** — Before creating a PR, invoke the `/pre-merge` skill. Do not run `gh pr create` until this returns all-green. (The hook will also block PR creation automatically if any check fails.)
 
 ## Database Migration Warning
 

@@ -59,13 +59,27 @@ vi.mock('better-auth/react', () => ({
 
 Override per-test: `vi.mocked(useSession).mockReturnValue({ ... })`
 
-**Prisma (`vitest-mock-extended`):**
+**Prisma (native `vi.fn()` — do NOT use `vitest-mock-extended`, it requires vitest ≥3):**
 ```typescript
-import { mockDeep, mockReset } from 'vitest-mock-extended'
-import type { PrismaClient } from '@prisma/client'
-const prismaMock = mockDeep<PrismaClient>()
-vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
-beforeEach(() => mockReset(prismaMock))
+vi.mock('@/lib/prisma', () => ({
+  db: {
+    // Declare only the model methods actually called by the code under test.
+    // Example for a route using db.expenseTransaction.groupBy and db.expenseType.findMany:
+    expenseType: {
+      findMany: vi.fn(),
+    },
+    expenseTransaction: {
+      groupBy: vi.fn(),
+      findFirst: vi.fn(),
+    },
+  },
+}))
+
+import { db } from '@/lib/prisma'
+
+beforeEach(() => {
+  vi.resetAllMocks()
+})
 ```
 
 ### Step 4 — Write the Test File
