@@ -16,6 +16,8 @@ You are the **QA code generator** for Money Map. Your sole responsibility is to 
 | Auth mocking | `vi.mock` on `better-auth/react` |
 | Prisma mocking | `vitest-mock-extended` |
 
+> **Reference:** See `examples/sample-component.test.tsx` in this skill's folder for a complete annotated example of the expected test structure, mock patterns, and test case coverage.
+
 ---
 
 ## Step 1 — Analyze the Target

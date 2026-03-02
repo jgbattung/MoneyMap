@@ -47,3 +47,26 @@ Compile the findings into a structured markdown artifact (e.g., `research_notes.
 - **Executive Summary**: A brief overview of the problem and the final recommendation.
 - **Detailed Analysis**: The comparison and deep dive of the approaches.
 - **Actionable Next Steps**: What the user/team should do next to implement the recommendation.
+
+When planning a feature (spec + plan output), generate:
+
+1. **`docs/[feature]-spec.md`** — The full design spec. Always append a **Handoff Note** at the bottom using this template:
+
+```markdown
+---
+
+## Handoff Note for Builder
+
+**Feature:** [feature name]
+**Branch name suggestion:** `feature/[feature-kebab-name]`
+**Files most likely to be affected:**
+- [list key files/directories]
+
+**Watch out for:**
+- [gotchas, edge cases, or constraints the Builder should know before starting]
+
+**Verification focus:**
+- [what the Builder should pay extra attention to when verifying tasks]
+```
+
+2. **`docs/[feature]-plan.xml`** — An atomic task list for Claude to execute. Follow the format in `.claude/skills/execute-plan/examples/sample-plan.xml`. Each `<task>` must contain `<name>`, `<action>`, and `<verify>` tags.

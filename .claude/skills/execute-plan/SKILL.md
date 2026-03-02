@@ -29,8 +29,8 @@ Derive the feature name from the plan filename: `docs/[feature]-plan.xml` → fe
 
 Read both files in parallel:
 
-1. `docs/[feature]-spec.md` — full design spec (context, requirements, scope)
-2. `docs/[feature]-plan.xml` — atomic task list
+1. `docs/[feature]-spec.md` — full design spec (context, requirements, scope). **Start by reading the "Handoff Note for Builder" section at the bottom** — it summarizes the most important things to know before starting.
+2. `docs/[feature]-plan.xml` — atomic task list. Refer to `examples/sample-plan.xml` in this skill folder for the expected XML structure.
 
 If the spec file does not exist, warn the user but proceed with the plan only.
 

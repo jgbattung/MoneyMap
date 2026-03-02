@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SAMPLE PLAN — Money Map
+  Feature: Performance Optimization
+  
+  This file illustrates the expected XML structure for all plan files.
+  Each <task> must be independently actionable and verifiable.
+  Tasks are executed strictly in order, with one atomic commit per task.
+-->
+<plan>
+  <task>
+    <name>Fix API Route Caching</name>
+    <action>Audit all GET API routes in `src/app/api/` that return transaction or user data. Ensure they do not cache stale data by adding `export const dynamic = 'force-dynamic'` at the top of each affected route file.</action>
+    <verify>Hit an API endpoint that was acting stale prior to the fix. Mutate the data via another endpoint, then hit the GET endpoint again and confirm fresh data is returned without a browser reload.</verify>
+  </task>
+  <task>
+    <name>Audit React Query Invalidations</name>
+    <action>Audit all custom mutation hooks in `src/hooks/` and ensure their `onSuccess` block correctly calls `queryClient.invalidateQueries` with the exact query keys used by the UI components that depend on the mutated data.</action>
+    <verify>In the app UI, perform a mutation (e.g., edit an expense or add an income entry) and verify the list or dashboard stat updates immediately without requiring a hard browser refresh.</verify>
+  </task>
+  <task>
+    <name>Optimize Prisma Queries</name>
+    <action>Review all Prisma `findMany` and aggregation calls across API routes in `src/app/api/`. Strip unnecessary `include` relations that are not used by the response. Replace in-memory aggregations (e.g., `.reduce`) with SQL-level `groupBy` or `aggregate` calls where possible.</action>
+    <verify>Run `npm run build` to confirm no TypeScript errors. Spot-check the Network tab in the browser for at least two routes to confirm faster load times and correct data shapes.</verify>
+  </task>
+</plan>
