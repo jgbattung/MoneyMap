@@ -79,7 +79,7 @@ const Accounts = () => {
 
         <button 
           onClick={() => setCreateAccountSheetOpen(true)}
-          className="hidden md:flex gap-2 items-center border rounded-md bg-secondary hover:bg-secondary/80 px-4 py-2 text-base transition-all"
+          className="hidden md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-base transition-all"
         >
           <Icons.createAccount size={20} />
           <span>Add account</span>
@@ -92,7 +92,7 @@ const Accounts = () => {
 
         <button 
           onClick={() => setCreateAccountDrawerOpen(true)}
-          className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary hover:bg-secondary/80 px-4 py-2 text-sm transition-all"
+          className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"
         >
           <Icons.createAccount size={16} />
           <span>Add account</span>

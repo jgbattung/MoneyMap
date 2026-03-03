@@ -26,22 +26,22 @@ const MonthlySummaryChart = () => {
           {/* Income Card Skeleton */}
           <div className='flex flex-col gap-1 p-3 rounded-md bg-success-950/20 border border-success-900/30'>
             <span className='text-muted-foreground text-xs'>Income</span>
-            <Skeleton className='h-7 w-28' />
-            <Skeleton className='h-3 w-32' />
+            <Skeleton className='h-7 w-28 bg-secondary-500' />
+            <Skeleton className='h-3 w-32 bg-secondary-500' />
           </div>
 
           {/* Expense Card Skeleton */}
           <div className='flex flex-col gap-1 p-3 rounded-md bg-error-950/20 border border-error-900/30'>
             <span className='text-muted-foreground text-xs'>Expenses</span>
-            <Skeleton className='h-7 w-28' />
-            <Skeleton className='h-3 w-32' />
+            <Skeleton className='h-7 w-28 bg-secondary-500' />
+            <Skeleton className='h-3 w-32 bg-secondary-500' />
           </div>
         </div>
 
         {/* Net Savings Skeleton */}
         <div className='flex items-center justify-between p-3 rounded-md bg-secondary-950/50 border border-border'>
           <span className='text-muted-foreground text-sm'>Net savings this month</span>
-          <Skeleton className='h-6 w-32' />
+          <Skeleton className='h-6 w-32 bg-secondary-500' />
         </div>
       </div>
     );

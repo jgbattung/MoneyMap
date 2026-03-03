@@ -15,22 +15,22 @@ const SkeletonEditIncomeTypeDrawerForm = () => {
       {/* Income type name field */}
       <div className='p-4'>
         <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Income type name</label>
-        <Skeleton className='h-8 w-full bg-muted mt-2' />
+        <Skeleton className='h-8 w-full bg-secondary-500 mt-2' />
       </div>
 
       {/* Monthly target field */}
       <div className="p-4">
         <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Monthly target</label>
         <div className='flex flex-col'>
-          <Skeleton className='h-5 w-3/4 bg-muted mt-2' />
-          <Skeleton className='h-8 w-full bg-muted mt-2' />
+          <Skeleton className='h-5 w-3/4 bg-secondary-500 mt-2' />
+          <Skeleton className='h-8 w-full bg-secondary-500 mt-2' />
         </div>
       </div>
 
       {/* Footer buttons */}
       <div className="flex flex-col p-4 gap-2">
-        <Skeleton className='h-8 w-full bg-muted' />
-        <Skeleton className='h-8 w-full bg-muted' />
+        <Skeleton className='h-8 w-full bg-secondary-500' />
+        <Skeleton className='h-8 w-full bg-secondary-500' />
       </div>
     </>
   )

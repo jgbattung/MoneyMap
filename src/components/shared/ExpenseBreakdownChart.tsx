@@ -98,19 +98,19 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
         {/* Header skeleton */}
         <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
           <p className='text-foreground font-semibold text-sm md:text-base'>Expense Breakdown</p>
-          <Skeleton className='h-9 w-full sm:w-[180px] bg-muted' />
+          <Skeleton className='h-9 w-full sm:w-[180px] bg-secondary-500' />
         </div>
 
         {/* Chart skeleton */}
         <div className='flex items-center justify-center py-12'>
-          <Skeleton className='h-[250px] w-[250px] rounded-full bg-muted' />
+          <Skeleton className='h-[250px] w-[250px] rounded-full bg-secondary-500' />
         </div>
 
         {/* Legend skeleton */}
         <div className='flex flex-col gap-2'>
-          <Skeleton className='h-4 w-full bg-muted' />
-          <Skeleton className='h-4 w-full bg-muted' />
-          <Skeleton className='h-4 w-full bg-muted' />
+          <Skeleton className='h-4 w-full bg-secondary-500' />
+          <Skeleton className='h-4 w-full bg-secondary-500' />
+          <Skeleton className='h-4 w-full bg-secondary-500' />
         </div>
       </div>
     )

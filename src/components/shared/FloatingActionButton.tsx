@@ -100,7 +100,7 @@ const FloatingActionButton = () => {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
                 transition={{ duration: 0.2, delay: 0.1 }}
-                className="absolute p-3 bg-muted hover:bg-secondary-600 rounded-full -top-12 -right-15"
+                className="absolute p-3 bg-secondary-500 hover:bg-secondary-600 rounded-full -top-12 -right-15"
               >
                 <Icons.addTransfer className="text-white" size={18} />
               </motion.button>

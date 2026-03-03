@@ -16,7 +16,7 @@ const IncomeTypeCard = ({ name, monthlyTarget, incomeAmount, onClick }: IncomeTy
 
   return (
     <div
-      className='flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md interactive-card cursor-pointer'
+      className='flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md hover:bg-card/70 hover:scale-105 transition-all duration-200 cursor-pointer'
       onClick={onClick}
     >
       <div className='flex items-center gap-3'>
@@ -37,7 +37,7 @@ const IncomeTypeCard = ({ name, monthlyTarget, incomeAmount, onClick }: IncomeTy
           </span>
           <span className={`font-medium ${
             targetAmount > 0 && percentageOfTarget >= 100
-              ? 'text-success-600'
+              ? 'text-green-600'
               : 'text-muted-foreground'
           }`}>
             {targetAmount > 0 ? `${percentageOfTarget.toFixed(0)}% of target` : 'No target set'}
