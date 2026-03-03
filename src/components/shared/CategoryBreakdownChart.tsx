@@ -89,14 +89,14 @@ const CategoryBreakdownChart = ({ type, month, year }: CategoryBreakdownChartPro
       <div className='flex flex-col gap-4'>
         {/* Chart skeleton */}
         <div className='flex items-center justify-center py-12'>
-          <Skeleton className='h-[250px] w-[250px] rounded-full bg-secondary-500' />
+          <Skeleton className='h-[250px] w-[250px] rounded-full bg-muted' />
         </div>
 
         {/* Legend skeleton */}
         <div className='flex flex-col gap-2'>
-          <Skeleton className='h-4 w-full bg-secondary-500' />
-          <Skeleton className='h-4 w-full bg-secondary-500' />
-          <Skeleton className='h-4 w-full bg-secondary-500' />
+          <Skeleton className='h-4 w-full bg-muted' />
+          <Skeleton className='h-4 w-full bg-muted' />
+          <Skeleton className='h-4 w-full bg-muted' />
         </div>
       </div>
     )

@@ -22,7 +22,7 @@ const BudgetCard = ({ name, monthlyBudget, spentAmount, onClick }: BudgetCardPro
   if (hasSpendingWithoutBudget || isOverBudget) {
     progressColor = 'bg-error-500';
   } else if (spentAmount > 0 && !isOverBudget) {
-    progressColor = 'bg-green-600';
+    progressColor = 'bg-success-600';
   }
 
   let statusText = 'No budget set';
@@ -34,7 +34,7 @@ const BudgetCard = ({ name, monthlyBudget, spentAmount, onClick }: BudgetCardPro
 
   return (
     <div
-      className='flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md hover:bg-card/70 hover:scale-105 transition-all duration-200 cursor-pointer'
+      className='flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md interactive-card cursor-pointer'
       onClick={onClick}
     >
       <div className='flex items-center gap-3'>
@@ -72,7 +72,7 @@ const BudgetCard = ({ name, monthlyBudget, spentAmount, onClick }: BudgetCardPro
           </span>
           <span className={`font-medium ${
             isOverBudget || hasSpendingWithoutBudget ? 'text-error-600' : 
-            budget > 0 ? 'text-green-600' : 'text-muted-foreground'
+            budget > 0 ? 'text-success-600' : 'text-muted-foreground'
           }`}>
             {statusText}
           </span>

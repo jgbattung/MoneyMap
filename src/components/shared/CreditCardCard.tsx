@@ -52,13 +52,13 @@ const CreditCardCard = ({
   
   return (
     <div
-      className='flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md hover:bg-card/70 hover:scale-105 transition-all duration-200 cursor-pointer relative'
+      className='flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md interactive-card cursor-pointer relative'
       onClick={onClick}
     >
       {/* Ellipsis Menu */}
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger 
-          className='absolute top-2 right-2 p-1 hover:bg-secondary-500 hover:transition-all rounded-sm'
+          className='absolute top-2 right-2 p-1 hover:bg-muted hover:transition-all rounded-sm'
           onClick={(e) => e.stopPropagation()}
         >
           <Icons.ellipsis size={16} className='text-muted-foreground' />
@@ -66,14 +66,14 @@ const CreditCardCard = ({
         <DropdownMenuContent align="end">
           <DropdownMenuItem 
             onClick={handleEdit}
-            className='cursor-pointer focus:bg-secondary-500 focus:text-foreground'
+            className='cursor-pointer focus:bg-muted focus:text-foreground'
           >
             <Icons.edit size={16} className='mr-2' />
             Edit
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={handleDelete}
-            className='cursor-pointer focus:bg-secondary-500 focus:text-foreground'
+            className='cursor-pointer focus:bg-muted focus:text-foreground'
           >
             <Icons.trash size={16} className='mr-2 text-error-600' />
             Delete

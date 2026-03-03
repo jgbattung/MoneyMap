@@ -87,10 +87,10 @@ export default function AnnualSummaryTable() {
               key={i}
               className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 px-2 py-3 border-b border-border/50"
             >
-              <Skeleton className="h-4 w-16 bg-secondary-500" />
-              <Skeleton className="h-4 w-20 ml-auto bg-secondary-500" />
-              <Skeleton className="h-4 w-20 ml-auto bg-secondary-500" />
-              <Skeleton className="h-4 w-20 ml-auto bg-secondary-500" />
+              <Skeleton className="h-4 w-16 bg-muted" />
+              <Skeleton className="h-4 w-20 ml-auto bg-muted" />
+              <Skeleton className="h-4 w-20 ml-auto bg-muted" />
+              <Skeleton className="h-4 w-20 ml-auto bg-muted" />
             </div>
           ))}
         </div>

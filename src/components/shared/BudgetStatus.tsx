@@ -29,7 +29,7 @@ const BudgetStatusItem = ({
   if (hasSpendingWithoutBudget || isOverBudget) {
     progressColor = 'bg-error-500';
   } else if (spentAmount > 0 && !isOverBudget) {
-    progressColor = 'bg-green-600';
+    progressColor = 'bg-success-600';
   }
 
   const progressWidth = hasNoBudget ? 100 : Math.min(progressPercentage, 100);
@@ -74,10 +74,10 @@ const SkeletonBudgetList = () => (
     {[...Array(5)].map((_, i) => (
       <div key={i} className="space-y-2">
         <div className="flex justify-between">
-          <Skeleton className="h-4 w-24 bg-secondary-500" />
-          <Skeleton className="h-4 w-20 bg-secondary-500" />
+          <Skeleton className="h-4 w-24 bg-muted" />
+          <Skeleton className="h-4 w-20 bg-muted" />
         </div>
-        <Skeleton className="h-2 w-full bg-secondary-500" />
+        <Skeleton className="h-2 w-full bg-muted" />
       </div>
     ))}
   </div>
