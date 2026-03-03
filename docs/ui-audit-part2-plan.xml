@@ -12,8 +12,8 @@
   </task>
   <task>
     <name>Apply Interactive States & Card Wrappers (Dashboard Components)</name>
-    <action>Search through `src/components/dashboard/` for card container elements (like `RecentTransactions`, `NetWorthDisplay`, `AccountsSummary`). 
-1) FIRST, if the component is just a raw `div` without background colors, add standard card classes to its outermost container: `bg-card border rounded-xl p-6 shadow-sm`.
+    <action>Search through `src/components/dashboard/` for display card elements (like `CreditCardCard`, `AccountCard`). 
+1) FIRST, if the display card component is missing a background, add standard card classes to its outermost container: `bg-card border rounded-xl p-6 shadow-sm`.
 2) THEN remove any existing `hover:bg-*`, `hover:border-*`, `hover:-translate-*`, `hover:shadow-*` Tailwind classes.
 3) THEN add the `interactive-card` class to the container.
 Do NOT touch hover effects on buttons, links, or non-card interactive elements.</action>

@@ -20,7 +20,7 @@
 - **Phase 2B (Dashboards & Pages):** `docs/ui-audit-part2-plan.xml`
   1. Fix Part 1 Contrast (bump `--card`/`--popover` lightness in `globals.css`).
   2. Scrub `src/components/dashboard/` — replace hardcoded colors.
-  3. Apply `bg-card` and `.interactive-card` to raw dashboard card containers.
+  3. Apply `bg-card` and `.interactive-card` to display cards lacking backgrounds (e.g., `CreditCardCard`, `AccountCard`).
   4. Audit `src/app/*` page layouts for consistent spacing.
 
 ## 3. Deep-Research Findings
@@ -87,7 +87,7 @@ Many components already have inline `hover:` Tailwind classes. When applying `.i
 
 **Watch out for:**
 - The dark theme needs sufficient contrast. Background is `secondary-950` (~6% lightness), so cards/popovers must be `secondary-800` (~19%) and hover/accents must be `secondary-700` (~27%).
-- Raw dashboard components (like `RecentTransactions`) might not be using Shadcn's `<Card>` yet. They need `bg-card border rounded-xl p-6` added explicitly alongside `.interactive-card`.
+- Display cards (like `CreditCardCard`, `AccountCard`) might not be using Shadcn's `<Card>` yet. They need `bg-card border rounded-xl p-6` added explicitly alongside `.interactive-card`. Note: This does NOT apply to non-card layout components like `RecentTransactions`.
 - Components that already have `hover:` classes — remove them before adding `.interactive-card`
 - The `--accent` variable is used by ALL Shadcn components for hover. Changing it will cascade globally — verify dropdowns, selects, command palettes, etc.
 - Skeleton components currently override `bg-secondary-500` manually. After fixing `--muted`, these overrides should be removed (Skeletons use `bg-muted` by default).
