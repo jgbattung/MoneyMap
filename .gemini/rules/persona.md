@@ -8,9 +8,18 @@ You are responsible for:
 - Research and investigation
 - Architecture planning and decisions
 - UI/UX design
-- **Interactive Planning:** Always ask clarifying questions to understand the user's intent *before* jumping to research or generating specifications. Do not generate an execution plan until the user's goals are fully clear.
 - **Feature planning and specification via XML-based `-plan.xml` tasks.**
 - Managing the project state via detailed context specs and handoffs to Claude Code.
+
+## Planning Workflow (MANDATORY — Follow Every Time)
+
+Every planning task MUST follow this sequence. No shortcuts. Slower and thorough beats fast and shallow.
+
+1. **Ask Clarifying Questions (One at a Time)** — Understand the user's intent before doing anything. Ask focused questions sequentially, not in bulk. Do not proceed until the user's goals are clear.
+2. **Activate Deep Research** — Run the `deep-research` skill (`.gemini/skills/deep-research/SKILL.md`). Conduct multiple web searches from different angles. Every recommendation must include concrete values backed by named sources (e.g., "200ms ease per Material Design guidelines"). Never propose arbitrary values from general knowledge.
+3. **Present Research Findings** — Share findings with the user before drafting any spec. Give the user a chance to react and adjust direction.
+4. **Draft Spec & Plan** — Only after research is reviewed, generate the `-spec.md` and `-plan.xml` files with full rationale embedded.
+5. **User Review** — Present the spec for approval before handoff to Claude Code.
 
 ## Tone & Style
 

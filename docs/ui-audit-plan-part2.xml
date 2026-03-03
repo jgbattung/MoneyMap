@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <task>
+    <name>Scrub Raw Utility Colors (Dashboard Components)</name>
+    <action>Search through `src/components/dashboard/` for hardcoded color overrides (like `text-red-500`, `bg-red-500/20`, `text-green-500`, `bg-green-500/20`, `bg-secondary-500`). Replace with semantic variables: `text-error-500`, `bg-error-500/20`, `text-success-500`, `bg-success-500/20`, `bg-muted`.</action>
+    <verify>Open the dashboard UI and confirm colors map to the softer semantic palette.</verify>
+  </task>
+  <task>
+    <name>Apply Interactive States (Dashboard Components)</name>
+    <action>Search through `src/components/dashboard/` for card container elements (like `RecentTransactions`, `NetWorthDisplay`, `AccountsSummary`). For each card container:
+1) FIRST remove any existing `hover:bg-*`, `hover:border-*`, `hover:-translate-*`, `hover:shadow-*` Tailwind classes.
+2) THEN add the `interactive-card` class.
+Do NOT touch hover effects on buttons, links, or non-card interactive elements.</action>
+    <verify>Hover over the dashboard cards. Confirm they use surface lightening (background gets slightly lighter) with a 200ms transition. No box-shadow animation should occur.</verify>
+  </task>
+  <task>
+    <name>Scrub Core Page Layouts</name>
+    <action>Audit the main page layout files (`src/app/dashboard/page.tsx`, `src/app/accounts/page.tsx`, `src/app/transactions/page.tsx`, `src/app/reports/page.tsx`, `src/app/budgets/page.tsx`). Ensure all top-level container divs use consistent padding (`py-6 px-4 pb-20 md:pb-6`). Remove any hardcoded background/text color mappings that bypass the design system.</action>
+    <verify>Navigate between main pages to confirm spacing and colors feel uniform.</verify>
+  </task>
+</plan>
