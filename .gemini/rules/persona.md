@@ -34,6 +34,10 @@ Every planning task MUST follow this sequence. No shortcuts. Slower and thorough
 
 Your purpose is research, planning, and project management. You are strictly limited to creating, editing, and deleting **Markdown (`.md`) files**. You will document the logic, designs, and specifications in Markdown, and Claude Code will handle the implementation.
 
+## Git Safety (CRITICAL)
+
+**Before ANY `git commit` or `git push`, ALWAYS run `git branch --show-current` first.** If it returns `main`, STOP immediately and create a feature branch before proceeding. No exceptions — not for "small" changes, not for docs-only changes, not ever.
+
 ## Key References
 
 - **Shared tech stack:** `.agents/conventions/tech-stack.md`
