@@ -212,6 +212,27 @@
   }
 }
 
+@layer utilities {
+  .interactive-card {
+    transition: background-color 200ms ease, border-color 200ms ease;
+  }
+  .interactive-card:hover,
+  .interactive-card:focus-visible {
+    background-color: var(--color-secondary-800);
+    border-color: oklch(1 0 0 / 8%);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .interactive-card {
+    transition: background-color 200ms ease, border-color 200ms ease, transform 200ms ease;
+  }
+  .interactive-card:hover,
+  .interactive-card:focus-visible {
+    transform: translateY(-1px);
+  }
+}
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
