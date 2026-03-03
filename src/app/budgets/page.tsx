@@ -78,7 +78,7 @@ const Budgets = () => {
 
         <button
           onClick={() => setCreateExpenseTypeSheetOpen(true)}
-          className="hidden md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-base transition-all"
+          className="hidden md:flex gap-2 items-center border rounded-md bg-secondary hover:bg-secondary/80 px-4 py-2 text-base transition-all"
         >
           <Icons.createAccount size={20} />
           <span>Add budget</span>
@@ -92,7 +92,7 @@ const Budgets = () => {
 
         <button
           onClick={() => setCreateExpenseTypeDrawerOpen(true)}
-          className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"
+          className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary hover:bg-secondary/80 px-4 py-2 text-sm transition-all"
         >
           <Icons.createAccount size={16} />
           <span>Add budget</span>
