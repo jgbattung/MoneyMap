@@ -12,12 +12,12 @@
 
 ## 2. Execution Strategy (Two-Part Phased Approach)
 
-- **Phase 2A (Foundation & Shared Components):** `docs/ui-audit-plan-part1.xml`
+- **Phase 2A (Foundation & Shared Components):** `docs/ui-audit-part1-plan.xml`
   1. Fix `globals.css` — recalibrate OKLCH colors + define `.interactive-card` utility.
   2. Scrub `src/components/shared/` and `src/components/ui/` — replace hardcoded colors, apply `.interactive-card`.
   3. Verify foundation is solid.
 
-- **Phase 2B (Dashboards & Pages):** `docs/ui-audit-plan-part2.xml`
+- **Phase 2B (Dashboards & Pages):** `docs/ui-audit-part2-plan.xml`
   1. Scrub `src/components/dashboard/` — replace hardcoded colors.
   2. Apply `.interactive-card` to dashboard card containers.
   3. Audit `src/app/*` page layouts for consistent spacing.
