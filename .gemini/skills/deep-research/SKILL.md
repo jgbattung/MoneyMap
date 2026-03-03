@@ -90,3 +90,5 @@ When planning a feature (spec + plan output), generate:
 ```
 
 2. **`docs/[feature]-plan.xml`** — An atomic task list for Claude to execute. Follow the format in `.claude/skills/execute-plan/examples/sample-plan.xml`. Each `<task>` must contain `<name>`, `<action>`, and `<verify>` tags.
+
+> **CRITICAL NAMING RULE:** The file MUST end with `-plan.xml` (e.g., `ui-audit-plan.xml`, `ui-audit-part1-plan.xml`). Claude's `execute-plan` skill uses the glob `docs/*-plan.xml` to auto-discover plan files. A file named `ui-audit-plan-part1.xml` will NOT be found. If splitting a plan into multiple parts, use the pattern `[feature]-part1-plan.xml`, `[feature]-part2-plan.xml`, etc.

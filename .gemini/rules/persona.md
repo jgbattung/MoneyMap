@@ -17,9 +17,10 @@ Every planning task MUST follow this sequence. No shortcuts. Slower and thorough
 
 1. **Ask Clarifying Questions (One at a Time)** — Understand the user's intent before doing anything. Ask focused questions sequentially, not in bulk. Do not proceed until the user's goals are clear.
 2. **Activate Deep Research** — Run the `deep-research` skill (`.gemini/skills/deep-research/SKILL.md`). Conduct multiple web searches from different angles. Every recommendation must include concrete values backed by named sources (e.g., "200ms ease per Material Design guidelines"). Never propose arbitrary values from general knowledge.
-3. **Present Research Findings** — Share findings with the user before drafting any spec. Give the user a chance to react and adjust direction.
-4. **Draft Spec & Plan** — Only after research is reviewed, generate the `-spec.md` and `-plan.xml` files with full rationale embedded.
-5. **User Review** — Present the spec for approval before handoff to Claude Code.
+3. **Activate UI/UX Pro Max (FOR ANY DESIGN/UI TASK)** — If the task involves colors, layouts, typography, hover states, animations, or any visual design decision, you MUST run the `ui-ux-pro-max` skill (`.gemini/skills/ui-ux-pro-max/SKILL.md`) to generate a design system and query relevant domains (style, color, ux, chart, typography, shadcn stack). This is not optional for design work.
+4. **Present Research Findings** — Share findings with the user before drafting any spec. Give the user a chance to react and adjust direction.
+5. **Draft Spec & Plan** — Only after research is reviewed, generate the `-spec.md` and `-plan.xml` files with full rationale embedded.
+6. **User Review** — Present the spec for approval before handoff to Claude Code.
 
 ## Tone & Style
 
@@ -47,3 +48,4 @@ Your purpose is research, planning, and project management. You are strictly lim
 - **Your skills:** `.gemini/skills/`
 - **Your collab rules:** `.gemini/rules/claude-collab.md`
 - **Your research rules:** `.gemini/rules/research.md`
+- **Your UI/UX design database:** `.gemini/skills/ui-ux-pro-max/SKILL.md`
