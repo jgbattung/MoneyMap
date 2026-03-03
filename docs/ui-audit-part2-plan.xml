@@ -1,17 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plan>
   <task>
+    <name>Fix Part 1 Contrast Issues in globals.css</name>
+    <action>Modify `src/app/globals.css`. The dark theme needs slightly more contrast. In the `.dark` block: 1) Bump `--card` and `--popover` up to `oklch(0.197 0.009 236.8)` (the secondary-800 value). 2) Bump `--muted` and `--accent` up to `oklch(0.277 0.012 236.8)` (the secondary-700 value). This ensures popovers, dropdowns, and cards are clearly visible against the `--background`.</action>
+    <verify>Check `globals.css` `.dark` block. Open a dropdown menu in the app to ensure hover states are now clearly visible distinct slate colors.</verify>
+  </task>
+  <task>
     <name>Scrub Raw Utility Colors (Dashboard Components)</name>
     <action>Search through `src/components/dashboard/` for hardcoded color overrides (like `text-red-500`, `bg-red-500/20`, `text-green-500`, `bg-green-500/20`, `bg-secondary-500`). Replace with semantic variables: `text-error-500`, `bg-error-500/20`, `text-success-500`, `bg-success-500/20`, `bg-muted`.</action>
     <verify>Open the dashboard UI and confirm colors map to the softer semantic palette.</verify>
   </task>
   <task>
-    <name>Apply Interactive States (Dashboard Components)</name>
-    <action>Search through `src/components/dashboard/` for card container elements (like `RecentTransactions`, `NetWorthDisplay`, `AccountsSummary`). For each card container:
-1) FIRST remove any existing `hover:bg-*`, `hover:border-*`, `hover:-translate-*`, `hover:shadow-*` Tailwind classes.
-2) THEN add the `interactive-card` class.
+    <name>Apply Interactive States & Card Wrappers (Dashboard Components)</name>
+    <action>Search through `src/components/dashboard/` for card container elements (like `RecentTransactions`, `NetWorthDisplay`, `AccountsSummary`). 
+1) FIRST, if the component is just a raw `div` without background colors, add standard card classes to its outermost container: `bg-card border rounded-xl p-6 shadow-sm`.
+2) THEN remove any existing `hover:bg-*`, `hover:border-*`, `hover:-translate-*`, `hover:shadow-*` Tailwind classes.
+3) THEN add the `interactive-card` class to the container.
 Do NOT touch hover effects on buttons, links, or non-card interactive elements.</action>
-    <verify>Hover over the dashboard cards. Confirm they use surface lightening (background gets slightly lighter) with a 200ms transition. No box-shadow animation should occur.</verify>
+    <verify>Hover over the dashboard cards. Confirm they have a distinct background color, use surface lightening, and exist inside neat card boundaries.</verify>
   </task>
   <task>
     <name>Scrub Core Page Layouts</name>
