@@ -167,17 +167,17 @@
   /* MoneyMap Dark Theme - Updated with your colors */
   --background: oklch(0.067 0.003 236.8);   /* secondary-950 — rich slate black */
   --foreground: oklch(0.893 0 0);           /* #e0e0e0 */
-  --card: oklch(0.127 0.006 236.8);         /* secondary-900 — slate card surface */
+  --card: oklch(0.197 0.009 236.8);         /* secondary-800 — card surface (bumped for contrast) */
   --card-foreground: oklch(0.893 0 0);      /* Card text */
-  --popover: oklch(0.127 0.006 236.8);      /* secondary-900 — popover surface */
+  --popover: oklch(0.197 0.009 236.8);      /* secondary-800 — popover surface (bumped for contrast) */
   --popover-foreground: oklch(0.893 0 0);   /* Popover text */
   --primary: oklch(0.637 0.121 187.5);      /* Your teal #00a9a5 */
   --primary-foreground: oklch(0.985 0 0);   /* White text on primary */
   --secondary: oklch(0.367 0.015 236.8);    /* Your slate #4a5568 */
   --secondary-foreground: oklch(0.985 0 0); /* White text on secondary */
-  --muted: oklch(0.197 0.009 236.8);        /* secondary-800 — muted slate */
+  --muted: oklch(0.277 0.012 236.8);        /* secondary-700 — muted slate (bumped for contrast) */
   --muted-foreground: oklch(0.708 0 0);     /* Muted text */
-  --accent: oklch(0.197 0.009 236.8);       /* secondary-800 — slate hover/dropdown (not gold) */
+  --accent: oklch(0.277 0.012 236.8);       /* secondary-700 — slate hover/dropdown (bumped for contrast) */
   --accent-foreground: oklch(0.893 0 0);    /* Light text on slate accent */
   --destructive: oklch(0.627 0.150 27.3);   /* Error red — reduced chroma */
   --border: oklch(1 0 0 / 10%);             /* Subtle borders */
