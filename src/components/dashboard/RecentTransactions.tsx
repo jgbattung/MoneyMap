@@ -32,9 +32,9 @@ const RecentTransactions = () => {
   const getIconBgColor = (type: TransactionType) => {
     switch (type) {
       case 'EXPENSE':
-        return 'bg-red-500/20';
+        return 'bg-error-500/20';
       case 'INCOME':
-        return 'bg-green-500/20';
+        return 'bg-success-500/20';
       case 'TRANSFER':
         return 'bg-muted';
     }
@@ -43,9 +43,9 @@ const RecentTransactions = () => {
   const getIconColor = (type: TransactionType) => {
     switch (type) {
       case 'EXPENSE':
-        return 'text-red-500';
+        return 'text-error-500';
       case 'INCOME':
-        return 'text-green-500';
+        return 'text-success-500';
       case 'TRANSFER':
         return 'text-muted-foreground';
     }
@@ -54,9 +54,9 @@ const RecentTransactions = () => {
   const getAmountColor = (type: TransactionType) => {
     switch (type) {
       case 'EXPENSE':
-        return 'text-red-500';
+        return 'text-error-500';
       case 'INCOME':
-        return 'text-green-500';
+        return 'text-success-500';
       case 'TRANSFER':
         return 'text-muted-foreground';
     }
@@ -72,19 +72,19 @@ const RecentTransactions = () => {
             <div key={index} className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {/* Icon Box Skeleton */}
-                <Skeleton className="h-10 w-10 rounded-md bg-secondary-500" />
+                <Skeleton className="h-10 w-10 rounded-md" />
 
                 {/* Name and Account Skeleton */}
                 <div className="flex flex-col gap-1">
-                  <Skeleton className="h-4 w-32 bg-secondary-500" />
-                  <Skeleton className="h-3 w-24 bg-secondary-500" />
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-24" />
                 </div>
               </div>
 
               {/* Amount and Date Skeleton */}
               <div className="flex flex-col items-end gap-1">
-                <Skeleton className="h-4 w-20 bg-secondary-500" />
-                <Skeleton className="h-3 w-24 bg-secondary-500" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-3 w-24" />
               </div>
             </div>
           ))}
@@ -92,7 +92,7 @@ const RecentTransactions = () => {
 
         {/* Button Skeleton */}
         <div className="pt-3 border-t border-border">
-          <Skeleton className="h-10 w-full rounded-md bg-secondary-500" />
+          <Skeleton className="h-10 w-full rounded-md" />
         </div>
       </div>
     );

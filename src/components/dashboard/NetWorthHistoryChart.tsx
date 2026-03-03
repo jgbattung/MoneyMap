@@ -34,18 +34,18 @@ const NetWorthHistoryChart = () => {
           <p className='text-foreground font-light text-sm md:text-base mt-6'>
             Net Worth Over Time
           </p>
-          <div className="h-3 w-20 md:h-4 md:w-24 bg-secondary-500 rounded animate-pulse" />
+          <div className="h-3 w-20 md:h-4 md:w-24 bg-muted rounded animate-pulse" />
         </div>
 
-        <div className="relative h-[200px] md:h-[250px] w-full bg-secondary-500/20 rounded animate-pulse overflow-hidden">
+        <div className="relative h-[200px] md:h-[250px] w-full bg-muted/20 rounded animate-pulse overflow-hidden">
           <div className="absolute inset-0 flex flex-col justify-between p-4">
-            <div className="h-px bg-secondary-500/40" />
-            <div className="h-px bg-secondary-500/40" />
-            <div className="h-px bg-secondary-500/40" />
-            <div className="h-px bg-secondary-500/40" />
+            <div className="h-px bg-muted/40" />
+            <div className="h-px bg-muted/40" />
+            <div className="h-px bg-muted/40" />
+            <div className="h-px bg-muted/40" />
           </div>
-          
-          <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-secondary-500/30 to-transparent" />
+
+          <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-muted/30 to-transparent" />
         </div>
       </div>
     );
