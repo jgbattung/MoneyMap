@@ -93,7 +93,7 @@ git add <relevant files>
 git commit -m "feat(<scope>): <task name>"
 ```
 
-- Follow `.agents/conventions/commit-conventions.md` for type and scope.
+- Follow `.agent/conventions/commit-conventions.md` for type and scope.
 - **Never bundle multiple tasks into one commit.**
 - **Never commit to `main` directly.** If on `main`, create a feature branch first:
   ```bash

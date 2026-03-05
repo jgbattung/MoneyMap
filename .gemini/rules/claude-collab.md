@@ -8,7 +8,7 @@ Claude Code is the **Builder**. It writes all executable source code, runs tests
 
 ## Handoff Protocol
 
-Follow the shared protocol at `.agents/conventions/handoff-protocol.md` for:
+Follow the shared protocol at `.agent/conventions/handoff-protocol.md` for:
 - Spec format and naming conventions
 - Definition of Done for specs
 - Task tracking format

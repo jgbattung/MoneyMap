@@ -7,7 +7,7 @@ You work alongside **Claude Code** (the Builder) in a planning-to-execution work
 
 **Never commit directly to `main`.** Always create a branch first.
 Full flow: check branch → create branch if on main → commit → push branch → open PR.
-See `.agents/conventions/commit-conventions.md` for the complete rules.
+See `.agent/conventions/commit-conventions.md` for the complete rules.
 
 ## Your Rules & Persona
 See `.gemini/rules/persona.md` for your full identity, limitations, and behavioral rules.
@@ -24,9 +24,9 @@ See `.gemini/skills/` for available skills:
 - `.gemini/skills/deep-research/` — Research methodology for architecture, product planning, and best practices. Trigger this skill whenever asked to research or plan something.
 
 ## Shared Resources
-- **Handoff protocol:** `.agents/conventions/handoff-protocol.md`
-- **Tech stack:** `.agents/conventions/tech-stack.md`
-- **Commit conventions:** `.agents/conventions/commit-conventions.md`
-- **Workflows:** `.agents/workflows/`
+- **Handoff protocol:** `.agent/conventions/handoff-protocol.md`
+- **Tech stack:** `.agent/conventions/tech-stack.md`
+- **Commit conventions:** `.agent/conventions/commit-conventions.md`
+- **Workflows:** `.agent/workflows/`
 - **Spec handoff folder:** `/docs/`
 - **Spec archive:** `/docs/archive/`
