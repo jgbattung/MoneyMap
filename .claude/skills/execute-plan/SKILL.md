@@ -57,9 +57,9 @@ Do not ask for approval — the user already triggered this skill intentionally.
 
 ---
 
-## Step 4 — Execute Tasks Atomically
+## Step 4 — Execute Tasks Phase-by-Phase
 
-Work through each `<task>` block **sequentially**. For each task:
+Work through the XML plan one `<phase>` at a time. **Do not look ahead to execute tasks in future phases.** For each `<task>` block in the current phase:
 
 ### 4a. Read the task fields
 
@@ -113,11 +113,19 @@ If a task is blocked, print:
 ```
 Then halt execution and await user guidance.
 
+### 4f. Phase Checkpoint (HARD STOP)
+
+When all tasks in the *current phase* are done, **YOU MUST STOP HERE**. Do not proceed to the next phase.
+Present a brief summary of the completed phase to the user and ask:
+*"Phase [X] complete. Say `/approve-phase` to continue to Phase [X+1]."* 
+
+Wait for the user's actual approval before reading or starting the tasks in the next phase.
+
 ---
 
 ## Step 5 — Post-Execution
 
-After all tasks complete:
+**Only after the user approves the *final phase***, trigger the completion workflow:
 
 ### 5a. Create the verification document
 

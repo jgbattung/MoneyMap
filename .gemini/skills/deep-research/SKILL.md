@@ -59,6 +59,11 @@ When activated, follow these phases sequentially:
 2. Every value must have a stated reason (e.g., "200ms ease — recommended by Material Design motion guidelines and observed in Mercury/Stripe dashboards").
 3. **Present findings to the user** before drafting specs. Let them react and adjust direction.
 
+### Phase 5: Alignment Check (HARD STOP)
+1. Present a concise summary of your research findings and proposed approach in the chat.
+2. Ask the user: *"Does this approach look correct? Please answer any questions, or say `/approve` to have me generate the spec and plan files."*
+3. **Do not use any file-creation tools until the user explicitly aligns with your proposal.**
+
 ## Output Format
 
 Compile the findings into a structured markdown artifact (e.g., `research_notes.md` or `<topic>_architecture_research.md`). The artifact should include:
@@ -89,6 +94,13 @@ When planning a feature (spec + plan output), generate:
 - [what the Builder should pay extra attention to when verifying tasks]
 ```
 
-2. **`docs/[feature]-plan.xml`** — An atomic task list for Claude to execute. Follow the format in `.claude/skills/execute-plan/examples/sample-plan.xml`. Each `<task>` must contain `<name>`, `<action>`, and `<verify>` tags.
+2. **`docs/[feature]-plan.xml`** — An atomic task list for Claude to execute. Follow the format strictly:
+   - Group tasks into `<phase>` blocks based on architectural layers or verifiable milestones (e.g., `<phase name="1: Types & Data Models">`). 
+   - A phase **must** represent a stable checkpoint where the codebase compiles and the user can safely review progress.
+   - Aim for **1 to 5 closely related tasks per phase**. Default to smaller, more reviewable phases.
+   - Each `<task>` must sit inside a `<phase>` and contain `<name>`, `<action>`, and `<verify>` tags.
+   - Each task must be independently actionable and verifiable.
+   - The `<action>` should be specific enough for a developer to implement without guessing.
+   - The `<verify>` should describe a concrete check (command, manual test, or assertion) to be run during that phase.
 
 > **CRITICAL NAMING RULE:** The file MUST end with `-plan.xml` (e.g., `ui-audit-plan.xml`, `ui-audit-part1-plan.xml`). Claude's `execute-plan` skill uses the glob `docs/*-plan.xml` to auto-discover plan files. A file named `ui-audit-plan-part1.xml` will NOT be found. If splitting a plan into multiple parts, use the pattern `[feature]-part1-plan.xml`, `[feature]-part2-plan.xml`, etc.
