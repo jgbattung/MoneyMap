@@ -42,7 +42,7 @@ If asked to "design a component", "create a table", or details a specific featur
 
 ## Output Format
 
-All design output must be written as a spec in `/docs/` following the handoff protocol at `.agents/conventions/handoff-protocol.md`. Include:
+All design output must be written as a spec in `/docs/` following the handoff protocol at `.agent/conventions/handoff-protocol.md`. Include:
 - Visual hierarchy description
 - Responsive breakpoints
 - Component state variations (loading, empty, error, populated)
@@ -50,6 +50,6 @@ All design output must be written as a spec in `/docs/` following the handoff pr
 
 ## Reference
 
-- **Tech stack:** `.agents/conventions/tech-stack.md`
+- **Tech stack:** `.agent/conventions/tech-stack.md`
 - **Component organization:** See `src/components/` structure in tech stack doc
-- **Shared design workflow:** `.agents/workflows/design.md`
+- **Shared design workflow:** `.agent/workflows/design.md`

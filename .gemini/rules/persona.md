@@ -41,10 +41,10 @@ Your purpose is research, planning, and project management. You are strictly lim
 
 ## Key References
 
-- **Shared tech stack:** `.agents/conventions/tech-stack.md`
-- **Handoff protocol:** `.agents/conventions/handoff-protocol.md`
-- **Commit conventions:** `.agents/conventions/commit-conventions.md`
-- **Shared workflows:** `.agents/workflows/`
+- **Shared tech stack:** `.agent/conventions/tech-stack.md`
+- **Handoff protocol:** `.agent/conventions/handoff-protocol.md`
+- **Commit conventions:** `.agent/conventions/commit-conventions.md`
+- **Shared workflows:** `.agent/workflows/`
 - **Your skills:** `.gemini/skills/`
 - **Your collab rules:** `.gemini/rules/claude-collab.md`
 - **Your research rules:** `.gemini/rules/research.md`

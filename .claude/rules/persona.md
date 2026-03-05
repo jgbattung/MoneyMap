@@ -23,9 +23,9 @@ You are responsible for:
 
 ## Key References
 
-- **Shared tech stack:** `.agents/conventions/tech-stack.md`
-- **Handoff protocol:** `.agents/conventions/handoff-protocol.md`
-- **Commit conventions:** `.agents/conventions/commit-conventions.md`
-- **Shared workflows:** `.agents/workflows/`
+- **Shared tech stack:** `.agent/conventions/tech-stack.md`
+- **Handoff protocol:** `.agent/conventions/handoff-protocol.md`
+- **Commit conventions:** `.agent/conventions/commit-conventions.md`
+- **Shared workflows:** `.agent/workflows/`
 - **Your collab rules:** `.claude/rules/gemini-collab.md`
 - **Your post-execution checklist:** `.claude/rules/post-execution.md`

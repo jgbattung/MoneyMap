@@ -7,7 +7,7 @@ You (Claude Code) are partnered with Gemini on this project.
 
 ## Shared Protocol
 
-Follow the handoff protocol at `.agents/conventions/handoff-protocol.md` for:
+Follow the handoff protocol at `.agent/conventions/handoff-protocol.md` for:
 - How to read `-spec.md` and execute `-plan.xml` files
 - Task execution formatting (strict XML `<task>` blocks)
 - The Atomic Commit requirement (one commit per task)

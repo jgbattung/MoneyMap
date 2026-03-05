@@ -39,7 +39,7 @@ Never run migrations as part of automated plan execution, post-execution checkli
 
 ## Architecture
 
-See `.agents/conventions/tech-stack.md` for the full shared tech stack and architecture reference. Quick summary:
+See `.agent/conventions/tech-stack.md` for the full shared tech stack and architecture reference. Quick summary:
 
 - **Routing:** Next.js App Router, file-based in `src/app/`, auth pages under `(auth)`
 - **Data flow:** Components → Custom hooks (`src/hooks/`) → TanStack React Query → `/api/*` routes → Prisma → PostgreSQL
@@ -56,14 +56,14 @@ See `.claude/rules/` for behavioral rules:
 
 ## Shared Conventions
 
-See `.agents/conventions/` for shared standards:
-- `.agents/conventions/handoff-protocol.md` — Spec format and handoff rules
-- `.agents/conventions/tech-stack.md` — Full tech stack reference
-- `.agents/conventions/commit-conventions.md` — Git commit and PR standards
+See `.agent/conventions/` for shared standards:
+- `.agent/conventions/handoff-protocol.md` — Spec format and handoff rules
+- `.agent/conventions/tech-stack.md` — Full tech stack reference
+- `.agent/conventions/commit-conventions.md` — Git commit and PR standards
 
 ## Workflows
 
-See `.agents/workflows/` for cross-agent workflows.
+See `.agent/workflows/` for cross-agent workflows.
 
 ## Testing Setup (IMPORTANT — Read Before Installing Test Dependencies)
 
