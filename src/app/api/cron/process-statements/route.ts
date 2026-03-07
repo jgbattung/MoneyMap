@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto';
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { calculateStatementBalance } from "@/lib/statement-calculator";
@@ -6,8 +7,10 @@ export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get("authorization");
     const token = authHeader?.replace("Bearer ", "");
+    const secret = process.env.CRON_SECRET;
 
-    if (!token || token !== process.env.CRON_SECRET) {
+    if (!token || !secret || token.length !== secret.length ||
+        !timingSafeEqual(Buffer.from(token), Buffer.from(secret))) {
       console.error("Unauthorized cron request");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -18,8 +21,6 @@ export async function POST(request: NextRequest) {
     const phMonth = phDate.getUTCMonth(); // 0-indexed
     const phYear = phDate.getUTCFullYear();
 
-    console.log(`Processing statements for PH date: ${phDate.toISOString()}, day: ${phDay}`);
-
     // Find all credit cards whose statement_date matches today (PH)
     const cards = await db.financialAccount.findMany({
       where: {
@@ -28,7 +29,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(`Found ${cards.length} credit card(s) with statement_date = ${phDay}`);
 
     const results: Array<{
       id: string;
@@ -42,7 +42,6 @@ export async function POST(request: NextRequest) {
       try {
         // Case 1: First run — transitional cycle, skip calculation
         if (!card.lastStatementCalculationDate) {
-          console.log(`Card "${card.name}" (${card.id}): first run, setting lastStatementCalculationDate`);
 
           await db.financialAccount.update({
             where: { id: card.id },
@@ -65,8 +64,6 @@ export async function POST(request: NextRequest) {
 
         // Case 2: Already calculated this month, skip
         if (lastCalcMonth === phMonth) {
-          console.log(`Card "${card.name}" (${card.id}): already calculated this month, skipping`);
-
           results.push({
             id: card.id,
             name: card.name,
@@ -83,10 +80,6 @@ export async function POST(request: NextRequest) {
 
         const cycleEnd = new Date(phYear, phMonth, phDay - 1, 23, 59, 59, 999);
 
-        console.log(
-          `Card "${card.name}" (${card.id}): calculating cycle ${cycleStart.toISOString()} → ${cycleEnd.toISOString()}`
-        );
-
         const previousBalance = Number(card.statementBalance ?? card.previousStatementBalance ?? 0);
 
         const balance = await calculateStatementBalance(card.id, cycleStart, cycleEnd, previousBalance);
@@ -99,8 +92,6 @@ export async function POST(request: NextRequest) {
             lastStatementCalculationDate: new Date(),
           },
         });
-
-        console.log(`Card "${card.name}" (${card.id}): statement balance set to ${balance}`);
 
         results.push({
           id: card.id,

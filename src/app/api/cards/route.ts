@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
+import { CardValidation } from "@/lib/validations/account";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -60,14 +61,15 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const { name, initialBalance, statementDate, dueDate, cardGroup } = body;
-
-    if (!name ||  initialBalance === undefined) {
+    const result = CardValidation.safeParse(body);
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, initialBalance' },
+        { error: 'Validation failed', details: result.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { name, initialBalance, statementDate, dueDate, cardGroup } = result.data;
 
     const card = await db.financialAccount.create({
       data: {
@@ -77,8 +79,8 @@ export async function POST(request: NextRequest) {
         initialBalance: parseFloat(initialBalance),
         currentBalance: parseFloat(initialBalance),
         addToNetWorth: true,
-        statementDate: statementDate ? parseInt(statementDate) : null,
-        dueDate: dueDate ? parseInt(dueDate) : null,
+        statementDate: statementDate ?? null,
+        dueDate: dueDate ?? null,
         cardGroup: cardGroup || null,
       },
     });

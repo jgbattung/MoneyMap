@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
+import { IncomeTypeValidation } from "@/lib/validations/income";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -7,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
-  { params } : { params: { id: string } }
+  { params } : { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
@@ -49,7 +50,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params } : { params: { id: string } }
+  { params } : { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
@@ -67,14 +68,15 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const { name, monthlyTarget } = body;
-
-    if (!name) {
+    const parseResult = IncomeTypeValidation.safeParse(body);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Missing required field: name' },
+        { error: 'Validation failed', details: parseResult.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { name, monthlyTarget } = parseResult.data;
 
     const updatedIncomeType = await db.incomeType.update({
       where: {
@@ -108,7 +110,7 @@ export async function PATCH(
 
 export async function DELETE(
     request: NextRequest,
-  { params } : { params: { id: string } }
+  { params } : { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;

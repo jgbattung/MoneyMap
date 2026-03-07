@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { groupName: string } }
+  { params }: { params: Promise<{ groupName: string }> }
 ) {
   try {
     const { groupName } = await params;

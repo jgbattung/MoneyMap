@@ -5,6 +5,25 @@ import { db } from "@/lib/prisma";
 import { INSTALLMENT_STATUS } from "./[id]/route";
 import { Prisma } from "@prisma/client";
 import { onExpenseTransactionChange } from "@/lib/statement-recalculator";
+import { z } from "zod";
+
+const ServerPostExpenseSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name is too long"),
+  amount: z.string().min(1, "Amount is required").refine(
+    (val) => !isNaN(Number(val)) && Number(val) > 0,
+    { message: "Amount must be a positive number" }
+  ),
+  accountId: z.string().min(1, "Account is required"),
+  expenseTypeId: z.string().min(1, "Expense type is required"),
+  expenseSubcategoryId: z.string().optional(),
+  date: z.string().optional(),
+  description: z.string().optional(),
+  isInstallment: z.boolean(),
+  installmentDuration: z.coerce.number().int().positive().optional().nullable(),
+  installmentStartDate: z.string().optional().nullable(),
+  isSystemGenerated: z.boolean().optional(),
+  parentInstallmentId: z.string().optional(),
+});
 
 export const dynamic = 'force-dynamic';
 
@@ -28,8 +47,8 @@ export async function GET(request: NextRequest) {
     const dateFilter = searchParams.get('dateFilter');
     const accountId = searchParams.get('accountId');
 
-    const skipNumber = skip ? parseInt(skip) : undefined;
-    const takeNumber = take ? parseInt(take) : undefined;
+    const skipNumber = skip ? Math.min(parseInt(skip), 10000) : undefined;
+    const takeNumber = take ? Math.min(parseInt(take), 100) : undefined;
 
     const whereClause: Prisma.ExpenseTransactionWhereInput = {
       userId: session.user.id,
@@ -160,30 +179,28 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const { 
-      name, 
-      amount, 
-      accountId, 
+    const parseResult = ServerPostExpenseSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parseResult.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const {
+      name,
+      amount,
+      accountId,
       expenseTypeId,
-      expenseSubcategoryId, 
-      date, 
+      expenseSubcategoryId,
+      date,
       description,
       isInstallment,
       installmentDuration,
       installmentStartDate,
       isSystemGenerated,
       parentInstallmentId,
-    } = body;
-
-    console.log('📅 Received date from client:', date);
-    console.log('📅 After new Date:', new Date(date));
-
-    if (!name || !amount || !accountId || !expenseTypeId) {
-      return NextResponse.json(
-        { error: 'Missing required fields: name, amount, accountId, expenseTypeId' },
-        { status: 400 }
-      );
-    }
+    } = parseResult.data;
 
     if (!isInstallment && !date) {
       return NextResponse.json(
@@ -230,8 +247,8 @@ export async function POST(request: NextRequest) {
       let remainingInstallments: number | null = null;
 
       if (isInstallment && installmentDuration) {
-        monthlyAmount = parsedAmount / parseInt(installmentDuration);
-        remainingInstallments = parseInt(installmentDuration);
+        monthlyAmount = parsedAmount / installmentDuration;
+        remainingInstallments = installmentDuration;
       }
 
       const expenseTransaction = await tx.expenseTransaction.create({
@@ -243,11 +260,11 @@ export async function POST(request: NextRequest) {
           expenseTypeId,
           expenseSubcategoryId: expenseSubcategoryId || null,
           date: isInstallment
-            ? new Date(installmentStartDate)
-            : new Date(date),
+            ? new Date(installmentStartDate!)
+            : new Date(date!),
           description: description || null,
           isInstallment: isInstallment || false,
-          installmentDuration: installmentDuration ? parseInt(installmentDuration) : null,
+          installmentDuration: installmentDuration ?? null,
           remainingInstallments: remainingInstallments,
           installmentStartDate: installmentStartDate ? new Date(installmentStartDate) : null,
           monthlyAmount,
@@ -273,7 +290,7 @@ export async function POST(request: NextRequest) {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
 
-          const startDate = new Date(installmentStartDate);
+          const startDate = new Date(installmentStartDate!);
           startDate.setHours(0, 0, 0, 0);
 
           if (startDate <= today) {

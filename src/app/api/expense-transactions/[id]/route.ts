@@ -3,12 +3,30 @@ import { db } from "@/lib/prisma";
 import { onExpenseTransactionChange } from "@/lib/statement-recalculator";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+const ServerPatchExpenseSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  amount: z.string().refine(
+    (val) => !isNaN(Number(val)) && Number(val) > 0,
+    { message: "Amount must be a positive number" }
+  ).optional(),
+  accountId: z.string().optional(),
+  expenseTypeId: z.string().optional(),
+  expenseSubcategoryId: z.string().nullable().optional(),
+  date: z.string().optional(),
+  description: z.string().nullable().optional(),
+  isInstallment: z.boolean().optional(),
+  installmentDuration: z.coerce.number().int().positive().nullable().optional(),
+  installmentStartDate: z.string().nullable().optional(),
+  remainingInstallments: z.coerce.number().int().optional(),
+});
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
-  { params } : { params: { id: string } }
+  { params } : { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
@@ -55,14 +73,14 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params } : { params : { id: string } }
+  { params } : { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
 
     const session = await auth.api.getSession({
       headers: await headers()
-    }); 
+    });
 
     if (!session) {
       return NextResponse.json(
@@ -73,19 +91,27 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const { 
-      name, 
-      amount, 
-      accountId, 
+    const parseResult = ServerPatchExpenseSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parseResult.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const {
+      name,
+      amount,
+      accountId,
       expenseTypeId,
-      expenseSubcategoryId, 
-      date, 
+      expenseSubcategoryId,
+      date,
       description,
       isInstallment,
       installmentDuration,
       installmentStartDate,
       remainingInstallments
-    } = body;
+    } = parseResult.data;
 
     const existingExpense = await db.expenseTransaction.findUnique({
       where: {
@@ -140,7 +166,7 @@ export async function PATCH(
       if (description !== undefined) updateData.description = description || null;
       if (isInstallment !== undefined) updateData.isInstallment = isInstallment;
       if (installmentStartDate !== undefined) updateData.installmentStartDate = installmentStartDate ? new Date(installmentStartDate) : null;
-      if (remainingInstallments !== undefined) updateData.remainingInstallments = parseInt(remainingInstallments);
+      if (remainingInstallments !== undefined) updateData.remainingInstallments = remainingInstallments;
 
       if (amount !== undefined) {
         const parsedAmount = parseFloat(amount);
@@ -149,12 +175,12 @@ export async function PATCH(
         let monthlyAmount: number | null = null;
 
         if (isInstallment && installmentDuration) {
-          monthlyAmount = parsedAmount / parseInt(installmentDuration);
-          updateData.installmentDuration = parseInt(installmentDuration);
+          monthlyAmount = parsedAmount / installmentDuration;
+          updateData.installmentDuration = installmentDuration;
           updateData.monthlyAmount = monthlyAmount;
-          
+
           if (remainingInstallments === undefined) {
-            updateData.remainingInstallments = parseInt(installmentDuration);
+            updateData.remainingInstallments = installmentDuration;
           }
         }
 
@@ -272,7 +298,7 @@ export const INSTALLMENT_STATUS = {
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;

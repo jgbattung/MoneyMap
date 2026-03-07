@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import { IncomeTypeValidation } from "@/lib/validations/income";
 
 export const dynamic = 'force-dynamic';
 
@@ -49,14 +50,15 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const { name, monthlyTarget } = body;
-
-    if (!name) {
+    const parseResult = IncomeTypeValidation.safeParse(body);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Missing required field: name' },
+        { error: 'Validation failed', details: parseResult.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { name, monthlyTarget } = parseResult.data;
 
     const incomeType = await db.incomeType.create({
       data: {

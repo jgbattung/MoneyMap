@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto';
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { INSTALLMENT_STATUS } from "../../expense-transactions/[id]/route";
@@ -6,8 +7,10 @@ export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
+    const secret = process.env.CRON_SECRET;
 
-    if (!token || token !== process.env.CRON_SECRET) {
+    if (!token || !secret || token.length !== secret.length ||
+        !timingSafeEqual(Buffer.from(token), Buffer.from(secret))) {
       console.error('Unauthorized cron request');
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -31,7 +34,6 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`Found ${installmentsDue.length} installments to process`);
 
     const results = [];
     for (const installment of installmentsDue) {
@@ -56,11 +58,8 @@ export async function POST(request: NextRequest) {
           : daysSinceLastProcessed >= 30;
 
         if (!shouldProcess) {
-          console.log(`Installment ${installment.id} not due yet (${daysSinceLastProcessed} days)`);
           continue;
         }
-
-        console.log(`Processing installment ${installment.id}`);
         
         await db.$transaction(async (tx) => {
           // Deduct monthly amount from credit card
@@ -111,8 +110,6 @@ export async function POST(request: NextRequest) {
           });
         });
 
-        console.log(`Successfully processed installment ${installment.id} - deducted ${installment.monthlyAmount}`);
-        
         results.push({ 
           id: installment.id, 
           status: 'success',
