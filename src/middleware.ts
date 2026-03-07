@@ -14,9 +14,6 @@ export async function middleware(request: NextRequest) {
 
 	const { pathname } = request.nextUrl;
 
-	console.log("Middleware - pathname:", pathname);
-  console.log("Middleware - session exists:", !!session);
-
 	// If user has session and tries to access auth pages, redirect to dashboard
 	if (session && (pathname === '/sign-in' || pathname === '/sign-up')) {
 		return NextResponse.redirect(new URL("/dashboard", request.url));

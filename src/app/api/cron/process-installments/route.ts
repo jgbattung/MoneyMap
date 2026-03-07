@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`Found ${installmentsDue.length} installments to process`);
 
     const results = [];
     for (const installment of installmentsDue) {
@@ -56,11 +55,8 @@ export async function POST(request: NextRequest) {
           : daysSinceLastProcessed >= 30;
 
         if (!shouldProcess) {
-          console.log(`Installment ${installment.id} not due yet (${daysSinceLastProcessed} days)`);
           continue;
         }
-
-        console.log(`Processing installment ${installment.id}`);
         
         await db.$transaction(async (tx) => {
           // Deduct monthly amount from credit card
@@ -111,8 +107,6 @@ export async function POST(request: NextRequest) {
           });
         });
 
-        console.log(`Successfully processed installment ${installment.id} - deducted ${installment.monthlyAmount}`);
-        
         results.push({ 
           id: installment.id, 
           status: 'success',
