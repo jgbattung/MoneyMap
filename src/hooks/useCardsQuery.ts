@@ -29,7 +29,7 @@ const fetchCards = async (): Promise<Card[]> => {
 const createCard = async (cardData: Record<string, unknown>): Promise<Card> => {
   const transformedData = {
     ...cardData,
-    initialBalance: cardData.initialBalance ? (-Math.abs(parseFloat(cardData.initialBalance))).toString() : '0'
+    initialBalance: cardData.initialBalance ? (-Math.abs(parseFloat(cardData.initialBalance as string))).toString() : '0'
   };
 
   const response = await fetch('/api/cards', {
@@ -45,7 +45,7 @@ const createCard = async (cardData: Record<string, unknown>): Promise<Card> => {
 const updateCard = async ({ id, ...cardData }: { id: string; [key: string]: unknown }): Promise<Card> => {
   const transformedData = {
     ...cardData,
-    initialBalance: cardData.initialBalance ? (-Math.abs(parseFloat(cardData.initialBalance))).toString() : cardData.initialBalance
+    initialBalance: cardData.initialBalance ? (-Math.abs(parseFloat(cardData.initialBalance as string))).toString() : cardData.initialBalance
   };
 
   const response = await fetch(`/api/cards/${id}`, {

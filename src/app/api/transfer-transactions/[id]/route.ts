@@ -7,8 +7,8 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = 'force-dynamic';
 
 export async function GET(
-  request: NextResponse,
-  { params } : { params: { id: string } }
+  request: NextRequest,
+  { params } : { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
@@ -53,7 +53,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params } : { params: { id: string } }
+  { params } : { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
@@ -291,7 +291,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params } : { params: { id: string } }
+  { params } : { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
@@ -355,7 +355,7 @@ export async function DELETE(
       });
     });
 
-    await onTransferTransactionChange(existingTransfer.toAccountId, existingTransfer.transferTypeId, existingTransfer.date);
+    await onTransferTransactionChange(existingTransfer.fromAccountId, existingTransfer.toAccountId, existingTransfer.transferTypeId, existingTransfer.date);
 
     return NextResponse.json(
       { message: 'Transfer transaction deleted successfully' },
