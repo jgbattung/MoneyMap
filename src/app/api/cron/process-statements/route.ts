@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto';
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { calculateStatementBalance } from "@/lib/statement-calculator";
@@ -6,8 +7,10 @@ export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get("authorization");
     const token = authHeader?.replace("Bearer ", "");
+    const secret = process.env.CRON_SECRET;
 
-    if (!token || token !== process.env.CRON_SECRET) {
+    if (!token || !secret || token.length !== secret.length ||
+        !timingSafeEqual(Buffer.from(token), Buffer.from(secret))) {
       console.error("Unauthorized cron request");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
