@@ -3,6 +3,27 @@ import { db } from "@/lib/prisma";
 import { onTransferTransactionChange } from "@/lib/statement-recalculator";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+const ServerPatchTransferSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  amount: z.string().min(1, "Amount is required").refine(
+    (val) => !isNaN(Number(val)) && Number(val) > 0,
+    { message: "Amount must be a positive number" }
+  ),
+  fromAccountId: z.string().min(1, "From account is required"),
+  toAccountId: z.string().min(1, "To account is required"),
+  transferTypeId: z.string().min(1, "Transfer type is required"),
+  date: z.string().min(1, "Date is required"),
+  notes: z.string().optional(),
+  feeAmount: z.string().optional().refine(
+    (val) => !val || (!isNaN(Number(val)) && Number(val) > 0),
+    { message: "Fee amount must be a positive number" }
+  ),
+}).refine((data) => data.fromAccountId !== data.toAccountId, {
+  message: "From account and to account must be different",
+  path: ["toAccountId"],
+});
 
 export const dynamic = 'force-dynamic';
 
@@ -71,21 +92,15 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const { name, amount, fromAccountId, toAccountId, transferTypeId, date, notes, feeAmount  } = body;
-
-    if (!name || !amount || !fromAccountId || !toAccountId || !transferTypeId || !date) {
+    const parseResult = ServerPatchTransferSchema.safeParse(body);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Validation failed', details: parseResult.error.flatten() },
         { status: 400 }
       );
     }
 
-    if (fromAccountId === toAccountId) {
-      return NextResponse.json(
-        { error: 'From account and to account must be different' },
-        { status: 400 }
-      );
-    }
+    const { name, amount, fromAccountId, toAccountId, transferTypeId, date, notes, feeAmount } = parseResult.data;
 
     const existingTransfer = await db.transferTransaction.findUnique({
       where: {
