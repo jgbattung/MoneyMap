@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
+import { AccountValidation } from "@/lib/validations/account";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -69,14 +70,15 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const { name, accountType, initialBalance, addToNetWorth, statementDate, dueDate } = body;
-
-    if (!name || !accountType || initialBalance === undefined) {
+    const result = AccountValidation.safeParse(body);
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Validation failed', details: result.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { name, accountType, initialBalance, addToNetWorth, statementDate, dueDate } = result.data;
 
     const updatedAccount = await db.financialAccount.update({
       where: {
@@ -89,8 +91,8 @@ export async function PATCH(
         initialBalance: parseFloat(initialBalance),
         currentBalance: parseFloat(initialBalance),
         addToNetWorth: addToNetWorth ?? true,
-        statementDate: statementDate ? parseInt(statementDate) : null,
-        dueDate: dueDate ? parseInt(dueDate) : null,
+        statementDate: statementDate ?? null,
+        dueDate: dueDate ?? null,
       },
     })
 
