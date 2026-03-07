@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <meta>
+    <name>codebase-security-remediation</name>
+    <description>Remediation plan for findings from the 2026-03-07 security audit</description>
+    <audit-ref>docs/codebase-security-audit.md</audit-ref>
+  </meta>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE 1: Security Headers & Build Config (HIGH-3, MEDIUM-2)   -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <phase id="1" name="Security Headers and Build Config">
+
+    <task id="1">
+      <name>Add security headers to Next.js config</name>
+      <finding>HIGH-3, MEDIUM-2</finding>
+      <action>
+        In `next.config.ts`:
+        1. Add an `async headers()` function that returns the following headers for all routes (source: '/(.*)')):
+           - `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`
+           - `X-Content-Type-Options: nosniff`
+           - `X-Frame-Options: DENY`
+           - `Referrer-Policy: strict-origin-when-cross-origin`
+           - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+           - `Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://accounts.google.com;`
+        2. Remove `eslint.ignoreDuringBuilds: true` and `typescript.ignoreBuildErrors: true`. If the build fails after removal, fix the underlying type/lint errors — do NOT re-suppress.
+      </action>
+      <verify>
+        Run `npm run build` to confirm zero errors. Start the dev server and use browser DevTools (Network tab) to verify all six security headers appear on responses.
+      </verify>
+    </task>
+
+  </phase>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE 2: Server-Side Zod Validation (HIGH-1, MEDIUM-4)        -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <phase id="2" name="Server-Side Zod Validation">
+
+    <task id="2">
+      <name>Add server-side Zod validation to account and card API routes</name>
+      <finding>HIGH-1, MEDIUM-4</finding>
+      <action>
+        In `src/app/api/accounts/route.ts` (POST handler) and `src/app/api/accounts/[id]/route.ts` (PATCH handler):
+        1. Import `AccountValidation` from `@/lib/validations/account`.
+        2. Replace manual field checks with `AccountValidation.safeParse(body)`.
+        3. On failure, return `NextResponse.json({ error: 'Validation failed', details: result.error.flatten() }, { status: 400 })`.
+        4. Use `result.data` for all subsequent `parseFloat()` and Prisma calls.
+
+        In `src/app/api/cards/route.ts` (POST) and `src/app/api/cards/[id]/route.ts` (PATCH):
+        1. Import `CardValidation` from `@/lib/validations/account`.
+        2. Apply the same `.safeParse()` pattern.
+      </action>
+      <verify>
+        Send POST `/api/accounts` with `{ "name": "", "accountType": "INVALID", "initialBalance": "abc" }` — expect 400 with Zod error details. Send a valid payload — expect 201.
+      </verify>
+    </task>
+
+    <task id="3">
+      <name>Add server-side Zod validation to expense transaction API routes</name>
+      <finding>HIGH-1</finding>
+      <action>
+        In `src/app/api/expense-transactions/route.ts` (POST) and `src/app/api/expense-transactions/[id]/route.ts` (PATCH):
+        1. Import the relevant schema from `@/lib/validations/expense-transactions`.
+        2. The existing schema uses `z.date()` for the date field but the API receives a date string — adapt the schema to use `z.coerce.date()` or `z.string().datetime()` for the server-side variant.
+        3. Apply `.safeParse()` on the request body and return 400 on failure.
+        4. Use validated data for all downstream `parseFloat()` and Prisma calls.
+      </action>
+      <verify>
+        Send POST `/api/expense-transactions` with `{ "amount": "not-a-number" }` — expect 400. Send valid data — expect 201.
+      </verify>
+    </task>
+
+    <task id="4">
+      <name>Add server-side Zod validation to income transaction API routes</name>
+      <finding>HIGH-1</finding>
+      <action>
+        In `src/app/api/income-transactions/route.ts` (POST) and `src/app/api/income-transactions/[id]/route.ts` (PATCH):
+        1. Import or adapt the schema from `@/lib/validations/income-transactions`.
+        2. Use `z.coerce.date()` for the date field (server-side receives a string).
+        3. Apply `.safeParse()` and return 400 on failure.
+      </action>
+      <verify>
+        Send malformed POST requests — expect 400 responses. Send valid payloads — expect 201.
+      </verify>
+    </task>
+
+    <task id="5">
+      <name>Add server-side Zod validation to transfer transaction API routes</name>
+      <finding>HIGH-1</finding>
+      <action>
+        In `src/app/api/transfer-transactions/route.ts` (POST) and `src/app/api/transfer-transactions/[id]/route.ts` (PATCH):
+        1. Import or adapt the schema from `@/lib/validations/transfer-transactions`.
+        2. Use `z.coerce.date()` for the date field.
+        3. Apply `.safeParse()` and return 400 on failure.
+      </action>
+      <verify>
+        Send a payload with `fromAccountId === toAccountId` — expect 400. Send with missing required fields — expect 400. Send valid data — expect 201.
+      </verify>
+    </task>
+
+    <task id="6">
+      <name>Add server-side Zod validation to type management API routes</name>
+      <finding>HIGH-1</finding>
+      <action>
+        Apply `.safeParse()` with the corresponding schema from `@/lib/validations/` in the POST and PATCH handlers of:
+        - `src/app/api/expense-types/route.ts` and `src/app/api/expense-types/[id]/route.ts`
+        - `src/app/api/income-types/route.ts` and `src/app/api/income-types/[id]/route.ts`
+        - `src/app/api/transfer-types/route.ts` and `src/app/api/transfer-types/[id]/route.ts`
+        Return 400 with flattened Zod errors on validation failure.
+      </action>
+      <verify>
+        Send POST `/api/expense-types` with `{ "name": "" }` — expect 400. Send `{ "name": "Valid" }` — expect 201.
+      </verify>
+    </task>
+
+    <task id="7">
+      <name>Add server-side Zod validation to net-worth-target API route</name>
+      <finding>HIGH-1</finding>
+      <action>
+        In `src/app/api/user/net-worth-target/route.ts` (PATCH handler):
+        1. Define an inline schema: `z.object({ target: z.number().min(0).nullable(), targetDate: z.string().datetime().nullable() })`.
+        2. Apply `.safeParse()` on the request body and return 400 on failure.
+        3. Replace the existing manual validation block (lines 70-88) with the Zod-validated data.
+      </action>
+      <verify>
+        Send PATCH with `{ "target": -1 }` — expect 400. Send `{ "target": 100000, "targetDate": "2027-01-01T00:00:00.000Z" }` — expect 200.
+      </verify>
+    </task>
+
+  </phase>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE 3: Logging Cleanup (MEDIUM-1, LOW-1)                    -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <phase id="3" name="Remove Debug Logging">
+
+    <task id="8">
+      <name>Remove debug console.log statements from production code</name>
+      <finding>MEDIUM-1, LOW-1</finding>
+      <action>
+        Remove all `console.log()` debug statements from the following files:
+        1. `src/middleware.ts` — remove the pathname and session-exists log lines.
+        2. `src/app/api/auth/[...all]/route.ts` — remove all `console.log()` calls; keep the GET/POST handler logic intact.
+        3. `src/app/api/expense-transactions/route.ts` — remove the date debug log lines.
+        4. `src/app/api/cron/process-installments/route.ts` — remove the line logging `monthlyAmount` (financial data).
+        5. `src/app/api/cron/process-statements/route.ts` — remove the line logging the statement balance value.
+
+        Keep all `console.error()` calls for actual error paths, but ensure they log only `error.message` and not full error objects that may contain sensitive data.
+      </action>
+      <verify>
+        Grep `console.log` across `src/app/api/` and `src/middleware.ts` — expect zero results. Confirm `console.error` calls still exist on 500 error paths.
+      </verify>
+    </task>
+
+  </phase>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE 4: Hardening (LOW-2, LOW-4, OBS-1)                      -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <phase id="4" name="Hardening and Defense-in-Depth">
+
+    <task id="9">
+      <name>Add pagination upper-bound limits</name>
+      <finding>LOW-2</finding>
+      <action>
+        In `src/app/api/expense-transactions/route.ts`, `src/app/api/income-transactions/route.ts`, and `src/app/api/transfer-transactions/route.ts`:
+        After parsing `takeNumber`, add:
+          `const safeTake = takeNumber ? Math.min(takeNumber, 100) : undefined;`
+        After parsing `skipNumber`, add:
+          `const safeSkip = skipNumber ? Math.min(skipNumber, 10000) : undefined;`
+        Use `safeTake` and `safeSkip` in the Prisma query instead of the raw parsed values.
+      </action>
+      <verify>
+        Send `GET /api/expense-transactions?take=999999` — expect at most 100 items in the response.
+      </verify>
+    </task>
+
+    <task id="10">
+      <name>Use timing-safe comparison for cron secret</name>
+      <finding>OBS-1</finding>
+      <action>
+        In `src/app/api/cron/process-installments/route.ts` and `src/app/api/cron/process-statements/route.ts`:
+        1. Import: `import { timingSafeEqual } from 'crypto';`
+        2. Replace the token check:
+           ```typescript
+           const secret = process.env.CRON_SECRET;
+           if (!token || !secret || token.length !== secret.length ||
+               !timingSafeEqual(Buffer.from(token), Buffer.from(secret))) {
+             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+           }
+           ```
+      </action>
+      <verify>
+        Confirm the cron endpoints accept a valid Bearer token and reject an invalid one with 401.
+      </verify>
+    </task>
+
+    <task id="11">
+      <name>Explicitly configure Better Auth secret with startup validation</name>
+      <finding>LOW-4</finding>
+      <action>
+        In `src/lib/auth.ts`:
+        1. Add a startup guard at the top of the file (before the `betterAuth()` call):
+           ```typescript
+           if (!process.env.BETTER_AUTH_SECRET) {
+             throw new Error('BETTER_AUTH_SECRET environment variable is required');
+           }
+           ```
+        2. Pass the secret explicitly in the `betterAuth()` config:
+           ```typescript
+           export const auth = betterAuth({
+             secret: process.env.BETTER_AUTH_SECRET,
+             // ... rest of existing config unchanged
+           });
+           ```
+      </action>
+      <verify>
+        Confirm the application starts normally with `BETTER_AUTH_SECRET` set. Temporarily remove it and verify the server throws a clear error on startup rather than silently misconfiguring auth.
+      </verify>
+    </task>
+
+  </phase>
+
+</plan>
