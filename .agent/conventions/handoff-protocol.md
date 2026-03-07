@@ -30,14 +30,16 @@ A specification is not complete until it includes all of the following:
 
 ## Task Tracking & Execution
 
-When Gemini produces an execution plan (`-plan.xml`), it must use strict XML blocks for each task to remove ambiguity:
+When Gemini produces an execution plan (`-plan.xml`), it must use strict XML blocks organized by `<phase>` to allow for user approval between major steps, reducing execution risk:
 
 ```xml
-<task>
-  <name>Display Name of Task</name>
-  <action>Explicit instruction of what files to modify and how</action>
-  <verify>Explicit command or step to test the change</verify>
-</task>
+<phase>
+  <task>
+    <name>Display Name of Task</name>
+    <action>Explicit instruction of what files to modify and how</action>
+    <verify>Explicit command or step to test the change</verify>
+  </task>
+</phase>
 ```
 
 When Claude Code executes a `-plan.xml`:
