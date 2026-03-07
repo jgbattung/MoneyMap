@@ -2,6 +2,12 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+const NetWorthTargetSchema = z.object({
+  target: z.number().min(0).nullable(),
+  targetDate: z.string().datetime().nullable(),
+});
 
 export const dynamic = 'force-dynamic';
 
@@ -64,28 +70,16 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { target, targetDate } = body;
 
-    // Validate target if provided
-    if (target !== null && target !== undefined) {
-      if (typeof target !== 'number' || target < 0) {
-        return NextResponse.json(
-          { error: 'Target must be a positive number' },
-          { status: 400 }
-        );
-      }
+    const parseResult = NetWorthTargetSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parseResult.error.flatten() },
+        { status: 400 }
+      );
     }
 
-    // Validate targetDate if provided
-    if (targetDate !== null && targetDate !== undefined) {
-      const date = new Date(targetDate);
-      if (isNaN(date.getTime())) {
-        return NextResponse.json(
-          { error: 'Invalid date format' },
-          { status: 400 }
-        );
-      }
-    }
+    const { target, targetDate } = parseResult.data;
 
     // Update user's net worth target
     const updatedUser = await db.user.update({
