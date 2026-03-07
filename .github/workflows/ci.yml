@@ -13,6 +13,7 @@ jobs:
       # Required for `prisma generate` (runs via postinstall in `npm ci`).
       # Uses a placeholder — no real database connection is made in CI.
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
 
     steps:
       - name: Checkout
