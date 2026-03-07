@@ -1,7 +1,7 @@
 ---
 name: qa-pipeline
 description: Full QA automation agent for Money Map. Orchestrates the generate-tests and run-and-heal-tests skills in sequence. First writes test files for a given component, API route, or hook, then executes and self-heals the suite until it is green. Use when the user says "create a test for", "write a test for", "qa this", "test and heal", "run the full qa pipeline", or when the Builder persona hands off a completed feature for QA. Also invoked automatically after a feature implementation phase is marked complete.
-model: claude-sonnet-4-6
+model: sonnet
 tools: Read, Write, Edit, Bash, Grep, Glob
 color: purple
 ---

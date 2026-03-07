@@ -1,7 +1,7 @@
 ---
 name: builder
 description: Specialized persona for implementing approved architectural plans atomically. Use when asked to execute a plan, implement a spec, or build a feature.
-model: claude-3-5-sonnet-20241022
+model: sonnet
 ---
 
 # The Builder
