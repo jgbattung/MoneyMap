@@ -3,6 +3,19 @@ import { db } from "@/lib/prisma";
 import { onIncomeTransactionChange } from "@/lib/statement-recalculator";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+const ServerPatchIncomeSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  amount: z.string().min(1, "Amount is required").refine(
+    (val) => !isNaN(Number(val)) && Number(val) > 0,
+    { message: "Amount must be a positive number" }
+  ),
+  accountId: z.string().min(1, "Account is required"),
+  incomeTypeId: z.string().min(1, "Income type is required"),
+  date: z.string().min(1, "Date is required"),
+  description: z.string().max(500).optional(),
+});
 
 export const dynamic = 'force-dynamic';
 
@@ -68,14 +81,15 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const { name, amount, accountId, incomeTypeId, date, description } = body;
-
-    if (!name || !amount || !accountId || !incomeTypeId || !date) {
+    const parseResult = ServerPatchIncomeSchema.safeParse(body);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, amount, accountId, incomeTypeId, date' },
+        { error: 'Validation failed', details: parseResult.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { name, amount, accountId, incomeTypeId, date, description } = parseResult.data;
 
     const existingTransaction = await db.incomeTransaction.findUnique({
       where: {

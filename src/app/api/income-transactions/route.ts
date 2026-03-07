@@ -4,6 +4,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { onIncomeTransactionChange } from "@/lib/statement-recalculator";
+import { z } from "zod";
+
+const ServerPostIncomeSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  amount: z.string().min(1, "Amount is required").refine(
+    (val) => !isNaN(Number(val)) && Number(val) > 0,
+    { message: "Amount must be a positive number" }
+  ),
+  accountId: z.string().min(1, "Account is required"),
+  incomeTypeId: z.string().min(1, "Income type is required"),
+  date: z.string().min(1, "Date is required"),
+  description: z.string().max(500).optional(),
+});
 
 export const dynamic = 'force-dynamic';
 
@@ -150,14 +163,15 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const { name, amount, accountId, incomeTypeId, date, description } = body;
-
-    if (!name || !amount || !accountId || !incomeTypeId || !date) {
+    const parseResult = ServerPostIncomeSchema.safeParse(body);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, amount, accountId, incomeTypeId, date' },
+        { error: 'Validation failed', details: parseResult.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { name, amount, accountId, incomeTypeId, date, description } = parseResult.data;
 
     const result = await db.$transaction(async (tx) => {
       const incomeTransaction = await tx.incomeTransaction.create({
