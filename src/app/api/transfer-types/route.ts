@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import { TransferTypeValidation } from "@/lib/validations/transfer";
 
 export const dynamic = 'force-dynamic';
 
@@ -80,14 +81,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name } = body;
 
-    if (!name) {
+    const parseResult = TransferTypeValidation.safeParse(body);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Missing required field: name' },
+        { error: 'Validation failed', details: parseResult.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { name } = parseResult.data;
 
     const transferType = await db.transferType.create({
       data: {

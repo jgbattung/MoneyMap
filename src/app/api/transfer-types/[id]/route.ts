@@ -1,6 +1,7 @@
 // /api/transfer-types/[id]/route.ts
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
+import { TransferTypeValidation } from "@/lib/validations/transfer";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -67,14 +68,16 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { name } = body;
 
-    if (!name) {
+    const parseResult = TransferTypeValidation.safeParse(body);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Missing required field: name' },
+        { error: 'Validation failed', details: parseResult.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { name } = parseResult.data;
 
     const updatedTransferType = await db.transferType.update({
       where: {

@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
+import { ExpenseTypeValidation } from "@/lib/validations/expense";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -75,14 +76,16 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const { name, monthlyBudget, subcategoryChanges } = body;
-
-    if (!name) {
+    const parseResult = ExpenseTypeValidation.safeParse(body);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Missing required field: name' },
+        { error: 'Validation failed', details: parseResult.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { name, monthlyBudget } = parseResult.data;
+    const { subcategoryChanges } = body;
 
     const result = await db.$transaction(async (tx) => {
       // Update the expense type
