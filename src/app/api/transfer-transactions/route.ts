@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
     const dateFilter = searchParams.get('dateFilter');
     const accountId = searchParams.get('accountId');
 
-    const skipNumber = skip ? parseInt(skip) : undefined;
-    const takeNumber = take ? parseInt(take) : undefined;
+    const skipNumber = skip ? Math.min(parseInt(skip), 10000) : undefined;
+    const takeNumber = take ? Math.min(parseInt(take), 100) : undefined;
 
     const whereClause: Prisma.TransferTransactionWhereInput = {
       userId: session.user.id,
