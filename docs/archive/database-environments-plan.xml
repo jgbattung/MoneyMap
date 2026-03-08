@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <phase name="1: Local DB Setup">
+    <task>
+      <name>Create Docker Compose configuration</name>
+      <action>Create a `docker-compose.yml` file in the root directory that defines a `postgres:15-alpine` service. Configure it with a named volume for persistence, map port 5432 to 5432, and set standard environment variables (e.g., POSTGRES_USER=postgres, POSTGRES_PASSWORD=local_dev_password, POSTGRES_DB=money_map_dev). Also update `.env.example` to document the local database URL format.</action>
+      <verify>Run `docker-compose up -d` and confirm the container starts successfully.</verify>
+    </task>
+    <task>
+      <name>Configure local environment and apply existing migrations</name>
+      <action>Ask the user to update their local `.env` file so `DATABASE_URL` points to the new local Docker database. Once confirmed, run `npx prisma migrate deploy` locally to apply the 19 existing migrations to the empty local database.</action>
+      <verify>Run `npx prisma migrate status` and confirm it shows 19 applied migrations against the local database.</verify>
+    </task>
+  </phase>
+
+  <phase name="2: Backup and Schema Sync">
+    <task>
+      <name>Confirm Production Backup</name>
+      <action>STOP. Instruct the user to log into their Supabase dashboard and create a manual backup of their production database. Wait for explicit confirmation from the user that the backup is successfully completed before proceeding.</action>
+      <verify>User confirms via chat message that the Supabase backup is complete.</verify>
+    </task>
+    <task>
+      <name>Generate missing schema migration</name>
+      <action>While still connected to the local database, run `npx --yes prisma migrate dev --name sync_reverted_feature`. Because the local DB currently only has 19 migrations but `schema.prisma` has extra fields, this command will generate the 20th migration containing the missing `card_group` and date type changes. It will also apply it locally.</action>
+      <verify>Check the `prisma/migrations` folder to confirm a new folder ending in `_sync_reverted_feature` was created. Inspect the `migration.sql` inside to ensure it adds the missing fields.</verify>
+    </task>
+    <task>
+      <name>Resolve migration history on Production</name>
+      <action>Ask the user to temporarily revert their `.env` file so `DATABASE_URL` and `DIRECT_URL` point back to the production Supabase database. Once confirmed, run `npx prisma migrate resolve --applied [MIGRATION_FOLDER_NAME]` using the exact folder name generated in the previous task. This tells production to mark the migration as applied without attempting to actually create the fields (since they already exist in production).</action>
+      <verify>Run `npx prisma migrate status` against the production database and confirm it now outputs `Database schema is up to date!` Return the `.env` to point to the local DB for further development.</verify>
+    </task>
+  </phase>
+</plan>
