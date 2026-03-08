@@ -28,6 +28,7 @@ export async function calculateStatementBalance(
         gte: cycleStart,
         lte: cycleEnd,
       },
+      isInstallment: false,
     },
   });
 
