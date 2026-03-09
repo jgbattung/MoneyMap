@@ -7,9 +7,9 @@
       <verify>Ensure `package.json` contains `@playwright/test` and the new scripts. Run `npx playwright --version` to verify installation.</verify>
     </task>
     <task>
-      <name>Create Playwright Config</name>
-      <action>Create a `playwright.config.ts` in the root. Configure it to use `tests/e2e` as the test dir, `playwright/.auth/user.json` as the storageState for tests, and set up the `webServer` block to run `npm run dev` locally (or `npm run start` in CI) against `http://localhost:3000`. Ensure `globalSetup` points to `playwright/global.setup.ts`.</action>
-      <verify>Config file compiles without TS errors.</verify>
+      <name>Create Playwright Env and Config</name>
+      <action>First, create `playwright/.env.test` with `DATABASE_URL=postgresql://postgres:local_dev_password@localhost:5433/money_map_dev` (and DIRECT_URL if needed). Then, create `playwright.config.ts`. Configure it to load this `.env.test` file via `dotenv` at the very top of the file so Prisma utilities pick it up. Pass this env to the `webServer` block so the Next.js dev server also connects exclusively to the local DB. Set the test dir to `tests/e2e`, use `playwright/.auth/user.json` as the storageState, and configure `globalSetup`.</action>
+      <verify>Config file compiles. When running `npx playwright test`, both the setup scripts and the Next.js web server explicitly use the localhost DB connection.</verify>
     </task>
   </phase>
 
