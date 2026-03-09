@@ -6,7 +6,13 @@ import path from "path";
 // then override with .env.test (for DATABASE_URL, DIRECT_URL).
 // .env.test takes precedence because dotenv does NOT overwrite existing vars.
 dotenv.config({ path: path.resolve(__dirname, ".env.local") });
-dotenv.config({ path: path.resolve(__dirname, "playwright/.env.test"), override: true });
+// In CI, DATABASE_URL and DIRECT_URL are set by the workflow's services block
+// and must not be overridden by the local .env.test (which uses a different port).
+// Locally, .env.test overrides .env.local so tests use the isolated Docker DB.
+dotenv.config({
+  path: path.resolve(__dirname, "playwright/.env.test"),
+  override: !process.env.CI,
+});
 
 const E2E_PORT = 3001;
 
