@@ -15,6 +15,7 @@ export default defineConfig({
       '**/dist/**',
       '**/.claude/**',
       '**/.gemini/**',
+      'tests/e2e/**',
     ],
   },
   resolve: {
