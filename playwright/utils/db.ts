@@ -1,5 +1,16 @@
 import { PrismaClient } from "@prisma/client";
 
+// SAFETY GUARDRAIL: Abort immediately if DATABASE_URL points to a non-local database.
+// This prevents accidental data wipes against production.
+const dbUrl = process.env.DATABASE_URL ?? "";
+if (!dbUrl.includes("localhost") && !dbUrl.includes("127.0.0.1")) {
+  console.error(
+    "FATAL: DATABASE_URL does not point to localhost. Aborting to prevent production data loss."
+  );
+  console.error(`Current DATABASE_URL: ${dbUrl.replace(/\/\/.*@/, "//***@")}`);
+  process.exit(1);
+}
+
 const prisma = new PrismaClient();
 
 /**
