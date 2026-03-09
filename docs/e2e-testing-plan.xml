@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <phase name="1: Tooling and Configuration Setup">
+    <task>
+      <name>Install Playwright and Dependencies</name>
+      <action>Install Playwright test packages (`npm i -D @playwright/test @types/node`). Run `npx playwright install --with-deps chromium` (only Chromium initially for speed). Add npm scripts to `package.json` for running tests: `"test:e2e": "playwright test", "test:e2e:ui": "playwright test --ui"`.</action>
+      <verify>Ensure `package.json` contains `@playwright/test` and the new scripts. Run `npx playwright --version` to verify installation.</verify>
+    </task>
+    <task>
+      <name>Create Playwright Config</name>
+      <action>Create a `playwright.config.ts` in the root. Configure it to use `tests/e2e` as the test dir, `playwright/.auth/user.json` as the storageState for tests, and set up the `webServer` block to run `npm run dev` locally (or `npm run start` in CI) against `http://localhost:3000`. Ensure `globalSetup` points to `playwright/global.setup.ts`.</action>
+      <verify>Config file compiles without TS errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="2: Database and Authentication Framework">
+    <task>
+      <name>Create Database Seeding Utilities</name>
+      <action>Create `playwright/utils/db.ts`. CRITICAL SAFETY REQUIREMENT: At the top of this file, add a hardcoded guardrail that throws an error and aborts the process if `process.env.DATABASE_URL` does NOT include 'localhost' or '127.0.0.1'. Implement a `clearDatabase()` helper that uses `prisma.$transaction` to delete all records from tables (considering foreign key constraints) and a `seedBaseData()` helper that creates essential setup data (e.g., standard ExpenseTypes like "Groceries", TransferTypes).</action>
+      <verify>File compiles. Can be imported without runtime errors, and the safeguard correctly aborts if a production URL is somehow injected.</verify>
+    </task>
+    <task>
+      <name>Implement Global Auth Setup</name>
+      <action>Create `playwright/global.setup.ts`. This script must run before all tests. It should: 1) Clear the database using the utility, 2) Create a test `User` directly via Prisma, 3) Create a valid `Session` for that user via Prisma, 4) Mock the `better-auth.session_token` cookie containing the generated session token, and 5) Save the browser state context to `playwright/.auth/user.json`.</action>
+      <verify>Run `npx playwright test` (even with no tests). The setup script should execute, create the user in the local database, and write the `.auth/user.json` file successfully.</verify>
+    </task>
+  </phase>
+
+  <phase name="3: Core Test Implementation">
+    <task>
+      <name>Implement Accounts E2E Test</name>
+      <action>Create `tests/e2e/accounts.spec.ts`. Write a test that navigates to the accounts page, opens the "Add Account" dialog, fills out the form for a Checking account, submits it, and verifies the new account appears in the UI list.</action>
+      <verify>Run `npm run test:e2e tests/e2e/accounts.spec.ts`. The test must pass locally against the dev server.</verify>
+    </task>
+    <task>
+      <name>Implement Transactions E2E Test</name>
+      <action>Create `tests/e2e/transactions.spec.ts`. Write a test that adds a standard expense transaction, handles the form submission, and verifies the transaction appears in the "Recent Transactions" table or list.</action>
+      <verify>Run `npm run test:e2e tests/e2e/transactions.spec.ts`. The test must pass locally.</verify>
+    </task>
+    <task>
+      <name>Implement Installments Edge Case Test</name>
+      <action>Create `tests/e2e/installments.spec.ts`. Write a complex test ensuring that when a credit card installment transaction is created via the UI, the monolithic parent transaction is visually hidden from the transaction lists, and the split installment chunks appear correctly.</action>
+      <verify>Run `npm run test:e2e tests/e2e/installments.spec.ts`. The test must pass locally.</verify>
+    </task>
+  </phase>
+
+  <phase name="4: CI Pipeline Setup">
+    <task>
+      <name>Create GitHub Actions E2E Workflow</name>
+      <action>Create `.github/workflows/e2e.yml`. Define a job that spins up a `postgres:15-alpine` service container. The steps should setup Node, run `npm ci`, run `npx playwright install --with-deps chromium`, migrate the DB (`prisma migrate deploy`), build the Next app (`npm run build`), and finally run `npm run test:e2e`.</action>
+      <verify>The workflow file is valid YAML. Commit and push the changes, then confirm the GitHub Action triggers, the DB service starts, and the Playwright tests run successfully in the CI environment.</verify>
+    </task>
+  </phase>
+</plan>
