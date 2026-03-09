@@ -41,7 +41,7 @@ test.describe("Accounts", () => {
     await expect(page.getByText("Account created successfully")).toBeVisible();
 
     // Verify the new account appears in the list
-    await expect(page.getByText("Test Checking Account")).toBeVisible();
-    await expect(page.getByText("Checking")).toBeVisible();
+    await expect(page.getByText("Test Checking Account", { exact: true })).toBeVisible();
+    await expect(page.getByText("Checking", { exact: true })).toBeVisible();
   });
 });

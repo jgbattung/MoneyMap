@@ -27,11 +27,11 @@ test.describe("Installments", () => {
   test("should create an installment transaction, hide the parent, and show child installments", async ({ page }) => {
     await page.goto("/expenses");
 
-    // Click the "Add expense" button (desktop)
-    await page.getByRole("button", { name: "Add expense" }).first().click();
+    // Click the "Add expense" button on the page (second one — first is in sidebar)
+    await page.getByRole("button", { name: "Add expense" }).nth(1).click();
 
     // Wait for the sheet to appear
-    await expect(page.getByText("Add Expense Transaction")).toBeVisible();
+    await expect(page.getByText("Add Expense Transaction")).toBeVisible({ timeout: 10000 });
 
     // Fill in the expense name
     await page.getByLabel("Expense name").fill("New Laptop");
@@ -50,17 +50,17 @@ test.describe("Installments", () => {
     await page.getByLabel("Installment duration (months)").fill("6");
 
     // Select installment start date — pick today
-    const installmentDateButton = page.getByRole("button", { name: "Select date" });
+    const installmentDateButton = page.getByLabel("Installment start date");
     await installmentDateButton.click();
-    const today = new Date();
-    await page.getByRole("gridcell", { name: String(today.getDate()), exact: true }).first().click();
+    // Click today's date in the calendar (gridcell names are full dates like "Today, Monday, March 9th, 2026")
+    await page.getByRole("gridcell", { name: /Today/ }).getByRole("button").click();
 
     // Select expense type
     await page.getByLabel("Expense type").click();
     await page.getByRole("option", { name: "Shopping" }).click();
 
-    // Submit the form
-    await page.getByRole("button", { name: "Add expense" }).click();
+    // Submit the form (the button inside the open sheet)
+    await page.locator('[data-slot="sheet-content"]').getByRole("button", { name: "Add expense" }).click();
 
     // Verify the success toast
     await expect(page.getByText("Expense transaction created successfully")).toBeVisible();
