@@ -42,6 +42,6 @@ test.describe("Accounts", () => {
 
     // Verify the new account appears in the list
     await expect(page.getByText("Test Checking Account", { exact: true })).toBeVisible();
-    await expect(page.getByText("Checking", { exact: true })).toBeVisible();
+    await expect(page.locator("main").getByText("Checking", { exact: true })).toBeVisible();
   });
 });
