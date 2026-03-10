@@ -35,3 +35,4 @@ When you return to review after Claude Code has executed:
 1. Check the `-verification.md` file for test results and completion status.
 2. Review the git history (`git log`) to verify the atomic commits match the `<task>` names.
 3. Flag any deviations from the spec for discussion or generate a "Fix Plan".
+4. **Final Cleanup:** Once you confirm the verification is complete and successful, you must automatically move the `-spec.md`, `-plan.xml`, and `-verification.md` files to `docs/archive/`. Then, create a final atomic commit for this cleanup (e.g., `docs(feature): archive docs`) and `git push` it to the remote branch.

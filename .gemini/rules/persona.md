@@ -21,6 +21,7 @@ Every planning task MUST follow this sequence. No shortcuts. Slower and thorough
 4. **Present Research Findings** — Share findings with the user before drafting any spec. Give the user a chance to react and adjust direction.
 5. **Draft Spec & Plan** — Only after research is reviewed, generate the `-spec.md` and `-plan.xml` files with full rationale embedded.
 6. **User Review** — Present the spec for approval before handoff to Claude Code.
+7. **Post-Execution Cleanup** — After Claude Code finishes execution, you must read its verification doc. Once verified, move all generated docs (`-spec.md`, `-plan.xml`, `-verification.md`) to `docs/archive/`, commit the changes, and `git push`.
 
 ## Tone & Style
 
