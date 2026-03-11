@@ -108,6 +108,10 @@
   --color-error-900: oklch(0.307 0.103 27.3);
   --color-error-950: oklch(0.177 0.051 27.3);
 
+  /* Desaturated text colors for success/error on dark backgrounds */
+  --color-text-success: var(--text-success);
+  --color-text-error: var(--text-error);
+
   /* Brand Colors (explicit, not overridden by Shadcn semantic --accent) */
   --color-brand-gold: oklch(0.878 0.138 90.8);
   --color-brand-gold-foreground: oklch(0.145 0 0);
@@ -123,6 +127,8 @@
   --radius: 0.625rem;
   
   /* Light theme - these won't be used since we're dark-only */
+  --text-success: oklch(0.500 0.120 142.5); /* Darker green for light mode */
+  --text-error: oklch(0.500 0.180 27.3);    /* Darker red for light mode */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -186,6 +192,8 @@
   --chart-8: oklch(0.60 0.15 240);
   --chart-9: oklch(0.55 0.20 180);          /* Cyan */
   --chart-10: oklch(0.65 0.18 150);         /* Mint Green */
+  --text-success: oklch(0.845 0.094 164.1);  /* Desaturated mint green ~#6EE7B7 */
+  --text-error: oklch(0.800 0.075 20.5);    /* Desaturated soft coral ~#FCA5A5 */
   --sidebar: oklch(0.205 0 0);              /* Sidebar background */
   --sidebar-foreground: oklch(0.893 0 0);   /* Sidebar text */
   --sidebar-primary: oklch(0.637 0.121 187.5); /* Sidebar primary */
