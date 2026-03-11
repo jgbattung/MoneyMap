@@ -44,9 +44,9 @@ const CompactTransactionCard = ({
   const getIconBgColor = () => {
     switch (type) {
       case 'EXPENSE':
-        return 'bg-red-500/20';
+        return 'bg-text-error/20';
       case 'INCOME':
-        return 'bg-green-500/20';
+        return 'bg-text-success/20';
       case 'TRANSFER':
         return 'bg-neutral-500/20';
     }
@@ -55,9 +55,9 @@ const CompactTransactionCard = ({
   const getIconColor = () => {
     switch (type) {
       case 'EXPENSE':
-        return 'text-red-500';
+        return 'text-text-error';
       case 'INCOME':
-        return 'text-green-500';
+        return 'text-text-success';
       case 'TRANSFER':
         return 'text-neutral-400';
     }
@@ -66,9 +66,9 @@ const CompactTransactionCard = ({
   const getAmountColor = () => {
     switch (type) {
       case 'EXPENSE':
-        return 'text-red-500';
+        return 'text-text-error';
       case 'INCOME':
-        return 'text-green-500';
+        return 'text-text-success';
       case 'TRANSFER':
         return 'text-neutral-400';
     }
