@@ -209,7 +209,10 @@
     @apply border-border outline-ring/50 transition-colors duration-200 ease-in-out;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground leading-relaxed;
+  }
+  h1, h2 {
+    @apply tracking-tight;
   }
 }
 
