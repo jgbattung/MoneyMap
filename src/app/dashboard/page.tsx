@@ -23,11 +23,11 @@ const Dashboard = () => {
   };
 
   return (
-    <div className='py-6 px-4 pb-20 md:pb-6 flex flex-col gap-4 mx-auto'>
+    <div className='py-6 px-4 md:px-6 pb-20 md:pb-6 flex flex-col gap-6 mx-auto'>
       <div className='flex justify-between items-center'>
         <h1 className='text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold'>Dashboard</h1>
-        
-        <button 
+
+        <button
           onClick={handleLogout}
           className="md:hidden p-2 hover:bg-white/10 rounded-md transition-colors"
           title="Logout"
@@ -38,12 +38,12 @@ const Dashboard = () => {
 
       <NetWorthSection />
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-3 bg-secondary-800 border border-border rounded-lg p-4 md:p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="lg:col-span-3 money-map-card">
           <BudgetStatus />
         </div>
 
-        <div className="lg:col-span-2 bg-secondary-800 border border-border rounded-lg p-4 md:p-6">
+        <div className="lg:col-span-2 money-map-card">
           <RecentTransactions />
         </div>
       </div>
