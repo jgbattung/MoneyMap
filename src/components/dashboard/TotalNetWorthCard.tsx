@@ -117,4 +117,4 @@ const TotalNetWorthCard = () => {
   );
 };
 
-export default TotalNetWorthCard;
+export { TotalNetWorthCard };

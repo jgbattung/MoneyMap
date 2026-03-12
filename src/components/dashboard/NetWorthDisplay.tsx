@@ -1,5 +1,5 @@
 import React from 'react'
-import TotalNetWorthCard from './TotalNetWorthCard'
+import { TotalNetWorthCard } from './TotalNetWorthCard'
 import NetWorthHistoryChart from './NetWorthHistoryChart'
 
 const NetWorthDisplay = () => {
@@ -12,4 +12,4 @@ const NetWorthDisplay = () => {
   )
 }
 
-export default NetWorthDisplay
+export { NetWorthDisplay }
