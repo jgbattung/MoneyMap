@@ -43,7 +43,7 @@ const TotalNetWorthCard = () => {
     return (
       <div className='flex flex-col gap-3'>
         <div className='flex items-center justify-between'>
-          <p className='text-foreground font-light text-lg md:text-xl'>Total Net Worth</p>
+          <h2 className='text-xl md:text-2xl font-semibold text-foreground tracking-tight'>Total Net Worth</h2>
           <Skeleton className="h-6 w-28 md:w-36 rounded-full bg-secondary-500" />
         </div>
 
@@ -81,7 +81,7 @@ const TotalNetWorthCard = () => {
       {/* Header with title and monthly change */}
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-2'>
-          <p className='text-foreground font-light text-lg md:text-xl'>Total Net Worth</p>
+          <h2 className='text-xl md:text-2xl font-semibold text-foreground tracking-tight'>Total Net Worth</h2>
           <button
             type="button"
             onClick={() => setIsBalanceHidden((prev) => !prev)}
