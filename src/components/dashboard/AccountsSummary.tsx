@@ -201,7 +201,7 @@ const TopAccounts = () => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Accounts</h2>
+      <h2 className="text-lg font-semibold text-foreground tracking-tight">Accounts</h2>
 
       <div className="space-y-3">
         {topAccounts.map((account, index) => (
@@ -255,7 +255,7 @@ const TopCreditCards = () => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Credit Cards</h2>
+      <h2 className="text-lg font-semibold text-foreground tracking-tight">Credit Cards</h2>
 
       <div className="space-y-3">
         {topCards.map((card, index) => {

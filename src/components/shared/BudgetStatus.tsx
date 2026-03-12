@@ -28,7 +28,7 @@ const BudgetStatusItem = ({
 }: BudgetStatusItemProps) => {
   const hasNoBudget = monthlyBudget === null || monthlyBudget === 0;
   const hasSpendingWithoutBudget = hasNoBudget && spentAmount > 0;
-  
+
   // Color logic shared by progress bar and percentage pill
   let progressColor = 'bg-secondary-400';
   let pillClasses = 'bg-secondary-400/10 text-secondary-400';
@@ -133,7 +133,7 @@ const BudgetStatus = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-foreground font-semibold text-sm md:text-base">Budget Status</h2>
+        <h2 className='text-lg font-semibold text-foreground tracking-tight'>Budget Status</h2>
         <span className="text-xs text-muted-foreground">This Month</span>
       </div>
 

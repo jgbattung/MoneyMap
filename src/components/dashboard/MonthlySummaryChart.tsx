@@ -19,7 +19,7 @@ const MonthlySummaryChart = () => {
     return (
       <div className='flex flex-col gap-4'>
         {/* Title */}
-        <p className='text-foreground font-semibold text-sm md:text-base'>Monthly Summary</p>
+        <h2 className='text-lg font-semibold text-foreground tracking-tight'>Monthly Summary</h2>
 
         {/* Income & Expense Cards Skeleton */}
         <div className='grid grid-cols-2 gap-3'>
@@ -50,7 +50,7 @@ const MonthlySummaryChart = () => {
   if (error) {
     return (
       <div className='flex flex-col gap-3'>
-        <p className='text-foreground font-semibold text-sm md:text-base'>Monthly Summary</p>
+        <h2 className='text-lg font-semibold text-foreground tracking-tight'>Monthly Summary</h2>
         <div className='flex flex-col items-center justify-center py-12 text-center'>
           <p className='text-error-600 font-semibold text-sm'>Failed to load summary</p>
           <p className='text-muted-foreground text-xs mt-1'>{error}</p>
@@ -62,7 +62,7 @@ const MonthlySummaryChart = () => {
   if (!summary) {
     return (
       <div className='flex flex-col gap-3'>
-        <p className='text-foreground font-semibold text-sm md:text-base'>Monthly Summary</p>
+        <h2 className='text-lg font-semibold text-foreground tracking-tight'>Monthly Summary</h2>
         <div className='flex flex-col items-center justify-center py-12 text-center'>
           <p className='text-muted-foreground text-sm'>No data available</p>
         </div>
@@ -104,7 +104,7 @@ const MonthlySummaryChart = () => {
   return (
     <div className='flex flex-col gap-4'>
       {/* Title */}
-      <p className='text-foreground font-semibold text-sm md:text-base'>Monthly Summary</p>
+      <h2 className='text-lg font-semibold text-foreground tracking-tight'>Monthly Summary</h2>
 
       {/* Income & Expense Cards */}
       <div className='grid grid-cols-2 gap-3'>

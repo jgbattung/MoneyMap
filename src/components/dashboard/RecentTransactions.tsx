@@ -65,7 +65,7 @@ const RecentTransactions = () => {
   if (isLoading) {
     return (
       <div className='flex flex-col gap-4'>
-        <p className='text-foreground font-semibold text-sm md:text-base'>Recent Transactions</p>
+        <h2 className='text-lg font-semibold text-foreground tracking-tight'>Recent Transactions</h2>
 
         <div className='flex flex-col gap-3'>
           {[...Array(5)].map((_, index) => (
@@ -112,7 +112,7 @@ const RecentTransactions = () => {
   if (transactions.length === 0) {
     return (
       <div className='flex flex-col gap-3'>
-        <p className='text-foreground font-semibold text-sm md:text-base'>Recent Transactions</p>
+        <h2 className='text-lg font-semibold text-foreground tracking-tight'>Recent Transactions</h2>
         <div className='flex flex-col items-center justify-center py-8 text-center'>
           <p className='text-muted-foreground'>No transactions yet</p>
           <p className='text-muted-foreground text-sm mt-2'>
@@ -125,7 +125,7 @@ const RecentTransactions = () => {
 
   return (
     <div className='flex flex-col gap-4'>
-      <p className='text-foreground font-semibold text-sm md:text-base'>Recent Transactions</p>
+      <h2 className='text-lg font-semibold text-foreground tracking-tight'>Recent Transactions</h2>
 
       <div className='flex flex-col gap-3'>
         {transactions.map((transaction) => (
