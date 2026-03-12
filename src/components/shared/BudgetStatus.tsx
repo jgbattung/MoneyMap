@@ -5,6 +5,7 @@ import { useBudgetStatus } from '@/hooks/useBudgetStatus';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/format';
+import { motion, useReducedMotion } from 'framer-motion';
 import Link from 'next/link';
 
 interface BudgetStatusItemProps {
@@ -13,14 +14,16 @@ interface BudgetStatusItemProps {
   spentAmount: number;
   progressPercentage: number;
   isOverBudget: boolean;
+  prefersReducedMotion: boolean;
 }
 
-const BudgetStatusItem = ({ 
-  name, 
-  monthlyBudget, 
-  spentAmount, 
+const BudgetStatusItem = ({
+  name,
+  monthlyBudget,
+  spentAmount,
   progressPercentage,
-  isOverBudget 
+  isOverBudget,
+  prefersReducedMotion,
 }: BudgetStatusItemProps) => {
   const hasNoBudget = monthlyBudget === null || monthlyBudget === 0;
   const hasSpendingWithoutBudget = hasNoBudget && spentAmount > 0;
@@ -61,10 +64,19 @@ const BudgetStatusItem = ({
       </div>
 
       <div className="w-full bg-secondary-400/30 rounded-full h-2">
-        <div 
-          className={`h-2 rounded-full transition-all duration-300 ${progressColor}`}
-          style={{ width: `${progressWidth}%` }}
-        />
+        {prefersReducedMotion ? (
+          <div
+            className={`h-2 rounded-full ${progressColor}`}
+            style={{ width: `${progressWidth}%` }}
+          />
+        ) : (
+          <motion.div
+            className={`h-2 rounded-full ${progressColor}`}
+            initial={{ width: "0%" }}
+            animate={{ width: `${progressWidth}%` }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          />
+        )}
       </div>
     </div>
   );
@@ -102,6 +114,7 @@ const ErrorState = ({ error }: { error: string }) => (
 
 const BudgetStatus = () => {
   const { budgets, isLoading, error } = useBudgetStatus();
+  const prefersReducedMotion = !!useReducedMotion();
 
   const onTrackCount = budgets.filter(b => !b.isOverBudget && b.monthlyBudget !== null && b.monthlyBudget > 0).length;
   const totalCount = budgets.length;
@@ -127,7 +140,7 @@ const BudgetStatus = () => {
         <>
           <div className="space-y-3">
             {budgets.map(budget => (
-              <BudgetStatusItem key={budget.id} {...budget} />
+              <BudgetStatusItem key={budget.id} {...budget} prefersReducedMotion={prefersReducedMotion} />
             ))}
           </div>
 
