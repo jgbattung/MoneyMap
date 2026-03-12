@@ -5,6 +5,7 @@ import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 import { useCardsQuery } from '@/hooks/useCardsQuery';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatCurrency } from '@/lib/format';
 import Link from 'next/link';
 
 const formatAccountType = (type: string): string => {
@@ -21,13 +22,6 @@ const formatAccountType = (type: string): string => {
     OTHER: "Other",
   };
   return typeMap[type] || type;
-};
-
-const formatCurrency = (balance: number): string => {
-  return balance.toLocaleString('en-PH', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
 };
 
 interface AccountItemProps {
@@ -66,32 +60,14 @@ const CreditCardItem = ({ name, balance }: CreditCardItemProps) => {
         <span className="text-xs text-muted-foreground">Credit Card</span>
       </div>
 
-      <div className="font-semibold text-sm text-white">
+      <div className="font-semibold text-sm text-foreground">
         ₱{formatCurrency(balance)}
       </div>
     </div>
   );
 };
 
-const SkeletonAccountList = () => (
-  <div className="space-y-4">
-    <Skeleton className="h-6 w-32 bg-secondary-500" />
-    <div className="space-y-3">
-      {[...Array(5)].map((_, i) => (
-        <div key={i} className="flex justify-between items-center">
-          <div className="space-y-1">
-            <Skeleton className="h-4 w-24 bg-secondary-500" />
-            <Skeleton className="h-3 w-16 bg-secondary-500" />
-          </div>
-          <Skeleton className="h-4 w-20 bg-secondary-500" />
-        </div>
-      ))}
-    </div>
-    <Skeleton className="h-10 w-full bg-secondary-500" />
-  </div>
-);
-
-const SkeletonCardList = () => (
+const SkeletonList = () => (
   <div className="space-y-4">
     <Skeleton className="h-6 w-32 bg-secondary-500" />
     <div className="space-y-3">
@@ -150,7 +126,7 @@ const TopAccounts = () => {
     .slice(0, 5);
 
   if (isLoading) {
-    return <SkeletonAccountList />;
+    return <SkeletonList />;
   }
 
   if (error) {
@@ -196,7 +172,7 @@ const TopCreditCards = () => {
     .slice(0, 5);
 
   if (isLoading) {
-    return <SkeletonCardList />;
+    return <SkeletonList />;
   }
 
   if (error) {
@@ -247,4 +223,4 @@ const AccountsSummary = () => {
   );
 };
 
-export default AccountsSummary;
+export { AccountsSummary };
