@@ -42,7 +42,7 @@ const GroupCard = ({
   });
 
   return (
-    <div className="flex flex-col bg-card border border-border rounded-md shadow-md overflow-hidden">
+    <div className="money-map-card flex flex-col overflow-hidden">
       {/* Group Card Header */}
       <div className="flex flex-col gap-3 p-4 hover:bg-card/70 transition-all duration-200">
         <div className="flex items-center justify-between gap-4">
