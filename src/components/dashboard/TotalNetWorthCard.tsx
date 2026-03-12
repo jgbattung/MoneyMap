@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
-import { ArrowUp, ArrowDown, ArrowRight } from 'lucide-react'
+import { ArrowUp, ArrowDown, ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { useSpring, useTransform, useReducedMotion } from 'framer-motion'
 import { useNetWorth } from '@/hooks/useNetWorth'
 import { formatCurrency } from '@/lib/format'
@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 const TotalNetWorthCard = () => {
   const { netWorth, monthlyChange, isLoading, error } = useNetWorth();
   const prefersReducedMotion = useReducedMotion();
+  const [isBalanceHidden, setIsBalanceHidden] = useState(false);
 
   const springValue = useSpring(0, { duration: 800, bounce: 0 });
   const displayValue = useTransform(springValue, (v) => formatCurrency(v));
@@ -71,14 +72,26 @@ const TotalNetWorthCard = () => {
     <div className='flex flex-col gap-3'>
       {/* Header with title and monthly change */}
       <div className='flex items-center justify-between'>
-        <p className='text-foreground font-light text-lg md:text-xl'>Total Net Worth</p>
-        
+        <div className='flex items-center gap-2'>
+          <p className='text-foreground font-light text-lg md:text-xl'>Total Net Worth</p>
+          <button
+            type="button"
+            onClick={() => setIsBalanceHidden((prev) => !prev)}
+            className='cursor-pointer p-1 rounded-md hover:bg-secondary-700 transition-colors text-muted-foreground'
+            aria-label="Toggle balance visibility"
+          >
+            {isBalanceHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+
         {/* Monthly Change Pill Badge */}
         <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs md:text-sm font-medium ${changePillClasses}`}>
           <ChangeIcon className="h-3 w-3 md:h-4 md:w-4" />
           <span>
-            ₱{formatCurrency(Math.abs(monthlyChange.amount))}
-            {` (${Math.abs(monthlyChange.percentage)}%)`}
+            {isBalanceHidden
+              ? '***'
+              : `₱${formatCurrency(Math.abs(monthlyChange.amount))} (${Math.abs(monthlyChange.percentage)}%)`
+            }
           </span>
         </div>
       </div>
@@ -88,7 +101,7 @@ const TotalNetWorthCard = () => {
         <div className='flex items-end gap-2'>
           <span className='text-muted-foreground font-light text-sm md:text-base'>PHP</span>
           <p className='text-foreground text-3xl md:text-4xl lg:text-5xl font-bold'>
-            {animatedText}
+            {isBalanceHidden ? '*****' : animatedText}
           </p>
         </div>
       </div>
