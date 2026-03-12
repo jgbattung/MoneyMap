@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/format';
 import { motion, useReducedMotion } from 'framer-motion';
+import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
 interface BudgetStatusItemProps {
@@ -105,15 +106,22 @@ const EmptyState = () => (
   </div>
 );
 
-const ErrorState = ({ error }: { error: string }) => (
+const ErrorState = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
   <div className="flex flex-col items-center justify-center py-8 text-center">
+    <AlertCircle className="h-8 w-8 text-error-600 mx-auto mb-2" />
     <p className="text-sm text-error-600 font-semibold">Failed to load budget status</p>
     <p className="text-xs text-muted-foreground mt-1">{error}</p>
+    <button
+      onClick={onRetry}
+      className="cursor-pointer text-sm font-medium text-primary hover:text-primary/80 transition-colors mt-3"
+    >
+      Try again
+    </button>
   </div>
 );
 
 const BudgetStatus = () => {
-  const { budgets, isLoading, error } = useBudgetStatus();
+  const { budgets, isLoading, error, refetch } = useBudgetStatus();
   const prefersReducedMotion = !!useReducedMotion();
 
   const onTrackCount = budgets.filter(b => !b.isOverBudget && b.monthlyBudget !== null && b.monthlyBudget > 0).length;
@@ -132,7 +140,7 @@ const BudgetStatus = () => {
 
       {isLoading && <SkeletonBudgetList />}
 
-      {!isLoading && error && <ErrorState error={error} />}
+      {!isLoading && error && <ErrorState error={error} onRetry={() => refetch()} />}
 
       {!isLoading && !error && budgets.length === 0 && <EmptyState />}
 
@@ -157,4 +165,4 @@ const BudgetStatus = () => {
   );
 };
 
-export default BudgetStatus;
+export { BudgetStatus };
