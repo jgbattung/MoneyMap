@@ -88,13 +88,13 @@ const MonthlySummaryChart = () => {
   const getChangeColor = (change: number, isExpense = false) => {
     if (isExpense) {
       // For expenses, negative is good (less spending)
-      if (change < 0) return 'text-success-600';
-      if (change > 0) return 'text-error-600';
+      if (change < 0) return 'text-text-success';
+      if (change > 0) return 'text-text-error';
       return 'text-muted-foreground';
     }
     // For income, positive is good
-    if (change > 0) return 'text-success-600';
-    if (change < 0) return 'text-error-600';
+    if (change > 0) return 'text-text-success';
+    if (change < 0) return 'text-text-error';
     return 'text-muted-foreground';
   };
 
@@ -140,7 +140,7 @@ const MonthlySummaryChart = () => {
       {/* Net Savings */}
       <div className='flex items-center justify-between p-3 rounded-md bg-secondary-950/50 border border-border'>
         <span className='text-muted-foreground text-sm'>Net savings this month</span>
-        <span className={`text-xl font-bold ${summary.currentMonth.savings >= 0 ? 'text-success-600' : 'text-error-600'}`}>
+        <span className={`text-xl font-bold ${summary.currentMonth.savings >= 0 ? 'text-text-success' : 'text-text-error'}`}>
           {formatCurrency(summary.currentMonth.savings)}
         </span>
       </div>
