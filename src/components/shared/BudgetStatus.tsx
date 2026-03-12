@@ -47,11 +47,16 @@ const BudgetStatusItem = ({
             ₱{formatCurrency(spentAmount)}
           </div>
           <div className="text-xs text-muted-foreground">
-            {hasNoBudget 
-              ? 'No budget set' 
+            {hasNoBudget
+              ? 'No budget set'
               : `out of ₱${formatCurrency(monthlyBudget)}`
             }
           </div>
+          {!hasNoBudget && (
+            <div className="text-xs text-muted-foreground">
+              {progressPercentage}%
+            </div>
+          )}
         </div>
       </div>
 
@@ -98,12 +103,19 @@ const ErrorState = ({ error }: { error: string }) => (
 const BudgetStatus = () => {
   const { budgets, isLoading, error } = useBudgetStatus();
 
+  const onTrackCount = budgets.filter(b => !b.isOverBudget && b.monthlyBudget !== null && b.monthlyBudget > 0).length;
+  const totalCount = budgets.length;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-foreground font-semibold text-sm md:text-base">Budget Status</h2>
         <span className="text-xs text-muted-foreground">This Month</span>
       </div>
+
+      {!isLoading && !error && budgets.length > 0 && (
+        <p className="text-xs text-muted-foreground">{onTrackCount} of {totalCount} budgets on track</p>
+      )}
 
       {isLoading && <SkeletonBudgetList />}
 
