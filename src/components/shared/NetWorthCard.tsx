@@ -24,10 +24,10 @@ const NetWorthCard = () => {
   const isNegative = monthlyChange.amount < 0;
 
   const ChangeIcon = isPositive ? ArrowUp : isNegative ? ArrowDown : ArrowRight;
-  const changeColor = isPositive 
-    ? 'text-success-600' 
-    : isNegative 
-    ? 'text-error-600' 
+  const changeColor = isPositive
+    ? 'text-text-success'
+    : isNegative
+    ? 'text-text-error'
     : 'text-secondary-400';
 
   const formatCurrency = (amount: number) => {
