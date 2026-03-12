@@ -1,12 +1,32 @@
 "use client"
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { ArrowUp, ArrowDown, ArrowRight } from 'lucide-react'
+import { useSpring, useTransform, useReducedMotion } from 'framer-motion'
 import { useNetWorth } from '@/hooks/useNetWorth'
+import { formatCurrency } from '@/lib/format'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const TotalNetWorthCard = () => {
   const { netWorth, monthlyChange, isLoading, error } = useNetWorth();
+  const prefersReducedMotion = useReducedMotion();
+
+  const springValue = useSpring(0, { duration: 800, bounce: 0 });
+  const displayValue = useTransform(springValue, (v) => formatCurrency(v));
+  const [animatedText, setAnimatedText] = useState('0.00');
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setAnimatedText(formatCurrency(netWorth));
+      return;
+    }
+    springValue.set(netWorth);
+  }, [netWorth, prefersReducedMotion, springValue]);
+
+  useEffect(() => {
+    const unsubscribe = displayValue.on('change', (v) => setAnimatedText(v));
+    return unsubscribe;
+  }, [displayValue]);
 
   const isPositive = monthlyChange.amount > 0;
   const isNegative = monthlyChange.amount < 0;
@@ -17,13 +37,6 @@ const TotalNetWorthCard = () => {
     : isNegative
     ? 'text-text-error'
     : 'text-secondary-400';
-
-  const formatCurrency = (amount: number) => {
-    return amount.toLocaleString('en-PH', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  };
 
   if (isLoading) {
     return (
@@ -75,7 +88,7 @@ const TotalNetWorthCard = () => {
         <div className='flex items-end gap-2'>
           <span className='text-muted-foreground font-light text-sm md:text-base'>PHP</span>
           <p className='text-foreground text-3xl md:text-4xl lg:text-5xl font-bold'>
-            {formatCurrency(netWorth)}
+            {animatedText}
           </p>
         </div>
       </div>
