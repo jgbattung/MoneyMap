@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <phase name="1: Standard Widget Headings">
+    <task>
+      <name>Update standard dashboard widget headings to h2</name>
+      <action>Edit the following files:
+      - `src/components/dashboard/AccountsSummary.tsx`
+      - `src/components/dashboard/AssetCategoriesChart.tsx`
+      - `src/components/dashboard/MonthlySummaryChart.tsx`
+      - `src/components/dashboard/RecentTransactions.tsx`
+
+      Change their main title elements to use:
+      `<h2 className="text-lg font-semibold text-foreground tracking-tight">`</action>
+      <verify>Run `npm run build` to confirm no errors. Visually verify the headings look consistent.</verify>
+    </task>
+    <task>
+      <name>Update NetWorthHistoryChart heading</name>
+      <action>Edit `src/components/dashboard/NetWorthHistoryChart.tsx`:
+      Change the main title `<p>` to `<h2>` while preserving the `mt-6` margin top.
+      Change to: `<h2 className="text-lg font-semibold text-foreground tracking-tight mt-6">`</action>
+      <verify>Run `npm run build` to confirm no errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="2: Hero Widget Heading">
+    <task>
+      <name>Update TotalNetWorthCard heading</name>
+      <action>Edit `src/components/dashboard/TotalNetWorthCard.tsx`:
+      Change the main title `<p>` to `<h2>` with larger classes.
+      Both instances (loading skeleton and main display) should be updated.
+      Change to: `<h2 className="text-xl md:text-2xl font-semibold text-foreground tracking-tight">`</action>
+      <verify>Run `npm run build` to confirm no errors. Visually verify the title stands out slightly from the rest of the widgets.</verify>
+    </task>
+  </phase>
+
+  <phase name="3: Verification">
+    <task>
+      <name>Lint, Test, and Final Visual Check</name>
+      <action>Run the following commands sequentially:
+      1. `npm run lint` — must pass with zero errors.
+      2. `npm run test` — must pass. Update any tests broken by changing p tags to h2 tags.
+      3. `npm run build` — must compile with zero errors.
+      4. Visually verify:
+         - All dashboard widgets show consistent heading typography.
+         - The layout has not materially changed besides the cleaner font.
+         - Dark and light modes look appropriate with `text-foreground`.</action>
+      <verify>All commands exit with code 0. Dashboard renders correctly.</verify>
+    </task>
+  </phase>
+</plan>
