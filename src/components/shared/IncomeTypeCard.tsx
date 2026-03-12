@@ -37,7 +37,7 @@ const IncomeTypeCard = ({ name, monthlyTarget, incomeAmount, onClick }: IncomeTy
           </span>
           <span className={`font-medium ${
             targetAmount > 0 && percentageOfTarget >= 100
-              ? 'text-green-600'
+              ? 'text-text-success'
               : 'text-muted-foreground'
           }`}>
             {targetAmount > 0 ? `${percentageOfTarget.toFixed(0)}% of target` : 'No target set'}
