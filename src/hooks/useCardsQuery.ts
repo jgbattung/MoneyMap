@@ -80,6 +80,7 @@ export const useCardsQuery = () => {
     data: cards = [],
     isPending,
     error,
+    refetch,
   } = useQuery({
     queryKey: QUERY_KEYS.cards,
     queryFn: fetchCards,
@@ -120,6 +121,7 @@ export const useCardsQuery = () => {
     cards,
     isLoading: isPending,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
+    refetch,
     createCard: createCardMutation.mutateAsync,
     updateCard: updateCardMutation.mutateAsync,
     deleteCard: deletecardMutation.mutateAsync,

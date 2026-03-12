@@ -6,6 +6,7 @@ import { useCardsQuery } from '@/hooks/useCardsQuery';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/format';
+import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
 const formatAccountType = (type: string): string => {
@@ -109,17 +110,28 @@ const EmptyState = ({ type }: EmptyStateProps) => {
 
 interface ErrorStateProps {
   error: string;
+  type: 'accounts' | 'cards';
+  onRetry: () => void;
 }
 
-const ErrorState = ({ error }: ErrorStateProps) => (
-  <div className="flex flex-col items-center justify-center py-8 text-center">
-    <p className="text-sm text-error-600 font-semibold">Failed to load data</p>
-    <p className="text-xs text-muted-foreground mt-1">{error}</p>
+const ErrorState = ({ error, type, onRetry }: ErrorStateProps) => (
+  <div className="flex flex-col items-center justify-center py-8 text-center gap-1">
+    <AlertCircle className="h-8 w-8 text-error-600" />
+    <p className="text-error-600 font-semibold">
+      Failed to load {type === 'accounts' ? 'accounts' : 'credit cards'}
+    </p>
+    <p className="text-muted-foreground text-sm">{error}</p>
+    <button
+      onClick={onRetry}
+      className="cursor-pointer text-sm font-medium text-primary hover:text-primary/80 transition-colors mt-1"
+    >
+      Try again
+    </button>
   </div>
 );
 
 const TopAccounts = () => {
-  const { accounts, isLoading, error } = useAccountsQuery();
+  const { accounts, isLoading, error, refetch } = useAccountsQuery();
 
   const topAccounts = accounts
     .sort((a, b) => parseFloat(b.currentBalance.toString()) - parseFloat(a.currentBalance.toString()))
@@ -130,7 +142,7 @@ const TopAccounts = () => {
   }
 
   if (error) {
-    return <ErrorState error={error} />;
+    return <ErrorState error={error} type="accounts" onRetry={refetch} />;
   }
 
   if (accounts.length === 0) {
@@ -160,7 +172,7 @@ const TopAccounts = () => {
 };
 
 const TopCreditCards = () => {
-  const { cards, isLoading, error } = useCardsQuery();
+  const { cards, isLoading, error, refetch } = useCardsQuery();
 
   const topCards = cards
     .sort((a, b) => {
@@ -176,7 +188,7 @@ const TopCreditCards = () => {
   }
 
   if (error) {
-    return <ErrorState error={error} />;
+    return <ErrorState error={error} type="cards" onRetry={refetch} />;
   }
 
   if (cards.length === 0) {
