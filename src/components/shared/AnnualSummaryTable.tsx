@@ -52,7 +52,7 @@ export default function AnnualSummaryTable() {
 
   if (error) {
     return (
-      <div className="bg-card border border-border rounded-md p-4 shadow-md max-w-5xl">
+      <div className="money-map-card max-w-5xl">
         <h2 className="text-foreground font-semibold text-sm md:text-base mb-4">
           Annual Summary
         </h2>
@@ -64,7 +64,7 @@ export default function AnnualSummaryTable() {
   }
 
   return (
-    <div className="bg-card border border-border rounded-md p-4 shadow-md max-w-5xl">
+    <div className="money-map-card max-w-5xl">
       <h2 className="text-foreground font-semibold text-sm md:text-base mb-4">
         Annual Summary
       </h2>
