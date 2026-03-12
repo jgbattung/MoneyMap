@@ -29,14 +29,18 @@ const BudgetStatusItem = ({
   const hasNoBudget = monthlyBudget === null || monthlyBudget === 0;
   const hasSpendingWithoutBudget = hasNoBudget && spentAmount > 0;
   
-  // Progress bar color logic
+  // Color logic shared by progress bar and percentage pill
   let progressColor = 'bg-secondary-400';
+  let pillClasses = 'bg-secondary-400/10 text-secondary-400';
   if (hasSpendingWithoutBudget || isOverBudget) {
     progressColor = 'bg-text-error';
+    pillClasses = 'bg-text-error/10 text-text-error';
   } else if (spentAmount > 0 && !isOverBudget && progressPercentage >= 80) {
     progressColor = 'bg-amber-400';
+    pillClasses = 'bg-amber-400/10 text-amber-400';
   } else if (spentAmount > 0 && !isOverBudget) {
     progressColor = 'bg-text-success';
+    pillClasses = 'bg-text-success/10 text-text-success';
   }
 
   const progressWidth = hasNoBudget ? 100 : Math.min(progressPercentage, 100);
@@ -44,23 +48,25 @@ const BudgetStatusItem = ({
   return (
     <div className="space-y-2">
       <div className="flex items-start justify-between gap-2">
-        <span className="font-semibold text-sm">{name}</span>
-        
-        <div className="text-right">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-semibold text-sm truncate">{name}</span>
+          {!hasNoBudget && (
+            <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${pillClasses}`}>
+              {progressPercentage.toLocaleString('en-PH')}%
+            </span>
+          )}
+        </div>
+
+        <div className="text-right shrink-0">
           <div className="font-semibold text-sm">
             ₱{formatCurrency(spentAmount)}
           </div>
           <div className="text-xs text-muted-foreground">
             {hasNoBudget
               ? 'No budget set'
-              : `out of ₱${formatCurrency(monthlyBudget)}`
+              : `of ₱${formatCurrency(monthlyBudget)}`
             }
           </div>
-          {!hasNoBudget && (
-            <div className="text-xs text-muted-foreground">
-              {progressPercentage}%
-            </div>
-          )}
         </div>
       </div>
 
@@ -124,19 +130,12 @@ const BudgetStatus = () => {
   const { budgets, isLoading, error, refetch } = useBudgetStatus();
   const prefersReducedMotion = !!useReducedMotion();
 
-  const onTrackCount = budgets.filter(b => !b.isOverBudget && b.monthlyBudget !== null && b.monthlyBudget > 0).length;
-  const totalCount = budgets.length;
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-foreground font-semibold text-sm md:text-base">Budget Status</h2>
         <span className="text-xs text-muted-foreground">This Month</span>
       </div>
-
-      {!isLoading && !error && budgets.length > 0 && (
-        <p className="text-xs text-muted-foreground">{onTrackCount} of {totalCount} budgets on track</p>
-      )}
 
       {isLoading && <SkeletonBudgetList />}
 
