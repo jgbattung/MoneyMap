@@ -6,7 +6,7 @@ import { useCardsQuery } from '@/hooks/useCardsQuery';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/format';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Wallet, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 
 const formatAccountType = (type: string): string => {
@@ -92,15 +92,17 @@ interface EmptyStateProps {
 
 const EmptyState = ({ type }: EmptyStateProps) => {
   const isAccounts = type === 'accounts';
-  
+  const Icon = isAccounts ? Wallet : CreditCard;
+
   return (
-    <div className="flex flex-col items-center justify-center py-8 text-center">
+    <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
+      <Icon className="h-8 w-8 text-muted-foreground/50" />
       <p className="text-sm text-muted-foreground">
         {isAccounts ? 'No accounts yet' : 'No credit cards yet'}
       </p>
       <p className="text-xs text-muted-foreground mt-1">
-        {isAccounts 
-          ? 'Add your first account to start tracking' 
+        {isAccounts
+          ? 'Add your first account to start tracking'
           : 'Add your first credit card to track debt'
         }
       </p>
