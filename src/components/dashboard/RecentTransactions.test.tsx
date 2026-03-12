@@ -28,8 +28,10 @@ function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return ({ children }: { children: React.ReactNode }) =>
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: queryClient }, children);
+  Wrapper.displayName = 'QueryClientWrapper';
+  return Wrapper;
 }
 
 const mockTransaction = {
@@ -63,7 +65,6 @@ describe('RecentTransactions', () => {
       );
 
       // Skeletons are rendered — check for skeleton elements
-      const skeletons = container.querySelectorAll('[class*="Skeleton"], .bg-secondary-500, [class*="h-10"][class*="w-10"]');
       expect(container.textContent).toContain('Recent Transactions');
     });
   });
@@ -180,7 +181,7 @@ describe('RecentTransactions', () => {
         error: null,
       });
 
-      const { container } = render(
+      render(
         React.createElement(RecentTransactions),
         { wrapper: createWrapper() }
       );

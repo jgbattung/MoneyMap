@@ -6,7 +6,7 @@ import BudgetCard from './BudgetCard';
 // Icons mock
 vi.mock('../icons', () => ({
   Icons: {
-    money: ({ size, className }: { size?: number; className?: string }) =>
+    money: ({ _size, className }: { _size?: number; className?: string }) =>
       React.createElement('svg', { 'data-testid': 'icon-money', className }),
   },
 }));
@@ -144,7 +144,7 @@ describe('BudgetCard', () => {
 
   describe('status text color logic', () => {
     it('applies error color when over budget', () => {
-      const { container } = render(
+      render(
         React.createElement(BudgetCard, {
           ...baseProps,
           monthlyBudget: '1000',

@@ -5,7 +5,7 @@ import IncomeCard from './IncomeCard';
 
 vi.mock('../icons', () => ({
   Icons: {
-    addIncome: ({ size, className }: { size?: number; className?: string }) =>
+    addIncome: ({ _size, className }: { _size?: number; className?: string }) =>
       React.createElement('svg', { 'data-testid': 'icon-add-income', className }),
   },
 }));

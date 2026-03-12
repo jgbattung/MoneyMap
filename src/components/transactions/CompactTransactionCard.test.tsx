@@ -119,7 +119,7 @@ describe('CompactTransactionCard', () => {
 
   describe('color classes by transaction type', () => {
     it('applies text-text-error class to amount for EXPENSE', () => {
-      const { container } = render(
+      render(
         React.createElement(CompactTransactionCard, { ...baseProps, type: 'EXPENSE' })
       );
       const amountEl = screen.getByText(/₱150\.50/);

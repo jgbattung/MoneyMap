@@ -12,15 +12,15 @@ vi.mock('next/navigation', () => ({
 // Mock icons
 vi.mock('../icons', () => ({
   Icons: {
-    bank: ({ size, className }: { size?: number; className?: string }) =>
+    bank: ({ _size, className }: { _size?: number; className?: string }) =>
       React.createElement('svg', { 'data-testid': 'icon-bank', className }),
-    ellipsis: ({ size, className }: { size?: number; className?: string }) =>
+    ellipsis: ({ _size, className }: { _size?: number; className?: string }) =>
       React.createElement('svg', { 'data-testid': 'icon-ellipsis', className }),
-    edit: ({ size, className }: { size?: number; className?: string }) =>
+    edit: ({ _size, className }: { _size?: number; className?: string }) =>
       React.createElement('svg', { 'data-testid': 'icon-edit', className }),
-    trash: ({ size, className }: { size?: number; className?: string }) =>
+    trash: ({ _size, className }: { _size?: number; className?: string }) =>
       React.createElement('svg', { 'data-testid': 'icon-trash', className }),
-    addToNetWorth: ({ size, className }: { size?: number; className?: string }) =>
+    addToNetWorth: ({ _size, className }: { _size?: number; className?: string }) =>
       React.createElement('svg', { 'data-testid': 'icon-net-worth', className }),
   },
 }));

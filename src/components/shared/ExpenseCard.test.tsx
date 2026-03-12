@@ -1,26 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 import ExpenseCard from './ExpenseCard';
 
 // Mock icons
 vi.mock('../icons', () => ({
   Icons: {
-    addExpense: ({ size, className }: { size?: number; className?: string }) =>
+    addExpense: ({ _size, className }: { _size?: number; className?: string }) =>
       React.createElement('svg', { 'data-testid': 'icon-add-expense', className }),
   },
 }));
 
 // Mock Shadcn Badge
 vi.mock('../ui/badge', () => ({
-  Badge: ({ children, variant, className }: { children: React.ReactNode; variant?: string; className?: string }) =>
+  Badge: ({ children, _variant, className }: { children: React.ReactNode; _variant?: string; className?: string }) =>
     React.createElement('span', { 'data-testid': 'badge', className }, children),
 }));
 
 // Mock framer-motion to avoid animation complexity in tests
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, className, ...rest }: { children: React.ReactNode; className?: string; [key: string]: unknown }) =>
+    div: ({ children, className, ..._rest }: { children: React.ReactNode; className?: string; [key: string]: unknown }) =>
       React.createElement('div', { className }, children),
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) =>
