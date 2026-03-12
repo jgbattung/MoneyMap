@@ -21,6 +21,7 @@ import {
   Smartphone,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import Link from 'next/link';
 
 const formatAccountType = (type: string): string => {
@@ -180,6 +181,7 @@ const ErrorState = ({ error, type, onRetry }: ErrorStateProps) => (
 
 const TopAccounts = () => {
   const { accounts, isLoading, error, refetch } = useAccountsQuery();
+  const prefersReducedMotion = !!useReducedMotion();
 
   const topAccounts = accounts
     .sort((a, b) => parseFloat(b.currentBalance.toString()) - parseFloat(a.currentBalance.toString()))
@@ -202,14 +204,20 @@ const TopAccounts = () => {
       <h2 className="text-lg font-semibold">Accounts</h2>
 
       <div className="space-y-3">
-        {topAccounts.map(account => (
-          <AccountItem
+        {topAccounts.map((account, index) => (
+          <motion.div
             key={account.id}
-            id={account.id}
-            name={account.name}
-            accountType={account.accountType}
-            balance={parseFloat(account.currentBalance.toString())}
-          />
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut", delay: index * 0.05 }}
+          >
+            <AccountItem
+              id={account.id}
+              name={account.name}
+              accountType={account.accountType}
+              balance={parseFloat(account.currentBalance.toString())}
+            />
+          </motion.div>
         ))}
       </div>
 
@@ -222,6 +230,7 @@ const TopAccounts = () => {
 
 const TopCreditCards = () => {
   const { cards, isLoading, error, refetch } = useCardsQuery();
+  const prefersReducedMotion = !!useReducedMotion();
 
   const topCards = cards
     .sort((a, b) => {
@@ -249,17 +258,23 @@ const TopCreditCards = () => {
       <h2 className="text-lg font-semibold">Credit Cards</h2>
 
       <div className="space-y-3">
-        {topCards.map(card => {
+        {topCards.map((card, index) => {
           const dbBalance = parseFloat(card.currentBalance.toString());
           const displayBalance = -dbBalance;
-          
+
           return (
-            <CreditCardItem
+            <motion.div
               key={card.id}
-              id={card.id}
-              name={card.name}
-              balance={displayBalance}
-            />
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut", delay: index * 0.05 }}
+            >
+              <CreditCardItem
+                id={card.id}
+                name={card.name}
+                balance={displayBalance}
+              />
+            </motion.div>
           );
         })}
       </div>
