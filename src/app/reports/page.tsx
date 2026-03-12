@@ -70,7 +70,7 @@ const Reports = () => {
         </div>
 
         {/* Category Breakdown Card with Tabs */}
-        <div className='flex flex-col max-w-5xl gap-4 bg-card border border-border rounded-md p-4 shadow-md'>
+        <div className='money-map-card flex flex-col max-w-5xl gap-4'>
           {/* Header with title and month picker */}
           <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
             <p className='text-foreground font-semibold text-sm md:text-base'>Category Breakdown</p>

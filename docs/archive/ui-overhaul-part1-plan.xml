@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <phase name="1: Global CSS & Core Variables">
+    <task>
+      <name>Remap Shadcn Accent & Add Brand Colors</name>
+      <action>Edit `src/app/globals.css`. Change `--accent` to a subtle dark mode hover state (e.g., `oklch(1 0 0 / 10%)`). Create new explicit variables `--brand-gold` and `--brand-teal` using the existing original OKLCH values. Update Tailwind config if necessary to expose these new colors.</action>
+      <verify>Run `npm run build` to ensure no CSS syntax errors and visually check that the app loads without crashing.</verify>
+    </task>
+    <task>
+      <name>Desaturate Success and Error Colors</name>
+      <action>Edit `src/app/globals.css`. Redefine standard success/error variables (or add `--text-success` and `--text-error`) using desaturated, pastel-like OKLCH values (e.g., mint green and soft coral) that guarantee a 4.5:1 contrast ratio against the `#121212` background.</action>
+      <verify>Verify visually in the browser that positive and negative transaction values are legible and no longer "vibrate".</verify>
+    </task>
+    <task>
+      <name>Global Animation Base</name>
+      <action>Update the global `body` or `*` selector in `globals.css` (or a base Tailwind layer) to ensure global focus rings and basic transition defaults (e.g., `transition-colors duration-200`) are established, removing any default instant state changes.</action>
+      <verify>Hover over a basic anchor tag or interactive element to verify a smooth transition.</verify>
+    </task>
+  </phase>
+
+  <phase name="2: Component Foundation (Pizzaz & Spacing)">
+    <task>
+      <name>Update Button Interactions</name>
+      <action>Modify the base Shadcn Button component (`src/components/ui/button.tsx`). Ensure it utilizes the redefined `--accent` for ghost/outline hovers, and add `active:scale-[0.98]` to all button variants for physical "pizzaz" feedback.</action>
+      <verify>Test all button variants in the browser (Primary, Secondary, Ghost, Outline) to ensure hovers are subtle and clicks have a physical scale effect.</verify>
+    </task>
+    <task>
+      <name>Standardize Custom Card Components</name>
+      <action>In `src/app/globals.css`, add `@layer components` and create `.money-map-card` and `.money-map-card-interactive` classes. These should enforce `p-4 md:p-6`, remove heavy drop shadows, and use transitions/rings instead of `hover:scale` for interactivity.</action>
+      <verify>Check `globals.css` compiles successfully.</verify>
+    </task>
+    <task>
+      <name>Apply Card Standard to Existing UI</name>
+      <action>Sweep dashboard/shared files to remove inline `hover:scale-105`, `shadow-md`, and `p-4` overrides. Apply `.money-map-card` and `.money-map-card-interactive` to:
+      1. `src/components/shared/AccountCard.tsx`, `BudgetCard.tsx`, `ExpenseCard.tsx`, `IncomeCard.tsx`
+      2. `src/components/dashboard/AccountsSummary.tsx`, `RecentTransactions.tsx`</action>
+      <verify>View the dashboard. Hover over an AccountCard. It should no longer scale up and shift the layout, but should subtly highlight instead. Padding should feel uniformly spacious.</verify>
+    </task>
+    <task>
+      <name>Fix Table & Icon Interactivity</name>
+      <action>Sweep `src/components/tables/*` (e.g., `ExpenseTable.tsx`) to add standard `hover:bg-muted/50` to `TableRow` elements for better horizontal tracking. Update `RecentTransactions.tsx` to use the new `--text-success` and `--text-error` variables instead of `text-green-500` and `text-red-500`.</action>
+      <verify>View the Expense table and verify rows highlight on hover. Check Recent Transactions to ensure text colors are the new desaturated, readable variants.</verify>
+    </task>
+  </phase>
+
+  <phase name="3: Global Layout & Typography Sweep">
+    <task>
+      <name>Dashboard Layout Wrapping</name>
+      <action>Sweep through the main dashboard page (`src/app/(dashboard)/page.tsx` or equivalent). Apply consistent `gap-6` and `p-6` to the main grid/flex containers to ensure structural consistency.</action>
+      <verify>Check the responsive layout on desktop and mobile. Ensure no horizontal scrolling or cramped edges.</verify>
+    </task>
+    <task>
+      <name>Typography Sweep</name>
+      <action>Audit the `src/app/globals.css` or root layout to apply `leading-relaxed` or `leading-loose` to body text globally, and `tracking-tight` to h1/h2 headings. Update transaction list items to ensure they use the new `--text-success` and `--text-error` colors.</action>
+      <verify>Read a block of text and verify financial numbers. They should be highly legible, spaced comfortably, and the red/greens should be soft on the eyes.</verify>
+    </task>
+  </phase>
+</plan>

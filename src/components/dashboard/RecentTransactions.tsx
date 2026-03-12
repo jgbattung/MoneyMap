@@ -32,9 +32,9 @@ const RecentTransactions = () => {
   const getIconBgColor = (type: TransactionType) => {
     switch (type) {
       case 'EXPENSE':
-        return 'bg-red-500/20';
+        return 'bg-text-error/20';
       case 'INCOME':
-        return 'bg-green-500/20';
+        return 'bg-text-success/20';
       case 'TRANSFER':
         return 'bg-muted';
     }
@@ -43,9 +43,9 @@ const RecentTransactions = () => {
   const getIconColor = (type: TransactionType) => {
     switch (type) {
       case 'EXPENSE':
-        return 'text-red-500';
+        return 'text-text-error';
       case 'INCOME':
-        return 'text-green-500';
+        return 'text-text-success';
       case 'TRANSFER':
         return 'text-muted-foreground';
     }
@@ -54,9 +54,9 @@ const RecentTransactions = () => {
   const getAmountColor = (type: TransactionType) => {
     switch (type) {
       case 'EXPENSE':
-        return 'text-red-500';
+        return 'text-text-error';
       case 'INCOME':
-        return 'text-green-500';
+        return 'text-text-success';
       case 'TRANSFER':
         return 'text-muted-foreground';
     }

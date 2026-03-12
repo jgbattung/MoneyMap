@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <phase name="1: Desaturate Financial Text Colors">
+    <task>
+      <name>Fix TotalNetWorthCard Colors</name>
+      <action>Edit `src/components/dashboard/TotalNetWorthCard.tsx`. Replace `text-success-600` with `text-text-success` and `text-error-600` with `text-text-error` in the `changeColor` variable (line 15-19). Leave the error state message `text-error-600` (line 50) unchanged — it's a UI indicator, not financial data.</action>
+      <verify>Run `npm run build`. Visually check the dashboard: the monthly change indicator next to "Total Net Worth" should be mint green (positive) or soft coral (negative), not saturated green/red.</verify>
+    </task>
+    <task>
+      <name>Fix NetWorthCard Colors</name>
+      <action>Edit `src/components/shared/NetWorthCard.tsx`. Replace `text-success-600` with `text-text-success` and `text-error-600` with `text-text-error` for the net worth change indicator (lines 28-30). Leave the error state message `text-error-600` (line 84) unchanged.</action>
+      <verify>Navigate to the reports page and verify the net worth card shows desaturated green/red for the change amount.</verify>
+    </task>
+    <task>
+      <name>Fix MonthlySummaryChart Colors</name>
+      <action>Edit `src/components/dashboard/MonthlySummaryChart.tsx`. Replace all `text-success-600` with `text-text-success` and `text-error-600` with `text-text-error` in the `getChangeColor` helper (lines 91-97) and the savings display (line 143). Leave the error state message `text-error-600` (line 55) unchanged.</action>
+      <verify>Check the Monthly Summary section on the dashboard. Financial change indicators should use the desaturated palette.</verify>
+    </task>
+    <task>
+      <name>Fix AnnualSummaryTable Colors</name>
+      <action>Edit `src/components/shared/AnnualSummaryTable.tsx`. Replace `text-success-600` with `text-text-success` in the savings color helper (line 18).</action>
+      <verify>Navigate to reports and check the annual summary table. Positive savings should display in desaturated mint green.</verify>
+    </task>
+    <task>
+      <name>Fix BudgetStatus Progress Bar Colors</name>
+      <action>Edit `src/components/shared/BudgetStatus.tsx`. Replace `bg-green-600` with `bg-success-500` and `bg-gray-400` with `bg-secondary-400` in the progress bar color logic (lines 28-33). Also replace `bg-gray-400/30` with `bg-secondary-400/30` for the progress track (line 62).</action>
+      <verify>Navigate to the dashboard Budget Status section. Progress bars should be the brand success green (not raw Tailwind green) and the track should use the secondary palette.</verify>
+    </task>
+    <task>
+      <name>Fix IncomeTypeCard Colors</name>
+      <action>Edit `src/components/shared/IncomeTypeCard.tsx`. Replace `text-green-600` with `text-text-success` for the target completion percentage (lines 38-42).</action>
+      <verify>Navigate to the income page. IncomeTypeCard target percentage should display in desaturated mint green when target is met.</verify>
+    </task>
+  </phase>
+
+  <phase name="2: Migrate Interactive Cards to .money-map-card-interactive">
+    <task>
+      <name>Migrate CreditCardCard</name>
+      <action>Edit `src/components/shared/CreditCardCard.tsx`. Replace the inline className `'flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md hover:bg-card/70 hover:scale-105 transition-all duration-200 cursor-pointer relative'` with `'money-map-card-interactive flex flex-col gap-3 cursor-pointer relative'` (line 55).</action>
+      <verify>Hover over a credit card on the Cards page. It should show a subtle ring glow and background shift — NO scale-up, NO drop shadow.</verify>
+    </task>
+    <task>
+      <name>Migrate TransferCard</name>
+      <action>Edit `src/components/shared/TransferCard.tsx`. Replace the inline className `'flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md hover:bg-card/70 hover:scale-105 transition-all duration-200 cursor-pointer'` with `'money-map-card-interactive flex flex-col gap-3 cursor-pointer'` (line 44).</action>
+      <verify>Hover over a transfer card on the Transfers page. Same expectation: ring glow, no scale, no shadow.</verify>
+    </task>
+    <task>
+      <name>Migrate IncomeTypeCard</name>
+      <action>Edit `src/components/shared/IncomeTypeCard.tsx`. Replace the inline className `'flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md hover:bg-card/70 hover:scale-105 transition-all duration-200 cursor-pointer'` with `'money-map-card-interactive flex flex-col gap-3 cursor-pointer'` (line 19).</action>
+      <verify>Hover over an income type card on the Income page. Same expectation.</verify>
+    </task>
+  </phase>
+
+  <phase name="3: Migrate Static Containers to .money-map-card">
+    <task>
+      <name>Migrate GroupCard</name>
+      <action>Edit `src/components/shared/GroupCard.tsx`. Replace `"flex flex-col bg-card border border-border rounded-md shadow-md overflow-hidden"` with `"money-map-card flex flex-col overflow-hidden"` (line 45). Note: keep `overflow-hidden` for the collapsible functionality.</action>
+      <verify>Check the Cards page. Group cards should have rounded-xl corners and no drop shadow.</verify>
+    </task>
+    <task>
+      <name>Migrate AnnualSummaryTable</name>
+      <action>Edit `src/components/shared/AnnualSummaryTable.tsx`. Replace all instances of `"bg-card border border-border rounded-md p-4 shadow-md max-w-5xl"` with `"money-map-card max-w-5xl"` (lines 55 and 67).</action>
+      <verify>Navigate to Reports. The annual summary table containers should use rounded-xl and no drop shadow.</verify>
+    </task>
+    <task>
+      <name>Migrate ExpenseBreakdownChart</name>
+      <action>Edit `src/components/shared/ExpenseBreakdownChart.tsx`. Replace all 4 instances of `'flex flex-col max-w-5xl gap-4 bg-card border border-border rounded-md p-4 shadow-md'` with `'money-map-card flex flex-col max-w-5xl gap-4'` (lines 97, 121, 148, 172).</action>
+      <verify>Navigate to Reports/Expenses. All chart containers should display with rounded-xl and no drop shadow.</verify>
+    </task>
+    <task>
+      <name>Migrate NetWorthCard</name>
+      <action>Edit `src/components/shared/NetWorthCard.tsx`. Replace all 3 instances of `'flex flex-col max-w-5xl gap-3 bg-card border border-border rounded-md p-4 shadow-md'` with `'money-map-card flex flex-col max-w-5xl gap-3'` (lines 52, 82, 93).</action>
+      <verify>Navigate to Reports. Net worth card containers should display with rounded-xl and no drop shadow.</verify>
+    </task>
+    <task>
+      <name>Migrate Reports Page Container</name>
+      <action>Edit `src/app/reports/page.tsx`. Replace `'flex flex-col max-w-5xl gap-4 bg-card border border-border rounded-md p-4 shadow-md'` with `'money-map-card flex flex-col max-w-5xl gap-4'` (line 73).</action>
+      <verify>Navigate to Reports page. The container should display with rounded-xl and no drop shadow.</verify>
+    </task>
+  </phase>
+
+  <phase name="4: Migrate Skeleton Cards">
+    <task>
+      <name>Migrate All Skeleton Cards to .money-map-card</name>
+      <action>Edit the following 4 files, replacing the inline card styling `'flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md'` with `'money-map-card flex flex-col gap-3'`:
+      1. `src/components/shared/SkeletonAccountCard.tsx` (line 6)
+      2. `src/components/shared/SkeletonBudgetCard.tsx` (line 6)
+      3. `src/components/shared/SkeletonCardCard.tsx` (line 6)
+      4. `src/components/shared/SkeletonIncomeTypeCard.tsx` (line 6)</action>
+      <verify>Navigate to pages with loading states (Accounts, Budgets, Cards, Income). Skeleton loading cards should display with rounded-xl corners and no drop shadow, visually matching the real cards they replace.</verify>
+    </task>
+  </phase>
+
+  <phase name="5: Verification Sweep">
+    <task>
+      <name>Build, Lint, and Test</name>
+      <action>Run the following commands sequentially:
+      1. `npm run build` — must compile with zero errors
+      2. `npm run lint` — must pass with zero warnings
+      3. `npx jest` — all existing unit tests must pass</action>
+      <verify>All three commands exit with code 0.</verify>
+    </task>
+    <task>
+      <name>Anti-Pattern Grep Sweep</name>
+      <action>Run the following grep checks:
+      1. `grep -r "hover:scale-105" src/` → must return **zero** results
+      2. `grep -r "text-green-600" src/components/shared/` → must return **zero** results
+      3. `grep -r "bg-green-600" src/` → must return **zero** results
+      4. `grep -r "shadow-md" src/components/shared/` → must return **zero** results
+      5. `grep -r "text-green-500" src/` → must return **zero** results
+      6. `grep -r "text-red-500" src/` → must return **zero** results</action>
+      <verify>All grep commands return empty results, confirming zero remaining anti-patterns in the targeted component directories.</verify>
+    </task>
+  </phase>
+</plan>

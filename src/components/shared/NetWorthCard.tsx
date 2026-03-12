@@ -24,10 +24,10 @@ const NetWorthCard = () => {
   const isNegative = monthlyChange.amount < 0;
 
   const ChangeIcon = isPositive ? ArrowUp : isNegative ? ArrowDown : ArrowRight;
-  const changeColor = isPositive 
-    ? 'text-success-600' 
-    : isNegative 
-    ? 'text-error-600' 
+  const changeColor = isPositive
+    ? 'text-text-success'
+    : isNegative
+    ? 'text-text-error'
     : 'text-secondary-400';
 
   const formatCurrency = (amount: number) => {
@@ -49,7 +49,7 @@ const NetWorthCard = () => {
 
   if (isLoading) {
     return (
-      <div className='flex flex-col max-w-5xl gap-3 bg-card border border-border rounded-md p-4 shadow-md'>
+      <div className='money-map-card flex flex-col max-w-5xl gap-3'>
         {/* Header Section Skeleton */}
         <div className='flex items-center justify-between'>
           <Skeleton className='h-5 w-32 md:h-6 md:w-36 bg-secondary-500' />
@@ -79,7 +79,7 @@ const NetWorthCard = () => {
 
   if (error) {
     return (
-      <div className='flex flex-col max-w-5xl gap-3 bg-card border border-border rounded-md p-4 shadow-md'>
+      <div className='money-map-card flex flex-col max-w-5xl gap-3'>
         <div className='flex flex-col items-center justify-center py-12 text-center'>
           <p className='text-error-600 font-semibold'>Failed to load net worth</p>
           <p className='text-muted-foreground text-sm mt-2'>{error}</p>
@@ -90,7 +90,7 @@ const NetWorthCard = () => {
 
   return (
     <>
-      <div className='flex flex-col max-w-5xl gap-3 bg-card border border-border rounded-md p-4 shadow-md'>
+      <div className='money-map-card flex flex-col max-w-5xl gap-3'>
         {/* Header Section */}
         <div className='flex items-center justify-between'>
           <p className='text-foreground font-light md:text-md lg:text-xl '>Total Net Worth</p>

@@ -94,7 +94,7 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
 
   if (isLoading) {
     return (
-      <div className='flex flex-col max-w-5xl gap-4 bg-card border border-border rounded-md p-4 shadow-md'>
+      <div className='money-map-card flex flex-col max-w-5xl gap-4'>
         {/* Header skeleton */}
         <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
           <p className='text-foreground font-semibold text-sm md:text-base'>Expense Breakdown</p>
@@ -118,7 +118,7 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
 
   if (error) {
     return (
-      <div className='flex flex-col max-w-5xl gap-4 bg-card border border-border rounded-md p-4 shadow-md'>
+      <div className='money-map-card flex flex-col max-w-5xl gap-4'>
         <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
           <p className='text-foreground font-semibold text-sm md:text-base'>Expense Breakdown</p>
           <Select value={selectedValue} onValueChange={handleMonthSelect}>
@@ -145,7 +145,7 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
   // Empty state - no expenses for this month
   if (!breakdown || breakdown.data.length === 0) {
     return (
-      <div className='flex flex-col max-w-5xl gap-4 bg-card border border-border rounded-md p-4 shadow-md'>
+      <div className='money-map-card flex flex-col max-w-5xl gap-4'>
         <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
           <p className='text-foreground font-semibold text-sm md:text-base'>Expense Breakdown</p>
           <Select value={selectedValue} onValueChange={handleMonthSelect}>
@@ -169,7 +169,7 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
   }
 
   return (
-    <div className='flex flex-col max-w-5xl gap-4 bg-card border border-border rounded-md p-4 shadow-md'>
+    <div className='money-map-card flex flex-col max-w-5xl gap-4'>
       {/* Header with title and month picker */}
       <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
         <p className='text-foreground font-semibold text-sm md:text-base'>Expense Breakdown</p>

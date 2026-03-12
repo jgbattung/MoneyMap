@@ -3,7 +3,7 @@ import { Skeleton } from '../ui/skeleton'
 
 const SkeletonBudgetCard = () => {
   return (
-    <div className='flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md'>
+    <div className='money-map-card flex flex-col gap-3'>
       <div className='flex items-center gap-2'>
         <Skeleton className='h-8 w-[35px] bg-secondary-500' />
         <Skeleton className='h-6 w-[190px] bg-secondary-500' />

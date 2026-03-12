@@ -25,11 +25,11 @@ const BudgetStatusItem = ({
   const hasSpendingWithoutBudget = hasNoBudget && spentAmount > 0;
   
   // Progress bar color logic
-  let progressColor = 'bg-gray-400';
+  let progressColor = 'bg-secondary-400';
   if (hasSpendingWithoutBudget || isOverBudget) {
     progressColor = 'bg-error-500';
   } else if (spentAmount > 0 && !isOverBudget) {
-    progressColor = 'bg-green-600';
+    progressColor = 'bg-success-500';
   }
 
   const progressWidth = hasNoBudget ? 100 : Math.min(progressPercentage, 100);
@@ -59,7 +59,7 @@ const BudgetStatusItem = ({
         </div>
       </div>
 
-      <div className="w-full bg-gray-400/30 rounded-full h-2">
+      <div className="w-full bg-secondary-400/30 rounded-full h-2">
         <div 
           className={`h-2 rounded-full transition-all duration-300 ${progressColor}`}
           style={{ width: `${progressWidth}%` }}

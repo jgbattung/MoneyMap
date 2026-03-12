@@ -52,7 +52,7 @@ const CreditCardCard = ({
   
   return (
     <div
-      className='flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md hover:bg-card/70 hover:scale-105 transition-all duration-200 cursor-pointer relative'
+      className='money-map-card-interactive flex flex-col gap-3 cursor-pointer relative'
       onClick={onClick}
     >
       {/* Ellipsis Menu */}
