@@ -15,7 +15,7 @@ const formatCurrency = (value: number): string => {
 };
 
 const getSavingsColorClass = (savings: number): string => {
-  if (savings > 0) return "text-success-600";
+  if (savings > 0) return "text-text-success";
   if (savings < 0) return "text-error-400";
   return "";
 };
