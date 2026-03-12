@@ -23,6 +23,7 @@ export const useNetWorth = () => {
     data,
     isPending,
     error,
+    refetch,
   } = useQuery({
     queryKey: QUERY_KEYS.netWorth,
     queryFn: fetchNetWorth,
@@ -34,5 +35,6 @@ export const useNetWorth = () => {
     monthlyChange: data?.monthlyChange ?? { amount: 0, percentage: 0 },
     isLoading: isPending,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
+    refetch,
   };
 };
