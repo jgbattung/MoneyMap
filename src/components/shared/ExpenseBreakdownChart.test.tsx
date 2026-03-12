@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import ExpenseBreakdownChart from './ExpenseBreakdownChart';
@@ -29,7 +29,7 @@ vi.mock('@/components/ui/chart', () => ({
 
 // Mock Shadcn Select components
 vi.mock('@/components/ui/select', () => ({
-  Select: ({ children, value, onValueChange }: {
+  Select: ({ children, value, onValueChange: _onValueChange }: {
     children: React.ReactNode;
     value?: string;
     onValueChange?: (v: string) => void;
