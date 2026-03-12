@@ -318,11 +318,11 @@ describe('BudgetStatus', () => {
       expect(screen.getAllByText(/₱3,500\.00/).length).toBeGreaterThan(0);
     });
 
-    it('renders "out of ₱X" line for items that have a budget', () => {
+    it('renders "of ₱X" line for items that have a budget', () => {
       render(React.createElement(BudgetStatus), { wrapper: createWrapper() });
 
-      expect(screen.getByText(/out of ₱5,000\.00/)).toBeTruthy();
-      expect(screen.getByText(/out of ₱3,000\.00/)).toBeTruthy();
+      expect(screen.getByText(/of ₱5,000\.00/)).toBeTruthy();
+      expect(screen.getByText(/of ₱3,000\.00/)).toBeTruthy();
     });
 
     it('renders percentage text for items with a budget', () => {
@@ -349,48 +349,13 @@ describe('BudgetStatus', () => {
   });
 
   // -------------------------------------------------------------------------
-  describe('budget summary line', () => {
-    it('shows correct on-track count out of total', () => {
-      // mockBudgets: Food & Dining (on track), Transport (over budget), Entertainment (on track, 85%)
+  describe('budget summary line (removed)', () => {
+    it('does not render a summary line', () => {
       vi.mocked(useBudgetStatus).mockReturnValue(makeDefaultReturn({ budgets: mockBudgets }));
 
       render(React.createElement(BudgetStatus), { wrapper: createWrapper() });
 
-      // 2 are on track (Food & Dining, Entertainment), 1 is over budget
-      expect(screen.getByText('2 of 3 budgets on track')).toBeTruthy();
-    });
-
-    it('excludes items with null monthlyBudget from on-track count', () => {
-      const budgetsWithNullBudget = [
-        ...mockBudgets,
-        {
-          id: 'b-4',
-          name: 'Miscellaneous',
-          monthlyBudget: null,
-          spentAmount: 500,
-          progressPercentage: 0,
-          isOverBudget: false,
-        },
-      ];
-
-      vi.mocked(useBudgetStatus).mockReturnValue(
-        makeDefaultReturn({ budgets: budgetsWithNullBudget })
-      );
-
-      render(React.createElement(BudgetStatus), { wrapper: createWrapper() });
-
-      // Miscellaneous has null budget so it's excluded from on-track count
-      // Still 2 on track out of 4 total
-      expect(screen.getByText('2 of 4 budgets on track')).toBeTruthy();
-    });
-
-    it('shows 0 on-track when all budgets are over budget', () => {
-      const allOverBudget = mockBudgets.map((b) => ({ ...b, isOverBudget: true }));
-      vi.mocked(useBudgetStatus).mockReturnValue(makeDefaultReturn({ budgets: allOverBudget }));
-
-      render(React.createElement(BudgetStatus), { wrapper: createWrapper() });
-
-      expect(screen.getByText('0 of 3 budgets on track')).toBeTruthy();
+      expect(screen.queryByText(/budgets on track/)).toBeNull();
     });
   });
 
