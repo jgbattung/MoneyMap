@@ -32,11 +32,11 @@ const TotalNetWorthCard = () => {
   const isNegative = monthlyChange.amount < 0;
 
   const ChangeIcon = isPositive ? ArrowUp : isNegative ? ArrowDown : ArrowRight;
-  const changeColor = isPositive
-    ? 'text-text-success'
+  const changePillClasses = isPositive
+    ? 'bg-text-success/10 text-text-success'
     : isNegative
-    ? 'text-text-error'
-    : 'text-secondary-400';
+    ? 'bg-text-error/10 text-text-error'
+    : 'bg-secondary-400/10 text-secondary-400';
 
   if (isLoading) {
     return (
@@ -73,11 +73,11 @@ const TotalNetWorthCard = () => {
       <div className='flex items-center justify-between'>
         <p className='text-foreground font-light text-lg md:text-xl'>Total Net Worth</p>
         
-        {/* Monthly Change Indicator */}
-        <div className={`flex items-center gap-1 ${changeColor}`}>
+        {/* Monthly Change Pill Badge */}
+        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs md:text-sm font-medium ${changePillClasses}`}>
           <ChangeIcon className="h-3 w-3 md:h-4 md:w-4" />
-          <span className="text-xs md:text-sm font-medium">
-            {isPositive && '+'}{isNegative && '-'}₱{formatCurrency(Math.abs(monthlyChange.amount))}
+          <span>
+            ₱{formatCurrency(Math.abs(monthlyChange.amount))}
             {` (${Math.abs(monthlyChange.percentage)}%)`}
           </span>
         </div>
