@@ -1,5 +1,5 @@
 import React from 'react'
-import NetWorthDisplay from './NetWorthDisplay'
+import { NetWorthDisplay } from './NetWorthDisplay'
 import NetWorthInsights from './NetWorthInsights'
 
 const NetWorthSection = () => {

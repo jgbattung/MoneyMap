@@ -1,36 +1,50 @@
 "use client"
 
-import React from 'react'
-import { ArrowUp, ArrowDown, ArrowRight } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { ArrowUp, ArrowDown, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { useSpring, useTransform, useReducedMotion } from 'framer-motion'
 import { useNetWorth } from '@/hooks/useNetWorth'
+import { formatCurrency } from '@/lib/format'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const TotalNetWorthCard = () => {
-  const { netWorth, monthlyChange, isLoading, error } = useNetWorth();
+  const { netWorth, monthlyChange, isLoading, error, refetch } = useNetWorth();
+  const prefersReducedMotion = useReducedMotion();
+  const [isBalanceHidden, setIsBalanceHidden] = useState(false);
+
+  const springValue = useSpring(0, { duration: 800, bounce: 0 });
+  const displayValue = useTransform(springValue, (v) => formatCurrency(v));
+  const [animatedText, setAnimatedText] = useState('0.00');
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setAnimatedText(formatCurrency(netWorth));
+      return;
+    }
+    springValue.set(netWorth);
+  }, [netWorth, prefersReducedMotion, springValue]);
+
+  useEffect(() => {
+    const unsubscribe = displayValue.on('change', (v) => setAnimatedText(v));
+    return unsubscribe;
+  }, [displayValue]);
 
   const isPositive = monthlyChange.amount > 0;
   const isNegative = monthlyChange.amount < 0;
 
   const ChangeIcon = isPositive ? ArrowUp : isNegative ? ArrowDown : ArrowRight;
-  const changeColor = isPositive
-    ? 'text-text-success'
+  const changePillClasses = isPositive
+    ? 'bg-text-success/10 text-text-success'
     : isNegative
-    ? 'text-text-error'
-    : 'text-secondary-400';
-
-  const formatCurrency = (amount: number) => {
-    return amount.toLocaleString('en-PH', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  };
+    ? 'bg-text-error/10 text-text-error'
+    : 'bg-secondary-400/10 text-secondary-400';
 
   if (isLoading) {
     return (
       <div className='flex flex-col gap-3'>
         <div className='flex items-center justify-between'>
           <p className='text-foreground font-light text-lg md:text-xl'>Total Net Worth</p>
-          <Skeleton className="h-4 w-24 md:h-5 md:w-32 bg-secondary-500" />
+          <Skeleton className="h-6 w-28 md:w-36 rounded-full bg-secondary-500" />
         </div>
 
         <div className='flex flex-col items-start'>
@@ -46,9 +60,17 @@ const TotalNetWorthCard = () => {
   if (error) {
     return (
       <div className='flex flex-col gap-3'>
-        <div className='flex flex-col items-center justify-center py-8 text-center'>
+        <div className='flex flex-col items-center justify-center py-8 text-center gap-2'>
+          <AlertCircle className="h-8 w-8 text-error-600" />
           <p className='text-error-600 font-semibold'>Failed to load net worth</p>
-          <p className='text-muted-foreground text-sm mt-2'>{error}</p>
+          <p className='text-muted-foreground text-sm'>{error}</p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className='cursor-pointer text-sm font-medium text-primary hover:text-primary/80 transition-colors mt-1'
+          >
+            Try again
+          </button>
         </div>
       </div>
     );
@@ -58,14 +80,26 @@ const TotalNetWorthCard = () => {
     <div className='flex flex-col gap-3'>
       {/* Header with title and monthly change */}
       <div className='flex items-center justify-between'>
-        <p className='text-foreground font-light text-lg md:text-xl'>Total Net Worth</p>
-        
-        {/* Monthly Change Indicator */}
-        <div className={`flex items-center gap-1 ${changeColor}`}>
+        <div className='flex items-center gap-2'>
+          <p className='text-foreground font-light text-lg md:text-xl'>Total Net Worth</p>
+          <button
+            type="button"
+            onClick={() => setIsBalanceHidden((prev) => !prev)}
+            className='cursor-pointer p-1 rounded-md hover:bg-secondary-700 transition-colors text-muted-foreground'
+            aria-label="Toggle balance visibility"
+          >
+            {isBalanceHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+
+        {/* Monthly Change Pill Badge */}
+        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs md:text-sm font-medium ${changePillClasses}`}>
           <ChangeIcon className="h-3 w-3 md:h-4 md:w-4" />
-          <span className="text-xs md:text-sm font-medium">
-            {isPositive && '+'}{isNegative && '-'}₱{formatCurrency(Math.abs(monthlyChange.amount))}
-            {` (${Math.abs(monthlyChange.percentage)}%)`}
+          <span>
+            {isBalanceHidden
+              ? '***'
+              : `₱${formatCurrency(Math.abs(monthlyChange.amount))} (${Math.abs(monthlyChange.percentage)}%)`
+            }
           </span>
         </div>
       </div>
@@ -75,7 +109,7 @@ const TotalNetWorthCard = () => {
         <div className='flex items-end gap-2'>
           <span className='text-muted-foreground font-light text-sm md:text-base'>PHP</span>
           <p className='text-foreground text-3xl md:text-4xl lg:text-5xl font-bold'>
-            {formatCurrency(netWorth)}
+            {isBalanceHidden ? '*****' : animatedText}
           </p>
         </div>
       </div>
@@ -83,4 +117,4 @@ const TotalNetWorthCard = () => {
   );
 };
 
-export default TotalNetWorthCard;
+export { TotalNetWorthCard };

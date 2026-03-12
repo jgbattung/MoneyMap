@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <phase name="1: Shared Utility and Hook Updates">
+    <task>
+      <name>Create shared formatCurrency utility</name>
+      <action>Create a new file `src/lib/format.ts` with a named export `formatCurrency` function that formats a number using `toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })`.</action>
+      <verify>Run `npm run build` to confirm the new file compiles. Import it in a throwaway check or just verify no type errors.</verify>
+    </task>
+    <task>
+      <name>Expose refetch from useNetWorth hook</name>
+      <action>Edit `src/hooks/useNetWorth.ts`. Destructure `refetch` from the `useQuery` return value alongside `data`, `isPending`, and `error`. Add `refetch` to the hook's return object.</action>
+      <verify>Run `npm run build` to confirm no type errors. The hook's return type should now include `refetch`.</verify>
+    </task>
+  </phase>
+
+  <phase name="2: TotalNetWorthCard Core Improvements">
+    <task>
+      <name>Add animated count-up for net worth value</name>
+      <action>Edit `src/components/dashboard/TotalNetWorthCard.tsx`:
+      1. Import `useSpring`, `useTransform`, `motion`, and `useReducedMotion` from `framer-motion`.
+      2. Import `formatCurrency` from `@/lib/format` and remove the inline `formatCurrency` function.
+      3. Create a spring animation: `useSpring(0, { duration: 800, bounce: 0 })` that targets the `netWorth` value.
+      4. Use `useTransform` to pipe the spring value through `formatCurrency` for display.
+      5. Use `useReducedMotion()` — if true, skip the animation and display the formatted value directly.
+      6. Use a `useEffect` to set the spring target to `netWorth` when data loads or changes.
+      7. Render the animated value using `<motion.span>` or a regular span that reads the transformed value.</action>
+      <verify>Run `npm run build`. Visually verify the net worth value animates from 0 on page load. Toggle `prefers-reduced-motion` in browser DevTools and confirm the value appears instantly.</verify>
+    </task>
+    <task>
+      <name>Restyle monthly change as pill badge</name>
+      <action>Edit `src/components/dashboard/TotalNetWorthCard.tsx`:
+      1. Wrap the monthly change indicator in a pill container with classes: `flex items-center gap-1 px-2.5 py-1 rounded-full text-xs md:text-sm font-medium`.
+      2. Add background tint based on direction:
+         - Positive: `bg-text-success/10 text-text-success`
+         - Negative: `bg-text-error/10 text-text-error`
+         - Neutral: `bg-secondary-400/10 text-secondary-400`
+      3. Remove the `{isPositive && '+'}{isNegative && '-'}` text prefixes — the arrow icon already indicates direction.
+      4. Keep the format: `[ArrowIcon] ₱{amount} ({percentage}%)`</action>
+      <verify>Run `npm run build`. Visually verify the monthly change now appears as a colored pill badge with tinted background.</verify>
+    </task>
+  </phase>
+
+  <phase name="3: Privacy Toggle and Error State">
+    <task>
+      <name>Add balance privacy eye toggle</name>
+      <action>Edit `src/components/dashboard/TotalNetWorthCard.tsx`:
+      1. Import `Eye` and `EyeOff` from `lucide-react`.
+      2. Add a `useState` boolean `isBalanceHidden` (default `false`).
+      3. Next to the "Total Net Worth" label, add a button with the Eye/EyeOff icon that toggles `isBalanceHidden`.
+      4. Style the button: `cursor-pointer p-1 rounded-md hover:bg-secondary-700 transition-colors` with `aria-label="Toggle balance visibility"`.
+      5. When `isBalanceHidden` is true:
+         - Replace the net worth value with `*****`
+         - Replace the monthly change amount and percentage with `***`
+      6. The toggle should not affect the loading or error states.</action>
+      <verify>Run `npm run build`. Visually verify clicking the eye icon toggles between showing the real balance and `*****`. Check that the button has a visible hover state and correct cursor.</verify>
+    </task>
+    <task>
+      <name>Improve error state with retry button</name>
+      <action>Edit `src/components/dashboard/TotalNetWorthCard.tsx`:
+      1. Import `AlertCircle` from `lucide-react`.
+      2. Destructure `refetch` from `useNetWorth()` (added in Phase 1).
+      3. Replace the current error state with:
+         - An `AlertCircle` icon (size `h-8 w-8 text-error-600`)
+         - The "Failed to load net worth" message
+         - The error detail message
+         - A "Try again" button styled with `cursor-pointer text-sm font-medium text-primary hover:text-primary/80 transition-colors` that calls `refetch()` on click.</action>
+      <verify>Run `npm run build`. To test: temporarily break the API endpoint or mock an error. The error state should show the icon, message, and a clickable "Try again" button.</verify>
+    </task>
+  </phase>
+
+  <phase name="4: Exports, Skeleton, and Cleanup">
+    <task>
+      <name>Convert to named exports</name>
+      <action>1. Edit `src/components/dashboard/TotalNetWorthCard.tsx`: Change `export default TotalNetWorthCard` to `export { TotalNetWorthCard }`.
+      2. Edit `src/components/dashboard/NetWorthDisplay.tsx`: Update the import from `import TotalNetWorthCard from './TotalNetWorthCard'` to `import { TotalNetWorthCard } from './TotalNetWorthCard'`.
+      3. Edit `src/components/dashboard/NetWorthDisplay.tsx`: Change `export default NetWorthDisplay` to `export { NetWorthDisplay }`.
+      4. Search for any other imports of `NetWorthDisplay` and update them to use the named import.</action>
+      <verify>Run `npm run build` to confirm all imports resolve correctly with zero errors.</verify>
+    </task>
+    <task>
+      <name>Update skeleton loading state</name>
+      <action>Edit `src/components/dashboard/TotalNetWorthCard.tsx`:
+      1. In the loading skeleton, replace the monthly change skeleton with a pill-shaped skeleton: `Skeleton` with classes `h-6 w-28 md:w-36 rounded-full bg-secondary-500` to match the new pill badge shape.
+      2. Ensure the skeleton layout mirrors the real content layout (title row with pill on right, value below).</action>
+      <verify>Run `npm run build`. Visually verify the loading skeleton matches the shape of the real content — especially the pill-shaped badge placeholder.</verify>
+    </task>
+  </phase>
+
+  <phase name="5: Verification">
+    <task>
+      <name>Build, Lint, and Final Check</name>
+      <action>Run the following commands sequentially:
+      1. `npm run lint` — must pass with zero errors
+      2. `npm run build` — must compile with zero errors
+      3. Verify no regressions: the dashboard should load correctly with the animated net worth, pill badge, eye toggle, and improved error state.</action>
+      <verify>All commands exit with code 0. Dashboard renders correctly with all new features.</verify>
+    </task>
+  </phase>
+</plan>
