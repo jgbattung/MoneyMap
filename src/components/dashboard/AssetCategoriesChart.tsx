@@ -4,9 +4,14 @@ import React from 'react'
 import { calculateAssetCategories } from '@/lib/utils'
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { formatCurrency } from '@/lib/format';
+import { motion, useReducedMotion } from 'framer-motion';
+import { AlertCircle } from 'lucide-react';
 
 const AssetCategoriesChart = () => {
-  const { accounts, isLoading, error } = useAccountsQuery();
+  const { accounts, isLoading, error, refetch } = useAccountsQuery();
+  const prefersReducedMotion = useReducedMotion();
 
   if (isLoading) {
     return (
@@ -41,8 +46,15 @@ const AssetCategoriesChart = () => {
       <div className='flex flex-col gap-3'>
         <p className='text-foreground font-semibold text-sm md:text-base'>Asset Categories</p>
         <div className='flex flex-col items-center justify-center py-12 text-center'>
+          <AlertCircle className='h-8 w-8 text-error-600 mx-auto mb-2' />
           <p className='text-error-600 font-semibold text-sm'>Failed to load categories</p>
           <p className='text-muted-foreground text-xs mt-1'>{error}</p>
+          <button
+            onClick={() => refetch()}
+            className='cursor-pointer text-sm font-medium text-primary hover:text-primary/80 transition-colors mt-3'
+          >
+            Try again
+          </button>
         </div>
       </div>
     );
@@ -71,16 +83,31 @@ const AssetCategoriesChart = () => {
 
       {/* Segmented Bar */}
       <div className='flex w-full h-4 rounded-md overflow-hidden'>
-        {categories.map((category, _index) => (
-          <div
-            key={category.name}
-            style={{
-              width: `${category.percentage}%`,
-              backgroundColor: category.color,
-            }}
-            className='transition-opacity hover:opacity-80'
-            title={`${category.name}: ${category.percentage}%`}
-          />
+        {categories.map((category, index) => (
+          <Tooltip key={category.name}>
+            <TooltipTrigger asChild>
+              {prefersReducedMotion ? (
+                <div
+                  style={{
+                    width: `${category.percentage}%`,
+                    backgroundColor: category.color,
+                  }}
+                  className='cursor-pointer transition-opacity hover:opacity-80'
+                />
+              ) : (
+                <motion.div
+                  initial={{ width: "0%" }}
+                  animate={{ width: `${category.percentage}%` }}
+                  transition={{ duration: 0.5, ease: "easeOut", delay: index * 0.05 }}
+                  style={{ backgroundColor: category.color }}
+                  className='cursor-pointer transition-opacity hover:opacity-80'
+                />
+              )}
+            </TooltipTrigger>
+            <TooltipContent>
+              {category.name}: ₱{formatCurrency(category.value)} ({category.percentage}%)
+            </TooltipContent>
+          </Tooltip>
         ))}
       </div>
 
@@ -94,10 +121,13 @@ const AssetCategoriesChart = () => {
               style={{ backgroundColor: category.color }}
             />
             
-            {/* Name and Percentage */}
-            <div className='flex flex-col min-w-0 gap-2'>
+            {/* Name, Amount, and Percentage */}
+            <div className='flex flex-col min-w-0 gap-1'>
               <p className='text-foreground text-xs font-medium truncate'>
                 {category.name}
+              </p>
+              <p className='text-muted-foreground text-xs'>
+                ₱{formatCurrency(category.value)}
               </p>
               <p className='text-muted-foreground text-xs'>
                 {category.percentage}%
@@ -110,4 +140,4 @@ const AssetCategoriesChart = () => {
   );
 };
 
-export default AssetCategoriesChart;
+export { AssetCategoriesChart };

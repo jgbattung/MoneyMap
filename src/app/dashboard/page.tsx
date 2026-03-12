@@ -6,7 +6,7 @@ import RecentTransactions from '@/components/dashboard/RecentTransactions'
 import AccountsSummary from '@/components/dashboard/AccountsSummary'
 import { signOut } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
-import BudgetStatus from '@/components/shared/BudgetStatus'
+import { BudgetStatus } from '@/components/shared/BudgetStatus'
 import { Icons } from '@/components/icons'
 
 const Dashboard = () => {

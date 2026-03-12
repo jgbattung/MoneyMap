@@ -33,6 +33,7 @@ export const useBudgetStatus = () => {
     data: budgets = [],
     isPending,
     error,
+    refetch,
   } = useQuery({
     queryKey: QUERY_KEYS.budgetStatus,
     queryFn: fetchBudgetStatus,
@@ -43,5 +44,6 @@ export const useBudgetStatus = () => {
     budgets,
     isLoading: isPending,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
+    refetch,
   };
 };

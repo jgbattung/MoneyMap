@@ -1,5 +1,5 @@
 import React from 'react'
-import AssetCategoriesChart from './AssetCategoriesChart'
+import { AssetCategoriesChart } from './AssetCategoriesChart'
 import MonthlySummaryChart from './MonthlySummaryChart'
 
 const NetWorthInsights = () => {
