@@ -41,7 +41,7 @@ const TransferCard = ({
 
   return (
     <div
-      className='flex flex-col gap-3 bg-card border border-border rounded-md p-4 shadow-md hover:bg-card/70 hover:scale-105 transition-all duration-200 cursor-pointer'
+      className='money-map-card-interactive flex flex-col gap-3 cursor-pointer'
       onClick={onClick}
     >
       <div className='flex flex-col gap-1'>
