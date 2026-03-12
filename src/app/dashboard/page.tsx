@@ -3,7 +3,7 @@
 import React from 'react'
 import NetWorthSection from '@/components/dashboard/NetWorthSection'
 import RecentTransactions from '@/components/dashboard/RecentTransactions'
-import AccountsSummary from '@/components/dashboard/AccountsSummary'
+import { AccountsSummary } from '@/components/dashboard/AccountsSummary'
 import { signOut } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
 import { BudgetStatus } from '@/components/shared/BudgetStatus'
