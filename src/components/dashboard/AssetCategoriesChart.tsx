@@ -4,6 +4,8 @@ import React from 'react'
 import { calculateAssetCategories } from '@/lib/utils'
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { formatCurrency } from '@/lib/format';
 
 const AssetCategoriesChart = () => {
   const { accounts, isLoading, error } = useAccountsQuery();
@@ -71,16 +73,21 @@ const AssetCategoriesChart = () => {
 
       {/* Segmented Bar */}
       <div className='flex w-full h-4 rounded-md overflow-hidden'>
-        {categories.map((category, _index) => (
-          <div
-            key={category.name}
-            style={{
-              width: `${category.percentage}%`,
-              backgroundColor: category.color,
-            }}
-            className='transition-opacity hover:opacity-80'
-            title={`${category.name}: ${category.percentage}%`}
-          />
+        {categories.map((category) => (
+          <Tooltip key={category.name}>
+            <TooltipTrigger asChild>
+              <div
+                style={{
+                  width: `${category.percentage}%`,
+                  backgroundColor: category.color,
+                }}
+                className='cursor-pointer transition-opacity hover:opacity-80'
+              />
+            </TooltipTrigger>
+            <TooltipContent>
+              {category.name}: ₱{formatCurrency(category.value)} ({category.percentage}%)
+            </TooltipContent>
+          </Tooltip>
         ))}
       </div>
 
@@ -94,10 +101,13 @@ const AssetCategoriesChart = () => {
               style={{ backgroundColor: category.color }}
             />
             
-            {/* Name and Percentage */}
-            <div className='flex flex-col min-w-0 gap-2'>
+            {/* Name, Amount, and Percentage */}
+            <div className='flex flex-col min-w-0 gap-1'>
               <p className='text-foreground text-xs font-medium truncate'>
                 {category.name}
+              </p>
+              <p className='text-muted-foreground text-xs'>
+                ₱{formatCurrency(category.value)}
               </p>
               <p className='text-muted-foreground text-xs'>
                 {category.percentage}%
