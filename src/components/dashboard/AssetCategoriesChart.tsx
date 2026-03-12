@@ -17,7 +17,7 @@ const AssetCategoriesChart = () => {
     return (
       <div className='flex flex-col gap-4'>
         {/* Title */}
-        <p className='text-foreground font-semibold text-sm md:text-base'>Asset Categories</p>
+        <h2 className='text-lg font-semibold text-foreground tracking-tight'>Asset Categories</h2>
 
         {/* Segmented Bar Skeleton */}
         <Skeleton className='h-4 w-full rounded-md bg-secondary-500' />
@@ -44,7 +44,7 @@ const AssetCategoriesChart = () => {
   if (error) {
     return (
       <div className='flex flex-col gap-3'>
-        <p className='text-foreground font-semibold text-sm md:text-base'>Asset Categories</p>
+        <h2 className='text-lg font-semibold text-foreground tracking-tight'>Asset Categories</h2>
         <div className='flex flex-col items-center justify-center py-12 text-center'>
           <AlertCircle className='h-8 w-8 text-error-600 mx-auto mb-2' />
           <p className='text-error-600 font-semibold text-sm'>Failed to load categories</p>
@@ -65,7 +65,7 @@ const AssetCategoriesChart = () => {
   if (categories.length === 0) {
     return (
       <div className='flex flex-col gap-3'>
-        <p className='text-foreground font-semibold text-sm md:text-base'>Asset Categories</p>
+        <h2 className='text-lg font-semibold text-foreground tracking-tight'>Asset Categories</h2>
         <div className='flex flex-col items-center justify-center py-12 text-center'>
           <p className='text-muted-foreground text-sm'>No asset categories</p>
           <p className='text-muted-foreground text-xs mt-1'>
@@ -79,7 +79,7 @@ const AssetCategoriesChart = () => {
   return (
     <div className='flex flex-col gap-4'>
       {/* Title */}
-      <p className='text-foreground font-semibold text-sm md:text-base'>Asset Categories</p>
+      <h2 className='text-lg font-semibold text-foreground tracking-tight'>Asset Categories</h2>
 
       {/* Segmented Bar */}
       <div className='flex w-full h-4 rounded-md overflow-hidden'>
