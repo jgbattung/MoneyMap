@@ -6,9 +6,11 @@ import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/lib/format';
+import { motion, useReducedMotion } from 'framer-motion';
 
 const AssetCategoriesChart = () => {
   const { accounts, isLoading, error } = useAccountsQuery();
+  const prefersReducedMotion = useReducedMotion();
 
   if (isLoading) {
     return (
@@ -73,16 +75,26 @@ const AssetCategoriesChart = () => {
 
       {/* Segmented Bar */}
       <div className='flex w-full h-4 rounded-md overflow-hidden'>
-        {categories.map((category) => (
+        {categories.map((category, index) => (
           <Tooltip key={category.name}>
             <TooltipTrigger asChild>
-              <div
-                style={{
-                  width: `${category.percentage}%`,
-                  backgroundColor: category.color,
-                }}
-                className='cursor-pointer transition-opacity hover:opacity-80'
-              />
+              {prefersReducedMotion ? (
+                <div
+                  style={{
+                    width: `${category.percentage}%`,
+                    backgroundColor: category.color,
+                  }}
+                  className='cursor-pointer transition-opacity hover:opacity-80'
+                />
+              ) : (
+                <motion.div
+                  initial={{ width: "0%" }}
+                  animate={{ width: `${category.percentage}%` }}
+                  transition={{ duration: 0.5, ease: "easeOut", delay: index * 0.05 }}
+                  style={{ backgroundColor: category.color }}
+                  className='cursor-pointer transition-opacity hover:opacity-80'
+                />
+              )}
             </TooltipTrigger>
             <TooltipContent>
               {category.name}: ₱{formatCurrency(category.value)} ({category.percentage}%)
