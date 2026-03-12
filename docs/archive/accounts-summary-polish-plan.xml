@@ -1,0 +1,101 @@
+<plan>
+  <feature>Accounts Summary Polish</feature>
+  <spec>docs/accounts-summary-polish-spec.md</spec>
+
+  <phase name="1: Code Cleanup &amp; Token Alignment">
+    <task id="1.1">
+      <name>Replace local formatCurrency with shared utility and fix token usage</name>
+      <action>
+        In `src/components/dashboard/AccountsSummary.tsx`:
+        1. Remove the local `formatCurrency` function (lines 26-31).
+        2. Add import: `import { formatCurrency } from '@/lib/format'`.
+        3. In `CreditCardItem`, replace `text-white` with `text-foreground` on the balance div.
+        4. Convert `export default AccountsSummary` to `export { AccountsSummary }`.
+        5. Update any consumer that imports AccountsSummary to use the named import (check `src/app/` pages).
+        6. Deduplicate `SkeletonAccountList` and `SkeletonCardList` into a single `SkeletonList` component since they are identical.
+      </action>
+      <verify>
+        Run `npm run build` — zero errors. Grep for the old `export default AccountsSummary` to confirm it's gone. Verify the dashboard page still imports correctly.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="2: Error &amp; Empty State Polish">
+    <task id="2.1">
+      <name>Upgrade error state to match TotalNetWorthCard pattern</name>
+      <action>
+        In `AccountsSummary.tsx`:
+        1. Import `AlertCircle` from `lucide-react`.
+        2. Update `ErrorState` to accept an `onRetry` callback prop.
+        3. Render: AlertCircle icon (h-8 w-8, text-error-600), error title ("Failed to load accounts" / "Failed to load credit cards"), error detail text, and a "Try again" button that calls `onRetry()`.
+        4. Style the retry button: `cursor-pointer text-sm font-medium text-primary hover:text-primary/80 transition-colors mt-1`.
+        5. In `TopAccounts`, destructure `refetch` from `useAccountsQuery()` and pass it to ErrorState as `onRetry`.
+        6. In `TopCreditCards`, destructure `refetch` from `useCardsQuery()` and pass it to ErrorState as `onRetry`.
+      </action>
+      <verify>
+        Temporarily force an error state (e.g., disconnect network) and confirm the AlertCircle icon, error message, and "Try again" button render. Confirm clicking "Try again" triggers a refetch. Run `npm run lint`.
+      </verify>
+    </task>
+
+    <task id="2.2">
+      <name>Enhance empty state with contextual icons</name>
+      <action>
+        In `AccountsSummary.tsx`:
+        1. Import `Wallet` and `CreditCard` icons from `lucide-react`.
+        2. Update `EmptyState` to render a contextual icon above the text:
+           - Accounts: `Wallet` (h-8 w-8, text-muted-foreground/50)
+           - Cards: `CreditCard` (h-8 w-8, text-muted-foreground/50)
+        3. Add `gap-2` to the empty state container for spacing between icon and text.
+      </action>
+      <verify>
+        If possible, test with an account/card-less state (or temporarily override data). Confirm icons render. Run `npm run build`.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="3: Account Type Icons &amp; Clickable Items">
+    <task id="3.1">
+      <name>Add account type icons and make items clickable links</name>
+      <action>
+        In `AccountsSummary.tsx`:
+        1. Import icons from `lucide-react`: `Landmark`, `PiggyBank`, `TrendingUp`, `Banknote`, `Bitcoin`, `Clock`, `Home`, `Briefcase`, `Smartphone`, `Wallet`, `CreditCard`.
+        2. Create a `getAccountTypeIcon` helper that maps account type strings to their icon components (see spec for mapping).
+        3. Update `AccountItem` to:
+           a. Accept an `id` prop.
+           b. Render the account type icon (h-4 w-4, text-muted-foreground) to the left of the name/type text.
+           c. Wrap the entire row in `Link` from `next/link` pointing to `/accounts/{id}`.
+           d. Add hover classes: `flex items-center justify-between rounded-lg px-2 -mx-2 py-2 hover:bg-secondary-500/10 transition-colors duration-200 cursor-pointer`.
+        4. Update `CreditCardItem` to:
+           a. Accept an `id` prop.
+           b. Render a `CreditCard` icon (h-4 w-4, text-muted-foreground) to the left of the name.
+           c. Wrap the entire row in `Link` pointing to `/cards/{id}`.
+           d. Add the same hover classes as AccountItem.
+        5. Pass `account.id` and `card.id` from the parent map functions.
+      </action>
+      <verify>
+        Run `npm run build`. Visually confirm icons render for each account type. Hover over items — confirm background change and cursor pointer. Click an item — confirm navigation to `/accounts/{id}` or `/cards/{id}`.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="4: Entrance Animations">
+    <task id="4.1">
+      <name>Add staggered entrance animations with reduced-motion support</name>
+      <action>
+        In `AccountsSummary.tsx`:
+        1. Import `motion` and `useReducedMotion` from `framer-motion`.
+        2. In both `TopAccounts` and `TopCreditCards`:
+           a. Call `const prefersReducedMotion = useReducedMotion()`.
+           b. Wrap each list item's `motion.div` (or use `motion(Link)`) with:
+              - `initial={{ opacity: 0, y: 8 }}`
+              - `animate={{ opacity: 1, y: 0 }}`
+              - `transition={{ duration: 0.3, ease: "easeOut", delay: index * 0.05 }}`
+           c. When `prefersReducedMotion` is true, skip the motion props entirely (render plain elements or set `initial` and `animate` to the same values).
+        3. Keep the "See All" button and section header static — only animate list items.
+      </action>
+      <verify>
+        Run `npm run build`. Reload the dashboard — confirm list items fade/slide in with a stagger effect. Enable "Reduce motion" in OS accessibility settings — confirm items appear instantly without animation. Run `npm run lint`.
+      </verify>
+    </task>
+  </phase>
+</plan>
