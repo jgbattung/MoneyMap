@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <phase name="1: Hook Updates (Expose refetch)">
+    <task>
+      <name>Expose refetch from useAccountsQuery</name>
+      <action>Edit `src/hooks/useAccountsQuery.ts`:
+      1. Destructure `refetch` from the `useQuery` return value alongside `data`, `isPending`, and `error`.
+      2. Add `refetch` to the hook's return object.</action>
+      <verify>Run `npm run build` to confirm no type errors. The hook's return type should now include `refetch`.</verify>
+    </task>
+    <task>
+      <name>Expose refetch from useBudgetStatus</name>
+      <action>Edit `src/hooks/useBudgetStatus.ts`:
+      1. Destructure `refetch` from the `useQuery` return value alongside `data`, `isPending`, and `error`.
+      2. Add `refetch` to the hook's return object.</action>
+      <verify>Run `npm run build` to confirm no type errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="2: AssetCategoriesChart Polish">
+    <task>
+      <name>Add tooltips, currency amounts in legend, and cursor-pointer</name>
+      <action>Edit `src/components/dashboard/AssetCategoriesChart.tsx`:
+      1. Import `{ Tooltip, TooltipTrigger, TooltipContent }` from `@/components/ui/tooltip`.
+      2. Import `{ formatCurrency }` from `@/lib/format`.
+      3. Wrap each bar segment in a `Tooltip` + `TooltipTrigger` + `TooltipContent` set. Tooltip content: `{category.name}: ₱{formatCurrency(category.value)} ({category.percentage}%)`.
+      4. Add `cursor-pointer` class to each bar segment div.
+      5. Update the legend labels to show the currency amount: below the category name, show `₱{formatCurrency(category.value)}` on one line and `{category.percentage}%` on another.</action>
+      <verify>Run `npm run build`. Visually verify tooltips appear on bar segment hover and legend shows ₱ amounts.</verify>
+    </task>
+    <task>
+      <name>Add animated bar entrance with reduced-motion support</name>
+      <action>Edit `src/components/dashboard/AssetCategoriesChart.tsx`:
+      1. Import `{ motion, useReducedMotion }` from `framer-motion`.
+      2. Call `useReducedMotion()` at the top of the component.
+      3. Replace each bar segment `div` (inside the TooltipTrigger) with `motion.div`.
+      4. When reduced motion is false/null: add `initial={{ width: "0%" }}`, `animate={{ width: "{percentage}%" }}`, `transition={{ duration: 0.5, ease: "easeOut", delay: index * 0.05 }}`.
+      5. When reduced motion is true: render with static `style={{ width: "{percentage}%" }}` and no motion props.
+      6. Keep the existing `transition-opacity hover:opacity-80` class and inline `backgroundColor` style.</action>
+      <verify>Run `npm run build`. Visually verify bar segments animate in sequentially on page load. Toggle `prefers-reduced-motion` in DevTools and confirm segments appear instantly.</verify>
+    </task>
+    <task>
+      <name>Improve error state with retry and convert to named export</name>
+      <action>Edit `src/components/dashboard/AssetCategoriesChart.tsx`:
+      1. Import `{ AlertCircle }` from `lucide-react`.
+      2. Destructure `refetch` from `useAccountsQuery()`.
+      3. Replace the error state div contents: add `AlertCircle` icon (`h-8 w-8 text-error-600`), keep the error messages, add a "Try again" button with `cursor-pointer text-sm font-medium text-primary hover:text-primary/80 transition-colors` that calls `refetch()`.
+      4. Change `export default AssetCategoriesChart` to `export { AssetCategoriesChart }`.
+
+      Then edit `src/components/dashboard/NetWorthInsights.tsx`:
+      5. Update import: `import AssetCategoriesChart from './AssetCategoriesChart'` → `import { AssetCategoriesChart } from './AssetCategoriesChart'`.</action>
+      <verify>Run `npm run build` to confirm all imports resolve and no type errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="3: BudgetStatus — Color Migration and Shared Utility">
+    <task>
+      <name>Replace inline formatCurrency and migrate color tokens</name>
+      <action>Edit `src/components/shared/BudgetStatus.tsx`:
+      1. Import `{ formatCurrency }` from `@/lib/format`.
+      2. Remove the inline `formatCurrency` function from `BudgetStatusItem`.
+      3. Update the progress bar color logic to use design system tokens:
+         - No spending: `bg-secondary-400` (unchanged)
+         - Over budget OR spending without budget: `bg-text-error`
+         - 80–99% spent (not over budget): `bg-amber-400`
+         - Under 80% spent (not over budget): `bg-text-success`
+      4. Remove `hover:text-white` from the "See All Budgets" Button component.</action>
+      <verify>Run `npm run build`. Visually verify progress bars use the new desaturated colors and the amber warning state appears for budgets near their limit.</verify>
+    </task>
+    <task>
+      <name>Add percentage text and budget summary line</name>
+      <action>Edit `src/components/shared/BudgetStatus.tsx`:
+      1. In `BudgetStatusItem`, add `{progressPercentage}%` as a small text element next to or below the "out of" line. Style: `text-xs text-muted-foreground`.
+      2. In the main `BudgetStatus` component, calculate `onTrackCount` (budgets where `!isOverBudget && monthlyBudget > 0`) and `totalCount` (total budgets).
+      3. Add a subtitle line after the header: `"{onTrackCount} of {totalCount} budgets on track"`. Style: `text-xs text-muted-foreground`.
+      4. Only render the summary when budgets are loaded and non-empty.</action>
+      <verify>Run `npm run build`. Visually verify the summary line displays correctly and percentage text appears on each budget item.</verify>
+    </task>
+  </phase>
+
+  <phase name="4: BudgetStatus — Animation, Error State, and Export">
+    <task>
+      <name>Add animated progress bars with reduced-motion support</name>
+      <action>Edit `src/components/shared/BudgetStatus.tsx`:
+      1. Import `{ motion, useReducedMotion }` from `framer-motion`.
+      2. Call `useReducedMotion()` in the parent `BudgetStatus` component.
+      3. Pass the result as a `prefersReducedMotion` prop to each `BudgetStatusItem`.
+      4. Add `prefersReducedMotion: boolean` to `BudgetStatusItemProps`.
+      5. In `BudgetStatusItem`, replace the progress bar fill `div` with `motion.div`:
+         - When reduced motion is false/null: `initial={{ width: "0%" }}`, `animate={{ width: "{progressWidth}%" }}`, `transition={{ duration: 0.5, ease: "easeOut" }}`.
+         - When reduced motion is true: render with static `style={{ width: "{progressWidth}%" }}` and no motion props.
+      6. Keep existing classes (`h-2 rounded-full`) and the dynamic `progressColor` class.</action>
+      <verify>Run `npm run build`. Visually verify progress bars animate in on page load. Toggle `prefers-reduced-motion` in DevTools and confirm they appear instantly.</verify>
+    </task>
+    <task>
+      <name>Improve error state with retry and convert to named export</name>
+      <action>Edit `src/components/shared/BudgetStatus.tsx`:
+      1. Import `{ AlertCircle }` from `lucide-react`.
+      2. Destructure `refetch` from `useBudgetStatus()`.
+      3. Update the `ErrorState` component to accept an `onRetry` prop.
+      4. Add `AlertCircle` icon (`h-8 w-8 text-error-600`) to ErrorState, keep error messages, add "Try again" button with `cursor-pointer text-sm font-medium text-primary hover:text-primary/80 transition-colors` that calls `onRetry`.
+      5. Pass `refetch` as the `onRetry` prop when rendering `ErrorState`.
+      6. Change `export default BudgetStatus` to `export { BudgetStatus }`.
+
+      Then edit `src/app/dashboard/page.tsx`:
+      7. Update import: `import BudgetStatus from '@/components/shared/BudgetStatus'` → `import { BudgetStatus } from '@/components/shared/BudgetStatus'`.</action>
+      <verify>Run `npm run build` to confirm all imports resolve and no type errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="5: Verification">
+    <task>
+      <name>Lint, Build, and Final Visual Check</name>
+      <action>Run the following commands sequentially:
+      1. `npm run lint` — must pass with zero errors.
+      2. `npm run build` — must compile with zero errors.
+      3. Visually verify:
+         - AssetCategoriesChart: tooltips on bar hover, animated entrance, ₱ amounts in legend, error retry works.
+         - BudgetStatus: desaturated colors, amber warning at 80–99%, animated progress bars, summary line, percentage text, error retry works.
+         - Both: `prefers-reduced-motion` disables animations.
+         - No regressions in dashboard layout.</action>
+      <verify>All commands exit with code 0. Dashboard renders correctly with all improvements.</verify>
+    </task>
+  </phase>
+</plan>
