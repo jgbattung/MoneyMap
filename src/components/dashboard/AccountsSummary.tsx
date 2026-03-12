@@ -6,7 +6,21 @@ import { useCardsQuery } from '@/hooks/useCardsQuery';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/format';
-import { AlertCircle, Wallet, CreditCard } from 'lucide-react';
+import {
+  AlertCircle,
+  Wallet,
+  CreditCard,
+  Landmark,
+  PiggyBank,
+  TrendingUp,
+  Banknote,
+  Bitcoin,
+  Clock,
+  Home,
+  Briefcase,
+  Smartphone,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 
 const formatAccountType = (type: string): string => {
@@ -25,46 +39,78 @@ const formatAccountType = (type: string): string => {
   return typeMap[type] || type;
 };
 
+const getAccountTypeIcon = (type: string): LucideIcon => {
+  const iconMap: Record<string, LucideIcon> = {
+    CHECKING: Landmark,
+    SAVINGS: PiggyBank,
+    INVESTMENT: TrendingUp,
+    CASH: Banknote,
+    CRYPTO: Bitcoin,
+    RETIREMENT: Clock,
+    REAL_ESTATE: Home,
+    PAYROLL: Briefcase,
+    E_WALLET: Smartphone,
+    OTHER: Wallet,
+  };
+  return iconMap[type] || Wallet;
+};
+
 interface AccountItemProps {
+  id: string;
   name: string;
   accountType: string;
   balance: number;
 }
 
-const AccountItem = ({ name, accountType, balance }: AccountItemProps) => {
+const AccountItem = ({ id, name, accountType, balance }: AccountItemProps) => {
+  const Icon = getAccountTypeIcon(accountType);
+
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex flex-col">
-        <span className="font-semibold text-sm">{name}</span>
-        <span className="text-xs text-muted-foreground">
-          {formatAccountType(accountType)}
-        </span>
+    <Link
+      href={`/accounts/${id}`}
+      className="flex items-center justify-between rounded-lg px-2 -mx-2 py-2 hover:bg-secondary-500/10 transition-colors duration-200 cursor-pointer"
+    >
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-col">
+          <span className="font-semibold text-sm">{name}</span>
+          <span className="text-xs text-muted-foreground">
+            {formatAccountType(accountType)}
+          </span>
+        </div>
       </div>
 
       <div className="font-semibold text-sm">
         ₱{formatCurrency(balance)}
       </div>
-    </div>
+    </Link>
   );
 };
 
 interface CreditCardItemProps {
+  id: string;
   name: string;
   balance: number;
 }
 
-const CreditCardItem = ({ name, balance }: CreditCardItemProps) => {
+const CreditCardItem = ({ id, name, balance }: CreditCardItemProps) => {
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex flex-col">
-        <span className="font-semibold text-sm">{name}</span>
-        <span className="text-xs text-muted-foreground">Credit Card</span>
+    <Link
+      href={`/cards/${id}`}
+      className="flex items-center justify-between rounded-lg px-2 -mx-2 py-2 hover:bg-secondary-500/10 transition-colors duration-200 cursor-pointer"
+    >
+      <div className="flex items-center gap-2">
+        <CreditCard className="h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-col">
+          <span className="font-semibold text-sm">{name}</span>
+          <span className="text-xs text-muted-foreground">Credit Card</span>
+        </div>
       </div>
 
       <div className="font-semibold text-sm text-foreground">
         ₱{formatCurrency(balance)}
       </div>
-    </div>
+    </Link>
   );
 };
 
@@ -159,6 +205,7 @@ const TopAccounts = () => {
         {topAccounts.map(account => (
           <AccountItem
             key={account.id}
+            id={account.id}
             name={account.name}
             accountType={account.accountType}
             balance={parseFloat(account.currentBalance.toString())}
@@ -209,6 +256,7 @@ const TopCreditCards = () => {
           return (
             <CreditCardItem
               key={card.id}
+              id={card.id}
               name={card.name}
               balance={displayBalance}
             />
