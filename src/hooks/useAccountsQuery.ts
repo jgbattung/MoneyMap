@@ -74,6 +74,7 @@ export const useAccountsQuery = (options?: UseAccountsQueryOptions) => {
     data: accounts = [],
     isPending,
     error,
+    refetch,
   } = useQuery({
     queryKey: QUERY_KEYS.accounts(includeCards),
     queryFn: () => fetchAccounts(includeCards),
@@ -114,6 +115,7 @@ export const useAccountsQuery = (options?: UseAccountsQueryOptions) => {
     accounts,
     isLoading: isPending,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
+    refetch,
     createAccount: createAccountMutation.mutateAsync,
     updateAccount: updateAccountMutation.mutateAsync,
     deleteAccount: deleteAccountMutation.mutateAsync,
