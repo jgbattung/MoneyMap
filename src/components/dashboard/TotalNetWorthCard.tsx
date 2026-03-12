@@ -1,14 +1,14 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
-import { ArrowUp, ArrowDown, ArrowRight, Eye, EyeOff } from 'lucide-react'
+import { ArrowUp, ArrowDown, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import { useSpring, useTransform, useReducedMotion } from 'framer-motion'
 import { useNetWorth } from '@/hooks/useNetWorth'
 import { formatCurrency } from '@/lib/format'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const TotalNetWorthCard = () => {
-  const { netWorth, monthlyChange, isLoading, error } = useNetWorth();
+  const { netWorth, monthlyChange, isLoading, error, refetch } = useNetWorth();
   const prefersReducedMotion = useReducedMotion();
   const [isBalanceHidden, setIsBalanceHidden] = useState(false);
 
@@ -60,9 +60,17 @@ const TotalNetWorthCard = () => {
   if (error) {
     return (
       <div className='flex flex-col gap-3'>
-        <div className='flex flex-col items-center justify-center py-8 text-center'>
+        <div className='flex flex-col items-center justify-center py-8 text-center gap-2'>
+          <AlertCircle className="h-8 w-8 text-error-600" />
           <p className='text-error-600 font-semibold'>Failed to load net worth</p>
-          <p className='text-muted-foreground text-sm mt-2'>{error}</p>
+          <p className='text-muted-foreground text-sm'>{error}</p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className='cursor-pointer text-sm font-medium text-primary hover:text-primary/80 transition-colors mt-1'
+          >
+            Try again
+          </button>
         </div>
       </div>
     );
