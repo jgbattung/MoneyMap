@@ -4,6 +4,7 @@ import React from 'react';
 import { useBudgetStatus } from '@/hooks/useBudgetStatus';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatCurrency } from '@/lib/format';
 import Link from 'next/link';
 
 interface BudgetStatusItemProps {
@@ -27,19 +28,14 @@ const BudgetStatusItem = ({
   // Progress bar color logic
   let progressColor = 'bg-secondary-400';
   if (hasSpendingWithoutBudget || isOverBudget) {
-    progressColor = 'bg-error-500';
+    progressColor = 'bg-text-error';
+  } else if (spentAmount > 0 && !isOverBudget && progressPercentage >= 80) {
+    progressColor = 'bg-amber-400';
   } else if (spentAmount > 0 && !isOverBudget) {
-    progressColor = 'bg-success-500';
+    progressColor = 'bg-text-success';
   }
 
   const progressWidth = hasNoBudget ? 100 : Math.min(progressPercentage, 100);
-
-  const formatCurrency = (amount: number) => {
-    return amount.toLocaleString('en-PH', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  };
 
   return (
     <div className="space-y-2">
@@ -125,7 +121,7 @@ const BudgetStatus = () => {
 
           <div className="pt-3 border-t border-border">
             <Link href="/budgets">
-              <Button variant="outline" className="w-full hover:text-white">
+              <Button variant="outline" className="w-full">
                 See All Budgets
               </Button>
             </Link>
