@@ -45,12 +45,6 @@ vi.mock('./FloatingActionButton', () => ({
 
 import { usePathname } from 'next/navigation'
 
-// Helper: get the <a> element that wraps a given icon testid
-function getLinkForIcon(testId: string): HTMLElement {
-  const icon = screen.getByTestId(testId)
-  return icon.closest('a') as HTMLElement
-}
-
 // Helper: get link by href
 function getLinkByHref(href: string): HTMLElement {
   const el = document.querySelector(`a[href="${href}"]`)

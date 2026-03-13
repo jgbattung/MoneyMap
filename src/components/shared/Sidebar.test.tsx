@@ -32,11 +32,11 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({ push: vi.fn() })),
 }));
 
-vi.mock('@/app/constants/navigation', () => {
+vi.mock('@/app/constants/navigation', async () => {
   // Icon stubs must be defined inside the factory to avoid hoisting issues
+  const { createElement } = await import('react');
   const stub = (testId: string) =>
     function MockIcon(props: Record<string, unknown>) {
-      const { createElement } = require('react') as typeof import('react');
       return createElement('span', { 'data-testid': testId, ...props });
     };
 
