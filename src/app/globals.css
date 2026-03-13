@@ -227,6 +227,28 @@
   }
 }
 
+.scrollbar-hide {
+  scrollbar-width: none;
+}
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+.nav-group-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 200ms ease-out;
+}
+.nav-group-content[data-expanded="true"] {
+  grid-template-rows: 1fr;
+}
+.nav-group-content > div {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-group-content,
+  .sidebar-animate {
+    transition: none !important;
+  }
 }

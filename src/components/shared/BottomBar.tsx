@@ -1,7 +1,6 @@
 "use client"
 
 import { mobileNavRoutes } from '@/app/constants/navigation'
-import { IconHomeFilled, IconHome, IconCashBanknoteFilled, IconCashBanknote, IconSwitchHorizontal, IconDots } from '@tabler/icons-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import React from 'react'
@@ -10,29 +9,14 @@ import FloatingActionButton from './FloatingActionButton'
 const BottomBar = () => {
   const pathname = usePathname();
 
-  const getIcon = (routeName: string, isActive: boolean) => {
-    switch (routeName) {
-      case 'Dashboard':
-        return isActive ? IconHomeFilled : IconHome;
-      case 'Accounts':
-        return isActive ? IconCashBanknoteFilled : IconCashBanknote;
-      case 'Transactions':
-        return IconSwitchHorizontal;
-      case 'More':
-        return IconDots;
-      default:
-        return IconHome;
-    }
-  };
-
   return (
     <div className="md:hidden flex items-center justify-center fixed bottom-0 left-0 right-0 h-14 bg-background border-t-2 border-secondary-700">
       <div className='w-full flex items-center justify-around'>
         {/* First 2 navigation items */}
         {mobileNavRoutes.slice(0, 2).map((route) => {
-          const IconComponent = getIcon(route.name, pathname === route.path);
           const isActive = pathname === route.path;
-          
+          const IconComponent = isActive ? route.activeIcon : route.icon;
+
           return (
             <Link
               href={route.path}
@@ -49,9 +33,9 @@ const BottomBar = () => {
 
         {/* Last 2 navigation items */}
         {mobileNavRoutes.slice(2).map((route) => {
-          const IconComponent = getIcon(route.name, pathname === route.path);
           const isActive = pathname === route.path;
-          
+          const IconComponent = isActive ? route.activeIcon : route.icon;
+
           return (
             <Link
               href={route.path}

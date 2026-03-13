@@ -1,20 +1,84 @@
-import { Icon, IconHomeFilled, IconCashBanknoteFilled, IconPigFilled, IconSwitchHorizontal, IconCreditCardFilled, IconDots, IconHome, IconCashBanknote, IconTrendingUp, IconWallet, IconArrowsExchange, IconChartBar  } from "@tabler/icons-react";
+import {
+  Icon,
+  IconHome,
+  IconHomeFilled,
+  IconCashBanknote,
+  IconCashBanknoteFilled,
+  IconCreditCard,
+  IconCreditCardFilled,
+  IconSwitchHorizontal,
+  IconReceiptFilled,
+  IconPig,
+  IconPigFilled,
+  IconWallet,
+  IconCoinFilled,
+  IconTrendingUp,
+  IconGraphFilled,
+  IconArrowsExchange,
+  IconExchangeFilled,
+  IconChartBar,
+  IconReportAnalyticsFilled,
+  IconDots,
+} from "@tabler/icons-react";
 
-export const navRoutes: { name: string, path: string, icon: Icon }[] = [
-  { name: 'Dashboard', path: '/dashboard', icon: IconHomeFilled },
-  { name: 'Accounts', path: '/accounts', icon: IconCashBanknoteFilled },
-  { name: 'Cards', path: '/cards', icon: IconCreditCardFilled },
-  { name: 'Transactions', path: '/transactions', icon: IconSwitchHorizontal },
-  { name: 'Budgets', path: '/budgets', icon: IconPigFilled },
-  { name: 'Expenses', path: '/expenses', icon: IconWallet },
-  { name: 'Income', path: '/income', icon: IconTrendingUp },
-  { name: 'Transfers', path: '/transfers', icon: IconArrowsExchange },
-  { name: 'Reports', path: '/reports', icon: IconChartBar },
+export interface NavRoute {
+  name: string;
+  path: string;
+  icon: Icon;
+  activeIcon: Icon;
+}
+
+export interface NavGroup {
+  label: string;
+  key: string;
+  routes: NavRoute[];
+}
+
+export const dashboardRoute: NavRoute = {
+  name: "Dashboard",
+  path: "/dashboard",
+  icon: IconHome,
+  activeIcon: IconHomeFilled,
+};
+
+export const navGroups: NavGroup[] = [
+  {
+    label: "Accounts",
+    key: "accounts",
+    routes: [
+      { name: "Accounts", path: "/accounts", icon: IconCashBanknote, activeIcon: IconCashBanknoteFilled },
+      { name: "Cards", path: "/cards", icon: IconCreditCard, activeIcon: IconCreditCardFilled },
+    ],
+  },
+  {
+    label: "Activity",
+    key: "activity",
+    routes: [
+      { name: "Transactions", path: "/transactions", icon: IconSwitchHorizontal, activeIcon: IconReceiptFilled },
+      { name: "Expenses", path: "/expenses", icon: IconWallet, activeIcon: IconCoinFilled },
+      { name: "Income", path: "/income", icon: IconTrendingUp, activeIcon: IconGraphFilled },
+      { name: "Transfers", path: "/transfers", icon: IconArrowsExchange, activeIcon: IconExchangeFilled },
+    ],
+  },
+  {
+    label: "Planning",
+    key: "planning",
+    routes: [
+      { name: "Budgets", path: "/budgets", icon: IconPig, activeIcon: IconPigFilled },
+      { name: "Reports", path: "/reports", icon: IconChartBar, activeIcon: IconReportAnalyticsFilled },
+    ],
+  },
 ];
 
-export const mobileNavRoutes = [
-  { name: 'Dashboard', path: '/dashboard', icon: IconHome },
-  { name: 'Accounts', path: '/accounts', icon: IconCashBanknote },
-  { name: 'Transactions', path: '/transactions', icon: IconSwitchHorizontal },
-  { name: 'More', path: '/more', icon: IconDots },
+// Flat list of all nav routes
+export const navRoutes: NavRoute[] = [
+  dashboardRoute,
+  ...navGroups.flatMap((g) => g.routes),
+];
+
+export const mobileNavRoutes: NavRoute[] = [
+  { name: "Dashboard", path: "/dashboard", icon: IconHome, activeIcon: IconHomeFilled },
+  { name: "Accounts", path: "/accounts", icon: IconCashBanknote, activeIcon: IconCashBanknoteFilled },
+  { name: "Transactions", path: "/transactions", icon: IconSwitchHorizontal, activeIcon: IconReceiptFilled },
+  { name: "More", path: "/more", icon: IconDots, activeIcon: IconDots },
 ];

@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <phase name="1: Navigation Types & Icon Mapping">
+    <task>
+      <name>Update navigation.ts with new types, groups, and icon pairs</name>
+      <action>Edit `src/app/constants/navigation.ts`:
+      1. Define `NavRoute` interface with `name`, `path`, `icon` (outline), and `activeIcon` (filled) fields.
+      2. Define `NavGroup` interface with `label`, `key`, and `routes: NavRoute[]`.
+      3. Export `dashboardRoute` as a standalone `NavRoute`: `{ name: 'Dashboard', path: '/dashboard', icon: IconHome, activeIcon: IconHomeFilled }`.
+      4. Export `navGroups: NavGroup[]` with three groups:
+         - `{ label: 'Accounts', key: 'accounts', routes: [Accounts, Cards] }`
+         - `{ label: 'Activity', key: 'activity', routes: [Transactions, Expenses, Income, Transfers] }`
+         - `{ label: 'Planning', key: 'planning', routes: [Budgets, Reports] }`
+      5. Update all routes with outline `icon` and filled `activeIcon`:
+         - Dashboard: `IconHome` / `IconHomeFilled`
+         - Accounts: `IconCashBanknote` / `IconCashBanknoteFilled`
+         - Cards: `IconCreditCard` / `IconCreditCardFilled`
+         - Transactions: `IconSwitchHorizontal` / `IconReceiptFilled` (no direct filled variant)
+         - Budgets: `IconPig` / `IconPigFilled`
+         - Expenses: `IconWallet` / `IconCoinFilled` (no direct filled variant)
+         - Income: `IconTrendingUp` / `IconGraphFilled` (no direct filled variant)
+         - Transfers: `IconArrowsExchange` / `IconExchangeFilled` (no direct filled variant)
+         - Reports: `IconChartBar` / `IconReportAnalyticsFilled` (no direct filled variant)
+      6. Keep the old `navRoutes` export temporarily for backward compatibility until Sidebar is updated.
+      7. Update `mobileNavRoutes` to include `activeIcon` field:
+         - Dashboard: `IconHome` / `IconHomeFilled`
+         - Accounts: `IconCashBanknote` / `IconCashBanknoteFilled`
+         - Transactions: `IconSwitchHorizontal` / `IconReceiptFilled`
+         - More: `IconDots` / `IconDots` (no filled variant needed — it's a menu trigger)</action>
+      <verify>Run `npm run build` to confirm all new types and exports compile. No existing imports should break since `navRoutes` is still exported.</verify>
+    </task>
+  </phase>
+
+  <phase name="2: Sidebar State Hook">
+    <task>
+      <name>Create useSidebarState custom hook</name>
+      <action>Create new file `src/hooks/useSidebarState.ts`:
+      1. Export `useSidebarState(pathname: string)` hook.
+      2. Manage `isCollapsed` state:
+         - Initialize from `localStorage` key `money-map-sidebar-collapsed` inside a `useEffect` (SSR-safe).
+         - Default to `false` (expanded).
+         - `toggleCollapsed()` flips the value and writes to `localStorage`.
+      3. Manage `groupStates` as `Record&lt;string, boolean&gt;`:
+         - Initialize from `localStorage` key `money-map-sidebar-groups` inside a `useEffect`.
+         - Default all groups to `true` (expanded) on first visit.
+         - `toggleGroup(key: string)` flips a single group and writes to `localStorage`.
+         - `isGroupExpanded(key: string)` returns the current state for a group.
+      4. Auto-expand logic: on mount and when `pathname` changes, find which group contains the active route and ensure that group is expanded (set to `true` in `groupStates`).
+      5. Return: `{ isCollapsed, toggleCollapsed, groupStates, toggleGroup, isGroupExpanded }`.</action>
+      <verify>Run `npm run build` to confirm the hook compiles with no type errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="3: Global CSS Utilities">
+    <task>
+      <name>Add scrollbar-hide and group animation CSS utilities</name>
+      <action>Edit `src/app/globals.css`. Add the following utility classes:
+      1. Scrollbar hide:
+         ```css
+         .scrollbar-hide {
+           scrollbar-width: none;
+         }
+         .scrollbar-hide::-webkit-scrollbar {
+           display: none;
+         }
+         ```
+      2. Group expand/collapse via grid-template-rows:
+         ```css
+         .nav-group-content {
+           display: grid;
+           grid-template-rows: 0fr;
+           transition: grid-template-rows 200ms ease-out;
+         }
+         .nav-group-content[data-expanded="true"] {
+           grid-template-rows: 1fr;
+         }
+         .nav-group-content > div {
+           overflow: hidden;
+         }
+         ```
+      3. Reduced motion override:
+         ```css
+         @media (prefers-reduced-motion: reduce) {
+           .nav-group-content {
+             transition: none;
+           }
+         }
+         ```</action>
+      <verify>Run `npm run build` to confirm no CSS syntax errors. The classes are not yet used but should compile.</verify>
+    </task>
+  </phase>
+
+  <phase name="4: Sidebar Rewrite — Expanded Mode">
+    <task>
+      <name>Rewrite Sidebar with collapsible groups and icon consistency (expanded mode)</name>
+      <action>Rewrite `src/components/shared/Sidebar.tsx`:
+      1. Replace `navRoutes` import with `dashboardRoute`, `navGroups`, and types from `navigation.ts`.
+      2. Import `useSidebarState` hook. Call with `pathname`.
+      3. Import `IconChevronDown` from `@tabler/icons-react` for group chevrons.
+      4. **Structural fixes:**
+         - Replace `justify-center` with `justify-start` on the `flex-1` container.
+         - Add `scrollbar-hide` class to the scrollable container.
+         - Change `border-r-2` to `border-r`.
+         - Change `mb-6` to `mb-4` and `gap-3` to `gap-2` for tighter spacing.
+         - Remove `w-36` from quick action buttons — let them fill available width.
+         - Add `cursor-pointer` to quick action buttons.
+         - Fix CSS typo on CreateExpenseTransactionSheet: `'hidden: md:block'` → `'hidden md:block'`.
+      5. **Semantic HTML:**
+         - Wrap the main menu section in `&lt;nav aria-label="Main navigation"&gt;`.
+         - Add `aria-label="Log out"` to the logout button.
+      6. **Dashboard route:** Render `dashboardRoute` as an ungrouped link above the groups. Use `pathname.startsWith(route.path) ? route.activeIcon : route.icon` for rendering.
+      7. **Collapsible groups:** For each group in `navGroups`:
+         - Render a group header button with `group.label` and a `IconChevronDown` that rotates (CSS `transition: transform 200ms ease-out`) based on expanded state.
+         - Render group routes inside a `div.nav-group-content[data-expanded]` wrapper with an inner `div` for overflow hidden.
+         - Each route renders outline icon by default, filled when active.
+      8. Keep all existing quick action button functionality (sheets) unchanged.
+      9. Do NOT implement collapsed mode yet — that's the next phase.</action>
+      <verify>Run `npm run build` and `npm run lint`. Visually verify in the browser:
+      - Dashboard link appears above groups
+      - Groups show with headers and chevron icons
+      - Clicking a group header collapses/expands with animation
+      - Active route's group is expanded on load
+      - Icons are outline by default, filled when active
+      - No visible scrollbar
+      - Content doesn't clip on shorter screens
+      - Quick action buttons fill width and have cursor-pointer</verify>
+    </task>
+  </phase>
+
+  <phase name="5: Sidebar Collapsed Mode (Icon Rail)">
+    <task>
+      <name>Implement collapsed icon rail mode with toggle</name>
+      <action>Edit `src/components/shared/Sidebar.tsx`:
+      1. Import `Tooltip`, `TooltipContent`, `TooltipProvider`, `TooltipTrigger` from `@/components/ui/tooltip`.
+      2. Import `IconChevronLeft`, `IconChevronRight` from `@tabler/icons-react`.
+      3. **Toggle button:** Add a collapse/expand button above the user section:
+         - Expanded: shows `IconChevronLeft` with `aria-label="Collapse sidebar"`
+         - Collapsed: shows `IconChevronRight` with `aria-label="Expand sidebar"`
+         - Style: `p-1.5 rounded-md hover:bg-white/10 transition-colors cursor-pointer`
+         - Calls `toggleCollapsed()` from the hook.
+      4. **Sidebar width:** Apply dynamic width class based on `isCollapsed`:
+         - Expanded: `w-56`
+         - Collapsed: `w-16`
+         - Add CSS transition: `transition-[width] duration-200 ease-out` (inline style or Tailwind)
+         - Add `@media (prefers-reduced-motion: reduce)` to disable transition.
+      5. **Collapsed nav items:**
+         - When `isCollapsed`, hide all text labels, group headers, and "Quick actions"/"Main menu" headings.
+         - Render each nav item (dashboard + all group routes flattened) as a centered icon button wrapped in `Tooltip`.
+         - Active state: filled icon + `bg-white/15 rounded-md` container.
+         - Inactive: outline icon, no background.
+      6. **Collapsed quick actions:**
+         - Render as `w-10 h-10 rounded-full border border-white/40 flex items-center justify-center hover:bg-white/10 cursor-pointer` icon-only buttons.
+         - Each wrapped in `Tooltip` showing action name.
+      7. **Collapsed user section:**
+         - Show avatar circle only (no name text).
+         - Logout icon button remains visible, wrapped in `Tooltip`.
+      8. **Text fade:** In expanded mode, text labels have `opacity-100`. On collapse, apply `opacity-0 transition-opacity duration-150` so text fades before width shrinks. On expand, text fades in after width expands (use a small `delay-75` or similar).</action>
+      <verify>Run `npm run build` and `npm run lint`. Visually verify:
+      - Clicking toggle collapses sidebar to narrow icon rail with smooth animation
+      - All icons show tooltips on hover in collapsed mode
+      - Active route shows filled icon with highlight in both modes
+      - Quick actions show as circular icon buttons in collapsed mode
+      - User section shows avatar only in collapsed mode
+      - Text fades out/in smoothly during transition
+      - State persists after page reload
+      - `prefers-reduced-motion` disables all animations (instant snap)</verify>
+    </task>
+  </phase>
+
+  <phase name="6: BottomBar Icon Update">
+    <task>
+      <name>Update BottomBar to use outline/filled icon pattern</name>
+      <action>Edit `src/components/shared/BottomBar.tsx`:
+      1. Update the import from `navigation.ts` to use the new `mobileNavRoutes` with `activeIcon` field.
+      2. Update the icon rendering logic: render `route.icon` (outline) by default, `route.activeIcon` (filled) when the route is active (`pathname.startsWith(route.path)`).</action>
+      <verify>Run `npm run build`. Visually verify on mobile viewport: inactive tabs show outline icons, active tab shows filled icon.</verify>
+    </task>
+  </phase>
+
+  <phase name="7: Cleanup & Remove Legacy Exports">
+    <task>
+      <name>Remove old navRoutes export and update any remaining references</name>
+      <action>Edit `src/app/constants/navigation.ts`:
+      1. Remove the old `navRoutes` array if no other files import it (search the codebase first with grep).
+      2. If other files still import `navRoutes`, update them to use `dashboardRoute` + `navGroups` or create a flat helper: `export const allNavRoutes = [dashboardRoute, ...navGroups.flatMap(g => g.routes)]`.
+      3. Clean up any unused icon imports from the file.</action>
+      <verify>Run `npm run build` to confirm no broken imports anywhere in the codebase.</verify>
+    </task>
+  </phase>
+
+  <phase name="8: Verification">
+    <task>
+      <name>Build, lint, and final visual verification</name>
+      <action>Run the following commands sequentially:
+      1. `npm run lint` — must pass with zero errors.
+      2. `npm run build` — must compile with zero errors.
+      3. Visual verification checklist:
+         - Sidebar collapses/expands with smooth 200ms animation
+         - Nav groups collapse/expand with smooth 200ms animation
+         - Active route's group auto-expands on page load
+         - Tooltips appear on all icons in collapsed mode
+         - Icons are outline default, filled active — both modes
+         - BottomBar icons match the pattern
+         - No visible scrollbar on shorter screens
+         - Content no longer clips at the top
+         - `prefers-reduced-motion` in DevTools disables all animations
+         - localStorage persistence works for both sidebar and group states
+         - CSS typo on CreateExpenseTransactionSheet is fixed
+         - Logout button has `aria-label`
+         - Quick action buttons have `cursor-pointer`
+         - Border is 1px (not 2px)</action>
+      <verify>All commands exit with code 0. All visual checks pass. No regressions in dashboard or other pages.</verify>
+    </task>
+  </phase>
+</plan>

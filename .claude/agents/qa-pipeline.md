@@ -129,9 +129,21 @@ Run test file
 
 **Never delete a test to make it pass.**
 
-### Step 4 — Full Suite Smoke Check
+### Step 4 — Lint Check
 
-After all individual files pass, run the full unit suite once:
+After all individual test files pass, run ESLint on the generated test files:
+```bash
+npm run lint
+```
+
+If there are lint errors in the test files (unused variables, forbidden `require()` imports, etc.), fix them immediately and re-run lint until clean. Common pitfalls to avoid:
+- Do not leave unused helper functions in test files.
+- Use `await import('react')` inside async mock factories instead of `require('react')` (forbidden by `@typescript-eslint/no-require-imports`).
+- Ensure all declared variables are used (prefix with `_` if intentionally unused).
+
+### Step 5 — Full Suite Smoke Check
+
+After lint is clean and all individual files pass, run the full unit suite once:
 ```bash
 npm run test
 ```
@@ -188,7 +200,7 @@ When the full pipeline completes, return this structured report to the orchestra
 <constraints>
 - Always read the source file before writing any tests.
 - Never run tests during Phase 1 (generate). Never skip Phase 2 (run).
-- Do not commit any files — leave commits to the Builder persona and user.
+- Do not commit any files during the pipeline run — leave commits to the orchestrator. However, once the user confirms tests are green, the orchestrator MUST commit the new/updated test files immediately using `test(<scope>): <description>` format before moving on.
 - Do not modify source files unless Phase 2 classification confirms a genuine source code bug (Category B).
 - Maximum 3 healing attempts per failing test before flagging as blocked.
 - Do not add `console.log` debugging to source files — use test assertions only.

@@ -39,7 +39,11 @@ const More = () => {
               } transition-colors`}
             >
               <div className='flex items-center gap-3'>
-                <route.icon size={24} className={isActive ? 'text-white' : 'text-muted-foreground'} />
+                {isActive ? (
+                  <route.activeIcon size={24} className='text-white' />
+                ) : (
+                  <route.icon size={24} className='text-muted-foreground' />
+                )}
                 <span className={`text-base ${isActive ? 'text-white font-medium' : 'text-foreground'}`}>
                   {route.name}
                 </span>
