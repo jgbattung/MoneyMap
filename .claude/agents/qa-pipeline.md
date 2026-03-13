@@ -129,9 +129,21 @@ Run test file
 
 **Never delete a test to make it pass.**
 
-### Step 4 — Full Suite Smoke Check
+### Step 4 — Lint Check
 
-After all individual files pass, run the full unit suite once:
+After all individual test files pass, run ESLint on the generated test files:
+```bash
+npm run lint
+```
+
+If there are lint errors in the test files (unused variables, forbidden `require()` imports, etc.), fix them immediately and re-run lint until clean. Common pitfalls to avoid:
+- Do not leave unused helper functions in test files.
+- Use `await import('react')` inside async mock factories instead of `require('react')` (forbidden by `@typescript-eslint/no-require-imports`).
+- Ensure all declared variables are used (prefix with `_` if intentionally unused).
+
+### Step 5 — Full Suite Smoke Check
+
+After lint is clean and all individual files pass, run the full unit suite once:
 ```bash
 npm run test
 ```
