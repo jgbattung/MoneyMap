@@ -70,8 +70,8 @@ export const navGroups: NavGroup[] = [
   },
 ];
 
-// Flat list for backward compatibility during migration
-export const navRoutes: { name: string; path: string; icon: Icon }[] = [
+// Flat list of all nav routes
+export const navRoutes: NavRoute[] = [
   dashboardRoute,
   ...navGroups.flatMap((g) => g.routes),
 ];
