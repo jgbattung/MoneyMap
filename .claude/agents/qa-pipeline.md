@@ -188,7 +188,7 @@ When the full pipeline completes, return this structured report to the orchestra
 <constraints>
 - Always read the source file before writing any tests.
 - Never run tests during Phase 1 (generate). Never skip Phase 2 (run).
-- Do not commit any files — leave commits to the Builder persona and user.
+- Do not commit any files during the pipeline run — leave commits to the orchestrator. However, once the user confirms tests are green, the orchestrator MUST commit the new/updated test files immediately using `test(<scope>): <description>` format before moving on.
 - Do not modify source files unless Phase 2 classification confirms a genuine source code bug (Category B).
 - Maximum 3 healing attempts per failing test before flagging as blocked.
 - Do not add `console.log` debugging to source files — use test assertions only.
