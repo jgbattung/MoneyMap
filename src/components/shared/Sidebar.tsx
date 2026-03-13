@@ -2,18 +2,21 @@
 
 import React, { useState } from 'react'
 import { Icons } from '../icons'
-import { navRoutes } from '@/app/constants/navigation'
+import { dashboardRoute, navGroups, NavRoute } from '@/app/constants/navigation'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import CreateIncomeTransactionSheet from '../forms/CreateIncomeTransactionSheet'
 import CreateTransferSheet from '../forms/CreateTransferSheet'
 import CreateExpenseTransactionSheet from '../forms/CreateExpenseTransactionSheet'
 import { useSession, signOut } from '@/lib/auth-client'
+import { useSidebarState } from '@/hooks/useSidebarState'
+import { IconChevronDown } from '@tabler/icons-react'
 
 const Sidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
+  const { isGroupExpanded, toggleGroup } = useSidebarState(pathname);
   const [createIncomeTransactionSheetOpen, setCreateIncomeTransactionSheetOpen] = useState(false);
   const [createTransferSheetOpen, setCreateTransferSheetOpen] = useState(false);
   const [createExpenseSheetOpen, setCreateExpenseSheetOpen] = useState(false);
@@ -50,10 +53,26 @@ const Sidebar = () => {
     return 'U';
   };
 
+  const renderNavLink = (route: NavRoute) => {
+    const isActive = pathname.startsWith(route.path);
+    const IconComponent = isActive ? route.activeIcon : route.icon;
+
+    return (
+      <Link
+        href={route.path}
+        key={route.name}
+        className={`flex gap-2 items-center pl-2.5 pr-3 py-1.5 w-full border rounded-md ${isActive ? 'bg-white/15 border-white/30' : 'border-transparent hover:bg-white/10'} transition-all duration-200 ease-in-out`}
+      >
+        <IconComponent size={20} />
+        <span>{route.name}</span>
+      </Link>
+    );
+  };
+
   return (
     <>
       <div
-        className="hidden md:flex flex-col px-5 w-56 bg-background border-r-2 border-secondary-700">
+        className="hidden md:flex flex-col px-5 w-56 bg-background border-r border-secondary-700">
         <div className='pt-6 pb-4'>
           <h1 className='text-2xl font-bold tracking-tight'>
             <span className='text-primary'>Money</span>
@@ -61,14 +80,14 @@ const Sidebar = () => {
           </h1>
         </div>
 
-        <div className='flex-1 flex flex-col justify-center overflow-y-auto'>
-          <div className='mb-6'>
+        <div className='flex-1 flex flex-col justify-start overflow-y-auto scrollbar-hide'>
+          <div className='mb-4'>
             <p className='text-sm text-muted-foreground mb-3'>Quick actions</p>
-            <div className='flex flex-col gap-3'>
+            <div className='flex flex-col gap-2'>
               {/* Add expense */}
               <button
                 onClick={handleAddExpense}
-                className='flex items-center w-36 px-4 py-2 gap-2 text-sm font-semibold border border-white/40 rounded-md hover:bg-white/10 transition-colors'
+                className='flex items-center px-4 py-2 gap-2 text-sm font-semibold border border-white/40 rounded-md hover:bg-white/10 transition-colors cursor-pointer'
               >
                 <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
                   <Icons.addExpense
@@ -81,7 +100,7 @@ const Sidebar = () => {
 
               <button
                 onClick={handleAddIncome}
-                className='flex items-center w-36 px-4 py-2 gap-2 text-sm font-semibold border border-white/40 rounded-md hover:bg-white/10 transition-colors'
+                className='flex items-center px-4 py-2 gap-2 text-sm font-semibold border border-white/40 rounded-md hover:bg-white/10 transition-colors cursor-pointer'
               >
                 <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
                   <Icons.addIncome
@@ -94,7 +113,7 @@ const Sidebar = () => {
 
               <button
                 onClick={handleAddTransfer}
-                className='flex items-center w-36 px-4 py-2 gap-2 text-sm font-semibold border border-white/40 rounded-md hover:bg-white/10 transition-colors'
+                className='flex items-center px-4 py-2 gap-2 text-sm font-semibold border border-white/40 rounded-md hover:bg-white/10 transition-colors cursor-pointer'
               >
                 <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
                   <Icons.addTransfer
@@ -107,21 +126,43 @@ const Sidebar = () => {
             </div>
           </div>
 
-          <div className='mb-6'>
+          <nav aria-label="Main navigation" className='mb-4'>
             <p className='text-sm text-muted-foreground mb-3'>Main menu</p>
             <div className='flex flex-col gap-2'>
-              {navRoutes.map((route) => (
-                <Link
-                  href={route.path}
-                  key={route.name}
-                  className={`flex gap-2 items-center pl-2.5 pr-3 py-1.5 w-full border rounded-md ${pathname.startsWith(route.path) ? 'bg-white/15 border-white/30' : 'border-transparent hover:bg-white/10'} transition-all duration-200 ease-in-out`}
-                >
-                  <route.icon size={20} />
-                  <span>{route.name}</span>
-                </Link>
-              ))}
+              {/* Dashboard - ungrouped */}
+              {renderNavLink(dashboardRoute)}
+
+              {/* Collapsible groups */}
+              {navGroups.map((group) => {
+                const expanded = isGroupExpanded(group.key);
+                return (
+                  <div key={group.key}>
+                    <button
+                      onClick={() => toggleGroup(group.key)}
+                      className='flex items-center justify-between w-full px-2.5 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors cursor-pointer'
+                      aria-expanded={expanded}
+                    >
+                      <span>{group.label}</span>
+                      <IconChevronDown
+                        size={14}
+                        className={`sidebar-animate transition-transform duration-200 ease-out ${expanded ? '' : '-rotate-90'}`}
+                      />
+                    </button>
+                    <div
+                      className="nav-group-content"
+                      data-expanded={expanded}
+                    >
+                      <div>
+                        <div className='flex flex-col gap-1 pt-1'>
+                          {group.routes.map((route) => renderNavLink(route))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
+          </nav>
         </div>
 
         <div className='pb-6 flex items-center justify-between'>
@@ -137,14 +178,14 @@ const Sidebar = () => {
           </div>
           <button
             onClick={handleLogout}
-            className='p-2 hover:bg-white/10 rounded-md transition-colors'
-            title='Logout'
+            className='p-2 hover:bg-white/10 rounded-md transition-colors cursor-pointer'
+            aria-label='Log out'
           >
             <Icons.logOut size={20} />
           </button>
         </div>
       </div>
-      
+
       <CreateIncomeTransactionSheet
         open={createIncomeTransactionSheetOpen}
         onOpenChange={setCreateIncomeTransactionSheetOpen}
@@ -157,10 +198,10 @@ const Sidebar = () => {
         className="hidden md:block"
       />
 
-      <CreateExpenseTransactionSheet        
+      <CreateExpenseTransactionSheet
         open={createExpenseSheetOpen}
         onOpenChange={setCreateExpenseSheetOpen}
-        className='hidden: md:block'
+        className='hidden md:block'
       />
     </>
   )
