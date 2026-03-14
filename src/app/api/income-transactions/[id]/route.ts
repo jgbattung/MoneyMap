@@ -6,15 +6,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 const ServerPatchIncomeSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100),
+  name: z.string().min(1, "Name is required").max(100).optional(),
   amount: z.string().min(1, "Amount is required").refine(
     (val) => !isNaN(Number(val)) && Number(val) > 0,
     { message: "Amount must be a positive number" }
-  ),
-  accountId: z.string().min(1, "Account is required"),
-  incomeTypeId: z.string().min(1, "Income type is required"),
-  date: z.string().min(1, "Date is required"),
-  description: z.string().max(500).optional(),
+  ).optional(),
+  accountId: z.string().min(1, "Account is required").optional(),
+  incomeTypeId: z.string().min(1, "Income type is required").optional(),
+  date: z.string().min(1, "Date is required").optional(),
+  description: z.string().max(500).nullable().optional(),
 });
 
 export const dynamic = 'force-dynamic';
@@ -89,7 +89,14 @@ export async function PATCH(
       );
     }
 
-    const { name, amount, accountId, incomeTypeId, date, description } = parseResult.data;
+    const {
+      name,
+      amount,
+      accountId,
+      incomeTypeId,
+      date,
+      description,
+    } = parseResult.data;
 
     const existingTransaction = await db.incomeTransaction.findUnique({
       where: {
@@ -105,31 +112,79 @@ export async function PATCH(
       );
     }
 
-    const oldAmount = parseFloat(existingTransaction.amount.toString());
-    const newAmount = parseFloat(amount);
-    const balanceDifference = newAmount - oldAmount;
-
     const result = await db.$transaction(async (tx) => {
-      const updatedTransaction = await tx.incomeTransaction.update({
-        where: {
-          id: id,
-          userId: session.user.id,
-        },
-        data: {
-          name,
-          amount: newAmount,
-          accountId,
-          incomeTypeId,
-          date: new Date(date),
-          description: description || null,
-        },
-        include: {
-          account: true,
-          incomeType: true,
-        },
-      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updateData: any = {};
 
-      if (balanceDifference !== 0) {
+      if (name !== undefined) updateData.name = name;
+      if (incomeTypeId !== undefined) updateData.incomeTypeId = incomeTypeId;
+      if (date !== undefined) updateData.date = new Date(date);
+      if (description !== undefined) updateData.description = description || null;
+
+      if (amount !== undefined) {
+        const newAmount = parseFloat(amount);
+        updateData.amount = newAmount;
+
+        const oldAmount = parseFloat(existingTransaction.amount.toString());
+        const balanceDifference = newAmount - oldAmount;
+
+        if (accountId !== undefined && accountId !== existingTransaction.accountId) {
+          // Account changed + amount changed: reverse old, apply new
+          await tx.financialAccount.update({
+            where: {
+              id: existingTransaction.accountId,
+              userId: session.user.id,
+            },
+            data: {
+              currentBalance: {
+                decrement: oldAmount,
+              },
+            },
+          });
+
+          await tx.financialAccount.update({
+            where: {
+              id: accountId,
+              userId: session.user.id,
+            },
+            data: {
+              currentBalance: {
+                increment: newAmount,
+              },
+            },
+          });
+
+          updateData.accountId = accountId;
+        } else {
+          // Same account, amount changed
+          await tx.financialAccount.update({
+            where: {
+              id: existingTransaction.accountId,
+              userId: session.user.id,
+            },
+            data: {
+              currentBalance: {
+                increment: balanceDifference,
+              },
+            },
+          });
+        }
+      } else if (accountId !== undefined && accountId !== existingTransaction.accountId) {
+        // Account changed, amount unchanged: move existing amount
+        const amountToMove = parseFloat(existingTransaction.amount.toString());
+
+        await tx.financialAccount.update({
+          where: {
+            id: existingTransaction.accountId,
+            userId: session.user.id,
+          },
+          data: {
+            currentBalance: {
+              decrement: amountToMove,
+            },
+          },
+        });
+
         await tx.financialAccount.update({
           where: {
             id: accountId,
@@ -137,20 +192,31 @@ export async function PATCH(
           },
           data: {
             currentBalance: {
-              increment: balanceDifference,
+              increment: amountToMove,
             },
           },
         });
+
+        updateData.accountId = accountId;
       }
+
+      const updatedTransaction = await tx.incomeTransaction.update({
+        where: {
+          id,
+          userId: session.user.id,
+        },
+        data: updateData,
+        include: {
+          account: true,
+          incomeType: true,
+        },
+      });
 
       return updatedTransaction;
     });
 
-    await onIncomeTransactionChange(
-      accountId,
-      new Date(date),
-      existingTransaction.date
-    );
+    await onIncomeTransactionChange(existingTransaction.accountId, existingTransaction.date);
+    await onIncomeTransactionChange(result.accountId, result.date);
 
     return NextResponse.json(result, { status: 200 });
 
