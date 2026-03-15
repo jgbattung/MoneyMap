@@ -6,6 +6,7 @@ import { useCardQuery } from '@/hooks/useCardsQuery';
 import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import ExpenseTable from '@/components/tables/expenses/ExpenseTable';
+import IncomeTable from '@/components/tables/income/IncomeTable';
 import TransferTable from '@/components/tables/transfers/TransferTable';
 import TransactionsMobileView from '@/components/transactions/TransactionsMobileView';
 
@@ -211,7 +212,7 @@ const CardDetailPage = () => {
         )}
       </div>
 
-      {/* Desktop View - Two Tables (Expenses and Transfers only) */}
+      {/* Desktop View - Three Tables */}
       <div className="hidden md:block">
         <div className="space-y-8">
           {/* Expenses Section */}
@@ -223,6 +224,17 @@ const CardDetailPage = () => {
               </p>
             </div>
             <ExpenseTable accountId={cardId} />
+          </section>
+
+          {/* Income Section */}
+          <section>
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold md:text-2xl">Income</h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                Income transactions for this card
+              </p>
+            </div>
+            <IncomeTable accountId={cardId} />
           </section>
 
           {/* Transfers Section */}

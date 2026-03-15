@@ -1,0 +1,69 @@
+<plan>
+  <feature>Fix Transaction Update 400 Errors</feature>
+  <spec>docs/fix-transaction-updates-spec.md</spec>
+
+  <phase name="1: Income PATCH Route Fix">
+    <task id="1.1">
+      <name>Update Income server schema to accept optional and nullable fields</name>
+      <action>
+        In `src/app/api/income-transactions/[id]/route.ts`, replace the `ServerPatchIncomeSchema` with one where all fields are `.optional()` and `description` is `.nullable().optional()`. Reference the expense schema at `src/app/api/expense-transactions/[id]/route.ts` lines 8-23 for the pattern.
+      </action>
+      <verify>Run `npm run build` to confirm the file compiles with no type errors.</verify>
+    </task>
+
+    <task id="1.2">
+      <name>Rewrite Income PATCH handler to use dynamic updateData</name>
+      <action>
+        In the same file, rewrite the PATCH handler's `$transaction` block to:
+        1. Build an `updateData` object dynamically — only include fields present in `parseResult.data` (check `!== undefined`).
+        2. Handle account changes: if `accountId` is provided AND differs from `existingTransaction.accountId`, restore the old account balance (decrement by oldAmount for income) and apply to the new account (increment by newAmount).
+        3. Handle amount-only changes on the same account: increment by `balanceDifference`.
+        4. Handle amount + account change together (same as expense route pattern at lines 197-235).
+        5. Ensure `onIncomeTransactionChange` is called for both old and new account/date when they change.
+        Reference the expense PATCH handler at lines 158-277 for the full dynamic update pattern.
+      </action>
+      <verify>Run `npm run build`. Then manually test: edit an income transaction's date only (without touching description) — should succeed without 400 error.</verify>
+    </task>
+  </phase>
+
+  <phase name="2: Transfer PATCH Route Fix">
+    <task id="2.1">
+      <name>Update Transfer server schema to accept optional and nullable fields</name>
+      <action>
+        In `src/app/api/transfer-transactions/[id]/route.ts`, replace the `ServerPatchTransferSchema` with one where all fields are `.optional()`, `notes` is `.nullable().optional()`, and `feeAmount` is `.nullable().optional()` (with its refine adjusted). Update the outer `.refine()` for `fromAccountId !== toAccountId` to only run when both fields are provided.
+      </action>
+      <verify>Run `npm run build` to confirm the file compiles with no type errors.</verify>
+    </task>
+
+    <task id="2.2">
+      <name>Rewrite Transfer PATCH handler to use dynamic updateData and fix accountsChanged logic</name>
+      <action>
+        In the same file, rewrite the PATCH handler to:
+        1. Build an `updateData` object dynamically — only include fields present in `parseResult.data`.
+        2. Fix the `accountsChanged` variable: change `existingTransfer.fromAccountId === fromAccountId || existingTransfer.toAccountId === toAccountId` to use `!==` so it correctly detects when accounts have actually changed.
+        3. Preserve the existing fee handling logic (create/update/delete fee expenses) exactly — just gate it on the relevant fields being provided.
+        4. Ensure `onTransferTransactionChange` is called for both old and new states when accounts/dates change.
+        The transfer handler is more complex than income due to fee logic — be careful to preserve all fee creation, update, and deletion paths.
+      </action>
+      <verify>Run `npm run build`. Then manually test: edit a transfer transaction's date only — should succeed without 400 error. Also test editing a transfer with a fee to ensure fee logic still works.</verify>
+    </task>
+  </phase>
+
+  <phase name="3: Verification and Cleanup">
+    <task id="3.1">
+      <name>Run lint and build checks</name>
+      <action>
+        Run `npm run lint` and `npm run build`. Fix any lint errors or type errors introduced by the changes.
+      </action>
+      <verify>`npm run lint` exits with 0 errors. `npm run build` exits with 0 errors.</verify>
+    </task>
+
+    <task id="3.2">
+      <name>Verify hook error messages are kept</name>
+      <action>
+        Confirm that the improved error messages in `src/hooks/useIncomeTransactionsQuery.ts` (lines 79-82) and `src/hooks/useTransferTransactionsQuery.ts` (lines 94-97) are still in place and read the API response body to surface Zod validation details.
+      </action>
+      <verify>Read both hook files and confirm the `errorData.details ? JSON.stringify(errorData.details)` pattern is present in the update functions.</verify>
+    </task>
+  </phase>
+</plan>
