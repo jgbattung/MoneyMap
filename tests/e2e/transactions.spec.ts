@@ -102,9 +102,10 @@ test.describe("Transaction updates", () => {
     // beforeAll. We only need to create the additional accounts and transactions.
     const userId = "test-user-id";
 
-    // Income account (starts at 50 000)
-    await prisma.financialAccount.create({
-      data: {
+    // Income account (starts at 50 000) — upsert so retries don't fail on unique constraint
+    await prisma.financialAccount.upsert({
+      where: { id: "bpi-savings-account" },
+      create: {
         id: "bpi-savings-account",
         userId,
         name: "BPI Savings",
@@ -112,11 +113,13 @@ test.describe("Transaction updates", () => {
         initialBalance: 50000,
         currentBalance: 50000,
       },
+      update: {},
     });
 
     // Transfer source account (starts at 30 000)
-    await prisma.financialAccount.create({
-      data: {
+    await prisma.financialAccount.upsert({
+      where: { id: "bdo-savings-account" },
+      create: {
         id: "bdo-savings-account",
         userId,
         name: "BDO Savings",
@@ -124,11 +127,13 @@ test.describe("Transaction updates", () => {
         initialBalance: 30000,
         currentBalance: 30000,
       },
+      update: {},
     });
 
     // Seed an income transaction — description is intentionally null (regression)
-    await prisma.incomeTransaction.create({
-      data: {
+    await prisma.incomeTransaction.upsert({
+      where: { id: "salary-income-txn" },
+      create: {
         id: "salary-income-txn",
         userId,
         name: "March Salary",
@@ -138,11 +143,13 @@ test.describe("Transaction updates", () => {
         date: new Date("2026-03-01"),
         description: null,
       },
+      update: {},
     });
 
     // Seed a transfer transaction — notes is intentionally null (regression)
-    await prisma.transferTransaction.create({
-      data: {
+    await prisma.transferTransaction.upsert({
+      where: { id: "monthly-transfer-txn" },
+      create: {
         id: "monthly-transfer-txn",
         userId,
         name: "March Transfer",
@@ -153,6 +160,7 @@ test.describe("Transaction updates", () => {
         date: new Date("2026-03-05"),
         notes: null,
       },
+      update: {},
     });
   });
 
@@ -165,7 +173,7 @@ test.describe("Transaction updates", () => {
     await page.goto("/income");
     await page.waitForLoadState("networkidle");
 
-    await expect(page.getByRole("heading", { name: "Income" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Income", exact: true }).first()).toBeVisible();
 
     // Open the edit sheet for the seeded income transaction
     await openEditSheet(page, "March Salary");
