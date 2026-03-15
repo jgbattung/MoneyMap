@@ -23,6 +23,7 @@ const ServerPostExpenseSchema = z.object({
   installmentStartDate: z.string().optional().nullable(),
   isSystemGenerated: z.boolean().optional(),
   parentInstallmentId: z.string().optional(),
+  tagIds: z.array(z.string()).max(10).optional(),
 });
 
 export const dynamic = 'force-dynamic';
@@ -138,6 +139,7 @@ export async function GET(request: NextRequest) {
         account: true,
         expenseType: true,
         expenseSubcategory: true,
+        tags: true,
       },
       orderBy: {
         date: 'desc',
@@ -200,6 +202,7 @@ export async function POST(request: NextRequest) {
       installmentStartDate,
       isSystemGenerated,
       parentInstallmentId,
+      tagIds,
     } = parseResult.data;
 
     if (!isInstallment && !date) {
@@ -270,6 +273,9 @@ export async function POST(request: NextRequest) {
           monthlyAmount,
           isSystemGenerated: isSystemGenerated || false,
           parentInstallmentId: parentInstallmentId || null,
+          ...(tagIds && tagIds.length > 0 && {
+            tags: { connect: tagIds.map((id) => ({ id })) },
+          }),
         },
       });
 

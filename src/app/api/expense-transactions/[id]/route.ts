@@ -20,6 +20,7 @@ const ServerPatchExpenseSchema = z.object({
   installmentDuration: z.coerce.number().int().positive().nullable().optional(),
   installmentStartDate: z.string().nullable().optional(),
   remainingInstallments: z.coerce.number().int().optional(),
+  tagIds: z.array(z.string()).max(10).optional(),
 });
 
 export const dynamic = 'force-dynamic';
@@ -51,6 +52,7 @@ export async function GET(
         account: true,
         expenseType: true,
         expenseSubcategory: true,
+        tags: true,
       },
     });
 
@@ -110,7 +112,8 @@ export async function PATCH(
       isInstallment,
       installmentDuration,
       installmentStartDate,
-      remainingInstallments
+      remainingInstallments,
+      tagIds,
     } = parseResult.data;
 
     const existingExpense = await db.expenseTransaction.findUnique({
@@ -160,6 +163,7 @@ export async function PATCH(
       const updateData: any = {};
 
       if (name !== undefined) updateData.name = name;
+      if (tagIds !== undefined) updateData.tags = { set: tagIds.map((id) => ({ id })) };
       if (expenseTypeId !== undefined) updateData.expenseTypeId = expenseTypeId;
       if (expenseSubcategoryId !== undefined) updateData.expenseSubcategoryId = expenseSubcategoryId;
       if (date !== undefined) updateData.date = new Date(date);
@@ -271,6 +275,9 @@ export async function PATCH(
           userId: session.user.id,
         },
         data: updateData,
+        include: {
+          tags: true,
+        },
       });
 
       return updatedExpense;
