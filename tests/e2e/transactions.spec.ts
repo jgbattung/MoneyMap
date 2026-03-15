@@ -2,15 +2,23 @@ import { test, expect } from "@playwright/test";
 import { clearDatabase, seedBaseData, createTestSession, prisma } from "../../playwright/utils/db";
 
 // ---------------------------------------------------------------------------
-// Shared helper: open an existing transaction's edit sheet by clicking its
-// row action menu on the relevant page.
+// Shared helper: enter inline-edit mode for a transaction row.
+// The tables use TanStack React Table with an EditCell that renders an
+// IconEdit button when not editing and IconCheck/IconX when editing.
+// Clicking the edit button (last column) puts the row into inline edit mode.
 // ---------------------------------------------------------------------------
-async function openEditSheet(page: import("@playwright/test").Page, transactionName: string) {
-  // Find the row containing the transaction name, then click its action/edit button.
+async function enterEditMode(page: import("@playwright/test").Page, transactionName: string) {
   const row = page.locator("tbody tr").filter({ hasText: transactionName });
   await row.waitFor({ state: "visible", timeout: 10000 });
-  // Many tables expose an actions menu via a "..." or edit button in the row.
-  // Try a generic approach: click the first button inside the row.
+  // The edit button is the last button in the row (IconEdit)
+  await row.getByRole("button").last().click();
+}
+
+// Save the inline-edit by clicking the IconCheck (save) button in the row.
+async function saveEditMode(page: import("@playwright/test").Page, transactionName: string) {
+  const row = page.locator("tbody tr").filter({ hasText: transactionName });
+  // After entering edit mode the row still contains the transaction name in a text input.
+  // The first button is now IconCheck (save), second is IconX (cancel).
   await row.getByRole("button").first().click();
 }
 
@@ -175,34 +183,22 @@ test.describe("Transaction updates", () => {
 
     await expect(page.getByRole("heading", { name: "Income", exact: true }).first()).toBeVisible();
 
-    // Open the edit sheet for the seeded income transaction
-    await openEditSheet(page, "March Salary");
+    // Enter inline edit mode — click the IconEdit button (last button in row)
+    await enterEditMode(page, "March Salary");
 
-    // Wait for the edit sheet to open
-    await expect(
-      page.getByRole("dialog").or(page.locator('[data-slot="sheet-content"]'))
-    ).toBeVisible({ timeout: 10000 });
+    const row = page.locator("tbody tr").filter({ hasText: "March Salary" });
 
-    // Change the date — navigate to April in the calendar picker
-    // (exact selector depends on implementation; look for "Date" label)
-    const dateField = page.getByLabel("Date");
-    await dateField.click();
-
-    // Navigate to the next month and pick the 1st
+    // Click the inline date popover button and pick a date
+    await row.locator("button").filter({ hasText: /jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i }).click();
     await page.getByRole("button", { name: /next month/i }).click();
     await page.getByRole("gridcell", { name: "1" }).first().getByRole("button").click();
 
-    // Submit the update
-    const saveBtn = page
-      .locator('[data-slot="sheet-content"]')
-      .getByRole("button", { name: /save|update/i });
-    await saveBtn.click();
+    // Save — click the IconCheck button (first button in edit-mode row)
+    await saveEditMode(page, "March Salary");
 
-    // Should NOT see a validation error toast (the regression produced a 400)
+    // Regression guard: should NOT see a validation error toast (regression produced 400)
     await expect(page.getByText(/validation failed/i)).not.toBeVisible({ timeout: 3000 });
-
-    // Should see a success toast
-    await expect(page.getByText(/updated successfully/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Income updated successfully")).toBeVisible({ timeout: 10000 });
   });
 
   // -------------------------------------------------------------------------
@@ -212,23 +208,19 @@ test.describe("Transaction updates", () => {
     await page.goto("/income");
     await page.waitForLoadState("networkidle");
 
-    await openEditSheet(page, "March Salary");
+    await enterEditMode(page, "March Salary");
 
-    await expect(
-      page.getByRole("dialog").or(page.locator('[data-slot="sheet-content"]'))
-    ).toBeVisible({ timeout: 10000 });
+    const row = page.locator("tbody tr").filter({ hasText: "March Salary" });
 
-    // Clear and re-type the name
-    const nameField = page.getByLabel(/income name/i).or(page.getByLabel(/name/i)).first();
-    await nameField.clear();
-    await nameField.fill("April Salary");
+    // Name field is a plain <Input> in edit mode — clear and retype
+    const nameInput = row.locator("input").first();
+    await nameInput.clear();
+    await nameInput.fill("April Salary");
+    await nameInput.blur();
 
-    const saveBtn = page
-      .locator('[data-slot="sheet-content"]')
-      .getByRole("button", { name: /save|update/i });
-    await saveBtn.click();
+    await saveEditMode(page, "April Salary");
 
-    await expect(page.getByText(/updated successfully/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Income updated successfully")).toBeVisible({ timeout: 10000 });
     await expect(page.locator("tbody").getByText("April Salary")).toBeVisible();
   });
 
@@ -239,31 +231,22 @@ test.describe("Transaction updates", () => {
     await page.goto("/income");
     await page.waitForLoadState("networkidle");
 
-    // The salary is currently linked to BPI Savings. Move it to BDO Savings.
-    await openEditSheet(page, "April Salary");
+    // Salary was renamed to "April Salary" in test 2
+    await enterEditMode(page, "April Salary");
 
-    await expect(
-      page.getByRole("dialog").or(page.locator('[data-slot="sheet-content"]'))
-    ).toBeVisible({ timeout: 10000 });
+    const row = page.locator("tbody tr").filter({ hasText: "April Salary" });
 
-    // Change account
-    await page.getByLabel("Account").click();
+    // Account column is a <Select> in edit mode
+    await row.locator('[role="combobox"]').first().click();
     await page.getByRole("option", { name: "BDO Savings" }).click();
 
-    const saveBtn = page
-      .locator('[data-slot="sheet-content"]')
-      .getByRole("button", { name: /save|update/i });
-    await saveBtn.click();
+    await saveEditMode(page, "April Salary");
 
-    await expect(page.getByText(/updated successfully/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Income updated successfully")).toBeVisible({ timeout: 10000 });
 
-    // Navigate to accounts page and verify balances updated
+    // Navigate to accounts page and confirm both accounts are present
     await page.goto("/accounts");
     await page.waitForLoadState("networkidle");
-
-    // BPI Savings should have decreased by the salary amount
-    // BDO Savings should have increased by the salary amount
-    // (Exact balance assertions depend on the accounts page layout)
     await expect(page.getByText("BDO Savings")).toBeVisible();
     await expect(page.getByText("BPI Savings")).toBeVisible();
   });
@@ -277,27 +260,20 @@ test.describe("Transaction updates", () => {
     await page.goto("/transfers");
     await page.waitForLoadState("networkidle");
 
-    await openEditSheet(page, "March Transfer");
+    await enterEditMode(page, "March Transfer");
 
-    await expect(
-      page.getByRole("dialog").or(page.locator('[data-slot="sheet-content"]'))
-    ).toBeVisible({ timeout: 10000 });
+    const row = page.locator("tbody tr").filter({ hasText: "March Transfer" });
 
-    // Change the date
-    const dateField = page.getByLabel("Date");
-    await dateField.click();
-
+    // Click the inline date popover button
+    await row.locator("button").filter({ hasText: /jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i }).click();
     await page.getByRole("button", { name: /next month/i }).click();
     await page.getByRole("gridcell", { name: "5" }).first().getByRole("button").click();
 
-    const saveBtn = page
-      .locator('[data-slot="sheet-content"]')
-      .getByRole("button", { name: /save|update/i });
-    await saveBtn.click();
+    await saveEditMode(page, "March Transfer");
 
     // Regression guard: should NOT 400 due to null notes
     await expect(page.getByText(/validation failed/i)).not.toBeVisible({ timeout: 3000 });
-    await expect(page.getByText(/updated successfully/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Transfer updated successfully")).toBeVisible({ timeout: 10000 });
   });
 
   // -------------------------------------------------------------------------
@@ -309,25 +285,19 @@ test.describe("Transaction updates", () => {
     await page.goto("/transfers");
     await page.waitForLoadState("networkidle");
 
-    await openEditSheet(page, "March Transfer");
+    await enterEditMode(page, "March Transfer");
 
-    await expect(
-      page.getByRole("dialog").or(page.locator('[data-slot="sheet-content"]'))
-    ).toBeVisible({ timeout: 10000 });
+    const row = page.locator("tbody tr").filter({ hasText: "March Transfer" });
 
-    // Change amount from 10 000 to 15 000
-    const amountField = page.getByLabel("Amount");
-    await amountField.clear();
-    await amountField.fill("15000");
+    // Amount field is a plain <Input> in edit mode
+    const amountInput = row.locator("input").first();
+    await amountInput.clear();
+    await amountInput.fill("15000");
+    await amountInput.blur();
 
-    const saveBtn = page
-      .locator('[data-slot="sheet-content"]')
-      .getByRole("button", { name: /save|update/i });
-    await saveBtn.click();
+    await saveEditMode(page, "March Transfer");
 
-    await expect(page.getByText(/updated successfully/i)).toBeVisible({ timeout: 10000 });
-
-    // Verify the updated amount is reflected in the list
+    await expect(page.getByText("Transfer updated successfully")).toBeVisible({ timeout: 10000 });
     await expect(page.locator("tbody").getByText(/15[,.]?000/)).toBeVisible();
   });
 });
