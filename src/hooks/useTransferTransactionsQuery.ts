@@ -91,7 +91,10 @@ const updateTransfer = async ({ id, ...transferData }: { id: string; [key: strin
     headers: { 'Content-Type' : 'application/json' },
     body: JSON.stringify(transferData),
   });
-  if (!response.ok) throw new Error('Failed to update transfer');
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.details ? JSON.stringify(errorData.details) : errorData.error || 'Failed to update transfer');
+  }
   return response.json();
 }
 
