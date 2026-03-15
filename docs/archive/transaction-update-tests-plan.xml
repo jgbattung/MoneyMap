@@ -1,0 +1,261 @@
+<plan>
+  <feature>Transaction Update Regression Tests</feature>
+  <spec>docs/transaction-update-tests-spec.md</spec>
+
+  <phase name="1: Income PATCH Unit Tests">
+    <task id="1.1">
+      <name>Write unit tests for income PATCH route</name>
+      <action>
+        Create `src/app/api/income-transactions/[id]/route.test.ts`.
+        Mock `next/headers`, `@/lib/auth`, `@/lib/prisma` (including `db.$transaction`), and `@/lib/statement-recalculator`.
+        Write all test cases defined in the spec under "File: src/app/api/income-transactions/[id]/route.test.ts":
+        - Schema validation regression tests (cases 1–5)
+        - Balance logic: amount change on same account (cases 6–7)
+        - Balance logic: account change (cases 8–9) — the income account-change bug
+        - Auth/error paths (cases 10–11)
+        Reference `src/app/api/expense-transactions/route.test.ts` for mock patterns.
+        Reference `src/app/api/income-transactions/[id]/route.ts` for the handler logic being tested.
+      </action>
+      <verify>Run `npx vitest run src/app/api/income-transactions` — all tests pass.</verify>
+    </task>
+  </phase>
+
+  <phase name="2: Transfer PATCH Unit Tests">
+    <task id="2.1">
+      <name>Write unit tests for transfer PATCH route</name>
+      <action>
+        Create `src/app/api/transfer-transactions/[id]/route.test.ts`.
+        Mock `next/headers`, `@/lib/auth`, `@/lib/prisma` (including `db.$transaction`, `transferTransaction`, `expenseTransaction`, `financialAccount`), and `@/lib/statement-recalculator`.
+        Write all test cases defined in the spec under "File: src/app/api/transfer-transactions/[id]/route.test.ts":
+        - Schema validation regression tests (cases 1–5), including the `z.coerce.string()` number coercion test
+        - Balance logic: amount change (cases 6–7)
+        - Balance logic: account changes including the both-accounts edge case (cases 8–10)
+        - Fee logic (cases 11–13)
+        - Auth/error paths (cases 14–16)
+        Reference `src/app/api/expense-transactions/route.test.ts` for mock patterns.
+        Reference `src/app/api/transfer-transactions/[id]/route.ts` for the handler logic being tested.
+      </action>
+      <verify>Run `npx vitest run src/app/api/transfer-transactions` — all tests pass.</verify>
+    </task>
+  </phase>
+
+  <phase name="3: E2E Tests (Basic Regression — COMPLETED)">
+    <task id="3.1">
+      <name>Add transaction update E2E tests to Playwright suite</name>
+      <action>
+        In `tests/e2e/transactions.spec.ts`, add a new `test.describe("Transaction updates", ...)` block.
+        In `beforeAll`, seed two accounts (BPI Savings, BDO Savings), one income transaction on BPI (name: "Salary", amount: 20000, no description), and one transfer transaction from BPI to BDO (name: "Monthly Transfer", amount: 5000, no notes).
+        Write the 5 E2E test cases from the spec:
+        1. Update income date only (regression — was 400'ing on null description)
+        2. Update income name only
+        3. Update income account — verify balance changes on both old and new accounts
+        4. Update transfer date only (regression — was 400'ing on null notes + number amount)
+        5. Update transfer amount — verify both account balances update correctly
+        Reference `tests/e2e/transactions.spec.ts` existing describe block for patterns (seeding, `page.goto`, form interaction, toast assertions).
+      </action>
+      <verify>Run `npx playwright test tests/e2e/transactions.spec.ts` — all tests in the new describe block pass.</verify>
+    </task>
+  </phase>
+
+  <phase name="4: Extended E2E Tests — Field Combinations, Balance Verification, Expense Updates">
+    <!--
+      Phase 3 already covers: income date-only, income name-only, income account change (no balance check),
+      transfer date-only, transfer amount-only (no account balance check).
+
+      Phase 4 adds: deeper field combinations, explicit account balance assertions, and a full
+      expense update suite. All new tests live in a new describe block
+      "Transaction updates — extended" in tests/e2e/transactions.spec.ts.
+
+      SEED STRATEGY: Add a new beforeAll that upserts isolated accounts and transactions
+      with unique IDs (prefixed "p4-") so they don't collide with Phase 3 data.
+
+      BALANCE ASSERTION STRATEGY: Before each test that checks balances, read the displayed
+      balance from the account card on /accounts (look for a numeric element inside the card
+      matching the account name). After the update, reload /accounts and assert the new value.
+      Use a helper `getAccountBalance(page, accountName)` that navigates to /accounts and
+      returns the parsed numeric balance for that account card.
+    -->
+
+    <task id="4.1">
+      <name>Seed isolated Phase 4 test data</name>
+      <action>
+        In `tests/e2e/transactions.spec.ts`, add a new `test.describe("Transaction updates — extended", ...)` block.
+
+        In `beforeAll`, upsert the following using the existing `prisma` import (all IDs are prefixed "p4-" to avoid collisions):
+
+        Accounts:
+        - id: "p4-income-account-a", name: "P4 Income A", type: CHECKING, balance: 100000
+        - id: "p4-income-account-b", name: "P4 Income B", type: CHECKING, balance: 50000
+        - id: "p4-transfer-from",    name: "P4 Transfer From", type: SAVINGS, balance: 80000
+        - id: "p4-transfer-to",      name: "P4 Transfer To",   type: SAVINGS, balance: 40000
+        - id: "p4-transfer-alt",     name: "P4 Transfer Alt",  type: SAVINGS, balance: 60000
+        - id: "p4-expense-account-a", name: "P4 Expense A",    type: CHECKING, balance: 70000
+        - id: "p4-expense-account-b", name: "P4 Expense B",    type: CHECKING, balance: 30000
+
+        Income transactions (description: null on all):
+        - id: "p4-income-amount",  name: "P4 Income Amount",  amount: 5000,  accountId: "p4-income-account-a", date: 2026-02-01
+        - id: "p4-income-multi",   name: "P4 Income Multi",   amount: 8000,  accountId: "p4-income-account-a", date: 2026-02-05
+        - id: "p4-income-acct",    name: "P4 Income AcctChg", amount: 10000, accountId: "p4-income-account-a", date: 2026-02-10
+        - id: "p4-income-all",     name: "P4 Income All",     amount: 3000,  accountId: "p4-income-account-a", date: 2026-02-15
+
+        Transfer transactions (notes: null on all):
+        - id: "p4-transfer-name",  name: "P4 Transfer Name",  amount: 2000,  from: "p4-transfer-from", to: "p4-transfer-to",  date: 2026-02-01
+        - id: "p4-transfer-multi", name: "P4 Transfer Multi", amount: 5000,  from: "p4-transfer-from", to: "p4-transfer-to",  date: 2026-02-05
+        - id: "p4-transfer-from-chg", name: "P4 Transfer FromChg", amount: 7000, from: "p4-transfer-from", to: "p4-transfer-to", date: 2026-02-10
+        - id: "p4-transfer-to-chg",   name: "P4 Transfer ToChg",   amount: 4000, from: "p4-transfer-from", to: "p4-transfer-to", date: 2026-02-15
+        - id: "p4-transfer-both",     name: "P4 Transfer Both",    amount: 6000, from: "p4-transfer-from", to: "p4-transfer-to", date: 2026-02-20
+
+        Expense transactions (description: null on all):
+        - id: "p4-expense-date",   name: "P4 Expense Date",   amount: 1500, accountId: "p4-expense-account-a", date: 2026-02-01
+        - id: "p4-expense-name",   name: "P4 Expense Name",   amount: 2000, accountId: "p4-expense-account-a", date: 2026-02-05
+        - id: "p4-expense-amount", name: "P4 Expense Amount", amount: 3000, accountId: "p4-expense-account-a", date: 2026-02-10
+        - id: "p4-expense-acct",   name: "P4 Expense AcctChg",amount: 4500, accountId: "p4-expense-account-a", date: 2026-02-15
+        - id: "p4-expense-multi",  name: "P4 Expense Multi",  amount: 1000, accountId: "p4-expense-account-a", date: 2026-02-20
+
+        All expense transactions use `expenseTypeId: "expense-type-groceries"` (seeded by seedBaseData()).
+        All income transactions use `incomeTypeId: "income-type-salary"` (seeded by seedBaseData()).
+        All transfer transactions use `transferTypeId: "transfer-type-internal"` (seeded by seedBaseData()).
+        Use `upsert` with `update: {}` to be retry-safe.
+
+        Also implement the helper `getAccountBalance(page, accountName): Promise&lt;number&gt;` that:
+        1. Navigates to /accounts
+        2. Finds the account card with that name (look for a &lt;p&gt; containing the name, then find the sibling balance &lt;p&gt;)
+        3. Reads and parses the formatted balance text — strip "₱", commas, then parseFloat — and returns a number
+        Note: balances are formatted with en-PH locale as "₱50,000.00"
+      </action>
+      <verify>Run the describe block — beforeAll completes without error.</verify>
+    </task>
+
+    <task id="4.2">
+      <name>Income update field combination E2E tests with balance verification</name>
+      <action>
+        Add these tests to the "Transaction updates — extended" describe block.
+        Navigate to the relevant page (/income or /accounts/[account-id] depending on where income transactions appear in the UI — check the existing Phase 3 tests which use /income).
+
+        **Test: Update income amount only — verify balance**
+        - Transaction: "P4 Income Amount" (amount: 5000, account: P4 Income A, balance starts at 100000)
+        - Action: Change amount to 7000
+        - Assert: success toast visible
+        - Assert: P4 Income A balance = 100000 + (7000 - 5000) = 102000
+
+        **Test: Update income name + description together (multi-field, no balance impact)**
+        - Transaction: "P4 Income Multi"
+        - Action: Change name to "P4 Income Multi Updated", fill description field with "Bonus payment"
+        - Assert: success toast visible
+        - Assert: updated name visible in table
+
+        **Test: Update income account change — verify both account balances**
+        - Transaction: "P4 Income AcctChg" (amount: 10000, account: P4 Income A starts at 102000 after test above, P4 Income B starts at 50000)
+        - NOTE: Use the CURRENT known balance at time of test, not the initial seed value. Read balance via getAccountBalance before the edit.
+        - Action: Change account from "P4 Income A" to "P4 Income B"
+        - Assert: success toast visible
+        - Assert: P4 Income A balance decreased by 10000
+        - Assert: P4 Income B balance increased by 10000
+
+        **Test: Update income amount + account together — verify both account balances**
+        - Transaction: "P4 Income All" (amount: 3000, account: P4 Income A)
+        - Read both account balances before the edit.
+        - Action: Change amount to 4500 AND change account to "P4 Income B"
+        - Assert: success toast visible
+        - Assert: P4 Income A balance decreased by 3000 (old income removed)
+        - Assert: P4 Income B balance increased by 4500 (new income applied)
+      </action>
+      <verify>All 4 income combination tests pass. Balance assertions confirm the exact expected values.</verify>
+    </task>
+
+    <task id="4.3">
+      <name>Transfer update field combination E2E tests with balance verification</name>
+      <action>
+        Add these tests to the "Transaction updates — extended" describe block.
+        Navigate to /transfers (or wherever the app shows transfer transactions — check existing Phase 3 tests).
+
+        **Test: Update transfer name + notes (no balance impact)**
+        - Transaction: "P4 Transfer Name" (amount: 2000)
+        - Action: Change name to "P4 Transfer Name Updated", fill notes field with "Monthly transfer"
+        - Assert: success toast visible
+        - Assert: updated name visible in table
+
+        **Test: Update transfer amount + date together — verify both account balances**
+        - Transaction: "P4 Transfer Multi" (amount: 5000, from: P4 Transfer From, to: P4 Transfer To)
+        - Read both account balances before the edit.
+        - Action: Change amount to 8000, change date to previous month
+        - Assert: success toast visible
+        - Assert: P4 Transfer From balance decreased by 3000 (extra 3000 debited)
+        - Assert: P4 Transfer To balance increased by 3000 (extra 3000 credited)
+
+        **Test: Update transfer fromAccount only — verify balance reversal on old from, apply to new from**
+        - Transaction: "P4 Transfer FromChg" (amount: 7000, from: P4 Transfer From, to: P4 Transfer To)
+        - Read P4 Transfer From and P4 Transfer Alt balances before the edit.
+        - Action: Change from account to "P4 Transfer Alt"
+        - Assert: success toast visible
+        - Assert: P4 Transfer From balance increased by 7000 (old debit reversed)
+        - Assert: P4 Transfer Alt balance decreased by 7000 (new debit applied)
+        - Assert: P4 Transfer To balance unchanged
+
+        **Test: Update transfer toAccount only — verify balance reversal on old to, apply to new to**
+        - Transaction: "P4 Transfer ToChg" (amount: 4000, from: P4 Transfer From, to: P4 Transfer To)
+        - Read P4 Transfer To and P4 Transfer Alt balances before the edit.
+        - Action: Change to account to "P4 Transfer Alt"
+        - Assert: success toast visible
+        - Assert: P4 Transfer From balance unchanged
+        - Assert: P4 Transfer To balance decreased by 4000 (old credit reversed)
+        - Assert: P4 Transfer Alt balance increased by 4000 (new credit applied)
+
+        **Test: Update transfer BOTH accounts — the edge case (accountsChanged === fix)**
+        - Transaction: "P4 Transfer Both" (amount: 6000, from: P4 Transfer From, to: P4 Transfer To)
+        - Read all 3 relevant account balances before the edit.
+        - Action: Change from account to "P4 Transfer Alt" AND change to account to "P4 Income B"
+        - Assert: success toast visible
+        - Assert: P4 Transfer From balance increased by 6000 (old debit reversed)
+        - Assert: P4 Transfer To balance decreased by 6000 (old credit reversed)
+        - Assert: P4 Transfer Alt balance decreased by 6000 (new debit applied)
+        - Assert: P4 Income B balance increased by 6000 (new credit applied)
+      </action>
+      <verify>All 5 transfer combination tests pass. Balance assertions confirm the exact expected values.</verify>
+    </task>
+
+    <task id="4.4">
+      <name>Expense update E2E tests with balance verification</name>
+      <action>
+        Add these tests to the "Transaction updates — extended" describe block.
+        Expense transactions appear under /expenses. Use the same enterEditMode / saveRow helpers.
+
+        **Test: Update expense date only**
+        - Transaction: "P4 Expense Date" (amount: 1500, account: P4 Expense A)
+        - Action: Change date to previous month
+        - Assert: success toast visible (regression guard — ensure no 400 from description null)
+        - Assert: no validation error toast
+
+        **Test: Update expense name only**
+        - Transaction: "P4 Expense Name"
+        - Action: Change name to "P4 Expense Name Updated"
+        - Assert: success toast visible
+        - Assert: updated name visible in table
+
+        **Test: Update expense amount — verify account balance**
+        - Transaction: "P4 Expense Amount" (amount: 3000, account: P4 Expense A, balance: 70000)
+        - Read P4 Expense A balance before the edit.
+        - Action: Change amount to 5000
+        - Assert: success toast visible
+        - Assert: P4 Expense A balance decreased by 2000 (extra 2000 spent)
+
+        **Test: Update expense account change — verify both account balances**
+        - Transaction: "P4 Expense AcctChg" (amount: 4500, account: P4 Expense A, P4 Expense B balance: 30000)
+        - Read both account balances before the edit.
+        - Action: Change account from "P4 Expense A" to "P4 Expense B"
+        - Assert: success toast visible
+        - Assert: P4 Expense A balance increased by 4500 (old expense reversed)
+        - Assert: P4 Expense B balance decreased by 4500 (expense moved to new account)
+
+        **Test: Update expense amount + name + description together (multi-field)**
+        - Transaction: "P4 Expense Multi" (amount: 1000, account: P4 Expense A)
+        - Read P4 Expense A balance before the edit.
+        - Action: Change name to "P4 Expense Multi Updated", amount to 1800, fill description with "Updated"
+        - Assert: success toast visible
+        - Assert: updated name visible in table
+        - Assert: P4 Expense A balance decreased by 800 (extra 800 spent)
+      </action>
+      <verify>All 5 expense update tests pass. Balance assertions confirm the exact expected values.</verify>
+    </task>
+  </phase>
+</plan>
