@@ -16,6 +16,7 @@ const ServerPostIncomeSchema = z.object({
   incomeTypeId: z.string().min(1, "Income type is required"),
   date: z.string().min(1, "Date is required"),
   description: z.string().max(500).optional(),
+  tagIds: z.array(z.string()).max(10).optional(),
 });
 
 export const dynamic = 'force-dynamic';
@@ -122,6 +123,7 @@ export async function GET(request: NextRequest) {
       include: {
         account: true,
         incomeType: true,
+        tags: true,
       },
       orderBy: {
         date: 'desc',
@@ -171,7 +173,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, amount, accountId, incomeTypeId, date, description } = parseResult.data;
+    const { name, amount, accountId, incomeTypeId, date, description, tagIds } = parseResult.data;
 
     const result = await db.$transaction(async (tx) => {
       const incomeTransaction = await tx.incomeTransaction.create({
@@ -183,10 +185,14 @@ export async function POST(request: NextRequest) {
           incomeTypeId,
           date: new Date(date),
           description: description || null,
+          ...(tagIds && tagIds.length > 0 && {
+            tags: { connect: tagIds.map((id) => ({ id })) },
+          }),
         },
         include: {
           account: true,
           incomeType: true,
+          tags: true,
         }
       });
 

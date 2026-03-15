@@ -15,6 +15,7 @@ const ServerPatchIncomeSchema = z.object({
   incomeTypeId: z.string().min(1, "Income type is required").optional(),
   date: z.string().min(1, "Date is required").optional(),
   description: z.string().max(500).nullable().optional(),
+  tagIds: z.array(z.string()).max(10).optional(),
 });
 
 export const dynamic = 'force-dynamic';
@@ -96,6 +97,7 @@ export async function PATCH(
       incomeTypeId,
       date,
       description,
+      tagIds,
     } = parseResult.data;
 
     const existingTransaction = await db.incomeTransaction.findUnique({
@@ -117,6 +119,7 @@ export async function PATCH(
       const updateData: any = {};
 
       if (name !== undefined) updateData.name = name;
+      if (tagIds !== undefined) updateData.tags = { set: tagIds.map((id) => ({ id })) };
       if (incomeTypeId !== undefined) updateData.incomeTypeId = incomeTypeId;
       if (date !== undefined) updateData.date = new Date(date);
       if (description !== undefined) updateData.description = description || null;
@@ -209,6 +212,7 @@ export async function PATCH(
         include: {
           account: true,
           incomeType: true,
+          tags: true,
         },
       });
 
