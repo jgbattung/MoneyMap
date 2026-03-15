@@ -19,6 +19,11 @@ export type IncomeTransaction = {
     id: string;
     name: string;
   };
+  tags?: {
+    id: string;
+    name: string;
+    color: string;
+  }[];
 }
 
 type IncomeTransactionsResponse = {

@@ -19,6 +19,7 @@ import { ChevronDownIcon } from "lucide-react";
 import { Textarea } from "../ui/textarea";
 import { format } from "date-fns";
 import { formatDateForAPI } from "@/lib/utils";
+import { TagInput } from '@/components/shared/TagInput';
 
 interface CreateIncomeTransactionProps {
   open: boolean;
@@ -42,6 +43,7 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
       incomeTypeId: "",
       date: undefined,
       description: "",
+      tagIds: [],
     }
   });
 
@@ -219,6 +221,23 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
                   <Textarea
                     className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
                     {...field}
+                    disabled={isCreating}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="tagIds"
+            render={({ field }) => (
+              <FormItem className="p-4">
+                <FormLabel>Tags</FormLabel>
+                <FormControl>
+                  <TagInput
+                    selectedTagIds={field.value ?? []}
+                    onChange={field.onChange}
                     disabled={isCreating}
                   />
                 </FormControl>
