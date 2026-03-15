@@ -7,7 +7,7 @@ import { z } from "zod";
 
 const ServerPatchTransferSchema = z.object({
   name: z.string().min(1, "Name is required").max(100).optional(),
-  amount: z.string().min(1, "Amount is required").refine(
+  amount: z.coerce.string().min(1, "Amount is required").refine(
     (val) => !isNaN(Number(val)) && Number(val) > 0,
     { message: "Amount must be a positive number" }
   ).optional(),
