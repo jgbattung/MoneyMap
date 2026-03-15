@@ -21,6 +21,7 @@ const ServerPostTransferSchema = z.object({
     (val) => !val || (!isNaN(Number(val)) && Number(val) > 0),
     { message: "Fee amount must be a positive number" }
   ),
+  tagIds: z.array(z.string()).max(10).optional(),
 }).refine((data) => data.fromAccountId !== data.toAccountId, {
   message: "From account and to account must be different",
   path: ["toAccountId"],
@@ -143,6 +144,7 @@ export async function GET(request: NextRequest) {
         fromAccount: true,
         toAccount: true,
         transferType: true,
+        tags: true,
       },
       orderBy: {
         date: 'desc'
@@ -192,7 +194,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, amount, fromAccountId, toAccountId, transferTypeId, date, notes, feeAmount } = parseResult.data;
+    const { name, amount, fromAccountId, toAccountId, transferTypeId, date, notes, feeAmount, tagIds } = parseResult.data;
 
     const result = await db.$transaction(async (tx) => {
       let feeExpenseId = null;
@@ -255,12 +257,16 @@ export async function POST(request: NextRequest) {
           notes: notes || null,
           feeAmount: feeAmount ? parseFloat(feeAmount) : null,
           feeExpenseId: feeExpenseId,
+          ...(tagIds && tagIds.length > 0 && {
+            tags: { connect: tagIds.map((id) => ({ id })) },
+          }),
         },
         include: {
           fromAccount: true,
           toAccount: true,
           transferType: true,
           feeExpense: true,
+          tags: true,
         }
       });
 
