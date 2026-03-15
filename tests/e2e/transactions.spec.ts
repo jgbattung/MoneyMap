@@ -48,6 +48,29 @@ async function saveRow(row: import("@playwright/test").Locator) {
   await editCell.getByRole("button").first().click();
 }
 
+/**
+ * Navigate to /accounts and read the current balance for a named account card.
+ * Returns the balance as a plain number (e.g. 102000 for "102,000.00").
+ * The AccountCard component renders the balance as a formatted number in a <p>
+ * tag alongside a "PHP" label — no ₱ symbol is used.
+ */
+async function getAccountBalance(page: Page, accountName: string): Promise<number> {
+  await page.goto("/accounts");
+  await page.waitForLoadState("networkidle");
+
+  // Find the card that contains the account name, then read the balance <p>
+  // AccountCard renders: <p class="... font-bold ...">name</p> and
+  // <p class="...">formattedBalance</p> (e.g. "102,000.00") nearby.
+  const card = page.locator(".money-map-card-interactive").filter({ hasText: accountName });
+  await card.waitFor({ state: "visible", timeout: 10000 });
+
+  // The balance is the <p> that contains digits and commas/dots but NOT letters
+  // We target the <p> inside the balance flex container (items-end justify-center gap-2 sibling)
+  const balanceText = await card.locator("p").filter({ hasNotText: /[a-zA-Z]/ }).first().innerText();
+  const numeric = parseFloat(balanceText.replace(/,/g, ""));
+  return numeric;
+}
+
 test.describe("Transactions", () => {
   test.beforeAll(async () => {
     await clearDatabase();
@@ -322,5 +345,481 @@ test.describe("Transaction updates", () => {
 
     await expect(page.getByText("Transfer updated successfully")).toBeVisible({ timeout: 10000 });
     await expect(page.locator("tbody").getByText(/15[,.]?000/)).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 4 — Extended update tests with balance verification
+//
+// Relies on the user/session seeded by the "Transactions" describe's beforeAll.
+// Does NOT call clearDatabase(). Seeds isolated "p4-" prefixed data only.
+// ---------------------------------------------------------------------------
+test.describe("Transaction updates — extended", () => {
+  test.setTimeout(60000);
+
+  test.beforeAll(async () => {
+    const userId = "test-user-id";
+
+    // ---- Accounts ----
+    const accounts = [
+      { id: "p4-income-account-a", name: "P4 Income A",      accountType: "CHECKING" as const, balance: 100000 },
+      { id: "p4-income-account-b", name: "P4 Income B",      accountType: "CHECKING" as const, balance: 50000  },
+      { id: "p4-transfer-from",    name: "P4 Transfer From", accountType: "SAVINGS"  as const, balance: 80000  },
+      { id: "p4-transfer-to",      name: "P4 Transfer To",   accountType: "SAVINGS"  as const, balance: 40000  },
+      { id: "p4-transfer-alt",     name: "P4 Transfer Alt",  accountType: "SAVINGS"  as const, balance: 60000  },
+      { id: "p4-expense-account-a",name: "P4 Expense A",     accountType: "CHECKING" as const, balance: 70000  },
+      { id: "p4-expense-account-b",name: "P4 Expense B",     accountType: "CHECKING" as const, balance: 30000  },
+    ];
+
+    for (const acct of accounts) {
+      await prisma.financialAccount.upsert({
+        where: { id: acct.id },
+        create: {
+          id: acct.id,
+          userId,
+          name: acct.name,
+          accountType: acct.accountType,
+          initialBalance: acct.balance,
+          currentBalance: acct.balance,
+        },
+        update: {},
+      });
+    }
+
+    // ---- Income transactions ----
+    const incomeTransactions = [
+      { id: "p4-income-amount", name: "P4 Income Amount",   amount: 5000,  accountId: "p4-income-account-a", date: new Date("2026-02-01") },
+      { id: "p4-income-multi",  name: "P4 Income Multi",    amount: 8000,  accountId: "p4-income-account-a", date: new Date("2026-02-05") },
+      { id: "p4-income-acct",   name: "P4 Income AcctChg",  amount: 10000, accountId: "p4-income-account-a", date: new Date("2026-02-10") },
+      { id: "p4-income-all",    name: "P4 Income All",      amount: 3000,  accountId: "p4-income-account-a", date: new Date("2026-02-15") },
+    ];
+
+    for (const txn of incomeTransactions) {
+      await prisma.incomeTransaction.upsert({
+        where: { id: txn.id },
+        create: {
+          id: txn.id,
+          userId,
+          name: txn.name,
+          amount: txn.amount,
+          accountId: txn.accountId,
+          incomeTypeId: "income-type-salary",
+          date: txn.date,
+          description: null,
+        },
+        update: {},
+      });
+    }
+
+    // ---- Transfer transactions ----
+    const transferTransactions = [
+      { id: "p4-transfer-name",     name: "P4 Transfer Name",    amount: 2000, fromAccountId: "p4-transfer-from", toAccountId: "p4-transfer-to", date: new Date("2026-02-01") },
+      { id: "p4-transfer-multi",    name: "P4 Transfer Multi",   amount: 5000, fromAccountId: "p4-transfer-from", toAccountId: "p4-transfer-to", date: new Date("2026-02-05") },
+      { id: "p4-transfer-from-chg", name: "P4 Transfer FromChg", amount: 7000, fromAccountId: "p4-transfer-from", toAccountId: "p4-transfer-to", date: new Date("2026-02-10") },
+      { id: "p4-transfer-to-chg",   name: "P4 Transfer ToChg",   amount: 4000, fromAccountId: "p4-transfer-from", toAccountId: "p4-transfer-to", date: new Date("2026-02-15") },
+      { id: "p4-transfer-both",     name: "P4 Transfer Both",    amount: 6000, fromAccountId: "p4-transfer-from", toAccountId: "p4-transfer-to", date: new Date("2026-02-20") },
+    ];
+
+    for (const txn of transferTransactions) {
+      await prisma.transferTransaction.upsert({
+        where: { id: txn.id },
+        create: {
+          id: txn.id,
+          userId,
+          name: txn.name,
+          amount: txn.amount,
+          fromAccountId: txn.fromAccountId,
+          toAccountId: txn.toAccountId,
+          transferTypeId: "transfer-type-internal",
+          date: txn.date,
+          notes: null,
+        },
+        update: {},
+      });
+    }
+
+    // ---- Expense transactions ----
+    const expenseTransactions = [
+      { id: "p4-expense-date",   name: "P4 Expense Date",    amount: 1500, accountId: "p4-expense-account-a", date: new Date("2026-02-01") },
+      { id: "p4-expense-name",   name: "P4 Expense Name",    amount: 2000, accountId: "p4-expense-account-a", date: new Date("2026-02-05") },
+      { id: "p4-expense-amount", name: "P4 Expense Amount",  amount: 3000, accountId: "p4-expense-account-a", date: new Date("2026-02-10") },
+      { id: "p4-expense-acct",   name: "P4 Expense AcctChg", amount: 4500, accountId: "p4-expense-account-a", date: new Date("2026-02-15") },
+      { id: "p4-expense-multi",  name: "P4 Expense Multi",   amount: 1000, accountId: "p4-expense-account-a", date: new Date("2026-02-20") },
+    ];
+
+    for (const txn of expenseTransactions) {
+      await prisma.expenseTransaction.upsert({
+        where: { id: txn.id },
+        create: {
+          id: txn.id,
+          userId,
+          name: txn.name,
+          amount: txn.amount,
+          accountId: txn.accountId,
+          expenseTypeId: "expense-type-groceries",
+          date: txn.date,
+          description: null,
+        },
+        update: {},
+      });
+    }
+  });
+
+  // =========================================================================
+  // Task 4.2 — Income update field combination tests
+  // =========================================================================
+
+  test("should update income amount and verify account balance", async ({ page }) => {
+    const balanceBefore = await getAccountBalance(page, "P4 Income A");
+
+    await page.goto("/income");
+    await page.waitForLoadState("networkidle");
+
+    const row = await enterEditMode(page, "P4 Income Amount");
+
+    // Amount input is the second input (after name)
+    const amountInput = row.locator("input").nth(1);
+    await amountInput.clear();
+    await amountInput.fill("7000");
+    await amountInput.blur();
+
+    await saveRow(row);
+
+    await expect(page.getByText("Income updated successfully")).toBeVisible({ timeout: 10000 });
+
+    await page.waitForTimeout(1000);
+    const balanceAfter = await getAccountBalance(page, "P4 Income A");
+    expect(balanceAfter).toBe(balanceBefore + 2000);
+  });
+
+  test("should update income name and description together", async ({ page }) => {
+    await page.goto("/income");
+    await page.waitForLoadState("networkidle");
+
+    const row = await enterEditMode(page, "P4 Income Multi");
+
+    const nameInput = row.locator("input").first();
+    await nameInput.clear();
+    await nameInput.fill("P4 Income Multi Updated");
+    await nameInput.blur();
+
+    const descInput = row.locator("input").last();
+    await descInput.fill("Bonus payment");
+    await descInput.blur();
+
+    await saveRow(row);
+
+    await expect(page.getByText("Income updated successfully")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("tbody").getByText("P4 Income Multi Updated")).toBeVisible();
+  });
+
+  test("should update income account and verify both account balances", async ({ page }) => {
+    const balanceA = await getAccountBalance(page, "P4 Income A");
+    const balanceB = await getAccountBalance(page, "P4 Income B");
+
+    await page.goto("/income");
+    await page.waitForLoadState("networkidle");
+
+    const row = await enterEditMode(page, "P4 Income AcctChg");
+
+    const accountCombobox = row.locator('[role="combobox"]').first();
+    await accountCombobox.click();
+    await page.getByRole("option", { name: "P4 Income B" }).click();
+
+    await saveRow(row);
+
+    await expect(page.getByText("Income updated successfully")).toBeVisible({ timeout: 10000 });
+
+    await page.waitForTimeout(1000);
+    const newBalanceA = await getAccountBalance(page, "P4 Income A");
+    const newBalanceB = await getAccountBalance(page, "P4 Income B");
+    expect(newBalanceA).toBe(balanceA - 10000);
+    expect(newBalanceB).toBe(balanceB + 10000);
+  });
+
+  test("should update income amount and account together, verify both balances", async ({ page }) => {
+    const balanceA = await getAccountBalance(page, "P4 Income A");
+    const balanceB = await getAccountBalance(page, "P4 Income B");
+
+    await page.goto("/income");
+    await page.waitForLoadState("networkidle");
+
+    const row = await enterEditMode(page, "P4 Income All");
+
+    const amountInput = row.locator("input").nth(1);
+    await amountInput.clear();
+    await amountInput.fill("4500");
+    await amountInput.blur();
+
+    const accountCombobox = row.locator('[role="combobox"]').first();
+    await accountCombobox.click();
+    await page.getByRole("option", { name: "P4 Income B" }).click();
+
+    await saveRow(row);
+
+    await expect(page.getByText("Income updated successfully")).toBeVisible({ timeout: 10000 });
+
+    await page.waitForTimeout(1000);
+    const newBalanceA = await getAccountBalance(page, "P4 Income A");
+    const newBalanceB = await getAccountBalance(page, "P4 Income B");
+    expect(newBalanceA).toBe(balanceA - 3000);
+    expect(newBalanceB).toBe(balanceB + 4500);
+  });
+
+  // =========================================================================
+  // Task 4.3 — Transfer update field combination tests
+  // =========================================================================
+
+  test("should update transfer name and notes together", async ({ page }) => {
+    await page.goto("/transfers");
+    await page.waitForLoadState("networkidle");
+
+    const row = await enterEditMode(page, "P4 Transfer Name");
+
+    const nameInput = row.locator("input").first();
+    await nameInput.clear();
+    await nameInput.fill("P4 Transfer Name Updated");
+    await nameInput.blur();
+
+    const notesInput = row.locator("input").last();
+    await notesInput.fill("Monthly transfer");
+    await notesInput.blur();
+
+    await saveRow(row);
+
+    await expect(page.getByText("Transfer updated successfully")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("tbody").getByText("P4 Transfer Name Updated")).toBeVisible();
+  });
+
+  test("should update transfer amount and date together, verify both account balances", async ({ page }) => {
+    const balanceFrom = await getAccountBalance(page, "P4 Transfer From");
+    const balanceTo = await getAccountBalance(page, "P4 Transfer To");
+
+    await page.goto("/transfers");
+    await page.waitForLoadState("networkidle");
+
+    const row = await enterEditMode(page, "P4 Transfer Multi");
+
+    const amountInput = row.locator("input").nth(1);
+    await amountInput.clear();
+    await amountInput.fill("8000");
+    await amountInput.blur();
+
+    // Open date popover (first button in the row)
+    await row.locator("button").first().click();
+    await page.getByRole("button", { name: /previous month/i }).click();
+    await page.getByRole("gridcell", { name: "10" }).first().getByRole("button").click();
+
+    await saveRow(row);
+
+    await expect(page.getByText("Transfer updated successfully")).toBeVisible({ timeout: 10000 });
+
+    await page.waitForTimeout(1000);
+    const newBalanceFrom = await getAccountBalance(page, "P4 Transfer From");
+    const newBalanceTo = await getAccountBalance(page, "P4 Transfer To");
+    // amount changed from 5000 to 8000: diff = +3000 deducted from From, +3000 credited to To
+    expect(newBalanceFrom).toBe(balanceFrom - 3000);
+    expect(newBalanceTo).toBe(balanceTo + 3000);
+  });
+
+  test("should update transfer from-account only, verify balance reversal", async ({ page }) => {
+    const balanceFrom = await getAccountBalance(page, "P4 Transfer From");
+    const balanceAlt = await getAccountBalance(page, "P4 Transfer Alt");
+
+    await page.goto("/transfers");
+    await page.waitForLoadState("networkidle");
+
+    const row = await enterEditMode(page, "P4 Transfer FromChg");
+
+    const fromCombobox = row.locator('[role="combobox"]').first();
+    await fromCombobox.click();
+    await page.getByRole("option", { name: "P4 Transfer Alt" }).click();
+
+    await saveRow(row);
+
+    await expect(page.getByText("Transfer updated successfully")).toBeVisible({ timeout: 10000 });
+
+    await page.waitForTimeout(1000);
+    const newBalanceFrom = await getAccountBalance(page, "P4 Transfer From");
+    const newBalanceAlt = await getAccountBalance(page, "P4 Transfer Alt");
+    expect(newBalanceFrom).toBe(balanceFrom + 7000);
+    expect(newBalanceAlt).toBe(balanceAlt - 7000);
+  });
+
+  test("should update transfer to-account only, verify balance reversal", async ({ page }) => {
+    const balanceTo = await getAccountBalance(page, "P4 Transfer To");
+    const balanceAlt = await getAccountBalance(page, "P4 Transfer Alt");
+
+    await page.goto("/transfers");
+    await page.waitForLoadState("networkidle");
+
+    const row = await enterEditMode(page, "P4 Transfer ToChg");
+
+    const toCombobox = row.locator('[role="combobox"]').nth(1);
+    await toCombobox.click();
+    await page.getByRole("option", { name: "P4 Transfer Alt" }).click();
+
+    await saveRow(row);
+
+    await expect(page.getByText("Transfer updated successfully")).toBeVisible({ timeout: 10000 });
+
+    await page.waitForTimeout(1000);
+    const newBalanceTo = await getAccountBalance(page, "P4 Transfer To");
+    const newBalanceAlt = await getAccountBalance(page, "P4 Transfer Alt");
+    expect(newBalanceTo).toBe(balanceTo - 4000);
+    expect(newBalanceAlt).toBe(balanceAlt + 4000);
+  });
+
+  test("should update transfer both accounts, verify all four balance changes", async ({ page }) => {
+    const balanceFrom = await getAccountBalance(page, "P4 Transfer From");
+    const balanceTo = await getAccountBalance(page, "P4 Transfer To");
+    const balanceAlt = await getAccountBalance(page, "P4 Transfer Alt");
+    const balanceIncomeB = await getAccountBalance(page, "P4 Income B");
+
+    await page.goto("/transfers");
+    await page.waitForLoadState("networkidle");
+
+    const row = await enterEditMode(page, "P4 Transfer Both");
+
+    const fromCombobox = row.locator('[role="combobox"]').first();
+    await fromCombobox.click();
+    await page.getByRole("option", { name: "P4 Transfer Alt" }).click();
+
+    const toCombobox = row.locator('[role="combobox"]').nth(1);
+    await toCombobox.click();
+    await page.getByRole("option", { name: "P4 Income B" }).click();
+
+    await saveRow(row);
+
+    await expect(page.getByText("Transfer updated successfully")).toBeVisible({ timeout: 10000 });
+
+    await page.waitForTimeout(1000);
+    const newBalanceFrom = await getAccountBalance(page, "P4 Transfer From");
+    const newBalanceTo = await getAccountBalance(page, "P4 Transfer To");
+    const newBalanceAlt = await getAccountBalance(page, "P4 Transfer Alt");
+    const newBalanceIncomeB = await getAccountBalance(page, "P4 Income B");
+
+    expect(newBalanceFrom).toBe(balanceFrom + 6000);
+    expect(newBalanceTo).toBe(balanceTo - 6000);
+    expect(newBalanceAlt).toBe(balanceAlt - 6000);
+    expect(newBalanceIncomeB).toBe(balanceIncomeB + 6000);
+  });
+
+  // =========================================================================
+  // Task 4.4 — Expense update tests
+  // =========================================================================
+
+  test("should update expense date only (regression guard)", async ({ page }) => {
+    await page.goto("/expenses");
+    await page.waitForLoadState("networkidle");
+
+    const row = await enterEditMode(page, "P4 Expense Date");
+
+    // Open date popover (first button in the row)
+    await row.locator("button").first().click();
+    await page.getByRole("button", { name: /previous month/i }).click();
+    await page.getByRole("gridcell", { name: "15" }).first().getByRole("button").click();
+
+    await saveRow(row);
+
+    await expect(page.getByText(/validation failed/i)).not.toBeVisible({ timeout: 3000 });
+    await expect(page.getByText("Expense updated successfully")).toBeVisible({ timeout: 10000 });
+  });
+
+  test("should update expense name only", async ({ page }) => {
+    await page.goto("/expenses");
+    await page.waitForLoadState("networkidle");
+
+    const row = await enterEditMode(page, "P4 Expense Name");
+
+    const nameInput = row.locator("input").first();
+    await nameInput.clear();
+    await nameInput.fill("P4 Expense Name Updated");
+    await nameInput.blur();
+
+    await saveRow(row);
+
+    await expect(page.getByText("Expense updated successfully")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("tbody").getByText("P4 Expense Name Updated")).toBeVisible();
+  });
+
+  test("should update expense amount and verify account balance", async ({ page }) => {
+    const balanceA = await getAccountBalance(page, "P4 Expense A");
+
+    await page.goto("/expenses");
+    await page.waitForLoadState("networkidle");
+
+    const row = await enterEditMode(page, "P4 Expense Amount");
+
+    const amountInput = row.locator("input").nth(1);
+    await amountInput.clear();
+    await amountInput.fill("5000");
+    await amountInput.blur();
+
+    await saveRow(row);
+
+    await expect(page.getByText("Expense updated successfully")).toBeVisible({ timeout: 10000 });
+
+    await page.waitForTimeout(1000);
+    const newBalanceA = await getAccountBalance(page, "P4 Expense A");
+    // amount changed from 3000 to 5000: net −2000 from account
+    expect(newBalanceA).toBe(balanceA - 2000);
+  });
+
+  test("should update expense account change and verify both account balances", async ({ page }) => {
+    const balanceExpA = await getAccountBalance(page, "P4 Expense A");
+    const balanceExpB = await getAccountBalance(page, "P4 Expense B");
+
+    await page.goto("/expenses");
+    await page.waitForLoadState("networkidle");
+
+    const row = await enterEditMode(page, "P4 Expense AcctChg");
+
+    const accountCombobox = row.locator('[role="combobox"]').first();
+    await accountCombobox.click();
+    await page.getByRole("option", { name: "P4 Expense B" }).click();
+
+    await saveRow(row);
+
+    await expect(page.getByText("Expense updated successfully")).toBeVisible({ timeout: 10000 });
+
+    await page.waitForTimeout(1000);
+    const newBalanceExpA = await getAccountBalance(page, "P4 Expense A");
+    const newBalanceExpB = await getAccountBalance(page, "P4 Expense B");
+    expect(newBalanceExpA).toBe(balanceExpA + 4500);
+    expect(newBalanceExpB).toBe(balanceExpB - 4500);
+  });
+
+  test("should update expense amount, name, and description together", async ({ page }) => {
+    const balanceA = await getAccountBalance(page, "P4 Expense A");
+
+    await page.goto("/expenses");
+    await page.waitForLoadState("networkidle");
+
+    const row = await enterEditMode(page, "P4 Expense Multi");
+
+    const nameInput = row.locator("input").first();
+    await nameInput.clear();
+    await nameInput.fill("P4 Expense Multi Updated");
+    await nameInput.blur();
+
+    const amountInput = row.locator("input").nth(1);
+    await amountInput.clear();
+    await amountInput.fill("1800");
+    await amountInput.blur();
+
+    const descInput = row.locator("input").last();
+    await descInput.fill("Updated");
+    await descInput.blur();
+
+    await saveRow(row);
+
+    await expect(page.getByText("Expense updated successfully")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("tbody").getByText("P4 Expense Multi Updated")).toBeVisible();
+
+    await page.waitForTimeout(1000);
+    const newBalanceA = await getAccountBalance(page, "P4 Expense A");
+    // amount changed from 1000 to 1800: net −800 from account
+    expect(newBalanceA).toBe(balanceA - 800);
   });
 });
