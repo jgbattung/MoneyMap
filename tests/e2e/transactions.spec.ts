@@ -2,24 +2,50 @@ import { test, expect } from "@playwright/test";
 import { clearDatabase, seedBaseData, createTestSession, prisma } from "../../playwright/utils/db";
 
 // ---------------------------------------------------------------------------
-// Shared helper: enter inline-edit mode for a transaction row.
-// The tables use TanStack React Table with an EditCell that renders an
-// IconEdit button when not editing and IconCheck/IconX when editing.
-// Clicking the edit button (last column) puts the row into inline edit mode.
+// Shared helpers for inline-edit mode.
+//
+// IMPORTANT: TanStack React Table inline editing replaces <span> text content
+// with <input value="...">. Playwright's `hasText` filter matches text nodes,
+// NOT input values — so after entering edit mode the row can no longer be
+// found by its original text. We work around this by finding the row index
+// BEFORE clicking edit, then using `tbody tr:nth-child(N)` afterwards.
 // ---------------------------------------------------------------------------
-async function enterEditMode(page: import("@playwright/test").Page, transactionName: string) {
+type Page = import("@playwright/test").Page;
+
+/** Click the IconEdit button on a row, returning a locator for the row by index (stable after edit). */
+async function enterEditMode(page: Page, transactionName: string) {
   const row = page.locator("tbody tr").filter({ hasText: transactionName });
   await row.waitFor({ state: "visible", timeout: 10000 });
-  // The edit button is the last button in the row (IconEdit)
+
+  // Capture 1-based row position before the text disappears
+  const rows = page.locator("tbody tr");
+  const count = await rows.count();
+  let rowIndex = -1;
+  for (let i = 0; i < count; i++) {
+    const text = await rows.nth(i).innerText();
+    if (text.includes(transactionName)) {
+      rowIndex = i;
+      break;
+    }
+  }
+  if (rowIndex === -1) throw new Error(`Row "${transactionName}" not found`);
+
+  // Click the edit button (only button in read-mode row)
   await row.getByRole("button").last().click();
+
+  // Wait for React to re-render with inputs
+  await page.waitForTimeout(500);
+
+  // Return a stable locator using nth-child (1-based)
+  return page.locator(`tbody tr:nth-child(${rowIndex + 1})`);
 }
 
-// Save the inline-edit by clicking the IconCheck (save) button in the row.
-async function saveEditMode(page: import("@playwright/test").Page, transactionName: string) {
-  const row = page.locator("tbody tr").filter({ hasText: transactionName });
-  // After entering edit mode the row still contains the transaction name in a text input.
-  // The first button is now IconCheck (save), second is IconX (cancel).
-  await row.getByRole("button").first().click();
+/** Click the IconCheck (save) button in the edit column (last td cell). */
+async function saveRow(row: import("@playwright/test").Locator) {
+  // The edit column is the last <td> in the row. In edit mode it contains
+  // three buttons: IconCheck (save), IconX (cancel), Trash2 (delete).
+  const editCell = row.locator("td").last();
+  await editCell.getByRole("button").first().click();
 }
 
 test.describe("Transactions", () => {
@@ -183,18 +209,20 @@ test.describe("Transaction updates", () => {
 
     await expect(page.getByRole("heading", { name: "Income", exact: true }).first()).toBeVisible();
 
-    // Enter inline edit mode — click the IconEdit button (last button in row)
-    await enterEditMode(page, "March Salary");
+    // Enter inline edit mode and get a stable row locator (by index)
+    const row = await enterEditMode(page, "March Salary");
 
-    const row = page.locator("tbody tr").filter({ hasText: "March Salary" });
+    // In edit mode the date cell has a popover trigger <button> showing "Mar 1, 2026"
+    // It's the first <button> element in the row (before the save/cancel/delete buttons)
+    await row.locator("button").first().click();
+    // Calendar disables future dates, so go to previous month and pick an enabled date
+    await page.getByRole("button", { name: /previous month/i }).click();
+    await page.getByRole("gridcell", { name: "15" }).first().getByRole("button").click();
 
-    // Click the inline date popover button and pick a date
-    await row.locator("button").filter({ hasText: /jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i }).click();
-    await page.getByRole("button", { name: /next month/i }).click();
-    await page.getByRole("gridcell", { name: "1" }).first().getByRole("button").click();
-
-    // Save — click the IconCheck button (first button in edit-mode row)
-    await saveEditMode(page, "March Salary");
+    // Save — IconCheck is now the first button after the calendar closes
+    // The date popover closed, so the row buttons are: date-trigger, save, cancel, delete
+    // Actually save button is in the last cell. Let's find it explicitly.
+    await saveRow(row);
 
     // Regression guard: should NOT see a validation error toast (regression produced 400)
     await expect(page.getByText(/validation failed/i)).not.toBeVisible({ timeout: 3000 });
@@ -208,17 +236,16 @@ test.describe("Transaction updates", () => {
     await page.goto("/income");
     await page.waitForLoadState("networkidle");
 
-    await enterEditMode(page, "March Salary");
+    const row = await enterEditMode(page, "March Salary");
 
-    const row = page.locator("tbody tr").filter({ hasText: "March Salary" });
-
-    // Name field is a plain <Input> in edit mode — clear and retype
+    // Name is the second column — the second <input> in the row
+    // Column order: date(popover), name(input), amount(input), account(select), type(select), description(input)
     const nameInput = row.locator("input").first();
     await nameInput.clear();
     await nameInput.fill("April Salary");
     await nameInput.blur();
 
-    await saveEditMode(page, "April Salary");
+    await saveRow(row);
 
     await expect(page.getByText("Income updated successfully")).toBeVisible({ timeout: 10000 });
     await expect(page.locator("tbody").getByText("April Salary")).toBeVisible();
@@ -232,15 +259,13 @@ test.describe("Transaction updates", () => {
     await page.waitForLoadState("networkidle");
 
     // Salary was renamed to "April Salary" in test 2
-    await enterEditMode(page, "April Salary");
+    const row = await enterEditMode(page, "April Salary");
 
-    const row = page.locator("tbody tr").filter({ hasText: "April Salary" });
-
-    // Account column is a <Select> in edit mode
+    // Account column is a <Select> (combobox) in edit mode
     await row.locator('[role="combobox"]').first().click();
     await page.getByRole("option", { name: "BDO Savings" }).click();
 
-    await saveEditMode(page, "April Salary");
+    await saveRow(row);
 
     await expect(page.getByText("Income updated successfully")).toBeVisible({ timeout: 10000 });
 
@@ -260,16 +285,15 @@ test.describe("Transaction updates", () => {
     await page.goto("/transfers");
     await page.waitForLoadState("networkidle");
 
-    await enterEditMode(page, "March Transfer");
+    const row = await enterEditMode(page, "March Transfer");
 
-    const row = page.locator("tbody tr").filter({ hasText: "March Transfer" });
+    // Click the date popover trigger (first button in the row)
+    await row.locator("button").first().click();
+    // Calendar disables future dates, so go to previous month and pick an enabled date
+    await page.getByRole("button", { name: /previous month/i }).click();
+    await page.getByRole("gridcell", { name: "10" }).first().getByRole("button").click();
 
-    // Click the inline date popover button
-    await row.locator("button").filter({ hasText: /jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i }).click();
-    await page.getByRole("button", { name: /next month/i }).click();
-    await page.getByRole("gridcell", { name: "5" }).first().getByRole("button").click();
-
-    await saveEditMode(page, "March Transfer");
+    await saveRow(row);
 
     // Regression guard: should NOT 400 due to null notes
     await expect(page.getByText(/validation failed/i)).not.toBeVisible({ timeout: 3000 });
@@ -285,17 +309,16 @@ test.describe("Transaction updates", () => {
     await page.goto("/transfers");
     await page.waitForLoadState("networkidle");
 
-    await enterEditMode(page, "March Transfer");
+    const row = await enterEditMode(page, "March Transfer");
 
-    const row = page.locator("tbody tr").filter({ hasText: "March Transfer" });
-
-    // Amount field is a plain <Input> in edit mode
-    const amountInput = row.locator("input").first();
+    // Amount is the second input (after name)
+    // Transfer columns: date(popover), name(input), amount(input), fee(input), from(select), to(select), type(select), notes(input)
+    const amountInput = row.locator("input").nth(1);
     await amountInput.clear();
     await amountInput.fill("15000");
     await amountInput.blur();
 
-    await saveEditMode(page, "March Transfer");
+    await saveRow(row);
 
     await expect(page.getByText("Transfer updated successfully")).toBeVisible({ timeout: 10000 });
     await expect(page.locator("tbody").getByText(/15[,.]?000/)).toBeVisible();
