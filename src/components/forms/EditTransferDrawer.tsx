@@ -25,6 +25,7 @@ import DeleteDialog from "../shared/DeleteDialog";
 import { Separator } from "../ui/separator";
 import { Checkbox } from "../ui/checkbox";
 import { formatDateForAPI } from "@/lib/utils";
+import { TagInput } from '@/components/shared/TagInput';
 
 interface EditTransferDrawerProps {
   open: boolean;
@@ -55,6 +56,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
       date: undefined,
       notes: "",
       feeAmount: "",
+      tagIds: [],
     }
   });
 
@@ -70,7 +72,9 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
         transferTypeId: transactionData.transferTypeId,
         date: new Date(transactionData.date),
         notes: transactionData.notes || "",
-        feeAmount: hasFeeAmount && transactionData.feeAmount !== null ? transactionData.feeAmount.toString() : "",      });
+        feeAmount: hasFeeAmount && transactionData.feeAmount !== null ? transactionData.feeAmount.toString() : "",
+        tagIds: transactionData.tags?.map((t: { id: string }) => t.id) ?? [],
+      });
 
       setHasFee(hasFeeAmount);
     }
@@ -423,6 +427,23 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                               placeholder="Add any additional notes..."
                               className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
                               {...field}
+                              disabled={isUpdating}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="tagIds"
+                      render={({ field }) => (
+                        <FormItem className="p-4">
+                          <FormLabel>Tags</FormLabel>
+                          <FormControl>
+                            <TagInput
+                              selectedTagIds={field.value ?? []}
+                              onChange={field.onChange}
                               disabled={isUpdating}
                             />
                           </FormControl>
