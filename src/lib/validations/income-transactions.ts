@@ -23,5 +23,7 @@ export const IncomeTransactionValidation = z.object({
 
   description: z.string()
     .max(500, "Description must be less than 500 characters")
-    .optional()
+    .optional(),
+
+  tagIds: z.array(z.string()).max(10).optional(),
 });
