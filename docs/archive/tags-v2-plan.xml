@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan feature="tags-v2" spec="docs/tags-v2-spec.md">
+
+  <phase name="1: Fix TagsCell Key Warning in All Tables">
+    <task>
+      <name>Fix TagsCell read-mode rendering when tags is a string array</name>
+      <action>
+        In `src/components/tables/expenses/ExpenseTable.tsx`, `src/components/tables/income/IncomeTable.tsx`, and `src/components/tables/transfers/TransferTable.tsx`:
+
+        1. Import `useTagsQuery` at the top of each file:
+           ```tsx
+           import { useTagsQuery } from '@/hooks/useTagsQuery';
+           ```
+
+        2. Refactor `TagsCell` to be a proper component (not a plain function) so it can use hooks. Convert from `const TagsCell = ({ getValue, row, table }: any) => {` to a proper component.
+
+        3. Inside `TagsCell`, call `const { tags: allTags } = useTagsQuery();` to get the full tag list.
+
+        4. Normalize the value from `getValue()`: if it's a `string[]` (array of IDs from an in-progress edit), look up the full tag objects from `allTags`. If it's already an `object[]`, use it directly:
+           ```tsx
+           const rawTags = getValue();
+           const tags: { id: string; name: string; color: string }[] | undefined =
+             Array.isArray(rawTags) &amp;&amp; rawTags.length > 0 &amp;&amp; typeof rawTags[0] === 'string'
+               ? rawTags.map((id: string) => allTags.find(t => t.id === id)).filter(Boolean)
+               : rawTags;
+           ```
+
+        5. In the edit-mode branch, derive `selectedTagIds` from the normalized `tags` array:
+           ```tsx
+           selectedTagIds={tags?.map(t => t.id) || []}
+           ```
+
+        6. Apply this identical fix to all three table files.
+      </action>
+      <verify>Run `npm run build` — must pass with no TypeScript errors. Manually test: open Expense table, click edit on a row, add a tag, confirm NO "unique key" warning in the browser console.</verify>
+    </task>
+  </phase>
+
+  <phase name="2: Redesign TagInput — Inline Pills + Focus Fix + Enter Key Fix">
+    <task>
+      <name>Refactor TagInput to inline pill layout with fixed Enter key and focus logic</name>
+      <action>
+        Rewrite `src/components/shared/TagInput.tsx` with these changes (keep the same props interface):
+
+        **Layout change — inline pills:**
+        1. Replace the current two-section layout (pills above, input below) with a single container:
+           ```tsx
+           &lt;div
+             className="flex flex-wrap items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 min-h-[36px] cursor-text"
+             onClick={() => inputRef.current?.focus()}
+           &gt;
+             {/* Badge pills inline */}
+             {selectedTags.map(tag => (
+               &lt;Badge key={tag.id} variant="secondary" className="flex items-center gap-1 pr-1 shrink-0"&gt;
+                 &lt;span className="inline-block h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} /&gt;
+                 &lt;span&gt;{tag.name}&lt;/span&gt;
+                 {!disabled &amp;&amp; (
+                   &lt;button type="button" onClick={(e) => { e.stopPropagation(); handleRemove(tag.id); }}
+                     className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5" aria-label={`Remove ${tag.name}`}&gt;
+                     &lt;X className="h-3 w-3" /&gt;
+                   &lt;/button&gt;
+                 )}
+               &lt;/Badge&gt;
+             ))}
+             {/* Bare input — no border, no ring */}
+             {!atLimit &amp;&amp; !disabled &amp;&amp; (
+               &lt;input
+                 ref={inputRef}
+                 value={inputValue}
+                 onChange={handleInputChange}
+                 onKeyDown={handleKeyDown}
+                 onFocus={handleFocus}
+                 onBlur={handleBlur}
+                 placeholder={selectedTags.length === 0 ? "Add tags..." : ""}
+                 className="flex-1 min-w-[80px] bg-transparent outline-none placeholder:text-muted-foreground text-sm"
+               /&gt;
+             )}
+           &lt;/div&gt;
+           ```
+        2. Wrap the entire container div in `PopoverAnchor asChild` so the dropdown anchors to the full container.
+        3. Remove the old `<Input>` import since we're using a bare `<input>` element now.
+
+        **Focus fix:**
+        4. Replace `onFocus={() => setOpen(true)}` with:
+           ```tsx
+           const handleFocus = () => {
+             const hasUnselectedTags = tags.some(t => !selectedTagIds.includes(t.id));
+             setOpen(hasUnselectedTags);
+           };
+           ```
+           This only opens the dropdown on focus if there are existing unselected tags to suggest.
+
+        5. Keep `onBlur` as `() => setTimeout(() => setOpen(false), 150)`.
+
+        **Enter key fix:**
+        6. Replace the `handleKeyDown` Enter logic with correct priority:
+           ```tsx
+           if (e.key === "Enter") {
+             e.preventDefault();
+             const trimmed = inputValue.trim();
+             if (!trimmed) return;
+
+             if (exactMatch) {
+               // Exact match — select existing tag
+               const matchingTag = filteredTags.find(
+                 t => t.name.toLowerCase() === trimmed.toLowerCase()
+               ) || tags.find(t => t.name.toLowerCase() === trimmed.toLowerCase());
+               if (matchingTag &amp;&amp; !selectedTagIds.includes(matchingTag.id)) {
+                 handleSelect(matchingTag.id);
+               }
+             } else {
+               // No exact match — create new tag
+               handleCreate();
+             }
+           }
+           ```
+
+        **Other adjustments:**
+        7. Change `handleInputChange` to always open the dropdown when text is present:
+           ```tsx
+           const handleInputChange = (e: React.ChangeEvent&lt;HTMLInputElement&gt;) => {
+             setInputValue(e.target.value);
+             if (e.target.value.length > 0) {
+               setOpen(true);
+             }
+           };
+           ```
+
+        8. Keep the `atLimit` message and disabled state logic unchanged.
+        9. The `Popover` wraps around the entire component (container + popover content), NOT just the input.
+      </action>
+      <verify>Run `npm run build` — must pass. Manually test: (1) open a create form, focus tag input with no text — dropdown does NOT flicker; (2) type "Bangkok" and press Enter — pill appears inline; (3) type another tag name, press Enter — second pill appears next to the first; (4) existing tag suggestions appear when typing a partial match.</verify>
+    </task>
+  </phase>
+
+  <phase name="3: Update TagInput Tests">
+    <task>
+      <name>Update TagInput.test.tsx for inline pill layout and fixed behavior</name>
+      <action>
+        Update `src/components/shared/TagInput.test.tsx`:
+
+        1. Remove the `Input` mock since the component no longer uses the shadcn `Input` — it uses a bare `&lt;input&gt;` element. The placeholder selector `getByPlaceholderText('Add tags...')` should still work on the native input.
+
+        2. Update the "renders badge pills" tests — pills are now inside the same container as the input, not in a separate div. The test assertions (checking for badge testids and text content) should still pass since the Badge mock is unchanged.
+
+        3. Update the "hides the input when 10 tags are selected" test — the bare input is hidden via conditional rendering, same as before.
+
+        4. Add a new test for the Enter key fix:
+           ```
+           it('selects the existing tag on Enter when input exactly matches a tag name', ...)
+           ```
+           - Set up tags with "Food", type "Food", press Enter → `onChange` called with `['tag-1']`.
+
+        5. Add a new test:
+           ```
+           it('creates a new tag on Enter when input does not match any existing tag', ...)
+           ```
+           - Type "NewTag", press Enter → `createTag` called with "NewTag".
+
+        6. Update the "does not throw on Enter when input is empty" test — behavior unchanged.
+
+        7. Verify the focus-only-when-suggestions test: render with some tags, focus the input → verify the popover opens (the mock always renders, so just verify no error). Render with all tags selected, focus → verify it doesn't trigger open state change.
+      </action>
+      <verify>Run `npx vitest run src/components/shared/TagInput.test.tsx` — all tests must pass.</verify>
+    </task>
+  </phase>
+
+  <phase name="4: Final Verification">
+    <task>
+      <name>Run full build, lint, and test suite</name>
+      <action>
+        1. Run `npm run lint` — no new warnings or errors.
+        2. Run `npm run build` — production build must succeed with zero errors.
+        3. Run `npx vitest run` — all test files must pass.
+      </action>
+      <verify>All three commands exit with code 0.</verify>
+    </task>
+
+    <task>
+      <name>Manual smoke test</name>
+      <action>
+        With the dev server running (`npm run dev`):
+        1. **Key warning fix:** Open Expenses table → click edit on a row → add a tag via TagInput in the Tags column → save → confirm NO "unique key" React warning in browser console.
+        2. **Flicker fix:** Open create expense drawer → focus the Tags input without typing → dropdown does NOT appear and immediately disappear. If existing tags exist, dropdown shows them stably.
+        3. **Inline pills:** On create expense drawer → type "Bangkok" → press Enter → a pill appears inline in the input container. Type "Food" → press Enter → second pill appears next to the first. Both show colored dot + name + ✕ button.
+        4. **Enter key logic:** Type the exact name of an existing tag (e.g., "Food") → press Enter → the existing tag is selected (no new tag created). Type a completely new name → press Enter → new tag is created.
+        5. **Remove pill:** Click ✕ on a pill → pill is removed, tag deselected.
+        6. **Edit forms:** Open edit expense drawer on a transaction with tags → tags appear as inline pills, can add/remove.
+        7. **Income + Transfer:** Repeat steps 3-5 on income and transfer create forms.
+        8. **Table tags:** All three tables show tag badges in the Tags column for tagged transactions.
+      </action>
+      <verify>All 8 manual checks pass as described.</verify>
+    </task>
+  </phase>
+
+</plan>
