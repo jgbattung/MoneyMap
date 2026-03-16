@@ -3,11 +3,10 @@
 import { useState, useRef } from "react";
 import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
-  PopoverTrigger,
 } from "@/components/ui/popover";
 import {
   Command,
@@ -73,18 +72,33 @@ export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
-    setOpen(e.target.value.length > 0);
+    if (e.target.value.length > 0) {
+      setOpen(true);
+    }
+  };
+
+  const handleFocus = () => {
+    const hasUnselectedTags = tags.some((t) => !selectedTagIds.includes(t.id));
+    setOpen(hasUnselectedTags);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      if (filteredTags.length > 0 && !exactMatch) {
-        // if there's a non-exact match result, create new tag
-        handleCreate();
-      } else if (filteredTags.length === 1) {
-        handleSelect(filteredTags[0].id);
-      } else if (inputValue.trim() && !exactMatch) {
+      const trimmed = inputValue.trim();
+      if (!trimmed) return;
+
+      if (exactMatch) {
+        // Exact match — select the existing tag
+        const matchingTag =
+          filteredTags.find(
+            (t) => t.name.toLowerCase() === trimmed.toLowerCase()
+          ) || tags.find((t) => t.name.toLowerCase() === trimmed.toLowerCase());
+        if (matchingTag && !selectedTagIds.includes(matchingTag.id)) {
+          handleSelect(matchingTag.id);
+        }
+      } else {
+        // No exact match — create new tag
         handleCreate();
       }
     }
@@ -94,15 +108,18 @@ export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) 
   };
 
   return (
-    <div className="space-y-2">
-      {/* Selected tag pills */}
-      {selectedTags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverAnchor asChild>
+        {/* Inline pill container */}
+        <div
+          className="flex flex-wrap items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 min-h-[36px] cursor-text"
+          onClick={() => inputRef.current?.focus()}
+        >
           {selectedTags.map((tag) => (
             <Badge
               key={tag.id}
               variant="secondary"
-              className="flex items-center gap-1 pr-1"
+              className="flex items-center gap-1 pr-1 shrink-0"
             >
               <span
                 className="inline-block h-2 w-2 rounded-full flex-shrink-0"
@@ -112,7 +129,10 @@ export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) 
               {!disabled && (
                 <button
                   type="button"
-                  onClick={() => handleRemove(tag.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemove(tag.id);
+                  }}
                   className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
                   aria-label={`Remove ${tag.name}`}
                 >
@@ -121,76 +141,67 @@ export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) 
               )}
             </Badge>
           ))}
-        </div>
-      )}
-
-      {/* Input + Popover */}
-      {!atLimit && !disabled && (
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Input
+          {!atLimit && !disabled && (
+            <input
               ref={inputRef}
               value={inputValue}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              onFocus={() => {
-                if (inputValue.length > 0) setOpen(true);
-              }}
-              placeholder="Add tags..."
-              className="h-8 text-sm"
-              disabled={disabled}
+              onFocus={handleFocus}
+              onBlur={() => setTimeout(() => setOpen(false), 150)}
+              placeholder={selectedTags.length === 0 ? "Add tags..." : ""}
+              className="flex-1 min-w-[80px] bg-transparent outline-none placeholder:text-muted-foreground text-sm"
             />
-          </PopoverTrigger>
-          <PopoverContent
-            className="p-0 w-[var(--radix-popover-trigger-width)]"
-            onOpenAutoFocus={(e) => e.preventDefault()}
-            align="start"
-          >
-            <Command>
-              <CommandList>
-                {filteredTags.length === 0 && !inputValue.trim() && (
-                  <CommandEmpty>Type to search or create a tag.</CommandEmpty>
-                )}
-                {filteredTags.length > 0 && (
-                  <CommandGroup heading="Existing tags">
-                    {filteredTags.map((tag) => (
-                      <CommandItem
-                        key={tag.id}
-                        onSelect={() => handleSelect(tag.id)}
-                        className="flex items-center gap-2"
-                      >
-                        <span
-                          className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: tag.color }}
-                        />
-                        {tag.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                )}
-                {inputValue.trim() && !exactMatch && (
-                  <CommandGroup>
-                    <CommandItem
-                      onSelect={handleCreate}
-                      disabled={isCreating}
-                      className="text-muted-foreground"
-                    >
-                      {isCreating ? "Creating..." : `Create "${inputValue.trim()}"`}
-                    </CommandItem>
-                  </CommandGroup>
-                )}
-                {inputValue.trim() && filteredTags.length === 0 && !exactMatch && (
-                  <CommandEmpty className="hidden" />
-                )}
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      )}
-
-      {atLimit && (
-        <p className="text-xs text-muted-foreground">(max {MAX_TAGS} tags)</p>
-      )}
-    </div>
+          )}
+          {atLimit && (
+            <span className="text-xs text-muted-foreground">(max {MAX_TAGS} tags)</span>
+          )}
+        </div>
+      </PopoverAnchor>
+      <PopoverContent
+        className="p-0 w-[var(--radix-popover-trigger-width)]"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        align="start"
+      >
+        <Command>
+          <CommandList>
+            {filteredTags.length === 0 && !inputValue.trim() && (
+              <CommandEmpty>Type to search or create a tag.</CommandEmpty>
+            )}
+            {filteredTags.length > 0 && (
+              <CommandGroup heading="Existing tags">
+                {filteredTags.map((tag) => (
+                  <CommandItem
+                    key={tag.id}
+                    onSelect={() => handleSelect(tag.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: tag.color }}
+                    />
+                    {tag.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+            {inputValue.trim() && !exactMatch && (
+              <CommandGroup>
+                <CommandItem
+                  onSelect={handleCreate}
+                  disabled={isCreating}
+                  className="text-muted-foreground"
+                >
+                  {isCreating ? "Creating..." : `Create "${inputValue.trim()}"`}
+                </CommandItem>
+              </CommandGroup>
+            )}
+            {inputValue.trim() && filteredTags.length === 0 && !exactMatch && (
+              <CommandEmpty className="hidden" />
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
