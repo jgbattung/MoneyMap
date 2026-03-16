@@ -26,7 +26,7 @@ interface TagInputProps {
 const MAX_TAGS = 10;
 
 export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) {
-  const { tags, createTag, isCreating } = useTagsQuery();
+  const { tags, createTagOptimistic, isCreating } = useTagsQuery();
   const [inputValue, setInputValue] = useState("");
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -59,14 +59,24 @@ export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) 
 
   const handleCreate = async () => {
     if (!inputValue.trim() || isCreating) return;
+    const trimmed = inputValue.trim();
+    const { optimisticId, settle } = createTagOptimistic(trimmed);
+    // Add pill immediately with optimistic ID
+    onChange([...selectedTagIds, optimisticId]);
+    setInputValue("");
+    setOpen(false);
+    inputRef.current?.focus();
     try {
-      const newTag = await createTag(inputValue.trim());
-      onChange([...selectedTagIds, newTag.id]);
-      setInputValue("");
-      setOpen(false);
-      inputRef.current?.focus();
+      const realTag = await settle;
+      // Swap optimistic ID for real ID once API resolves
+      onChange(
+        [...selectedTagIds, optimisticId].map((id) =>
+          id === optimisticId ? realTag.id : id
+        )
+      );
     } catch {
-      // duplicate or error — silently ignore
+      // On failure, remove the optimistic pill
+      onChange(selectedTagIds.filter((id) => id !== optimisticId));
     }
   };
 

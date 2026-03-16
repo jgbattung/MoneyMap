@@ -85,15 +85,21 @@ const mockTag1 = { id: 'tag-1', name: 'Food', color: 'hsl(0, 65%, 60%)', created
 const mockTag2 = { id: 'tag-2', name: 'Travel', color: 'hsl(90, 65%, 60%)', createdAt: '', updatedAt: '' };
 const mockTag3 = { id: 'tag-3', name: 'Shopping', color: 'hsl(180, 65%, 60%)', createdAt: '', updatedAt: '' };
 
-function makeDefaultHook(overrides: Partial<ReturnType<typeof useTagsQuery>> = {}) {
+function makeDefaultHook(overrides: Partial<ReturnType<typeof useTagsQuery> & { createTagOptimistic: ReturnType<typeof vi.fn> }> = {}) {
+  const createTagOptimistic = overrides.createTagOptimistic ?? vi.fn().mockReturnValue({
+    optimisticId: 'optimistic-123',
+    settle: Promise.resolve({ id: 'tag-new', name: 'NewTag', color: 'hsl(0, 65%, 60%)', createdAt: '', updatedAt: '' }),
+  });
   return {
     tags: [mockTag1, mockTag2, mockTag3],
     isLoading: false,
     createTag: vi.fn(),
+    createTagOptimistic,
     deleteTag: vi.fn(),
     isCreating: false,
     isDeleting: false,
     ...overrides,
+    createTagOptimistic, // ensure override wins
   };
 }
 
@@ -363,10 +369,13 @@ describe('TagInput', () => {
   });
 
   describe('tag creation', () => {
-    it('calls createTag with the trimmed input value when clicking "Create" option', async () => {
-      const createTag = vi.fn().mockResolvedValue({ id: 'tag-new', name: 'NewTag', color: 'hsl(0, 65%, 60%)', createdAt: '', updatedAt: '' });
+    it('calls createTagOptimistic with the trimmed input value when clicking "Create" option', async () => {
+      const createTagOptimistic = vi.fn().mockReturnValue({
+        optimisticId: 'optimistic-123',
+        settle: Promise.resolve({ id: 'tag-new', name: 'NewTag', color: 'hsl(0, 65%, 60%)', createdAt: '', updatedAt: '' }),
+      });
       const onChange = vi.fn();
-      vi.mocked(useTagsQuery).mockReturnValue(makeDefaultHook({ createTag }) as any);
+      vi.mocked(useTagsQuery).mockReturnValue(makeDefaultHook({ createTagOptimistic }) as any);
 
       render(
         React.createElement(TagInput, {
@@ -380,14 +389,17 @@ describe('TagInput', () => {
       const createItem = screen.getByText('Create "NewTag"');
       fireEvent.click(createItem);
 
-      await waitFor(() => expect(createTag).toHaveBeenCalledWith('NewTag'));
+      await waitFor(() => expect(createTagOptimistic).toHaveBeenCalledWith('NewTag'));
     });
 
-    it('calls onChange with the new tag id after creation', async () => {
+    it('calls onChange immediately with optimistic id, then swaps to real id after creation', async () => {
       const newTag = { id: 'tag-new', name: 'NewTag', color: 'hsl(0, 65%, 60%)', createdAt: '', updatedAt: '' };
-      const createTag = vi.fn().mockResolvedValue(newTag);
+      const createTagOptimistic = vi.fn().mockReturnValue({
+        optimisticId: 'optimistic-123',
+        settle: Promise.resolve(newTag),
+      });
       const onChange = vi.fn();
-      vi.mocked(useTagsQuery).mockReturnValue(makeDefaultHook({ createTag }) as any);
+      vi.mocked(useTagsQuery).mockReturnValue(makeDefaultHook({ createTagOptimistic }) as any);
 
       render(
         React.createElement(TagInput, {
@@ -401,7 +413,12 @@ describe('TagInput', () => {
       const createItem = screen.getByText('Create "NewTag"');
       fireEvent.click(createItem);
 
-      await waitFor(() => expect(onChange).toHaveBeenCalledWith(['tag-new']));
+      // First call: optimistic ID added immediately
+      expect(onChange).toHaveBeenCalledWith(['optimistic-123']);
+      // Second call: swapped to real ID after settle resolves
+      await waitFor(() =>
+        expect(onChange).toHaveBeenCalledWith(['tag-new'])
+      );
     });
 
     it('shows "Creating..." text while isCreating is true', () => {
@@ -489,9 +506,12 @@ describe('TagInput', () => {
     });
 
     it('creates a new tag on Enter when input does not match any existing tag', async () => {
-      const createTag = vi.fn().mockResolvedValue({ id: 'tag-new', name: 'BrandNew', color: 'hsl(0, 65%, 60%)', createdAt: '', updatedAt: '' });
+      const createTagOptimistic = vi.fn().mockReturnValue({
+        optimisticId: 'optimistic-123',
+        settle: Promise.resolve({ id: 'tag-new', name: 'BrandNew', color: 'hsl(0, 65%, 60%)', createdAt: '', updatedAt: '' }),
+      });
       const onChange = vi.fn();
-      vi.mocked(useTagsQuery).mockReturnValue(makeDefaultHook({ createTag }) as any);
+      vi.mocked(useTagsQuery).mockReturnValue(makeDefaultHook({ createTagOptimistic }) as any);
 
       render(
         React.createElement(TagInput, {
@@ -503,13 +523,16 @@ describe('TagInput', () => {
       fireEvent.change(input, { target: { value: 'BrandNew' } });
       fireEvent.keyDown(input, { key: 'Enter' });
 
-      await waitFor(() => expect(createTag).toHaveBeenCalledWith('BrandNew'));
+      await waitFor(() => expect(createTagOptimistic).toHaveBeenCalledWith('BrandNew'));
     });
 
     it('creates a new tag on Enter when input has partial matches but no exact match', async () => {
-      const createTag = vi.fn().mockResolvedValue({ id: 'tag-new', name: 'Foo', color: 'hsl(0, 65%, 60%)', createdAt: '', updatedAt: '' });
+      const createTagOptimistic = vi.fn().mockReturnValue({
+        optimisticId: 'optimistic-123',
+        settle: Promise.resolve({ id: 'tag-new', name: 'Foo', color: 'hsl(0, 65%, 60%)', createdAt: '', updatedAt: '' }),
+      });
       const onChange = vi.fn();
-      vi.mocked(useTagsQuery).mockReturnValue(makeDefaultHook({ createTag }) as any);
+      vi.mocked(useTagsQuery).mockReturnValue(makeDefaultHook({ createTagOptimistic }) as any);
 
       render(
         React.createElement(TagInput, {
@@ -522,7 +545,7 @@ describe('TagInput', () => {
       fireEvent.change(input, { target: { value: 'Foo' } });
       fireEvent.keyDown(input, { key: 'Enter' });
 
-      await waitFor(() => expect(createTag).toHaveBeenCalledWith('Foo'));
+      await waitFor(() => expect(createTagOptimistic).toHaveBeenCalledWith('Foo'));
     });
   });
 });
