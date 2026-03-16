@@ -45,30 +45,6 @@ export const useTagsQuery = () => {
 
   const createTagMutation = useMutation({
     mutationFn: createTagRequest,
-    onMutate: async (name: string) => {
-      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.tags });
-      const previous = queryClient.getQueryData<Tag[]>(QUERY_KEYS.tags);
-      const optimisticTag: Tag = {
-        id: `optimistic-${Date.now()}`,
-        name,
-        color: "hsl(0, 0%, 60%)",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      queryClient.setQueryData<Tag[]>(QUERY_KEYS.tags, (old = []) => [
-        ...old,
-        optimisticTag,
-      ]);
-      return { previous, optimisticTag };
-    },
-    onError: (_err, _name, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(QUERY_KEYS.tags, context.previous);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tags });
-    },
   });
 
   const deleteTagMutation = useMutation({
@@ -83,7 +59,7 @@ export const useTagsQuery = () => {
   // and replaced with the real tag on onSuccess.
   const createTagOptimistic = (name: string): { optimisticId: string; settle: Promise<Tag> } => {
     const optimisticId = `optimistic-${Date.now()}`;
-    // Inject into cache immediately (mirrors onMutate but synchronously)
+    // Inject into cache immediately so the pill renders right away
     queryClient.setQueryData<Tag[]>(QUERY_KEYS.tags, (old = []) => {
       if (old.some((t) => t.id === optimisticId)) return old;
       return [
@@ -97,14 +73,28 @@ export const useTagsQuery = () => {
         },
       ];
     });
-    const settle = createTagMutation.mutateAsync(name);
+    const settle = createTagMutation.mutateAsync(name).then((realTag) => {
+      // Swap the optimistic entry for the real one atomically — no refetch gap
+      queryClient.setQueryData<Tag[]>(QUERY_KEYS.tags, (old = []) =>
+        old.map((t) => (t.id === optimisticId ? realTag : t))
+      );
+      // Then invalidate in the background to sync any other changes from the server
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tags });
+      return realTag;
+    });
     return { optimisticId, settle };
+  };
+
+  const createTag = async (name: string): Promise<Tag> => {
+    const tag = await createTagMutation.mutateAsync(name);
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tags });
+    return tag;
   };
 
   return {
     tags,
     isLoading,
-    createTag: createTagMutation.mutateAsync,
+    createTag,
     createTagOptimistic,
     deleteTag: deleteTagMutation.mutateAsync,
     isCreating: createTagMutation.isPending,
