@@ -14,16 +14,6 @@ vi.mock('@/components/ui/badge', () => ({
     React.createElement('span', { 'data-testid': 'badge', className }, children),
 }));
 
-// Mock Shadcn Input — real input passthrough
-vi.mock('@/components/ui/input', () => ({
-  Input: React.forwardRef(function MockInput(
-    props: React.InputHTMLAttributes<HTMLInputElement>,
-    ref: React.Ref<HTMLInputElement>
-  ) {
-    return React.createElement('input', { ...props, ref });
-  }),
-}));
-
 // Mock Radix Popover — render children directly (no portal, no positioning)
 vi.mock('@/components/ui/popover', () => ({
   Popover: ({ children }: { children: React.ReactNode }) =>
@@ -33,6 +23,12 @@ vi.mock('@/components/ui/popover', () => ({
       return children;
     }
     return React.createElement('div', { 'data-testid': 'popover-trigger' }, children);
+  },
+  PopoverAnchor: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => {
+    if (asChild && React.isValidElement(children)) {
+      return children;
+    }
+    return React.createElement('div', { 'data-testid': 'popover-anchor' }, children);
   },
   PopoverContent: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', { 'data-testid': 'popover-content' }, children),
@@ -160,6 +156,17 @@ describe('TagInput', () => {
       expect(screen.getByLabelText('Remove Food')).toBeTruthy();
       expect(screen.getByLabelText('Remove Travel')).toBeTruthy();
     });
+
+    it('does not show placeholder when tags are already selected', () => {
+      render(
+        React.createElement(TagInput, {
+          selectedTagIds: ['tag-1'],
+          onChange: vi.fn(),
+        })
+      );
+      // placeholder is empty string when tags are selected
+      expect(screen.queryByPlaceholderText('Add tags...')).toBeNull();
+    });
   });
 
   describe('tag removal', () => {
@@ -219,7 +226,9 @@ describe('TagInput', () => {
           onChange: vi.fn(),
         })
       );
-      expect(screen.getByPlaceholderText('Add tags...')).toBeTruthy();
+      // input is present (placeholder is empty string when tags selected, but input element exists)
+      const inputs = document.querySelectorAll('input');
+      expect(inputs.length).toBeGreaterThan(0);
     });
   });
 
@@ -282,8 +291,10 @@ describe('TagInput', () => {
           onChange: vi.fn(),
         })
       );
-      const input = screen.getByPlaceholderText('Add tags...');
-      fireEvent.change(input, { target: { value: 'fo' } });
+      // No placeholder since a tag is selected; find the bare input
+      const inputs = document.querySelectorAll('input');
+      expect(inputs.length).toBeGreaterThan(0);
+      fireEvent.change(inputs[0], { target: { value: 'fo' } });
 
       // "Food" is already selected so it should not appear as option
       const items = screen.queryAllByTestId('command-item');
@@ -462,7 +473,7 @@ describe('TagInput', () => {
       }).not.toThrow();
     });
 
-    it('selects the single matching tag on Enter when there is exactly one filtered result and no exact match', async () => {
+    it('selects the existing tag on Enter when input exactly matches a tag name', async () => {
       const onChange = vi.fn();
       render(
         React.createElement(TagInput, {
@@ -471,12 +482,47 @@ describe('TagInput', () => {
         })
       );
       const input = screen.getByPlaceholderText('Add tags...');
-      // "trave" matches only "Travel" — non-exact match
-      fireEvent.change(input, { target: { value: 'trave' } });
+      // Type exactly "Food" — exact match exists
+      fireEvent.change(input, { target: { value: 'Food' } });
       fireEvent.keyDown(input, { key: 'Enter' });
-      // The Enter key path creates a new tag (filteredTags.length > 0 && !exactMatch)
-      // since "trave" is not an exact match it goes into handleCreate()
-      // which is fine behavior; just ensure no error is thrown
+      expect(onChange).toHaveBeenCalledWith(['tag-1']);
+    });
+
+    it('creates a new tag on Enter when input does not match any existing tag', async () => {
+      const createTag = vi.fn().mockResolvedValue({ id: 'tag-new', name: 'BrandNew', color: 'hsl(0, 65%, 60%)', createdAt: '', updatedAt: '' });
+      const onChange = vi.fn();
+      vi.mocked(useTagsQuery).mockReturnValue(makeDefaultHook({ createTag }) as any);
+
+      render(
+        React.createElement(TagInput, {
+          selectedTagIds: [],
+          onChange,
+        })
+      );
+      const input = screen.getByPlaceholderText('Add tags...');
+      fireEvent.change(input, { target: { value: 'BrandNew' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      await waitFor(() => expect(createTag).toHaveBeenCalledWith('BrandNew'));
+    });
+
+    it('creates a new tag on Enter when input has partial matches but no exact match', async () => {
+      const createTag = vi.fn().mockResolvedValue({ id: 'tag-new', name: 'Foo', color: 'hsl(0, 65%, 60%)', createdAt: '', updatedAt: '' });
+      const onChange = vi.fn();
+      vi.mocked(useTagsQuery).mockReturnValue(makeDefaultHook({ createTag }) as any);
+
+      render(
+        React.createElement(TagInput, {
+          selectedTagIds: [],
+          onChange,
+        })
+      );
+      const input = screen.getByPlaceholderText('Add tags...');
+      // "Foo" matches partial "Food" but is not an exact match
+      fireEvent.change(input, { target: { value: 'Foo' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      await waitFor(() => expect(createTag).toHaveBeenCalledWith('Foo'));
     });
   });
 });
