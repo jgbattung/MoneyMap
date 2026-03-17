@@ -26,6 +26,7 @@ model User {
   incomeTransactions   IncomeTransaction[]
   incomeTypes          IncomeType[]
   sessions             Session[]
+  tags                 Tag[]
   transferTransactions TransferTransaction[]
   transferTypes        TransferType[]
 
@@ -158,6 +159,7 @@ model ExpenseTransaction {
   expenseType           ExpenseType          @relation(fields: [expenseTypeId], references: [id])
   user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   linkedTransfer        TransferTransaction? @relation("TransferFee")
+  tags                  Tag[]
 
   @@index([accountId, date])
   @@index([userId, date])
@@ -192,6 +194,7 @@ model IncomeTransaction {
   account      FinancialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   incomeType   IncomeType       @relation(fields: [incomeTypeId], references: [id], onDelete: Cascade)
   user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags         Tag[]
 
   @@index([accountId, date])
   @@index([userId, date])
@@ -230,11 +233,28 @@ model TransferTransaction {
   toAccount      FinancialAccount    @relation("TransferTo", fields: [toAccountId], references: [id], onDelete: Cascade)
   transferType   TransferType        @relation(fields: [transferTypeId], references: [id])
   user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags           Tag[]
 
   @@index([fromAccountId, date])
   @@index([toAccountId, date])
   @@index([userId, date])
   @@map("transfer_transactions")
+}
+
+model Tag {
+  id                   String                @id @default(cuid())
+  userId               String                @map("user_id")
+  name                 String                @db.VarChar(50)
+  color                String                @db.VarChar(25)
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+  expenseTransactions  ExpenseTransaction[]
+  incomeTransactions   IncomeTransaction[]
+  transferTransactions TransferTransaction[]
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@map("tags")
 }
 
 enum AccountType {

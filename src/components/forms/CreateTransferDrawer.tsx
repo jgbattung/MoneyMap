@@ -21,6 +21,7 @@ import { format } from "date-fns";
 import { ScrollArea } from "../ui/scroll-area";
 import { Checkbox } from "../ui/checkbox";
 import { formatDateForAPI } from "@/lib/utils";
+import { TagInput } from '@/components/shared/TagInput';
 
 interface CreateTransferDrawerProps {
   open: boolean;
@@ -48,6 +49,7 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
       date: undefined,
       notes: "",
       feeAmount: "",
+      tagIds: [],
     }
   });
 
@@ -344,6 +346,23 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
                           placeholder="Add any additional notes..."
                           className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
                           {...field}
+                          disabled={isCreating}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="tagIds"
+                  render={({ field }) => (
+                    <FormItem className="p-4">
+                      <FormLabel>Tags</FormLabel>
+                      <FormControl>
+                        <TagInput
+                          selectedTagIds={field.value ?? []}
+                          onChange={field.onChange}
                           disabled={isCreating}
                         />
                       </FormControl>

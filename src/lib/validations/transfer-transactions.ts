@@ -34,6 +34,8 @@ export const TransferTransactionValidation = z.object({
   }, {
     message: "Fee amount must be a positive number",
   }),
+
+  tagIds: z.array(z.string()).max(10).optional(),
 }).refine((data) => data.fromAccountId !== data.toAccountId, {
   message: "From account and to account must be different",
   path: ["toAccountId"],

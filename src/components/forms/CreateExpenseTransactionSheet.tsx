@@ -23,6 +23,7 @@ import { useCardsQuery } from "@/hooks/useCardsQuery";
 import { Textarea } from "../ui/textarea";
 import { ScrollArea } from "../ui/scroll-area";
 import { formatDateForAPI } from "@/lib/utils";
+import { TagInput } from '@/components/shared/TagInput';
 
 interface CreateExpenseTransactionProps {
   open: boolean;
@@ -53,6 +54,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
       isInstallment: false,
       installmentDuration: null,
       installmentStartDate: null,
+      tagIds: [],
     }
   });
 
@@ -375,7 +377,24 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                   </FormItem>
                 )}
               />
-              
+
+              <FormField
+                control={form.control}
+                name="tagIds"
+                render={({ field }) => (
+                  <FormItem className="p-4">
+                    <FormLabel>Tags</FormLabel>
+                    <FormControl>
+                      <TagInput
+                        selectedTagIds={field.value ?? []}
+                        onChange={field.onChange}
+                        disabled={isCreating}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
             </ScrollArea>
             <SheetFooter>
               <Button

@@ -262,6 +262,7 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
                       category={expense.expenseType.name}
                       account={expense.account.name}
                       subcategory={expense.expenseSubcategory?.name}
+                      tags={expense.tags}
                       onClick={() => handleExpenseClick(expense.id)}
                     />
                   ))}
@@ -351,6 +352,7 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
                       date={format(new Date(income.date), 'MMM d')}
                       category={income.incomeType.name}
                       account={income.account.name}
+                      tags={income.tags}
                       onClick={() => handleIncomeClick(income.id)}
                     />
                   ))}
@@ -440,6 +442,7 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
                       category={transfer.transferType.name}
                       account={transfer.fromAccount.name}
                       toAccount={transfer.toAccount.name}
+                      tags={transfer.tags}
                       onClick={() => handleTransferClick(transfer.id)}
                     />
                   ))}

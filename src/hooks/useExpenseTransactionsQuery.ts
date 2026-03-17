@@ -29,6 +29,11 @@ export type ExpenseTransaction = {
     id: string;
     name: string;
   } | null;
+  tags?: {
+    id: string;
+    name: string;
+    color: string;
+  }[];
 }
 
 type ExpenseTransactionsResponse = {

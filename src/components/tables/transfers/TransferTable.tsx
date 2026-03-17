@@ -2,6 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
+import { TagInput } from '@/components/shared/TagInput';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
@@ -20,6 +22,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { TransferTransaction, useTransfersQuery } from '@/hooks/useTransferTransactionsQuery';
 import { useTransferTypesQuery } from '@/hooks/useTransferTypesQuery';
+import { useTagsQuery } from '@/hooks/useTagsQuery';
 import SkeletonTransferTable from '@/components/shared/SkeletonTransferTable';
 import DeleteDialog from '@/components/shared/DeleteDialog';
 import { formatDateForAPI } from '@/lib/utils';
@@ -148,6 +151,48 @@ const CellContent = ({ getValue, row, column, table }: any) => {
   );
 };
 
+const TagsCell = ({ getValue, row, table }: any) => {
+  const rawTags = getValue();
+  const { tags: allTags } = useTagsQuery();
+  const tableMeta = table.options.meta;
+  const isEditing = tableMeta?.editedRows[row.id];
+
+  // Normalize: if updateData stored string[] (IDs), look up full objects
+  const tags: { id: string; name: string; color: string }[] | undefined =
+    Array.isArray(rawTags) && rawTags.length > 0 && typeof rawTags[0] === 'string'
+      ? rawTags.map((id: string) => allTags.find((t: any) => t.id === id)).filter(Boolean)
+      : rawTags;
+
+  if (isEditing) {
+    return (
+      <div className="min-w-[180px]">
+        <TagInput
+          selectedTagIds={tags?.map((t: any) => t.id) || []}
+          onChange={(tagIds) => {
+            tableMeta?.updateData(row.index, "tags", tagIds);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (!tags || tags.length === 0) return <span className="text-muted-foreground">-</span>;
+
+  return (
+    <div className="flex flex-wrap gap-1 max-w-[150px]">
+      {tags.slice(0, 2).map((tag: any) => (
+        <Badge key={tag.id} variant="outline" className="text-[10px] px-1.5 py-0 h-4 gap-1">
+          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
+          {tag.name}
+        </Badge>
+      ))}
+      {tags.length > 2 && (
+        <span className="text-[10px] text-muted-foreground">+{tags.length - 2}</span>
+      )}
+    </div>
+  );
+};
+
 const EditCell = ({ row, table }: any) => {
   const meta = table.options.meta;
 
@@ -169,7 +214,7 @@ const EditCell = ({ row, table }: any) => {
   const saveRow = async () => {
     try {
       const updatedRow = table.options.data[row.index];
-      
+
       const updatePayload = {
         id: updatedRow.id,
         name: updatedRow.name,
@@ -180,6 +225,11 @@ const EditCell = ({ row, table }: any) => {
         date: updatedRow.date,
         notes: updatedRow.notes,
         feeAmount: updatedRow.feeAmount,
+        tagIds: Array.isArray(updatedRow.tags)
+          ? typeof updatedRow.tags[0] === 'string'
+            ? updatedRow.tags
+            : updatedRow.tags.map((t: any) => t.id)
+          : [],
       };
 
       await meta?.updateTransfer(updatePayload);
@@ -400,6 +450,10 @@ const TransferTable = ({ accountId }: TransferTableProps = {}) => {
         type: "text"
       },
     }),
+    columnHelper.accessor("tags", {
+      header: "Tags",
+      cell: TagsCell,
+    }),
     columnHelper.display({
       id: "edit",
       cell: EditCell,
@@ -407,7 +461,7 @@ const TransferTable = ({ accountId }: TransferTableProps = {}) => {
   ], [accountOptions, transferTypeOptions]);
 
   // Memoize meta functions with useCallback
-  const updateData = useCallback((rowIndex: number, columnId: string, value: string) => {
+  const updateData = useCallback((rowIndex: number, columnId: string, value: any) => {
     setData((old) =>
       old.map((row, index) => {
         if (index === rowIndex) {

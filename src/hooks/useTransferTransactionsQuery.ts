@@ -34,6 +34,11 @@ export type TransferTransaction = {
     amount: number;
     description: string | null;
   } | null;
+  tags?: {
+    id: string;
+    name: string;
+    color: string;
+  }[];
 }
 
 type TransferTransactionsResponse = {

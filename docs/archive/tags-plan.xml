@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan feature="transaction-tags" spec="docs/tags-spec.md">
+
+  <phase name="1: Data Model &amp; Migration">
+    <task>
+      <name>Add Tag model and relations to Prisma schema</name>
+      <action>
+        In `prisma/schema.prisma`:
+        1. Add the `Tag` model with fields: id, userId, name (VarChar(50)), color (VarChar(25)), createdAt, updatedAt. Add `@@unique([userId, name])` and `@@map("tags")`.
+        2. Add `tags Tag[]` relation field to `ExpenseTransaction`, `IncomeTransaction`, and `TransferTransaction` models.
+        3. Add `tags Tag[]` relation field to the `User` model.
+      </action>
+      <verify>Run `npx prisma validate` — must pass with no errors.</verify>
+    </task>
+
+    <task>
+      <name>Generate and apply Prisma migration</name>
+      <action>
+        Run `npx prisma migrate dev --name add-tags` to generate and apply the migration. Review the generated SQL to confirm:
+        - `tags` table is created with correct columns and constraints.
+        - Three implicit join tables (`_ExpenseTransactionToTag`, `_IncomeTransactionToTag`, `_TransferTransactionToTag`) are created.
+        - No existing tables are altered destructively.
+      </action>
+      <verify>Run `npx prisma migrate status` — must show all migrations applied. Run `npx prisma generate` — must succeed.</verify>
+    </task>
+  </phase>
+
+  <phase name="2: Tags API">
+    <task>
+      <name>Create GET/POST /api/tags route</name>
+      <action>
+        Create `src/app/api/tags/route.ts`:
+        - GET: Authenticate session, return all tags for the user ordered by name, `200`.
+        - POST: Authenticate session, validate body with Zod (`name: string`), count existing user tags to generate color via `hsl((count * 360) / Math.max(count + 1, 1), 65%, 60%)`, create tag with `db.tag.create(...)`, return `201`.
+        - Handle duplicate name error (Prisma unique constraint) with a `409` response.
+      </action>
+      <verify>Run `npm run build` — must pass with no TypeScript errors.</verify>
+    </task>
+
+    <task>
+      <name>Create DELETE/PATCH /api/tags/[id] route</name>
+      <action>
+        Create `src/app/api/tags/[id]/route.ts`:
+        - DELETE: Authenticate, verify tag belongs to user, delete (Prisma cascades disconnect from join tables), return `200`.
+        - PATCH: Authenticate, validate `{ name: string }`, update tag name, return `200`. Handle duplicate name with `409`.
+      </action>
+      <verify>Run `npm run build` — must pass with no TypeScript errors.</verify>
+    </task>
+
+    <task>
+      <name>Create useTagsQuery hook</name>
+      <action>
+        Create `src/hooks/useTagsQuery.ts`:
+        - Use TanStack Query with key `['tags']` to fetch `GET /api/tags`.
+        - Export `tags`, `isLoading`, `createTag(name)` mutation, and `deleteTag(id)` mutation.
+        - Both mutations invalidate the `['tags']` query on success.
+        - Follow the same patterns used in `useExpenseTypesQuery.ts`.
+      </action>
+      <verify>Run `npm run build` — must pass with no TypeScript errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="3: Transaction API Updates">
+    <task>
+      <name>Add tagIds to expense transaction POST and PATCH</name>
+      <action>
+        1. In `src/app/api/expense-transactions/route.ts`:
+           - Add `tagIds: z.array(z.string()).max(10).optional()` to `ServerPostExpenseSchema`.
+           - In the POST handler, when creating the expense, add `tags: { connect: tagIds.map(id => ({ id })) }` if tagIds is provided.
+           - Add `include: { tags: true }` to all `findMany` and `create` calls.
+           - Add tag name to the search OR clause so searching works with tags.
+        2. In `src/app/api/expense-transactions/[id]/route.ts`:
+           - Add `tagIds: z.array(z.string()).max(10).optional()` to `ServerPatchExpenseSchema`.
+           - In the PATCH handler, add `tags: { set: tagIds.map(id => ({ id })) }` to updateData if tagIds is provided.
+           - Add `include: { tags: true }` to GET and PATCH responses.
+      </action>
+      <verify>Run `npm run test` — all existing expense transaction tests must still pass. Run `npm run build` — must pass.</verify>
+    </task>
+
+    <task>
+      <name>Add tagIds to income transaction POST and PATCH</name>
+      <action>
+        Apply the same pattern as expense transactions to:
+        1. `src/app/api/income-transactions/route.ts` — POST schema + handler + includes.
+        2. `src/app/api/income-transactions/[id]/route.ts` — PATCH schema + handler + includes + GET includes.
+      </action>
+      <verify>Run `npm run test` — all existing income transaction tests must still pass. Run `npm run build` — must pass.</verify>
+    </task>
+
+    <task>
+      <name>Add tagIds to transfer transaction POST and PATCH</name>
+      <action>
+        Apply the same pattern as expense transactions to:
+        1. `src/app/api/transfer-transactions/route.ts` — POST schema + handler + includes.
+        2. `src/app/api/transfer-transactions/[id]/route.ts` — PATCH schema + handler + includes + GET includes.
+      </action>
+      <verify>Run `npm run test` — all existing transfer transaction tests must still pass. Run `npm run build` — must pass.</verify>
+    </task>
+
+    <task>
+      <name>Update client-side validation schemas</name>
+      <action>
+        Add `tagIds: z.array(z.string()).max(10).optional()` to:
+        - `src/lib/validations/expense-transactions.ts` (base `ExpenseTransactionValidation`)
+        - `src/lib/validations/income-transactions.ts` (`IncomeTransactionValidation`)
+        - `src/lib/validations/transfer-transactions.ts` (`TransferTransactionValidation`)
+      </action>
+      <verify>Run `npm run build` — must pass.</verify>
+    </task>
+  </phase>
+
+  <phase name="4: TagInput UI Component">
+    <task>
+      <name>Build the TagInput component</name>
+      <action>
+        Create `src/components/shared/TagInput.tsx`:
+        - Props: `selectedTagIds: string[]`, `onChange: (tagIds: string[]) => void`, `disabled?: boolean`.
+        - Uses `useTagsQuery()` internally to fetch all user tags.
+        - Renders selected tags as `Badge` components (variant="secondary") with:
+          - A small colored circle (`div` with inline `backgroundColor` from tag.color).
+          - Tag name text.
+          - An ✕ (`X` icon from lucide) button to remove.
+        - Shows an `Input` that opens a `Popover` with a `Command` list:
+          - Filters user tags by typed text.
+          - Unselected tags shown as selectable items.
+          - A "Create [typed-text]" action at the bottom when no exact name match exists.
+        - Clicking "Create" calls `createTag(name)` from `useTagsQuery` and adds the new tag's ID.
+        - When 10 tags are selected, the input is hidden and a small "(max 10)" label is shown.
+      </action>
+      <verify>Run `npm run build` — must pass with no TypeScript errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="5: Form Integration">
+    <task>
+      <name>Add TagInput to all Expense forms</name>
+      <action>
+        1. In `CreateExpenseTransactionDrawer.tsx` and `CreateExpenseTransactionSheet.tsx`:
+           - Add `tagIds: []` to form defaultValues.
+           - Add a `FormField` for `tagIds` rendering `TagInput` after the description field.
+           - Pass `tagIds` in the submit payload.
+        2. In `EditExpenseDrawer.tsx` (and Sheet if exists):
+           - Initialize `tagIds` from the existing transaction's tags.
+           - Add a `FormField` for `tagIds` rendering `TagInput`.
+           - Pass `tagIds` in the update payload.
+      </action>
+      <verify>Run `npm run build` — must pass.</verify>
+    </task>
+
+    <task>
+      <name>Add TagInput to all Income forms</name>
+      <action>
+        Apply the same TagInput integration pattern to:
+        - `CreateIncomeTransactionDrawer.tsx` and `CreateIncomeTransactionSheet.tsx`
+        - `EditIncomeDrawer.tsx` (and Sheet if exists)
+      </action>
+      <verify>Run `npm run build` — must pass.</verify>
+    </task>
+
+    <task>
+      <name>Add TagInput to all Transfer forms</name>
+      <action>
+        Apply the same TagInput integration pattern to:
+        - `CreateTransferDrawer.tsx` and `CreateTransferSheet.tsx`
+        - `EditTransferDrawer.tsx` (and Sheet if exists)
+      </action>
+      <verify>Run `npm run build` — must pass.</verify>
+    </task>
+  </phase>
+
+  <phase name="6: Tag Display &amp; Hook Updates">
+    <task>
+      <name>Update transaction query hooks to include tags</name>
+      <action>
+        Update the TypeScript interfaces/types in:
+        - `src/hooks/useExpenseTransactionsQuery.ts` — add `tags: { id: string; name: string; color: string }[]` to the transaction type.
+        - `src/hooks/useIncomeTransactionsQuery.ts` — same.
+        - `src/hooks/useTransferTransactionsQuery.ts` — same.
+        No query key or fetch logic changes needed since the API response now includes tags automatically.
+      </action>
+      <verify>Run `npm run build` — must pass.</verify>
+    </task>
+
+    <task>
+      <name>Display tags on CompactTransactionCard</name>
+      <action>
+        In `src/components/transactions/CompactTransactionCard.tsx`:
+        1. Add `tags?: { id: string; name: string; color: string }[]` to `CompactTransactionCardProps`.
+        2. Below the category/account line, conditionally render a flex-wrap row of small `Badge` components for each tag:
+           - `Badge` variant="outline", extra small text
+           - Inline colored dot from `tag.color`
+           - Tag name
+        3. Keep the row subtle — `text-[10px]`, `gap-1`, `mt-1`, max 3 visible with a "+N more" indicator if needed.
+      </action>
+      <verify>Run `npm run test` — existing `CompactTransactionCard.test.tsx` must pass (tags prop is optional). Run `npm run build` — must pass.</verify>
+    </task>
+  </phase>
+
+  <phase name="7: Final Verification">
+    <task>
+      <name>Run full test suite and build</name>
+      <action>
+        1. Run `npm run test` — all unit tests must pass.
+        2. Run `npm run build` — production build must succeed with no errors.
+        3. Run `npm run lint` — no new lint warnings.
+      </action>
+      <verify>All three commands exit with code 0.</verify>
+    </task>
+
+    <task>
+      <name>Manual smoke test</name>
+      <action>
+        With the dev server running (`npm run dev`):
+        1. Create a new expense transaction and add 2 tags ("Bangkok", "Food"). Confirm tags appear as colored pills in the form and are saved.
+        2. Edit an old expense transaction (one created before this feature). Add a tag ("Test"). Confirm it saves and displays.
+        3. Create a new income transaction with 1 tag. Confirm tags display on the transaction card.
+        4. Create a new transfer with 1 tag. Confirm tags display.
+        5. Open the expense list, confirm tags are visible on CompactTransactionCard.
+        6. Try to add an 11th tag — confirm the input is hidden and the limit message appears.
+        7. Remove a tag from an existing transaction — confirm it updates correctly.
+      </action>
+      <verify>All 7 manual checks pass as described.</verify>
+    </task>
+  </phase>
+
+</plan>

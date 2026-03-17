@@ -20,6 +20,7 @@ const ServerPatchTransferSchema = z.object({
     (val) => !val || (!isNaN(Number(val)) && Number(val) > 0),
     { message: "Fee amount must be a positive number" }
   ),
+  tagIds: z.array(z.string()).max(10).optional(),
 }).refine(
   (data) => {
     if (data.fromAccountId !== undefined && data.toAccountId !== undefined) {
@@ -114,6 +115,7 @@ export async function PATCH(
       date,
       notes,
       feeAmount,
+      tagIds,
     } = parseResult.data;
 
     const existingTransfer = await db.transferTransaction.findUnique({
@@ -138,6 +140,7 @@ export async function PATCH(
       const updateData: any = {};
 
       if (name !== undefined) updateData.name = name;
+      if (tagIds !== undefined) updateData.tags = { set: tagIds.map((id) => ({ id })) };
       if (transferTypeId !== undefined) updateData.transferTypeId = transferTypeId;
       if (date !== undefined) updateData.date = new Date(date);
       if (notes !== undefined) updateData.notes = notes || null;
@@ -312,6 +315,7 @@ export async function PATCH(
           toAccount: true,
           transferType: true,
           feeExpense: true,
+          tags: true,
         },
       });
 

@@ -22,6 +22,7 @@ import DeleteDialog from '../shared/DeleteDialog';
 import { Separator } from '../ui/separator';
 import SkeletonEditIncomeDrawerForm from '../shared/SkeletonEditIncomeDrawerForm';
 import { formatDateForAPI } from '@/lib/utils';
+import { TagInput } from '@/components/shared/TagInput';
 
 interface EditIncomeDrawerProps {
   open: boolean;
@@ -49,6 +50,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
       incomeTypeId: "",
       date: undefined,
       description: "",
+      tagIds: [],
     }
   });
 
@@ -61,6 +63,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
         incomeTypeId: incomeTransactionData.incomeTypeId,
         date: new Date(incomeTransactionData.date),
         description: incomeTransactionData.description ?? undefined,
+        tagIds: incomeTransactionData.tags?.map((t: { id: string }) => t.id) ?? [],
       })
     }
   }, [incomeTransactionData, form])
@@ -327,6 +330,23 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                           <Textarea
                             className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
                             {...field}
+                            disabled={isUpdating}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="tagIds"
+                    render={({ field }) => (
+                      <FormItem className="p-4">
+                        <FormLabel>Tags</FormLabel>
+                        <FormControl>
+                          <TagInput
+                            selectedTagIds={field.value ?? []}
+                            onChange={field.onChange}
                             disabled={isUpdating}
                           />
                         </FormControl>

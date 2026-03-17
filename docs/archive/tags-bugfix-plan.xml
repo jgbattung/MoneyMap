@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan feature="tags-bugfix" spec="See implementation_plan.md in gemini/brain for root cause analysis">
+
+  <phase name="1: Fix TagInput Input Can't Be Typed">
+    <task>
+      <name>Replace PopoverTrigger with PopoverAnchor in TagInput</name>
+      <action>
+        In `src/components/shared/TagInput.tsx`:
+        1. Change import: replace `PopoverTrigger` with `PopoverAnchor` from `@/components/ui/popover`.
+        2. Replace `PopoverTrigger asChild` (line 130) with `PopoverAnchor asChild`.
+        3. Replace closing `PopoverTrigger` (line 143) with `PopoverAnchor`.
+        4. Add `onBlur` handler to the `Input`: `onBlur={() =&gt; setTimeout(() =&gt; setOpen(false), 150)}` — the delay allows clicking items inside the popover before it closes.
+        5. Change the `onFocus` handler to `onFocus={() =&gt; setOpen(true)}` so the dropdown opens immediately on focus, showing existing tags even before typing.
+      </action>
+      <verify>
+        Run `npm run build` — must pass with no type errors.
+        Run `npx vitest run src/components/shared/TagInput.test.tsx` — must pass.
+        Manually test: navigate to a create transaction form, click the tag input, type "test" — text must appear and dropdown must show.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="2: Add Editable Tags Column to Expense Table">
+    <task>
+      <name>Add TagInput-powered tags column to ExpenseTable</name>
+      <action>
+        In `src/components/tables/expenses/ExpenseTable.tsx`:
+
+        1. Import `Badge` from `@/components/ui/badge` and `TagInput` from `@/components/shared/TagInput`.
+
+        2. Create a `TagsCell` component (above or near `CellContent`) that handles both read and edit modes:
+           ```tsx
+           const TagsCell = ({ getValue, row, table }: any) =&gt; {
+             const tags = getValue() as { id: string; name: string; color: string }[] | undefined;
+             const tableMeta = table.options.meta;
+             const isEditing = tableMeta?.editedRows[row.id];
+
+             if (isEditing) {
+               return (
+                 &lt;div className="min-w-[180px]"&gt;
+                   &lt;TagInput
+                     selectedTagIds={tags?.map(t =&gt; t.id) || []}
+                     onChange={(tagIds) =&gt; {
+                       // We need to update with full tag objects for display
+                       // TagInput uses useTagsQuery internally, so we can reconstruct
+                       tableMeta?.updateData(row.index, "tags", tagIds);
+                     }}
+                   /&gt;
+                 &lt;/div&gt;
+               );
+             }
+
+             if (!tags || tags.length === 0) return &lt;span className="text-muted-foreground"&gt;-&lt;/span&gt;;
+
+             return (
+               &lt;div className="flex flex-wrap gap-1 max-w-[150px]"&gt;
+                 {tags.slice(0, 2).map(tag =&gt; (
+                   &lt;Badge key={tag.id} variant="outline" className="text-[10px] px-1.5 py-0 h-4 gap-1"&gt;
+                     &lt;span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} /&gt;
+                     {tag.name}
+                   &lt;/Badge&gt;
+                 ))}
+                 {tags.length &gt; 2 &amp;&amp; (
+                   &lt;span className="text-[10px] text-muted-foreground"&gt;+{tags.length - 2}&lt;/span&gt;
+                 )}
+               &lt;/div&gt;
+             );
+           };
+           ```
+
+           **Important note on the `onChange` handler**: The `TagInput` component calls `onChange(tagIds: string[])` with just IDs. But for `saveRow` we need the IDs. So when `TagsCell` receives the new tagIds from TagInput, it should store just the tagIds array via `updateData`, and `saveRow` should read this properly.
+
+           The simplest approach: store the tagIds as an array directly via `updateData(row.index, "tags", tagIds)`. Then in `saveRow`, check if `updatedRow.tags` is an array of strings (tagIds) or array of objects, and handle accordingly:
+           ```tsx
+           tagIds: Array.isArray(updatedRow.tags)
+             ? typeof updatedRow.tags[0] === 'string'
+               ? updatedRow.tags  // already tagIds from edit
+               : updatedRow.tags.map((t: any) =&gt; t.id)  // original objects
+             : [],
+           ```
+
+        3. Add the tags column to the `columns` array, after the `description` column and before the `edit` column:
+           ```tsx
+           columnHelper.accessor("tags", {
+             header: "Tags",
+             cell: TagsCell,
+           }),
+           ```
+
+        4. Widen the `updateData` callback's `value` parameter type from `string` to `any`:
+           ```tsx
+           const updateData = useCallback((rowIndex: number, columnId: string, value: any) =&gt; {
+           ```
+
+        5. Update `saveRow` to include `tagIds` in the update payload:
+           ```tsx
+           tagIds: Array.isArray(updatedRow.tags)
+             ? typeof updatedRow.tags[0] === 'string'
+               ? updatedRow.tags
+               : updatedRow.tags.map((t: any) =&gt; t.id)
+             : [],
+           ```
+      </action>
+      <verify>Run `npm run build` — must pass with no type errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="3: Add Editable Tags Column to Income Table">
+    <task>
+      <name>Add TagInput-powered tags column to IncomeTable</name>
+      <action>
+        Apply the same pattern as Phase 2 to `src/components/tables/income/IncomeTable.tsx`:
+        1. Import `Badge` and `TagInput`.
+        2. Add the `TagsCell` component.
+        3. Add tags column to column definitions.
+        4. Widen `updateData` value type to `any`.
+        5. Add `tagIds` to `saveRow` payload.
+      </action>
+      <verify>Run `npm run build` — must pass with no type errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="4: Add Editable Tags Column to Transfer Table">
+    <task>
+      <name>Add TagInput-powered tags column to TransferTable</name>
+      <action>
+        Apply the same pattern as Phase 2 to `src/components/tables/transfers/TransferTable.tsx`:
+        1. Import `Badge` and `TagInput`.
+        2. Add the `TagsCell` component.
+        3. Add tags column to column definitions.
+        4. Widen `updateData` value type to `any`.
+        5. Add `tagIds` to `saveRow` payload.
+      </action>
+      <verify>Run `npm run build` — must pass with no type errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="5: Final Verification">
+    <task>
+      <name>Run full test suite and manual smoke test</name>
+      <action>
+        1. Run `npx vitest run` — all existing test files must pass.
+        2. Run `npm run build` — must compile successfully.
+        3. Run `npm run lint` — no new warnings.
+        4. Manual tests:
+           a. Open create expense drawer → Tags input → type "Bangkok" → text appears, dropdown shows → create tag → pill appears
+           b. Open create income drawer → Tags input → type text → works
+           c. Desktop table → Expenses → Tags column visible with pills for tagged transactions
+           d. Click edit (pencil) on a row → TagInput appears in the Tags cell → add a new tag → save → tag persists
+           e. Click edit on an OLD transaction with no tags → add a tag via TagInput → save → tag saved
+           f. Verify same for Income and Transfer tables
+      </action>
+      <verify>All automated and manual checks pass.</verify>
+    </task>
+  </phase>
+
+</plan>

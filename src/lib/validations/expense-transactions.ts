@@ -20,6 +20,7 @@ export const ExpenseTransactionValidation = z.object({
     .optional()
     .nullable(),
   installmentStartDate: z.date().optional().nullable(),
+  tagIds: z.array(z.string()).max(10).optional(),
 });
 
 export const createExpenseTransactionSchema = ExpenseTransactionValidation.refine(

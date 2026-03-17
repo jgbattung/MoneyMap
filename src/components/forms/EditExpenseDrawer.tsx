@@ -27,6 +27,7 @@ import SkeletonEditExpenseDrawerForm from '../shared/SkeletonEditExpenseDrawerFo
 import DeleteDialog from '../shared/DeleteDialog';
 import { Separator } from '../ui/separator';
 import { formatDateForAPI } from '@/lib/utils';
+import { TagInput } from '@/components/shared/TagInput';
 
 interface EditExpenseDrawerProps {
   open: boolean;
@@ -61,6 +62,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
       isInstallment: false,
       installmentDuration: null,
       installmentStartDate: null,
+      tagIds: [],
     }
   });
 
@@ -78,9 +80,10 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
           : undefined,
         isInstallment: expenseTransactionData.isInstallment,
         installmentDuration: expenseTransactionData.installmentDuration ?? undefined,
-        installmentStartDate: expenseTransactionData.installmentStartDate 
+        installmentStartDate: expenseTransactionData.installmentStartDate
           ? new Date(expenseTransactionData.installmentStartDate)
           : undefined,
+        tagIds: expenseTransactionData.tags?.map((t: { id: string }) => t.id) ?? [],
       })
     }
   }, [expenseTransactionData, form])
@@ -477,6 +480,23 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                           <Textarea
                             className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
                             {...field}
+                            disabled={isUpdating}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="tagIds"
+                    render={({ field }) => (
+                      <FormItem className="p-4">
+                        <FormLabel>Tags</FormLabel>
+                        <FormControl>
+                          <TagInput
+                            selectedTagIds={field.value ?? []}
+                            onChange={field.onChange}
                             disabled={isUpdating}
                           />
                         </FormControl>

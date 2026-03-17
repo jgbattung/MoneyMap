@@ -3,6 +3,7 @@
 import React from 'react';
 import { IconArrowDown, IconArrowUp, IconArrowRight } from '@tabler/icons-react';
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 type TransactionType = 'EXPENSE' | 'INCOME' | 'TRANSFER';
 
@@ -16,6 +17,7 @@ interface CompactTransactionCardProps {
   account: string;
   toAccount?: string;
   subcategory?: string | null;
+  tags?: { id: string; name: string; color: string }[];
   onClick: () => void;
 }
 
@@ -28,6 +30,7 @@ const CompactTransactionCard = ({
   account,
   toAccount,
   subcategory,
+  tags,
   onClick,
 }: CompactTransactionCardProps) => {
   const getIcon = () => {
@@ -112,6 +115,29 @@ const CompactTransactionCard = ({
             </div>
             <span className="text-muted-foreground/80 flex-shrink-0 ml-2">{formattedDate}</span>
           </div>
+
+          {tags && tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {tags.slice(0, 3).map((tag) => (
+                <Badge
+                  key={tag.id}
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 h-4 gap-1"
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: tag.color }}
+                  />
+                  {tag.name}
+                </Badge>
+              ))}
+              {tags.length > 3 && (
+                <span className="text-[10px] text-muted-foreground self-center">
+                  +{tags.length - 3} more
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
