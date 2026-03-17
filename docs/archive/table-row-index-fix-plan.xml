@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan feature="table-row-index-fix" spec="docs/table-row-index-fix-spec.md">
+
+  <phase name="1: Fix ExpenseTable">
+    <task>
+      <name>Change ExpenseTable updateData and revertData to use row ID instead of positional index</name>
+      <action>
+        In `src/components/tables/expenses/ExpenseTable.tsx`:
+
+        1. **Change `updateData` signature and logic** (lines 522-534):
+           - Change parameter from `rowIndex: number` to `rowId: string`
+           - Match by `row.id === rowId` instead of `index === rowIndex`
+           ```tsx
+           const updateData = useCallback((rowId: string, columnId: string, value: any) =&gt; {
+             setData((old) =&gt;
+               old.map((row) =&gt; {
+                 if (row.id === rowId) {
+                   return { ...row, [columnId]: value };
+                 }
+                 return row;
+               })
+             );
+           }, []);
+           ```
+
+        2. **Change `revertData` signature and logic** (lines 536-540):
+           - Change parameter from `rowIndex: number` to `rowId: string`
+           - Find the original row by ID instead of positional index
+           ```tsx
+           const revertData = useCallback((rowId: string) =&gt; {
+             setData((old) =&gt;
+               old.map((row) =&gt; {
+                 if (row.id === rowId) {
+                   const original = originalData.find((o) =&gt; o.id === rowId);
+                   return original ?? row;
+                 }
+                 return row;
+               })
+             );
+           }, [originalData]);
+           ```
+
+        3. **Update all `updateData` callers in CellContent** — change every `tableMeta?.updateData(row.index, ...)` to `tableMeta?.updateData(row.original.id, ...)`:
+           - Line 48: `onBlur` → `tableMeta?.updateData(row.original.id, column.id, value)`
+           - Line 53: `onSelectChange` → `tableMeta?.updateData(row.original.id, column.id, newValue)`
+           - Line 56: expense type change → `tableMeta?.updateData(row.original.id, "expenseSubcategoryId", "")`
+           - Line 64: `onDateChange` → `tableMeta?.updateData(row.original.id, column.id, dateString)`
+           - Line 165: subcategory change → `tableMeta?.updateData(row.original.id, column.id, storageValue)`
+
+        4. **Update `updateData` caller in TagsCell** (line 229):
+           - `tableMeta?.updateData(row.original.id, "tags", tagIds)`
+
+        5. **Update `revertData` caller in EditCell** (line 264):
+           - `meta?.revertData(row.original.id)`
+
+        6. **Do NOT change** `table.options.data[row.index]` on lines 130, 273, 314 — these read from `filteredData` and are correct.
+      </action>
+      <verify>Run `npm run build` — must pass with no TypeScript errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="2: Fix IncomeTable">
+    <task>
+      <name>Change IncomeTable updateData and revertData to use row ID instead of positional index</name>
+      <action>
+        In `src/components/tables/income/IncomeTable.tsx`, apply the identical fix pattern:
+
+        1. **Change `updateData`** — parameter from `rowIndex: number` to `rowId: string`, match by `row.id === rowId`.
+
+        2. **Change `revertData`** — parameter from `rowIndex: number` to `rowId: string`, find original by ID.
+
+        3. **Update all `updateData` callers** in `CellContent` and `TagsCell`:
+           - Every `tableMeta?.updateData(row.index, ...)` → `tableMeta?.updateData(row.original.id, ...)`
+
+        4. **Update `revertData` caller** in `EditCell`:
+           - `meta?.revertData(row.original.id)`
+
+        5. **Do NOT change** `table.options.data[row.index]` in `saveRow` or `handleDeleteClick`.
+      </action>
+      <verify>Run `npm run build` — must pass with no TypeScript errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="3: Fix TransferTable">
+    <task>
+      <name>Change TransferTable updateData and revertData to use row ID instead of positional index</name>
+      <action>
+        In `src/components/tables/transfers/TransferTable.tsx`, apply the identical fix pattern:
+
+        1. **Change `updateData`** — parameter from `rowIndex: number` to `rowId: string`, match by `row.id === rowId`.
+
+        2. **Change `revertData`** — parameter from `rowIndex: number` to `rowId: string`, find original by ID.
+
+        3. **Update all `updateData` callers** in `CellContent` and `TagsCell`:
+           - Every `tableMeta?.updateData(row.index, ...)` → `tableMeta?.updateData(row.original.id, ...)`
+
+        4. **Update `revertData` caller** in `EditCell`:
+           - `meta?.revertData(row.original.id)`
+
+        5. **Do NOT change** `table.options.data[row.index]` in `saveRow` or `handleDeleteClick`.
+      </action>
+      <verify>Run `npm run build` — must pass with no TypeScript errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="4: Final Verification">
+    <task>
+      <name>Run lint, build, and test suite</name>
+      <action>
+        1. Run `npm run lint` — no new warnings or errors.
+        2. Run `npm run build` — production build must succeed with zero errors.
+        3. Run `npx vitest run` — all test files must pass.
+      </action>
+      <verify>All three commands exit with code 0.</verify>
+    </task>
+  </phase>
+
+</plan>
