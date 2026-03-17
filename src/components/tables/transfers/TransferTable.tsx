@@ -45,19 +45,19 @@ const CellContent = ({ getValue, row, column, table }: any) => {
   }, [initialValue]);
 
   const onBlur = () => {
-    tableMeta?.updateData(row.index, column.id, value)
+    tableMeta?.updateData(row.original.id, column.id, value)
   }
 
   const onSelectChange = (newValue: string) => {
     setValue(newValue);
-    tableMeta?.updateData(row.index, column.id, newValue);
+    tableMeta?.updateData(row.original.id, column.id, newValue);
   };
   
   const onDateChange = (date: Date | undefined) => {
     if (date) {
       const dateString = formatDateForAPI(date);
       setValue(dateString);
-      tableMeta?.updateData(row.index, column.id, dateString);
+      tableMeta?.updateData(row.original.id, column.id, dateString);
       setCalendarOpen(false);
     }
   }
@@ -169,7 +169,7 @@ const TagsCell = ({ getValue, row, table }: any) => {
         <TagInput
           selectedTagIds={tags?.map((t: any) => t.id) || []}
           onChange={(tagIds) => {
-            tableMeta?.updateData(row.index, "tags", tagIds);
+            tableMeta?.updateData(row.original.id, "tags", tagIds);
           }}
         />
       </div>
@@ -204,7 +204,7 @@ const EditCell = ({ row, table }: any) => {
   }
 
   const removeRow = () => {
-    meta?.revertData(row.index);
+    meta?.revertData(row.original.id);
     meta?.setEditedRows((old: any) => ({
       ...old,
       [row.id]: !old[row.id],
@@ -461,23 +461,26 @@ const TransferTable = ({ accountId }: TransferTableProps = {}) => {
   ], [accountOptions, transferTypeOptions]);
 
   // Memoize meta functions with useCallback
-  const updateData = useCallback((rowIndex: number, columnId: string, value: any) => {
+  const updateData = useCallback((rowId: string, columnId: string, value: any) => {
     setData((old) =>
-      old.map((row, index) => {
-        if (index === rowIndex) {
-          return {
-            ...old[rowIndex],
-            [columnId]: value,
-          };
+      old.map((row) => {
+        if (row.id === rowId) {
+          return { ...row, [columnId]: value };
         }
         return row;
       })
     );
   }, []);
 
-  const revertData = useCallback((rowIndex: number) => {
+  const revertData = useCallback((rowId: string) => {
     setData((old) =>
-      old.map((row, index) => (index === rowIndex ? originalData[rowIndex] : row))
+      old.map((row) => {
+        if (row.id === rowId) {
+          const original = originalData.find((o) => o.id === rowId);
+          return original ?? row;
+        }
+        return row;
+      })
     );
   }, [originalData]);
 

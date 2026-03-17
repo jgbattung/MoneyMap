@@ -45,15 +45,15 @@ const CellContent = ({ getValue, row, column, table }: any) => {
   }, [initialValue]);
 
   const onBlur = () => {
-    tableMeta?.updateData(row.index, column.id, value)
+    tableMeta?.updateData(row.original.id, column.id, value)
   }
 
   const onSelectChange = (newValue: string) => {
     setValue(newValue);
-    tableMeta?.updateData(row.index, column.id, newValue);
-    
+    tableMeta?.updateData(row.original.id, column.id, newValue);
+
     if (column.id === "expenseTypeId") {
-      tableMeta?.updateData(row.index, "expenseSubcategoryId", "");
+      tableMeta?.updateData(row.original.id, "expenseSubcategoryId", "");
     }
   };
   
@@ -61,7 +61,7 @@ const CellContent = ({ getValue, row, column, table }: any) => {
     if (date) {
       const dateString = formatDateForAPI(date);
       setValue(dateString);
-      tableMeta?.updateData(row.index, column.id, dateString);
+      tableMeta?.updateData(row.original.id, column.id, dateString);
       setCalendarOpen(false);
     }
   }
@@ -162,7 +162,7 @@ const CellContent = ({ getValue, row, column, table }: any) => {
       // Convert "__none__" back to empty string for storage
       const storageValue = newValue === "__none__" ? "" : newValue;
       setValue(storageValue);
-      tableMeta?.updateData(row.index, column.id, storageValue);
+      tableMeta?.updateData(row.original.id, column.id, storageValue);
     };
     
     return (
@@ -226,7 +226,7 @@ const TagsCell = ({ getValue, row, table }: any) => {
         <TagInput
           selectedTagIds={tags?.map((t: any) => t.id) || []}
           onChange={(tagIds) => {
-            tableMeta?.updateData(row.index, "tags", tagIds);
+            tableMeta?.updateData(row.original.id, "tags", tagIds);
           }}
         />
       </div>
@@ -261,7 +261,7 @@ const EditCell = ({ row, table }: any) => {
   }
 
   const removeRow = () => {
-    meta?.revertData(row.index);
+    meta?.revertData(row.original.id);
     meta?.setEditedRows((old: any) => ({
       ...old,
       [row.id]: !old[row.id],
@@ -519,23 +519,26 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
   ], [accountOptions, expenseTypeOptions]);
 
   // Memoize meta functions with useCallback
-  const updateData = useCallback((rowIndex: number, columnId: string, value: any) => {
+  const updateData = useCallback((rowId: string, columnId: string, value: any) => {
     setData((old) =>
-      old.map((row, index) => {
-        if (index === rowIndex) {
-          return {
-            ...old[rowIndex],
-            [columnId]: value,
-          };
+      old.map((row) => {
+        if (row.id === rowId) {
+          return { ...row, [columnId]: value };
         }
         return row;
       })
     );
   }, []);
 
-  const revertData = useCallback((rowIndex: number) => {
+  const revertData = useCallback((rowId: string) => {
     setData((old) =>
-      old.map((row, index) => (index === rowIndex ? originalData[rowIndex] : row))
+      old.map((row) => {
+        if (row.id === rowId) {
+          const original = originalData.find((o) => o.id === rowId);
+          return original ?? row;
+        }
+        return row;
+      })
     );
   }, [originalData]);
 
