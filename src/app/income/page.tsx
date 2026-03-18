@@ -321,6 +321,7 @@ const Income = () => {
                   description={income.description}
                   account={income.account}
                   incomeType={income.incomeType}
+                  tags={income.tags}
                   onClick={() => handleIncomeTransactionCardClick(income.id)}
                 />
               ))}
