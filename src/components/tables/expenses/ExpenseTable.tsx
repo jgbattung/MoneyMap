@@ -3,7 +3,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import DeleteDialog from '@/components/shared/DeleteDialog';
-import { TagFilter } from '@/components/shared/TagFilter';
 import { TagInput } from '@/components/shared/TagInput';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -369,7 +368,6 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
   const [editedRows, setEditedRows] = useState({});
 
   const [dateFilter, setDateFilter] = useState<string>("view-all");
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<{ id: string; name: string } | null>(null);
@@ -443,12 +441,6 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
         }
       }
 
-      // Tag ID filter
-      if (selectedTagIds.length > 0) {
-        const hasMatchingTag = row.tags?.some(tag => selectedTagIds.includes(tag.id));
-        if (!hasMatchingTag) return false;
-      }
-
       // Search filter
       if (!debouncedSearchTerm) return true;
 
@@ -462,7 +454,7 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
         row.tags?.some(tag => tag.name.toLowerCase().includes(searchLower))
       );
     });
-  }, [data, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm, selectedTagIds]);
+  }, [data, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);
 
   // Memoize the columns with proper dependencies
   const columns = useMemo(() => [
@@ -672,9 +664,8 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
             </ToggleGroup>
           </div>
 
-          {/* Tag filter + Search */}
+          {/* Search */}
           <div className="flex items-start gap-2 justify-end">
-            <TagFilter selectedTagIds={selectedTagIds} onChange={setSelectedTagIds} />
             <div className="w-full max-w-xs">
               <InputGroup>
                 <InputGroupInput
