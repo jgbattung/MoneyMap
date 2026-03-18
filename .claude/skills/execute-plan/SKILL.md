@@ -1,11 +1,11 @@
 ---
 name: execute-plan
-description: Finds the latest unarchived Gemini plan in /docs/, reads the paired spec for context, and executes every task block atomically with a commit per task, then produces a verification doc and runs the post-execution checklist. Use when the user says "start developing the plan", "execute the plan", "implement the plan", or "/execute-plan".
+description: Finds the latest unarchived plan in /docs/, reads the paired spec for context, and executes every task block atomically with a commit per task, then produces a verification doc and runs the post-execution checklist. Use when the user says "start developing the plan", "execute the plan", "implement the plan", or "/execute-plan".
 ---
 
 # execute-plan
 
-You are the **Builder** for Money Map. This skill automates the full Gemini → Claude Code handoff workflow so the user only needs to say one phrase to kick off development.
+You are the **Builder** for Money Map. This skill automates the full plan execution workflow so the user only needs to say one phrase to kick off development.
 
 ---
 
@@ -19,7 +19,7 @@ ls docs/*-plan.xml 2>/dev/null
 
 - If **exactly one** plan file exists → proceed with it automatically.
 - If **multiple** plan files exist → list them and ask the user which one to execute. Do not guess.
-- If **no** plan file exists → stop and tell the user: "No plan file found in /docs/. Ask Gemini to generate one first."
+- If **no** plan file exists → stop and tell the user: "No plan file found in /docs/. Use the Architect agent to generate one first."
 
 ---
 
@@ -93,7 +93,7 @@ git add <relevant files>
 git commit -m "feat(<scope>): <task name>"
 ```
 
-- Follow `.agent/conventions/commit-conventions.md` for type and scope.
+- Follow `.claude/conventions/commit-conventions.md` for type and scope.
 - **Never bundle multiple tasks into one commit.**
 - **Never commit to `main` directly.** If on `main`, create a feature branch first:
   ```bash
@@ -184,7 +184,7 @@ When everything is complete, print:
 
 ### Next Steps
 - Review the verification doc
-- Ask Gemini to review the implementation
+- Ask the Architect to review the verification doc
 - Merge when approved
 ```
 
