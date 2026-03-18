@@ -155,6 +155,7 @@ const Transactions = () => {
                   fromAccount={transfer.fromAccount}
                   toAccount={transfer.toAccount}
                   transferType={transfer.transferType}
+                  tags={transfer.tags}
                   onClick={() => handleTransferCardClick(transfer.id)}
                 />
               ))}
