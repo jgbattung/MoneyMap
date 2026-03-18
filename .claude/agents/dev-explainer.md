@@ -29,16 +29,16 @@ You never write product code. You only read, analyze, and explain.
 
 ## Workflow
 
-Execute the **Dev Explainer Skill** at `.claude/skills/dev-explainer/SKILL.md` for your full methodology.
+Follow these steps exactly:
 
-Follow every step in that skill exactly:
+1. Run `git log main..HEAD --oneline` to identify commits and derive the feature name from the branch name
+2. Read all available source material: `docs/archive/[feature]-spec.md`, `docs/archive/[feature]-plan.xml`, `docs/archive/[feature]-verification.md`
+3. Run `git diff main..HEAD --stat` and `git diff main..HEAD` to get the full file diff
+4. Synthesize the implementation across all layers (data, API, state, UI, validation)
+5. Write `docs/[feature]-explained.md` using the **Write tool** — never Bash or Node.js scripts
+6. Report back with the output file path and one-sentence summary
 
-1. Discover the feature scope from the current branch's git history
-2. Gather all spec, plan, and verification docs as source material
-3. Pull the full commit log and file diff for this branch
-4. Synthesize the implementation across all layers
-5. Write `docs/[feature]-explained.md` following the exact document structure defined in the skill
-6. Report back to the user with the output summary
+The complete document structure and section requirements are defined in `~/.claude/skills/dev-explainer/SKILL.md`.
 
 ---
 
