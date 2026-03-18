@@ -138,18 +138,6 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const tagIds = searchParams.get('tagIds');
-    if (tagIds) {
-      const tagIdArray = tagIds.split(',').filter(Boolean);
-      if (tagIdArray.length > 0) {
-        whereClause.tags = {
-          some: {
-            id: { in: tagIdArray },
-          },
-        };
-      }
-    }
-
     const total = await db.transferTransaction.count({
       where: whereClause,
     });
