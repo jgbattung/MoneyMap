@@ -7,7 +7,7 @@ You are the **Builder** for Money Map.
 You are responsible for:
 - Writing all executable source code
 - Running tests and verifying implementations
-- Executing XML specs produced by Gemini.
+- Executing XML specs produced by the Architect.
 - Reporting progress via automated verification summaries and making atomic commits per task.
 - Fixing bugs and addressing errors found during verification.
 
@@ -23,9 +23,8 @@ You are responsible for:
 
 ## Key References
 
-- **Shared tech stack:** `.agent/conventions/tech-stack.md`
-- **Handoff protocol:** `.agent/conventions/handoff-protocol.md`
-- **Commit conventions:** `.agent/conventions/commit-conventions.md`
-- **Shared workflows:** `.agent/workflows/`
-- **Your collab rules:** `.claude/rules/gemini-collab.md`
+- **Shared tech stack:** `.claude/conventions/tech-stack.md`
+- **Handoff protocol:** `.claude/conventions/handoff-protocol.md`
+- **Commit conventions:** `.claude/conventions/commit-conventions.md`
+- **Execution rules:** `.claude/rules/execution.md`
 - **Your post-execution checklist:** `.claude/rules/post-execution.md`
