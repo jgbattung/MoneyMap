@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <feature>search-tags-cleanup</feature>
+  <spec>docs/search-tags-cleanup-spec.md</spec>
+
+  <!-- ===================================================================== -->
+  <!-- PHASE 1: Hooks — remove tagIds from the data-fetching layer            -->
+  <!-- ===================================================================== -->
+  <phase>
+    <name>Remove tagIds from hooks</name>
+
+    <task>
+      <name>Remove tagIds from useExpenseTransactionsQuery</name>
+      <action>
+        In `src/hooks/useExpenseTransactionsQuery.ts`:
+        1. Remove `tagIds?: string[];` from `UseExpenseTransactionsOptions`.
+        2. Remove `tagIds?: string[]` from `fetchExpenseTransactions` function signature (6th param).
+        3. Remove `if (tagIds &amp;&amp; tagIds.length > 0) params.append('tagIds', tagIds.join(','));` from the fetch function body.
+        4. Change destructure in `useExpenseTransactionsQuery` from `{ skip, take, search, dateFilter, accountId, tagIds }` to `{ skip, take, search, dateFilter, accountId }`.
+        5. Remove `tagIds` from the query key object: `{ skip, take, search, dateFilter, accountId }`.
+        6. Remove `tagIds` from the `queryFn` call: `fetchExpenseTransactions(skip, take, search, dateFilter, accountId)`.
+      </action>
+      <verify>Run `npx vitest run src/hooks/useExpenseTransactionsQuery` — no failures. Confirm no TypeScript errors with `npx tsc --noEmit --pretty 2>&amp;1 | grep -i "useExpenseTransactionsQuery"` (should return nothing).</verify>
+    </task>
+
+    <task>
+      <name>Remove tagIds from useIncomeTransactionsQuery</name>
+      <action>
+        In `src/hooks/useIncomeTransactionsQuery.ts`:
+        Apply the same 6 changes as the expense hook above:
+        1. Remove `tagIds?: string[];` from `UseIncomeTransactionsOptions`.
+        2. Remove `tagIds?: string[]` from `fetchIncomeTransactions` function signature.
+        3. Remove `if (tagIds &amp;&amp; tagIds.length > 0) params.append('tagIds', tagIds.join(','));`.
+        4. Change destructure to `{ skip, take, search, dateFilter, accountId }`.
+        5. Remove `tagIds` from query key object.
+        6. Remove `tagIds` from queryFn call.
+      </action>
+      <verify>Run `npx vitest run src/hooks/useIncomeTransactionsQuery` — no failures.</verify>
+    </task>
+
+    <task>
+      <name>Remove tagIds from useTransferTransactionsQuery</name>
+      <action>
+        In `src/hooks/useTransferTransactionsQuery.ts`:
+        Apply the same 6 changes:
+        1. Remove `tagIds?: string[];` from `UseTransfersOptions`.
+        2. Remove `tagIds?: string[]` from `fetchTransfers` function signature.
+        3. Remove `if (tagIds &amp;&amp; tagIds.length > 0) params.append('tagIds', tagIds.join(','));`.
+        4. Change destructure to `{ skip, take, search, dateFilter, accountId }`.
+        5. Remove `tagIds` from query key object.
+        6. Remove `tagIds` from queryFn call.
+      </action>
+      <verify>Run `npx vitest run src/hooks/useTransferTransactionsQuery` — no failures.</verify>
+    </task>
+  </phase>
+
+  <!-- ===================================================================== -->
+  <!-- PHASE 2: API routes — remove tagIds query param from GET handlers      -->
+  <!-- ===================================================================== -->
+  <phase>
+    <name>Remove tagIds from API route GET handlers</name>
+
+    <task>
+      <name>Remove tagIds filtering from expense-transactions GET</name>
+      <action>
+        In `src/app/api/expense-transactions/route.ts`, in the GET handler:
+        Remove the block that parses `tagIds` from searchParams and assigns `whereClause.tags`:
+        ```
+        const tagIds = searchParams.get('tagIds');
+        if (tagIds) {
+          const tagIdArray = tagIds.split(',').filter(Boolean);
+          if (tagIdArray.length > 0) {
+            whereClause.tags = {
+              some: {
+                id: { in: tagIdArray },
+              },
+            };
+          }
+        }
+        ```
+        Do NOT remove the `tagIds` field from the Zod schema or the POST handler.
+        Do NOT remove tag-name search in the `search` param handling.
+      </action>
+      <verify>Run `npx vitest run src/app/api/expense-transactions/route.test.ts` — all tests pass.</verify>
+    </task>
+
+    <task>
+      <name>Remove tagIds filtering from income-transactions GET</name>
+      <action>
+        In `src/app/api/income-transactions/route.ts`, apply the same removal of the `tagIds` searchParams block in the GET handler. Keep Zod schema and POST handler unchanged.
+      </action>
+      <verify>Run `npx vitest run src/app/api/income-transactions/route.test.ts` — all tests pass.</verify>
+    </task>
+
+    <task>
+      <name>Remove tagIds filtering from transfer-transactions GET</name>
+      <action>
+        In `src/app/api/transfer-transactions/route.ts`, apply the same removal of the `tagIds` searchParams block in the GET handler. Keep Zod schema and POST handler unchanged.
+      </action>
+      <verify>Run `npx vitest run src/app/api/transfer-transactions/route.test.ts` — all tests pass.</verify>
+    </task>
+  </phase>
+
+  <!-- ===================================================================== -->
+  <!-- PHASE 3: Desktop table components — remove TagFilter and selectedTagIds -->
+  <!-- ===================================================================== -->
+  <phase>
+    <name>Clean up desktop table components</name>
+
+    <task>
+      <name>Remove TagFilter from ExpenseTable</name>
+      <action>
+        In `src/components/tables/expenses/ExpenseTable.tsx`:
+        1. Remove `import { TagFilter } from '@/components/shared/TagFilter';`.
+        2. Remove `const [selectedTagIds, setSelectedTagIds] = useState&lt;string[]&gt;([]);`.
+        3. In the `filteredData` useMemo, remove the "Tag ID filter" block (the `if (selectedTagIds.length > 0) { ... }` block).
+        4. Remove `selectedTagIds` from the useMemo dependency array.
+        5. Remove the `&lt;TagFilter selectedTagIds={selectedTagIds} onChange={setSelectedTagIds} /&gt;` JSX.
+        6. Check if `useTagsQuery` is still needed — it IS used by `TagsCell` in this file, so keep the import.
+      </action>
+      <verify>Run `npx vitest run src/components/tables/expenses/ExpenseTable.test.tsx` — tests pass (tag filter tests will be removed in Phase 5, so some may fail now; that is expected).</verify>
+    </task>
+
+    <task>
+      <name>Remove TagFilter from IncomeTable</name>
+      <action>
+        In `src/components/tables/income/IncomeTable.tsx`:
+        1. Remove `import { TagFilter } from '@/components/shared/TagFilter';`.
+        2. Remove `const [selectedTagIds, setSelectedTagIds] = useState&lt;string[]&gt;([]);`.
+        3. In the `filteredData` useMemo, remove the "Tag ID filter" block.
+        4. Remove `selectedTagIds` from the useMemo dependency array.
+        5. Remove the `&lt;TagFilter&gt;` JSX.
+        6. `useTagsQuery` is used by `TagsCell` — keep the import.
+      </action>
+      <verify>Run `npx vitest run src/components/tables/income/IncomeTable.test.tsx` — some tag filter tests may fail (removed in Phase 5).</verify>
+    </task>
+
+    <task>
+      <name>Remove TagFilter from TransferTable</name>
+      <action>
+        In `src/components/tables/transfers/TransferTable.tsx`:
+        1. Remove `import { TagFilter } from '@/components/shared/TagFilter';`.
+        2. Remove `const [selectedTagIds, setSelectedTagIds] = useState&lt;string[]&gt;([]);`.
+        3. In the `filteredData` useMemo, remove the "Tag ID filter" block.
+        4. Remove `selectedTagIds` from the useMemo dependency array.
+        5. Remove the `&lt;TagFilter&gt;` JSX.
+        6. `useTagsQuery` is used by `TagsCell` — keep the import.
+      </action>
+      <verify>Run `npx vitest run src/components/tables/transfers/TransferTable.test.tsx` — some tag filter tests may fail (removed in Phase 5).</verify>
+    </task>
+  </phase>
+
+  <!-- ===================================================================== -->
+  <!-- PHASE 4: Mobile/page components — remove TagFilter and tagIds wiring   -->
+  <!-- ===================================================================== -->
+  <phase>
+    <name>Clean up mobile view and page components</name>
+
+    <task>
+      <name>Remove TagFilter from TransactionsMobileView</name>
+      <action>
+        In `src/components/transactions/TransactionsMobileView.tsx`:
+        1. Remove `import { TagFilter } from '@/components/shared/TagFilter';`.
+        2. Remove the three state declarations: `expenseSelectedTagIds`, `incomeSelectedTagIds`, `transferSelectedTagIds` and their setters.
+        3. Remove the three `useEffect`s that reset display count on tag ID change (lines like `useEffect(() => { setExpensesDisplayCount(ITEMS_PER_LOAD); }, [expenseSelectedTagIds]);`).
+        4. Remove `tagIds: expenseSelectedTagIds` from the `useExpenseTransactionsQuery` call.
+        5. Remove `tagIds: incomeSelectedTagIds` from the `useIncomeTransactionsQuery` call.
+        6. Remove `tagIds: transferSelectedTagIds` from the `useTransfersQuery` call.
+        7. Remove the three `&lt;TagFilter&gt;` JSX elements (one per tab).
+        8. Update the three `isFiltering` flags to remove `*SelectedTagIds.length > 0`:
+           - `isExpenseFiltering` = `debouncedExpenseSearch.length > 0 || expenseDateFilter !== dateFilterOptions.viewAll`
+           - `isIncomeFiltering` = `debouncedIncomeSearch.length > 0 || incomeDateFilter !== dateFilterOptions.viewAll`
+           - `isTransferFiltering` = `debouncedTransferSearch.length > 0 || transferDateFilter !== dateFilterOptions.viewAll`
+      </action>
+      <verify>Component should compile. Tests will be updated in Phase 5.</verify>
+    </task>
+
+    <task>
+      <name>Remove TagFilter from expenses/page.tsx</name>
+      <action>
+        In `src/app/expenses/page.tsx`:
+        1. Remove `import { TagFilter } from "@/components/shared/TagFilter";`.
+        2. Remove `const [selectedTagIds, setSelectedTagIds] = useState&lt;string[]&gt;([]);`.
+        3. Remove `useEffect(() => { setDisplayCount(ITEMS_PER_LOAD); }, [selectedTagIds]);`.
+        4. Remove `tagIds: selectedTagIds,` from the `useExpenseTransactionsQuery` call.
+        5. Remove the `&lt;TagFilter&gt;` JSX element.
+        6. Update `isFiltering` to: `debouncedSearchTerm.length > 0 || dateFilter !== dateFilterOptions.viewAll`.
+      </action>
+      <verify>Run `npm run lint` on the file — no errors.</verify>
+    </task>
+
+    <task>
+      <name>Remove TagFilter from income/page.tsx</name>
+      <action>
+        In `src/app/income/page.tsx`:
+        1. Remove `import { TagFilter } from '@/components/shared/TagFilter';`.
+        2. Remove `const [selectedTagIds, setSelectedTagIds] = useState&lt;string[]&gt;([]);`.
+        3. Remove `useEffect(() => { setDisplayCount(ITEMS_PER_LOAD); }, [selectedTagIds]);`.
+        4. Remove `tagIds: selectedTagIds,` from the `useIncomeTransactionsQuery` call.
+        5. Remove the `&lt;TagFilter&gt;` JSX element.
+        6. Update `isFiltering` to: `debouncedSearchTerm.length > 0 || dateFilter !== dateFilterOptions.viewAll`.
+      </action>
+      <verify>Run `npm run lint` on the file — no errors.</verify>
+    </task>
+
+    <task>
+      <name>Remove TagFilter from transfers/page.tsx</name>
+      <action>
+        In `src/app/transfers/page.tsx`:
+        1. Remove `import { TagFilter } from '@/components/shared/TagFilter';`.
+        2. Remove `const [selectedTagIds, setSelectedTagIds] = useState&lt;string[]&gt;([]);`.
+        3. Remove `useEffect(() => { setDisplayCount(ITEMS_PER_LOAD); }, [selectedTagIds]);`.
+        4. Remove `tagIds: selectedTagIds,` from the `useTransfersQuery` call.
+        5. Remove the `&lt;TagFilter&gt;` JSX element.
+        6. Update `isFiltering` to: `debouncedSearchTerm.length > 0 || dateFilter !== dateFilterOptions.viewAll`.
+      </action>
+      <verify>Run `npm run lint` on the file — no errors.</verify>
+    </task>
+  </phase>
+
+  <!-- ===================================================================== -->
+  <!-- PHASE 5: Tests — remove TagFilter mocks and tag-filter test blocks     -->
+  <!-- ===================================================================== -->
+  <phase>
+    <name>Clean up test files</name>
+
+    <task>
+      <name>Remove TagFilter tests from ExpenseTable.test.tsx</name>
+      <action>
+        In `src/components/tables/expenses/ExpenseTable.test.tsx`:
+        1. Remove the `vi.mock('@/components/shared/TagFilter', ...)` block.
+        2. Remove the entire `describe('tag filter — client-side filtering', ...)` block and all its child tests.
+        3. Clean up any unused imports that result from these removals.
+      </action>
+      <verify>Run `npx vitest run src/components/tables/expenses/ExpenseTable.test.tsx` — all remaining tests pass.</verify>
+    </task>
+
+    <task>
+      <name>Remove TagFilter tests from IncomeTable.test.tsx</name>
+      <action>
+        In `src/components/tables/income/IncomeTable.test.tsx`:
+        1. Remove the `vi.mock('@/components/shared/TagFilter', ...)` block.
+        2. Remove the entire `describe('tag filter — client-side filtering', ...)` block.
+        3. Clean up unused imports.
+      </action>
+      <verify>Run `npx vitest run src/components/tables/income/IncomeTable.test.tsx` — all remaining tests pass.</verify>
+    </task>
+
+    <task>
+      <name>Remove TagFilter tests from TransferTable.test.tsx</name>
+      <action>
+        In `src/components/tables/transfers/TransferTable.test.tsx`:
+        1. Remove the `vi.mock('@/components/shared/TagFilter', ...)` block.
+        2. Remove the entire `describe('tag filter — client-side filtering', ...)` block.
+        3. Clean up unused imports.
+      </action>
+      <verify>Run `npx vitest run src/components/tables/transfers/TransferTable.test.tsx` — all remaining tests pass.</verify>
+    </task>
+
+    <task>
+      <name>Remove TagFilter tests from TransactionsMobileView.test.tsx</name>
+      <action>
+        In `src/components/transactions/TransactionsMobileView.test.tsx`:
+        1. Remove the `vi.mock('@/components/shared/TagFilter', ...)` block.
+        2. Remove the following describe blocks and all their child tests:
+           - The `it('renders the TagFilter in the expenses tab', ...)` test.
+           - `describe('TagFilter integration — expenses tab', ...)`.
+           - `describe('tab independence — tag filter state is per-tab', ...)`.
+           - `describe('hook wiring — tagIds are passed to data hooks', ...)`.
+        3. Update any remaining tests that assert on `tagIds` in hook calls — remove `tagIds` from expected call arguments.
+        4. Clean up unused imports.
+      </action>
+      <verify>Run `npx vitest run src/components/transactions/TransactionsMobileView.test.tsx` — all remaining tests pass.</verify>
+    </task>
+  </phase>
+
+  <!-- ===================================================================== -->
+  <!-- PHASE 6: Delete TagFilter files and final verification                 -->
+  <!-- ===================================================================== -->
+  <phase>
+    <name>Delete TagFilter component and final verification</name>
+
+    <task>
+      <name>Delete TagFilter component and test files</name>
+      <action>
+        Delete the following files:
+        - `src/components/shared/TagFilter.tsx`
+        - `src/components/shared/TagFilter.test.tsx`
+      </action>
+      <verify>Confirm both files are deleted. Run `grep -r "TagFilter" src/` — should return zero results.</verify>
+    </task>
+
+    <task>
+      <name>Full verification pass</name>
+      <action>
+        Run the complete verification suite:
+        1. `npm run lint` — zero errors.
+        2. `npm run build` — zero errors.
+        3. `npx vitest run` — all tests pass.
+        4. Verify no references to `TagFilter` remain in `src/`.
+        5. Verify no `tagIds` references remain in hooks or API route GET handlers (only in Zod schemas and POST/PATCH handlers).
+      </action>
+      <verify>All three commands pass clean. Create `docs/search-tags-cleanup-verification.md`.</verify>
+    </task>
+  </phase>
+</plan>

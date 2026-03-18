@@ -56,7 +56,7 @@ const QUERY_KEYS = {
 }
 
 const fetchExpenseTransactions = async (
-  skip?: number, 
+  skip?: number,
   take?: number,
   search?: string,
   dateFilter?: string,
@@ -115,7 +115,7 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
     error,
   } = useQuery({
     queryKey: [
-      ...QUERY_KEYS.expenseTransactions, 
+      ...QUERY_KEYS.expenseTransactions,
       { skip, take, search, dateFilter, accountId }
     ],
     queryFn: () => fetchExpenseTransactions(skip, take, search, dateFilter, accountId),

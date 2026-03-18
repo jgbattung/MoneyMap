@@ -55,12 +55,12 @@ const Income = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
-  
+
   const { incomeTransactions, hasMore, isLoading } = useIncomeTransactionsQuery({
     skip: 0,
     take: displayCount,
     search: debouncedSearchTerm,
-    dateFilter
+    dateFilter,
   });
   
   const [createIncomeTypeSheetOpen, setCreateIncomeTypeSheetOpen] = useState(false);
@@ -255,11 +255,11 @@ const Income = () => {
 
         <div className="md:hidden space-y-4">
           <InputGroup>
-            <InputGroupInput 
-              placeholder="Search income..." 
+            <InputGroupInput
+              placeholder="Search income..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="text-sm h-8 py-1" 
+              className="text-sm h-8 py-1"
               disabled={isLoading}
             />
             <InputGroupAddon>
@@ -321,6 +321,7 @@ const Income = () => {
                   description={income.description}
                   account={income.account}
                   incomeType={income.incomeType}
+                  tags={income.tags}
                   onClick={() => handleIncomeTransactionCardClick(income.id)}
                 />
               ))}

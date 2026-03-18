@@ -365,4 +365,6 @@ describe('IncomeTable', () => {
       expect(mockTransactions[0].id).not.toBe(mockTransactions[1].id);
     });
   });
+
 });
+

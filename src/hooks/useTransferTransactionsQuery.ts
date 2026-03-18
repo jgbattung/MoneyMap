@@ -123,7 +123,7 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
     error,
   } = useQuery({
     queryKey: [
-      ...QUERY_KEYS.transfers, 
+      ...QUERY_KEYS.transfers,
       { skip, take, search, dateFilter, accountId }
     ],
     queryFn: () => fetchTransfers(skip, take, search, dateFilter, accountId),

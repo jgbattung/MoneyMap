@@ -30,6 +30,7 @@ interface ExpenseCardProps {
   remainingInstallments?: number | null;
   installmentStartDate?: string | null;
   monthlyAmount?: string | null;
+  tags?: { id: string; name: string; color: string }[];
   onClick?: () => void;
 }
 
@@ -45,6 +46,7 @@ const ExpenseCard = ({
   remainingInstallments,
   installmentStartDate,
   monthlyAmount,
+  tags,
   onClick,
 }: ExpenseCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -96,6 +98,29 @@ const ExpenseCard = ({
         {expenseType.name}
         {expenseSubcategory && ` > ${expenseSubcategory.name}`}
       </p>
+
+      {tags && tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {tags.slice(0, 3).map((tag) => (
+            <Badge
+              key={tag.id}
+              variant="outline"
+              className="text-xs px-2 py-0 h-5 gap-1"
+            >
+              <span
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: tag.color }}
+              />
+              {tag.name}
+            </Badge>
+          ))}
+          {tags.length > 3 && (
+            <span className="text-xs text-muted-foreground self-center">
+              +{tags.length - 3} more
+            </span>
+          )}
+        </div>
+      )}
 
       <div className='flex items-end justify-between'>
         <p className='text-muted-foreground text-xs'>{displayDate}</p>

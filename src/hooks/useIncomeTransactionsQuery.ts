@@ -106,8 +106,8 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
     error,
   } = useQuery({
     queryKey: [
-      ...QUERY_KEYS.incomeTransactions, 
-      { skip, take, search, dateFilter, accountId  }
+      ...QUERY_KEYS.incomeTransactions,
+      { skip, take, search, dateFilter, accountId }
     ],
     queryFn: () => fetchIncomeTransactions(skip, take, search, dateFilter, accountId),
     staleTime: 5 * 60 * 1000,

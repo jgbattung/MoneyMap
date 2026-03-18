@@ -94,6 +94,16 @@ export async function GET(request: NextRequest) {
             },
           },
         },
+        {
+          tags: {
+            some: {
+              name: {
+                contains: search,
+                mode: 'insensitive' as Prisma.QueryMode,
+              },
+            },
+          },
+        },
       ];
     }
 

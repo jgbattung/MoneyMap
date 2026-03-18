@@ -443,14 +443,15 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
 
       // Search filter
       if (!debouncedSearchTerm) return true;
-      
+
       const searchLower = debouncedSearchTerm.toLowerCase();
       return (
         row.name.toLowerCase().includes(searchLower) ||
         row.description?.toLowerCase().includes(searchLower) ||
         row.expenseType.name.toLowerCase().includes(searchLower) ||
         row.account.name.toLowerCase().includes(searchLower) ||
-        row.expenseSubcategory?.name.toLowerCase().includes(searchLower)
+        row.expenseSubcategory?.name.toLowerCase().includes(searchLower) ||
+        row.tags?.some(tag => typeof tag === 'object' && tag.name?.toLowerCase().includes(searchLower))
       );
     });
   }, [data, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);
@@ -664,11 +665,11 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
           </div>
 
           {/* Search */}
-          <div className="flex justify-end">
+          <div className="flex items-start gap-2 justify-end">
             <div className="w-full max-w-xs">
               <InputGroup>
-                <InputGroupInput 
-                  placeholder='Search expenses...' 
+                <InputGroupInput
+                  placeholder='Search expenses...'
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />

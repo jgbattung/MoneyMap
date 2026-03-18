@@ -1,0 +1,379 @@
+<plan>
+  <feature>Search by Tags</feature>
+  <spec>docs/search-by-tags-spec.md</spec>
+
+  <phase name="1: API -- Add tag search and tagIds filter to all transaction GET routes">
+    <task>
+      <name>Add tag name to search OR clause and tagIds filter in expense-transactions GET</name>
+      <action>
+        In `src/app/api/expense-transactions/route.ts`, in the GET handler:
+
+        1. Inside the `if (search)` block, add a new entry to the `whereClause.OR` array:
+           ```typescript
+           {
+             tags: {
+               some: {
+                 name: {
+                   contains: search,
+                   mode: 'insensitive' as Prisma.QueryMode,
+                 },
+               },
+             },
+           },
+           ```
+
+        2. After the `accountId` filter block and before the `total` count query, parse the `tagIds` param and add it to the where clause:
+           ```typescript
+           const tagIds = searchParams.get('tagIds');
+           if (tagIds) {
+             const tagIdArray = tagIds.split(',').filter(Boolean);
+             if (tagIdArray.length > 0) {
+               whereClause.tags = {
+                 some: {
+                   id: { in: tagIdArray },
+                 },
+               };
+             }
+           }
+           ```
+      </action>
+      <verify>Run `npm run build` and confirm no TypeScript errors in the expense-transactions route.</verify>
+    </task>
+
+    <task>
+      <name>Add tag name to search OR clause and tagIds filter in income-transactions GET</name>
+      <action>
+        In `src/app/api/income-transactions/route.ts`, in the GET handler:
+
+        1. Inside the `if (search)` block, add a new entry to the `whereClause.OR` array:
+           ```typescript
+           {
+             tags: {
+               some: {
+                 name: {
+                   contains: search,
+                   mode: 'insensitive' as Prisma.QueryMode,
+                 },
+               },
+             },
+           },
+           ```
+
+        2. After the `accountId` filter block, parse `tagIds` and add it to the where clause (same pattern as expense route).
+      </action>
+      <verify>Run `npm run build` and confirm no TypeScript errors in the income-transactions route.</verify>
+    </task>
+
+    <task>
+      <name>Add tag name to search OR clause and tagIds filter in transfer-transactions GET</name>
+      <action>
+        In `src/app/api/transfer-transactions/route.ts`, in the GET handler:
+
+        1. Inside the `if (search)` block, add a new entry to the `whereClause.OR` array:
+           ```typescript
+           {
+             tags: {
+               some: {
+                 name: {
+                   contains: search,
+                   mode: 'insensitive' as Prisma.QueryMode,
+                 },
+               },
+             },
+           },
+           ```
+
+        2. After the `accountId` filter block, parse `tagIds` and add it to the where clause. IMPORTANT: The transfer route has special OR handling for `accountId` -- the `tagIds` filter must be added as a separate top-level `tags` property on `whereClause`, NOT inside the OR array. Place it after the accountId block:
+           ```typescript
+           const tagIds = searchParams.get('tagIds');
+           if (tagIds) {
+             const tagIdArray = tagIds.split(',').filter(Boolean);
+             if (tagIdArray.length > 0) {
+               whereClause.tags = {
+                 some: {
+                   id: { in: tagIdArray },
+                 },
+               };
+             }
+           }
+           ```
+      </action>
+      <verify>Run `npm run build` and confirm no TypeScript errors in the transfer-transactions route.</verify>
+    </task>
+  </phase>
+
+  <phase name="2: Hooks -- Add tagIds to all transaction query hooks">
+    <task>
+      <name>Add tagIds support to useExpenseTransactionsQuery</name>
+      <action>
+        In `src/hooks/useExpenseTransactionsQuery.ts`:
+
+        1. Add `tagIds?: string[]` to the `UseExpenseTransactionsOptions` interface.
+
+        2. Add `tagIds?: string[]` as a parameter to `fetchExpenseTransactions`.
+
+        3. In `fetchExpenseTransactions`, add: `if (tagIds &amp;&amp; tagIds.length > 0) params.append('tagIds', tagIds.join(','));`
+
+        4. In `useExpenseTransactionsQuery`, destructure `tagIds` from options.
+
+        5. Pass `tagIds` to `fetchExpenseTransactions` in the queryFn.
+
+        6. Add `tagIds` to the query key object: `{ skip, take, search, dateFilter, accountId, tagIds }`.
+      </action>
+      <verify>Run `npm run build` and confirm no TypeScript errors.</verify>
+    </task>
+
+    <task>
+      <name>Add tagIds support to useIncomeTransactionsQuery</name>
+      <action>
+        In `src/hooks/useIncomeTransactionsQuery.ts`:
+
+        Apply the same pattern as the expense hook:
+        1. Add `tagIds?: string[]` to `UseIncomeTransactionsOptions`.
+        2. Add `tagIds` parameter to `fetchIncomeTransactions`.
+        3. Append `tagIds` to URL params in the fetch function.
+        4. Destructure and pass `tagIds` through in the hook.
+        5. Add `tagIds` to the query key object.
+      </action>
+      <verify>Run `npm run build` and confirm no TypeScript errors.</verify>
+    </task>
+
+    <task>
+      <name>Add tagIds support to useTransferTransactionsQuery</name>
+      <action>
+        In `src/hooks/useTransferTransactionsQuery.ts`:
+
+        Apply the same pattern as the expense hook:
+        1. Add `tagIds?: string[]` to `UseTransfersOptions`.
+        2. Add `tagIds` parameter to `fetchTransfers`.
+        3. Append `tagIds` to URL params in the fetch function.
+        4. Destructure and pass `tagIds` through in the hook.
+        5. Add `tagIds` to the query key object.
+      </action>
+      <verify>Run `npm run build` and confirm no TypeScript errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="3: TagFilter component">
+    <task>
+      <name>Ensure Checkbox UI component exists</name>
+      <action>
+        Check if `src/components/ui/checkbox.tsx` exists. If not, generate it:
+        ```
+        npx shadcn@latest add checkbox
+        ```
+      </action>
+      <verify>Confirm `src/components/ui/checkbox.tsx` exists and exports a `Checkbox` component.</verify>
+    </task>
+
+    <task>
+      <name>Create TagFilter component</name>
+      <action>
+        Create `src/components/shared/TagFilter.tsx` with the following:
+
+        **Props interface:**
+        ```typescript
+        interface TagFilterProps {
+          selectedTagIds: string[];
+          onChange: (tagIds: string[]) => void;
+          disabled?: boolean;
+        }
+        ```
+
+        **Implementation:**
+        1. Import `useTagsQuery` to get all user tags internally.
+        2. Use Shadcn `Popover` + `PopoverTrigger` + `PopoverContent` for the dropdown.
+        3. Trigger button: `Button variant="outline"` with a `Tags` icon from lucide-react. Label shows "Tags" when no selection, "Tags (N)" when N tags selected.
+        4. Popover content: A scrollable list (max-h-[200px] overflow-y-auto) of tag items. Each item is a row with a `Checkbox`, a colored dot (`span` with `backgroundColor` set to the tag's HSL color), and the tag name. Clicking toggles the tag in the selection.
+        5. Include a search input at the top of the popover to filter the tag list within the popover (local filter only, does not affect transaction results).
+        6. Include a "Clear all" button at the bottom when any tags are selected.
+        7. Below the Popover (outside it), render active filter pills as `Badge variant="secondary"` components with the tag name and an X button to deselect.
+        8. If the user has no tags, render the button as disabled with `title="No tags created yet"`.
+
+        Follow existing component patterns: named export, use Shadcn primitives, TypeScript strict.
+      </action>
+      <verify>Run `npm run build` and confirm no TypeScript errors. Visually verify the component renders correctly by temporarily adding it to a page.</verify>
+    </task>
+  </phase>
+
+  <phase name="4: Desktop tables -- Add tag text search and TagFilter UI">
+    <task>
+      <name>Add tag filtering to ExpenseTable</name>
+      <action>
+        In `src/components/tables/expenses/ExpenseTable.tsx`:
+
+        1. Import `TagFilter` from `@/components/shared/TagFilter`.
+
+        2. Add state: `const [selectedTagIds, setSelectedTagIds] = useState&lt;string[]&gt;([]);`
+
+        3. In the `filteredData` useMemo, add two filtering additions:
+
+           a. **Tag text search** -- In the search filter return statement, add:
+              `row.tags?.some(tag => tag.name.toLowerCase().includes(searchLower))`
+              to the existing OR chain.
+
+           b. **Tag ID filter** -- Before the search filter check, add:
+              ```typescript
+              if (selectedTagIds.length > 0) {
+                const hasMatchingTag = row.tags?.some(tag => selectedTagIds.includes(tag.id));
+                if (!hasMatchingTag) return false;
+              }
+              ```
+
+        4. Add `selectedTagIds` to the `filteredData` useMemo dependency array.
+
+        5. In the JSX toolbar (the `div` with `flex items-center justify-between`), add the `TagFilter` component between the date ToggleGroup and the search InputGroup:
+           ```tsx
+           &lt;TagFilter
+             selectedTagIds={selectedTagIds}
+             onChange={setSelectedTagIds}
+           /&gt;
+           ```
+      </action>
+      <verify>Run `npm run build` and confirm no TypeScript errors. Verify the tag filter appears in the ExpenseTable toolbar.</verify>
+    </task>
+
+    <task>
+      <name>Add tag filtering to IncomeTable</name>
+      <action>
+        In `src/components/tables/income/IncomeTable.tsx`:
+
+        Apply the same changes as ExpenseTable:
+        1. Import `TagFilter`.
+        2. Add `selectedTagIds` state.
+        3. Add tag text search and tag ID filter to `filteredData` useMemo.
+        4. Add `selectedTagIds` to the useMemo dependency array.
+        5. Add `TagFilter` component to the toolbar.
+
+        Note: Check the specific field names -- IncomeTable uses `incomeType` instead of `expenseType`, so verify the search filter additions use the correct field names.
+      </action>
+      <verify>Run `npm run build` and confirm no TypeScript errors.</verify>
+    </task>
+
+    <task>
+      <name>Add tag filtering to TransferTable</name>
+      <action>
+        In `src/components/tables/transfers/TransferTable.tsx`:
+
+        Apply the same changes as ExpenseTable:
+        1. Import `TagFilter`.
+        2. Add `selectedTagIds` state.
+        3. Add tag text search and tag ID filter to `filteredData` useMemo.
+        4. Add `selectedTagIds` to the useMemo dependency array.
+        5. Add `TagFilter` component to the toolbar.
+
+        Note: TransferTable uses `transferType`, `fromAccount`, `toAccount`, and `notes` instead of `description`. Verify the search filter additions use the correct field names.
+      </action>
+      <verify>Run `npm run build` and confirm no TypeScript errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="5: Mobile views -- Add TagFilter UI and pass tagIds to hooks">
+    <task>
+      <name>Add tag filter to expenses page (mobile)</name>
+      <action>
+        In `src/app/expenses/page.tsx`:
+
+        1. Import `TagFilter` from `@/components/shared/TagFilter`.
+        2. Add state: `const [selectedTagIds, setSelectedTagIds] = useState&lt;string[]&gt;([]);`
+        3. Pass `tagIds: selectedTagIds` to the `useExpenseTransactionsQuery` hook options (alongside existing `search`, `dateFilter`, etc.).
+        4. In the mobile view section (`md:hidden`), render `TagFilter` between the search `InputGroup` and the date `ToggleGroup`:
+           ```tsx
+           &lt;TagFilter
+             selectedTagIds={selectedTagIds}
+             onChange={setSelectedTagIds}
+             disabled={isLoading}
+           /&gt;
+           ```
+        5. Update the `isFiltering` check to include tag filter: `selectedTagIds.length > 0`.
+        6. Add a `useEffect` to reset `displayCount` when `selectedTagIds` changes (same pattern as existing search/dateFilter resets).
+      </action>
+      <verify>Run `npm run build` and confirm no TypeScript errors.</verify>
+    </task>
+
+    <task>
+      <name>Add tag filter to income page (mobile)</name>
+      <action>
+        In `src/app/income/page.tsx`:
+
+        Apply the same pattern as the expenses page:
+        1. Import `TagFilter`.
+        2. Add `selectedTagIds` state.
+        3. Pass `tagIds: selectedTagIds` to `useIncomeTransactionsQuery`.
+        4. Render `TagFilter` in the mobile section between search and date toggle.
+        5. Update `isFiltering` to include tag filter.
+        6. Add `useEffect` to reset `displayCount` when `selectedTagIds` changes.
+      </action>
+      <verify>Run `npm run build` and confirm no TypeScript errors.</verify>
+    </task>
+
+    <task>
+      <name>Add tag filter to transfers page (mobile)</name>
+      <action>
+        In `src/app/transfers/page.tsx`:
+
+        Apply the same pattern as the expenses page:
+        1. Import `TagFilter`.
+        2. Add `selectedTagIds` state.
+        3. Pass `tagIds: selectedTagIds` to `useTransfersQuery`.
+        4. Render `TagFilter` in the mobile section between search and date toggle.
+        5. Update `isFiltering` to include tag filter.
+        6. Add `useEffect` to reset `displayCount` when `selectedTagIds` changes.
+      </action>
+      <verify>Run `npm run build` and confirm no TypeScript errors.</verify>
+    </task>
+
+    <task>
+      <name>Add tag filter to TransactionsMobileView</name>
+      <action>
+        In `src/components/transactions/TransactionsMobileView.tsx`:
+
+        1. Import `TagFilter` from `@/components/shared/TagFilter`.
+        2. Add three `selectedTagIds` states (one per tab):
+           ```typescript
+           const [expenseSelectedTagIds, setExpenseSelectedTagIds] = useState&lt;string[]&gt;([]);
+           const [incomeSelectedTagIds, setIncomeSelectedTagIds] = useState&lt;string[]&gt;([]);
+           const [transferSelectedTagIds, setTransferSelectedTagIds] = useState&lt;string[]&gt;([]);
+           ```
+        3. Pass `tagIds` to each hook call:
+           - `useExpenseTransactionsQuery({ ..., tagIds: expenseSelectedTagIds })`
+           - `useIncomeTransactionsQuery({ ..., tagIds: incomeSelectedTagIds })`
+           - `useTransfersQuery({ ..., tagIds: transferSelectedTagIds })`
+        4. In each tab's JSX section, render `TagFilter` between the search InputGroup and date ToggleGroup.
+        5. Update the `isFiltering` variables to include tag filter state:
+           - `isExpenseFiltering` should include `expenseSelectedTagIds.length > 0`
+           - `isIncomeFiltering` should include `incomeSelectedTagIds.length > 0`
+           - `isTransferFiltering` should include `transferSelectedTagIds.length > 0`
+        6. Add `useEffect` hooks to reset each display count when its corresponding `selectedTagIds` changes.
+      </action>
+      <verify>Run `npm run build` and confirm no TypeScript errors.</verify>
+    </task>
+  </phase>
+
+  <phase name="6: Final verification">
+    <task>
+      <name>Full build and lint check</name>
+      <action>
+        Run `npm run lint` and `npm run build` to verify zero errors across the entire project.
+      </action>
+      <verify>Both commands exit with code 0 and no errors.</verify>
+    </task>
+
+    <task>
+      <name>Generate verification document</name>
+      <action>
+        Create `docs/search-by-tags-verification.md` documenting:
+        1. All files created or modified.
+        2. Build and lint results.
+        3. Manual verification steps performed (or instructions for the user to verify):
+           - Text search matching tag names works on all 3 transaction types.
+           - Tag filter selects/deselects correctly.
+           - OR logic works (selecting multiple tags shows transactions with any of them).
+           - Tag filter + date filter + text search combine correctly (AND).
+           - Mobile and desktop layouts both show the tag filter.
+           - Removing all selected tags shows all transactions again.
+      </action>
+      <verify>File exists at `docs/search-by-tags-verification.md` with complete content.</verify>
+    </task>
+  </phase>
+</plan>

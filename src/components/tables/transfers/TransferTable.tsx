@@ -378,14 +378,15 @@ const TransferTable = ({ accountId }: TransferTableProps = {}) => {
 
       // Search filter
       if (!debouncedSearchTerm) return true;
-      
+
       const searchLower = debouncedSearchTerm.toLowerCase();
       return (
         row.name.toLowerCase().includes(searchLower) ||
         row.notes?.toLowerCase().includes(searchLower) ||
         row.transferType.name.toLowerCase().includes(searchLower) ||
         row.toAccount.name.toLowerCase().includes(searchLower) ||
-        row.fromAccount.name.toLowerCase().includes(searchLower)
+        row.fromAccount.name.toLowerCase().includes(searchLower) ||
+        row.tags?.some(tag => typeof tag === 'object' && tag.name?.toLowerCase().includes(searchLower))
       );
     });
   }, [data, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);
@@ -615,11 +616,11 @@ const TransferTable = ({ accountId }: TransferTableProps = {}) => {
           </div>
 
           {/* Search */}
-          <div className="flex justify-end">
+          <div className="flex items-start gap-2 justify-end">
             <div className="w-full max-w-xs">
               <InputGroup>
-                <InputGroupInput 
-                  placeholder='Search transfers...' 
+                <InputGroupInput
+                  placeholder='Search transfers...'
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />

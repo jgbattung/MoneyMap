@@ -52,40 +52,40 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
   const [editTransferDrawerOpen, setEditTransferDrawerOpen] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string>('');
 
-  const { 
-    expenseTransactions, 
-    hasMore: expensesHasMore, 
-    isLoading: expensesLoading 
+  const {
+    expenseTransactions,
+    hasMore: expensesHasMore,
+    isLoading: expensesLoading
   } = useExpenseTransactionsQuery({
     skip: 0,
     take: expensesDisplayCount,
     search: debouncedExpenseSearch,
     dateFilter: expenseDateFilter,
-    accountId
+    accountId,
   });
 
-  const { 
-    incomeTransactions, 
-    hasMore: incomeHasMore, 
-    isLoading: incomeLoading 
+  const {
+    incomeTransactions,
+    hasMore: incomeHasMore,
+    isLoading: incomeLoading
   } = useIncomeTransactionsQuery({
     skip: 0,
     take: incomeDisplayCount,
     search: debouncedIncomeSearch,
     dateFilter: incomeDateFilter,
-    accountId
+    accountId,
   });
 
-  const { 
-    transfers, 
-    hasMore: transfersHasMore, 
-    isLoading: transfersLoading 
+  const {
+    transfers,
+    hasMore: transfersHasMore,
+    isLoading: transfersLoading
   } = useTransfersQuery({
     skip: 0,
     take: transfersDisplayCount,
     search: debouncedTransferSearch,
     dateFilter: transferDateFilter,
-    accountId
+    accountId,
   });
 
   useEffect(() => {
@@ -195,11 +195,11 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
         {activeTab === 'expenses' && (
           <div className="space-y-4">
             <InputGroup>
-              <InputGroupInput 
-                placeholder="Search expenses..." 
+              <InputGroupInput
+                placeholder="Search expenses..."
                 value={expenseSearchTerm}
                 onChange={(e) => setExpenseSearchTerm(e.target.value)}
-                className="text-sm h-8 py-1" 
+                className="text-sm h-8 py-1"
                 disabled={expensesLoading}
               />
               <InputGroupAddon>
@@ -284,13 +284,12 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
         {/* Income Tab */}
         {activeTab === 'income' && (
           <div className="space-y-4">
-            {/* Search - Always visible, disabled when loading */}
             <InputGroup>
-              <InputGroupInput 
-                placeholder="Search income..." 
+              <InputGroupInput
+                placeholder="Search income..."
                 value={incomeSearchTerm}
                 onChange={(e) => setIncomeSearchTerm(e.target.value)}
-                className="text-sm h-8 py-1" 
+                className="text-sm h-8 py-1"
                 disabled={incomeLoading}
               />
               <InputGroupAddon>
@@ -375,11 +374,11 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
         {activeTab === 'transfers' && (
           <div className="space-y-4">
             <InputGroup>
-              <InputGroupInput 
-                placeholder="Search transfers..." 
+              <InputGroupInput
+                placeholder="Search transfers..."
                 value={transferSearchTerm}
                 onChange={(e) => setTransferSearchTerm(e.target.value)}
-                className="text-sm h-8 py-1" 
+                className="text-sm h-8 py-1"
                 disabled={transfersLoading}
               />
               <InputGroupAddon>

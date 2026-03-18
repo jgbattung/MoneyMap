@@ -26,12 +26,12 @@ const Transactions = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
-  
+
   const { transfers, hasMore, isLoading } = useTransfersQuery({
     skip: 0,
     take: displayCount,
     search: debouncedSearchTerm,
-    dateFilter
+    dateFilter,
   });
   
   const [selectedTransferId, setSelectedTransferId] = useState<string>('');
@@ -49,7 +49,7 @@ const Transactions = () => {
       setDisplayCount(ITEMS_PER_LOAD);
     }
   }, [debouncedSearchTerm, dateFilter]);
-  
+
   const handleTransferCardClick = (transferId: string) => {
     setSelectedTransferId(transferId);
     setEditTransferDrawerOpen(true);
@@ -89,11 +89,11 @@ const Transactions = () => {
 
         <div className="md:hidden space-y-4">
           <InputGroup>
-            <InputGroupInput 
-              placeholder="Search transfers..." 
+            <InputGroupInput
+              placeholder="Search transfers..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="text-sm h-8 py-1" 
+              className="text-sm h-8 py-1"
               disabled={isLoading}
             />
             <InputGroupAddon>
@@ -155,6 +155,7 @@ const Transactions = () => {
                   fromAccount={transfer.fromAccount}
                   toAccount={transfer.toAccount}
                   transferType={transfer.transferType}
+                  tags={transfer.tags}
                   onClick={() => handleTransferCardClick(transfer.id)}
                 />
               ))}

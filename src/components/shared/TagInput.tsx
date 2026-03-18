@@ -30,6 +30,8 @@ export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) 
   const [inputValue, setInputValue] = useState("");
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectedTags = tags.filter((t) => selectedTagIds.includes(t.id));
   const atLimit = selectedTagIds.length >= MAX_TAGS;
@@ -88,8 +90,19 @@ export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) 
   };
 
   const handleFocus = () => {
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
     const hasUnselectedTags = tags.some((t) => !selectedTagIds.includes(t.id));
     setOpen(hasUnselectedTags);
+  };
+
+  const handleBlur = () => {
+    blurTimeoutRef.current = setTimeout(() => {
+      blurTimeoutRef.current = null;
+      setOpen(false);
+    }, 150);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -118,10 +131,16 @@ export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) 
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(nextOpen) => {
+        if (!nextOpen && containerRef.current?.contains(document.activeElement)) {
+          return;
+        }
+        setOpen(nextOpen);
+      }}>
       <PopoverAnchor asChild>
         {/* Inline pill container */}
         <div
+          ref={containerRef}
           className="flex flex-wrap items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 min-h-[36px] cursor-text"
           onClick={() => inputRef.current?.focus()}
         >
@@ -158,7 +177,7 @@ export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) 
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               onFocus={handleFocus}
-              onBlur={() => setTimeout(() => setOpen(false), 150)}
+              onBlur={handleBlur}
               placeholder={selectedTags.length === 0 ? "Add tags..." : ""}
               className="flex-1 min-w-[80px] bg-transparent outline-none placeholder:text-muted-foreground text-sm"
             />
@@ -171,10 +190,15 @@ export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) 
       <PopoverContent
         className="p-0 w-[var(--radix-popover-trigger-width)]"
         onOpenAutoFocus={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => {
+          if (containerRef.current?.contains(e.target as Node)) {
+            e.preventDefault();
+          }
+        }}
         align="start"
       >
         <Command>
-          <CommandList>
+          <CommandList onWheel={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()}>
             {filteredTags.length === 0 && !inputValue.trim() && (
               <CommandEmpty>Type to search or create a tag.</CommandEmpty>
             )}

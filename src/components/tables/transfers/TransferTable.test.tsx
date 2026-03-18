@@ -379,4 +379,6 @@ describe('TransferTable', () => {
       expect(mockTransfers[0].id).not.toBe(mockTransfers[1].id);
     });
   });
+
 });
+

@@ -30,13 +30,13 @@ const Expenses = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
-  
+
   // Pass search and dateFilter to the hook
   const { expenseTransactions, hasMore, isLoading, error } = useExpenseTransactionsQuery({
     skip: 0,
     take: displayCount,
     search: debouncedSearchTerm,
-    dateFilter
+    dateFilter,
   });
   
   // Drawer/Sheet states
@@ -157,11 +157,11 @@ const Expenses = () => {
         <div className="mt-10">
           <div className='md:hidden space-y-4'>
             <InputGroup>
-              <InputGroupInput 
-                placeholder="Search expenses..." 
+              <InputGroupInput
+                placeholder="Search expenses..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="text-sm h-8 py-1" 
+                className="text-sm h-8 py-1"
                 disabled={isLoading}
               />
               <InputGroupAddon>
@@ -235,6 +235,7 @@ const Expenses = () => {
                     remainingInstallments={expense.remainingInstallments}
                     installmentStartDate={expense.installmentStartDate}
                     monthlyAmount={expense.monthlyAmount}
+                    tags={expense.tags}
                     onClick={() => handleExpenseClick(expense.id)}
                   />
                 ))}
