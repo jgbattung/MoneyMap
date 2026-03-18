@@ -5,6 +5,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
 import { InputGroup, InputGroupInput, InputGroupAddon } from '@/components/ui/input-group';
 import { SearchIcon, Loader2 } from 'lucide-react';
+import { TagFilter } from '@/components/shared/TagFilter';
 import CompactTransactionCard from './CompactTransactionCard';
 import { useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery';
 import { useIncomeTransactionsQuery } from '@/hooks/useIncomeTransactionsQuery';
@@ -47,45 +48,52 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
   const [incomeDateFilter, setIncomeDateFilter] = useState(dateFilterOptions.viewAll);
   const [transferDateFilter, setTransferDateFilter] = useState(dateFilterOptions.viewAll);
 
+  const [expenseSelectedTagIds, setExpenseSelectedTagIds] = useState<string[]>([]);
+  const [incomeSelectedTagIds, setIncomeSelectedTagIds] = useState<string[]>([]);
+  const [transferSelectedTagIds, setTransferSelectedTagIds] = useState<string[]>([]);
+
   const [editExpenseDrawerOpen, setEditExpenseDrawerOpen] = useState(false);
   const [editIncomeDrawerOpen, setEditIncomeDrawerOpen] = useState(false);
   const [editTransferDrawerOpen, setEditTransferDrawerOpen] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string>('');
 
-  const { 
-    expenseTransactions, 
-    hasMore: expensesHasMore, 
-    isLoading: expensesLoading 
+  const {
+    expenseTransactions,
+    hasMore: expensesHasMore,
+    isLoading: expensesLoading
   } = useExpenseTransactionsQuery({
     skip: 0,
     take: expensesDisplayCount,
     search: debouncedExpenseSearch,
     dateFilter: expenseDateFilter,
-    accountId
+    accountId,
+    tagIds: expenseSelectedTagIds,
   });
 
-  const { 
-    incomeTransactions, 
-    hasMore: incomeHasMore, 
-    isLoading: incomeLoading 
+  const {
+    incomeTransactions,
+    hasMore: incomeHasMore,
+    isLoading: incomeLoading
   } = useIncomeTransactionsQuery({
     skip: 0,
     take: incomeDisplayCount,
     search: debouncedIncomeSearch,
     dateFilter: incomeDateFilter,
-    accountId
+    accountId,
+    tagIds: incomeSelectedTagIds,
   });
 
-  const { 
-    transfers, 
-    hasMore: transfersHasMore, 
-    isLoading: transfersLoading 
+  const {
+    transfers,
+    hasMore: transfersHasMore,
+    isLoading: transfersLoading
   } = useTransfersQuery({
     skip: 0,
     take: transfersDisplayCount,
     search: debouncedTransferSearch,
     dateFilter: transferDateFilter,
-    accountId
+    accountId,
+    tagIds: transferSelectedTagIds,
   });
 
   useEffect(() => {
@@ -127,6 +135,10 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
     }
   }, [debouncedTransferSearch, transferDateFilter]);
 
+  useEffect(() => { setExpensesDisplayCount(ITEMS_PER_LOAD); }, [expenseSelectedTagIds]);
+  useEffect(() => { setIncomeDisplayCount(ITEMS_PER_LOAD); }, [incomeSelectedTagIds]);
+  useEffect(() => { setTransfersDisplayCount(ITEMS_PER_LOAD); }, [transferSelectedTagIds]);
+
   const handleLoadMoreExpenses = () => {
     setExpensesDisplayCount(prev => prev + ITEMS_PER_LOAD);
   };
@@ -155,9 +167,9 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
   };
 
   // Determine if filtering is active for each tab
-  const isExpenseFiltering = debouncedExpenseSearch.length > 0 || expenseDateFilter !== dateFilterOptions.viewAll;
-  const isIncomeFiltering = debouncedIncomeSearch.length > 0 || incomeDateFilter !== dateFilterOptions.viewAll;
-  const isTransferFiltering = debouncedTransferSearch.length > 0 || transferDateFilter !== dateFilterOptions.viewAll;
+  const isExpenseFiltering = debouncedExpenseSearch.length > 0 || expenseDateFilter !== dateFilterOptions.viewAll || expenseSelectedTagIds.length > 0;
+  const isIncomeFiltering = debouncedIncomeSearch.length > 0 || incomeDateFilter !== dateFilterOptions.viewAll || incomeSelectedTagIds.length > 0;
+  const isTransferFiltering = debouncedTransferSearch.length > 0 || transferDateFilter !== dateFilterOptions.viewAll || transferSelectedTagIds.length > 0;
 
   return (
     <>
@@ -195,17 +207,23 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
         {activeTab === 'expenses' && (
           <div className="space-y-4">
             <InputGroup>
-              <InputGroupInput 
-                placeholder="Search expenses..." 
+              <InputGroupInput
+                placeholder="Search expenses..."
                 value={expenseSearchTerm}
                 onChange={(e) => setExpenseSearchTerm(e.target.value)}
-                className="text-sm h-8 py-1" 
+                className="text-sm h-8 py-1"
                 disabled={expensesLoading}
               />
               <InputGroupAddon>
                 <SearchIcon className="h-4 w-4" />
               </InputGroupAddon>
             </InputGroup>
+
+            <TagFilter
+              selectedTagIds={expenseSelectedTagIds}
+              onChange={setExpenseSelectedTagIds}
+              disabled={expensesLoading}
+            />
 
             <ToggleGroup
               type="single"
@@ -284,19 +302,24 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
         {/* Income Tab */}
         {activeTab === 'income' && (
           <div className="space-y-4">
-            {/* Search - Always visible, disabled when loading */}
             <InputGroup>
-              <InputGroupInput 
-                placeholder="Search income..." 
+              <InputGroupInput
+                placeholder="Search income..."
                 value={incomeSearchTerm}
                 onChange={(e) => setIncomeSearchTerm(e.target.value)}
-                className="text-sm h-8 py-1" 
+                className="text-sm h-8 py-1"
                 disabled={incomeLoading}
               />
               <InputGroupAddon>
                 <SearchIcon className="h-4 w-4" />
               </InputGroupAddon>
             </InputGroup>
+
+            <TagFilter
+              selectedTagIds={incomeSelectedTagIds}
+              onChange={setIncomeSelectedTagIds}
+              disabled={incomeLoading}
+            />
 
             <ToggleGroup
               type="single"
@@ -375,17 +398,23 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
         {activeTab === 'transfers' && (
           <div className="space-y-4">
             <InputGroup>
-              <InputGroupInput 
-                placeholder="Search transfers..." 
+              <InputGroupInput
+                placeholder="Search transfers..."
                 value={transferSearchTerm}
                 onChange={(e) => setTransferSearchTerm(e.target.value)}
-                className="text-sm h-8 py-1" 
+                className="text-sm h-8 py-1"
                 disabled={transfersLoading}
               />
               <InputGroupAddon>
                 <SearchIcon className="h-4 w-4" />
               </InputGroupAddon>
             </InputGroup>
+
+            <TagFilter
+              selectedTagIds={transferSelectedTagIds}
+              onChange={setTransferSelectedTagIds}
+              disabled={transfersLoading}
+            />
 
             <ToggleGroup
               type="single"
