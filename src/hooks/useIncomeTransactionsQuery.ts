@@ -38,7 +38,6 @@ interface UseIncomeTransactionsOptions {
   search?: string;
   dateFilter?: string;
   accountId?: string;
-  tagIds?: string[];
 }
 
 const QUERY_KEYS = {
@@ -51,8 +50,7 @@ const fetchIncomeTransactions = async (
   take?: number,
   search?: string,
   dateFilter?: string,
-  accountId?: string,
-  tagIds?: string[]
+  accountId?: string
 ): Promise<IncomeTransactionsResponse> => {
   const params = new URLSearchParams();
   if (skip !== undefined) params.append('skip', skip.toString());
@@ -60,7 +58,6 @@ const fetchIncomeTransactions = async (
   if (search) params.append('search', search);
   if (dateFilter && dateFilter !== 'view-all') params.append('dateFilter', dateFilter);
   if (accountId) params.append('accountId', accountId);
-  if (tagIds && tagIds.length > 0) params.append('tagIds', tagIds.join(','));
   
   const url = `/api/income-transactions${params.toString() ? `?${params.toString()}` : ''}`;
   const response = await fetch(url);
@@ -100,7 +97,7 @@ const deleteIncomeTransaction = async (id: string): Promise<void> => {
 }
 
 export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions = {}) => {
-  const { skip, take, search, dateFilter, accountId, tagIds } = options;
+  const { skip, take, search, dateFilter, accountId } = options;
   const queryClient = useQueryClient();
 
   const {
@@ -110,9 +107,9 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
   } = useQuery({
     queryKey: [
       ...QUERY_KEYS.incomeTransactions,
-      { skip, take, search, dateFilter, accountId, tagIds }
+      { skip, take, search, dateFilter, accountId }
     ],
-    queryFn: () => fetchIncomeTransactions(skip, take, search, dateFilter, accountId, tagIds),
+    queryFn: () => fetchIncomeTransactions(skip, take, search, dateFilter, accountId),
     staleTime: 5 * 60 * 1000,
   });
 
