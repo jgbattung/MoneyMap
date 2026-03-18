@@ -79,6 +79,16 @@ export async function GET(request: NextRequest) {
             },
           },
         },
+        {
+          tags: {
+            some: {
+              name: {
+                contains: search,
+                mode: 'insensitive' as Prisma.QueryMode,
+              },
+            },
+          },
+        },
       ];
     }
 
@@ -106,6 +116,18 @@ export async function GET(request: NextRequest) {
 
     if (accountId) {
       whereClause.accountId = accountId;
+    }
+
+    const tagIds = searchParams.get('tagIds');
+    if (tagIds) {
+      const tagIdArray = tagIds.split(',').filter(Boolean);
+      if (tagIdArray.length > 0) {
+        whereClause.tags = {
+          some: {
+            id: { in: tagIdArray },
+          },
+        };
+      }
     }
 
     const total = await db.incomeTransaction.count({
