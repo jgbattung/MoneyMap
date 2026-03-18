@@ -104,6 +104,27 @@ npm run build  → ✓ Compiled successfully (zero TypeScript or Next.js errors)
 - On `/transactions` (mobile), switch between Expenses / Income / Transfers tabs
 - Verify each tab maintains its own independent tag filter state
 
+## QA Results
+
+### Test Files Generated
+- `src/components/shared/TagFilter.test.tsx` — 22 test cases
+- `src/components/transactions/TransactionsMobileView.test.tsx` — 16 test cases
+- `src/components/tables/expenses/ExpenseTable.test.tsx` — 18 test cases
+- `src/components/tables/income/IncomeTable.test.tsx` — 18 test cases
+- `src/components/tables/transfers/TransferTable.test.tsx` — 19 test cases
+
+### Vitest Results
+**93 new tests passing** across 5 files. Full suite: **787 tests, 48 files — all passing**.
+
+### Fixes Applied
+- `TagFilter.test.tsx` — fixed `getByText('Housing')` ambiguity (badge pill + list item) by switching to `getAllByText` and targeting index 0
+- `TagFilter.test.tsx` — removed unused `eslint-disable @typescript-eslint/no-explicit-any` directive
+- `TransactionsMobileView.test.tsx` — removed unused `eslint-disable @typescript-eslint/no-explicit-any` directive
+- `package.json` — reverted `happy-dom` downgrade from `^14.12.0` back to `^20.8.4` (QA pipeline had incorrectly downgraded it)
+
+### Final Status
+**PASS** — lint clean, full suite green.
+
 ## Notes
 - Desktop tables perform all filtering client-side in `filteredData` useMemo — `tagIds` is not passed to the server hook for table components.
 - Mobile pages pass `tagIds` server-side via the query hook (comma-separated in URL: `?tagIds=id1,id2`).

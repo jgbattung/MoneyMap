@@ -6,6 +6,41 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TransferTable from './TransferTable';
 
 // ---------------------------------------------------------------------------
+// Mock: TagFilter — captures onChange so tag filter tests can trigger it
+// ---------------------------------------------------------------------------
+vi.mock('@/components/shared/TagFilter', () => ({
+  TagFilter: ({
+    onChange,
+    selectedTagIds,
+  }: {
+    selectedTagIds: string[];
+    onChange: (ids: string[]) => void;
+    disabled?: boolean;
+  }) =>
+    React.createElement(
+      'div',
+      { 'data-testid': 'tag-filter' },
+      React.createElement('span', null, `selected:${selectedTagIds.join(',')}`),
+      React.createElement(
+        'button',
+        {
+          'data-testid': 'tag-filter-select',
+          onClick: () => onChange(['tag-1']),
+        },
+        'Select tag-1'
+      ),
+      React.createElement(
+        'button',
+        {
+          'data-testid': 'tag-filter-clear',
+          onClick: () => onChange([]),
+        },
+        'Clear tags'
+      )
+    ),
+}));
+
+// ---------------------------------------------------------------------------
 // Mock: better-auth/react
 // ---------------------------------------------------------------------------
 vi.mock('better-auth/react', () => ({
@@ -377,6 +412,105 @@ describe('TransferTable', () => {
       // When filtered to Rent only, visible[0] → data[1].
       // row.index (0) → txf-aaa (wrong). row.original.id ('txf-bbb') → correct.
       expect(mockTransfers[0].id).not.toBe(mockTransfers[1].id);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('tag filter — client-side filtering', () => {
+    it('renders the TagFilter component', () => {
+      renderTransferTable();
+      expect(screen.getByTestId('tag-filter')).toBeTruthy();
+    });
+
+    it('selecting a tag hides transfers that do not have that tag', async () => {
+      // Give only Rent Payment the tag-1 tag
+      const taggedTransfers = [
+        makeTransfer('txf-aaa', 'Old Transfer', { tags: [] }),
+        makeTransfer('txf-bbb', 'Rent Payment', {
+          tags: [{ id: 'tag-1', name: 'Housing', color: '#FF6B6B' }],
+        }),
+        makeTransfer('txf-ccc', 'Utility Bill', { tags: [] }),
+      ];
+      setupAllMocks(taggedTransfers);
+      renderTransferTable();
+
+      // Confirm all three are visible before filter
+      expect(screen.getByText('Old Transfer')).toBeTruthy();
+      expect(screen.getByText('Rent Payment')).toBeTruthy();
+      expect(screen.getByText('Utility Bill')).toBeTruthy();
+
+      // Apply tag filter
+      fireEvent.click(screen.getByTestId('tag-filter-select'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Rent Payment')).toBeTruthy();
+        expect(screen.queryByText('Old Transfer')).toBeNull();
+        expect(screen.queryByText('Utility Bill')).toBeNull();
+      });
+    });
+
+    it('clearing tag filter restores all rows', async () => {
+      const taggedTransfers = [
+        makeTransfer('txf-aaa', 'Old Transfer', { tags: [] }),
+        makeTransfer('txf-bbb', 'Rent Payment', {
+          tags: [{ id: 'tag-1', name: 'Housing', color: '#FF6B6B' }],
+        }),
+        makeTransfer('txf-ccc', 'Utility Bill', { tags: [] }),
+      ];
+      setupAllMocks(taggedTransfers);
+      renderTransferTable();
+
+      // Apply then clear
+      fireEvent.click(screen.getByTestId('tag-filter-select'));
+      await waitFor(() => expect(screen.queryByText('Old Transfer')).toBeNull());
+
+      fireEvent.click(screen.getByTestId('tag-filter-clear'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Old Transfer')).toBeTruthy();
+        expect(screen.getByText('Rent Payment')).toBeTruthy();
+        expect(screen.getByText('Utility Bill')).toBeTruthy();
+      });
+    });
+
+    it('when tag filter is active and no transfer matches, shows empty state', async () => {
+      // None of the transfers have tag-1
+      setupAllMocks(mockTransfers); // mockTransfers all have tags: []
+      renderTransferTable();
+
+      fireEvent.click(screen.getByTestId('tag-filter-select'));
+
+      await waitFor(() => {
+        expect(screen.getByText('No transfer transactions found.')).toBeTruthy();
+      });
+    });
+
+    it('tag filter is cumulative with search filter', async () => {
+      const taggedTransfers = [
+        makeTransfer('txf-aaa', 'Old Transfer', { tags: [] }),
+        makeTransfer('txf-bbb', 'Rent Payment', {
+          tags: [{ id: 'tag-1', name: 'Housing', color: '#FF6B6B' }],
+        }),
+        makeTransfer('txf-ccc', 'Utility Bill', {
+          tags: [{ id: 'tag-1', name: 'Housing', color: '#FF6B6B' }],
+        }),
+      ];
+      setupAllMocks(taggedTransfers);
+      renderTransferTable();
+
+      // Apply tag filter first
+      fireEvent.click(screen.getByTestId('tag-filter-select'));
+      await waitFor(() => expect(screen.queryByText('Old Transfer')).toBeNull());
+
+      // Then add search filter
+      const searchInput = screen.getByTestId('search-input');
+      fireEvent.change(searchInput, { target: { value: 'Utility' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Utility Bill')).toBeTruthy();
+        expect(screen.queryByText('Rent Payment')).toBeNull();
+        expect(screen.queryByText('Old Transfer')).toBeNull();
+      });
     });
   });
 });

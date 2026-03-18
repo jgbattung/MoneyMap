@@ -6,6 +6,41 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import IncomeTable from './IncomeTable';
 
 // ---------------------------------------------------------------------------
+// Mock: TagFilter — captures onChange so tag filter tests can trigger it
+// ---------------------------------------------------------------------------
+vi.mock('@/components/shared/TagFilter', () => ({
+  TagFilter: ({
+    onChange,
+    selectedTagIds,
+  }: {
+    selectedTagIds: string[];
+    onChange: (ids: string[]) => void;
+    disabled?: boolean;
+  }) =>
+    React.createElement(
+      'div',
+      { 'data-testid': 'tag-filter' },
+      React.createElement('span', null, `selected:${selectedTagIds.join(',')}`),
+      React.createElement(
+        'button',
+        {
+          'data-testid': 'tag-filter-select',
+          onClick: () => onChange(['tag-1']),
+        },
+        'Select tag-1'
+      ),
+      React.createElement(
+        'button',
+        {
+          'data-testid': 'tag-filter-clear',
+          onClick: () => onChange([]),
+        },
+        'Clear tags'
+      )
+    ),
+}));
+
+// ---------------------------------------------------------------------------
 // Mock: better-auth/react
 // ---------------------------------------------------------------------------
 vi.mock('better-auth/react', () => ({
@@ -363,6 +398,101 @@ describe('IncomeTable', () => {
       // When filtered to Freelance, visible[0] corresponds to data[1].
       // row.index (0) → inc-aaa (wrong). row.original.id ('inc-bbb') → correct.
       expect(mockTransactions[0].id).not.toBe(mockTransactions[1].id);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('tag filter — client-side filtering', () => {
+    it('renders the TagFilter component', () => {
+      renderIncomeTable();
+      expect(screen.getByTestId('tag-filter')).toBeTruthy();
+    });
+
+    it('selecting a tag hides income transactions that do not have that tag', async () => {
+      const taggedTransactions = [
+        makeIncome('inc-aaa', 'January Salary', { tags: [] }),
+        makeIncome('inc-bbb', 'Freelance Project', {
+          tags: [{ id: 'tag-1', name: 'Recurring', color: '#FF6B6B' }],
+        }),
+        makeIncome('inc-ccc', 'Dividends', { tags: [] }),
+      ];
+      setupAllMocks(taggedTransactions);
+      renderIncomeTable();
+
+      // All rows visible initially
+      expect(screen.getByText('January Salary')).toBeTruthy();
+      expect(screen.getByText('Freelance Project')).toBeTruthy();
+      expect(screen.getByText('Dividends')).toBeTruthy();
+
+      // Apply tag filter
+      fireEvent.click(screen.getByTestId('tag-filter-select'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Freelance Project')).toBeTruthy();
+        expect(screen.queryByText('January Salary')).toBeNull();
+        expect(screen.queryByText('Dividends')).toBeNull();
+      });
+    });
+
+    it('clearing tag filter restores all rows', async () => {
+      const taggedTransactions = [
+        makeIncome('inc-aaa', 'January Salary', { tags: [] }),
+        makeIncome('inc-bbb', 'Freelance Project', {
+          tags: [{ id: 'tag-1', name: 'Recurring', color: '#FF6B6B' }],
+        }),
+        makeIncome('inc-ccc', 'Dividends', { tags: [] }),
+      ];
+      setupAllMocks(taggedTransactions);
+      renderIncomeTable();
+
+      fireEvent.click(screen.getByTestId('tag-filter-select'));
+      await waitFor(() => expect(screen.queryByText('January Salary')).toBeNull());
+
+      fireEvent.click(screen.getByTestId('tag-filter-clear'));
+
+      await waitFor(() => {
+        expect(screen.getByText('January Salary')).toBeTruthy();
+        expect(screen.getByText('Freelance Project')).toBeTruthy();
+        expect(screen.getByText('Dividends')).toBeTruthy();
+      });
+    });
+
+    it('when tag filter is active and no income matches, shows empty state', async () => {
+      // None have tags
+      setupAllMocks(mockTransactions);
+      renderIncomeTable();
+
+      fireEvent.click(screen.getByTestId('tag-filter-select'));
+
+      await waitFor(() => {
+        expect(screen.getByText('No income transactions found.')).toBeTruthy();
+      });
+    });
+
+    it('tag filter is cumulative with search filter', async () => {
+      const taggedTransactions = [
+        makeIncome('inc-aaa', 'January Salary', { tags: [] }),
+        makeIncome('inc-bbb', 'Freelance Project', {
+          tags: [{ id: 'tag-1', name: 'Recurring', color: '#FF6B6B' }],
+        }),
+        makeIncome('inc-ccc', 'Dividends', {
+          tags: [{ id: 'tag-1', name: 'Recurring', color: '#FF6B6B' }],
+        }),
+      ];
+      setupAllMocks(taggedTransactions);
+      renderIncomeTable();
+
+      fireEvent.click(screen.getByTestId('tag-filter-select'));
+      await waitFor(() => expect(screen.queryByText('January Salary')).toBeNull());
+
+      const searchInput = screen.getByTestId('search-input');
+      fireEvent.change(searchInput, { target: { value: 'Dividends' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Dividends')).toBeTruthy();
+        expect(screen.queryByText('Freelance Project')).toBeNull();
+        expect(screen.queryByText('January Salary')).toBeNull();
+      });
     });
   });
 });

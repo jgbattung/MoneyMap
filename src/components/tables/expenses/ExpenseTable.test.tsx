@@ -6,6 +6,41 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ExpenseTable from './ExpenseTable';
 
 // ---------------------------------------------------------------------------
+// Mock: TagFilter — captures onChange so tag filter tests can trigger it
+// ---------------------------------------------------------------------------
+vi.mock('@/components/shared/TagFilter', () => ({
+  TagFilter: ({
+    onChange,
+    selectedTagIds,
+  }: {
+    selectedTagIds: string[];
+    onChange: (ids: string[]) => void;
+    disabled?: boolean;
+  }) =>
+    React.createElement(
+      'div',
+      { 'data-testid': 'tag-filter' },
+      React.createElement('span', null, `selected:${selectedTagIds.join(',')}`),
+      React.createElement(
+        'button',
+        {
+          'data-testid': 'tag-filter-select',
+          onClick: () => onChange(['tag-1']),
+        },
+        'Select tag-1'
+      ),
+      React.createElement(
+        'button',
+        {
+          'data-testid': 'tag-filter-clear',
+          onClick: () => onChange([]),
+        },
+        'Clear tags'
+      )
+    ),
+}));
+
+// ---------------------------------------------------------------------------
 // Mock: better-auth/react
 // ---------------------------------------------------------------------------
 vi.mock('better-auth/react', () => ({
@@ -388,6 +423,101 @@ describe('ExpenseTable', () => {
       // When filtered to only Netflix, visible position 0 → data position 1.
       // Using row.index (0) would hit exp-aaa. Using row.original.id ('exp-bbb') is correct.
       expect(mockTransactions[0].id).not.toBe(mockTransactions[1].id);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('tag filter — client-side filtering', () => {
+    it('renders the TagFilter component', () => {
+      renderExpenseTable();
+      expect(screen.getByTestId('tag-filter')).toBeTruthy();
+    });
+
+    it('selecting a tag hides expenses that do not have that tag', async () => {
+      const taggedTransactions = [
+        makeExpense('exp-aaa', 'Groceries', { tags: [] }),
+        makeExpense('exp-bbb', 'Netflix', {
+          tags: [{ id: 'tag-1', name: 'Subscription', color: '#FF6B6B' }],
+        }),
+        makeExpense('exp-ccc', 'Transport', { tags: [] }),
+      ];
+      setupAllMocks(taggedTransactions);
+      renderExpenseTable();
+
+      // All rows visible initially
+      expect(screen.getByText('Groceries')).toBeTruthy();
+      expect(screen.getByText('Netflix')).toBeTruthy();
+      expect(screen.getByText('Transport')).toBeTruthy();
+
+      // Apply tag filter
+      fireEvent.click(screen.getByTestId('tag-filter-select'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Netflix')).toBeTruthy();
+        expect(screen.queryByText('Groceries')).toBeNull();
+        expect(screen.queryByText('Transport')).toBeNull();
+      });
+    });
+
+    it('clearing tag filter restores all rows', async () => {
+      const taggedTransactions = [
+        makeExpense('exp-aaa', 'Groceries', { tags: [] }),
+        makeExpense('exp-bbb', 'Netflix', {
+          tags: [{ id: 'tag-1', name: 'Subscription', color: '#FF6B6B' }],
+        }),
+        makeExpense('exp-ccc', 'Transport', { tags: [] }),
+      ];
+      setupAllMocks(taggedTransactions);
+      renderExpenseTable();
+
+      fireEvent.click(screen.getByTestId('tag-filter-select'));
+      await waitFor(() => expect(screen.queryByText('Groceries')).toBeNull());
+
+      fireEvent.click(screen.getByTestId('tag-filter-clear'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Groceries')).toBeTruthy();
+        expect(screen.getByText('Netflix')).toBeTruthy();
+        expect(screen.getByText('Transport')).toBeTruthy();
+      });
+    });
+
+    it('when tag filter is active and no expense matches, shows empty state', async () => {
+      // None have tags
+      setupAllMocks(mockTransactions);
+      renderExpenseTable();
+
+      fireEvent.click(screen.getByTestId('tag-filter-select'));
+
+      await waitFor(() => {
+        expect(screen.getByText('No expense transactions found.')).toBeTruthy();
+      });
+    });
+
+    it('tag filter is cumulative with search filter', async () => {
+      const taggedTransactions = [
+        makeExpense('exp-aaa', 'Groceries', { tags: [] }),
+        makeExpense('exp-bbb', 'Netflix', {
+          tags: [{ id: 'tag-1', name: 'Subscription', color: '#FF6B6B' }],
+        }),
+        makeExpense('exp-ccc', 'Transport', {
+          tags: [{ id: 'tag-1', name: 'Subscription', color: '#FF6B6B' }],
+        }),
+      ];
+      setupAllMocks(taggedTransactions);
+      renderExpenseTable();
+
+      fireEvent.click(screen.getByTestId('tag-filter-select'));
+      await waitFor(() => expect(screen.queryByText('Groceries')).toBeNull());
+
+      const searchInput = screen.getByTestId('search-input');
+      fireEvent.change(searchInput, { target: { value: 'Transport' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Transport')).toBeTruthy();
+        expect(screen.queryByText('Netflix')).toBeNull();
+        expect(screen.queryByText('Groceries')).toBeNull();
+      });
     });
   });
 });
