@@ -375,7 +375,7 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
         row.description?.toLowerCase().includes(searchLower) ||
         row.incomeType.name.toLowerCase().includes(searchLower) ||
         row.account.name.toLowerCase().includes(searchLower) ||
-        row.tags?.some(tag => tag.name.toLowerCase().includes(searchLower))
+        row.tags?.some(tag => typeof tag === 'object' && tag.name?.toLowerCase().includes(searchLower))
       );
     });
   }, [data, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);

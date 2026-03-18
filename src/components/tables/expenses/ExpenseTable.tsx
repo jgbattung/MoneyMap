@@ -451,7 +451,7 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
         row.expenseType.name.toLowerCase().includes(searchLower) ||
         row.account.name.toLowerCase().includes(searchLower) ||
         row.expenseSubcategory?.name.toLowerCase().includes(searchLower) ||
-        row.tags?.some(tag => tag.name.toLowerCase().includes(searchLower))
+        row.tags?.some(tag => typeof tag === 'object' && tag.name?.toLowerCase().includes(searchLower))
       );
     });
   }, [data, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);

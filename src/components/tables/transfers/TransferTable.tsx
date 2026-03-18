@@ -386,7 +386,7 @@ const TransferTable = ({ accountId }: TransferTableProps = {}) => {
         row.transferType.name.toLowerCase().includes(searchLower) ||
         row.toAccount.name.toLowerCase().includes(searchLower) ||
         row.fromAccount.name.toLowerCase().includes(searchLower) ||
-        row.tags?.some(tag => tag.name.toLowerCase().includes(searchLower))
+        row.tags?.some(tag => typeof tag === 'object' && tag.name?.toLowerCase().includes(searchLower))
       );
     });
   }, [data, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);
