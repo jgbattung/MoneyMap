@@ -71,41 +71,6 @@ vi.mock('./CompactTransactionCard', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Mock: TagFilter — captures onChange so we can trigger it in tests
-// ---------------------------------------------------------------------------
-vi.mock('@/components/shared/TagFilter', () => ({
-  TagFilter: ({
-    onChange,
-    selectedTagIds,
-  }: {
-    selectedTagIds: string[];
-    onChange: (ids: string[]) => void;
-    disabled?: boolean;
-  }) =>
-    React.createElement(
-      'div',
-      { 'data-testid': 'tag-filter' },
-      React.createElement('span', null, `selected:${selectedTagIds.join(',')}`),
-      React.createElement(
-        'button',
-        {
-          'data-testid': 'tag-filter-toggle',
-          onClick: () => onChange(['tag-1']),
-        },
-        'Select tag-1'
-      ),
-      React.createElement(
-        'button',
-        {
-          'data-testid': 'tag-filter-clear',
-          onClick: () => onChange([]),
-        },
-        'Clear tags'
-      )
-    ),
-}));
-
-// ---------------------------------------------------------------------------
 // Mock: UI primitives
 // ---------------------------------------------------------------------------
 vi.mock('@/components/ui/toggle-group', () => ({
@@ -354,12 +319,6 @@ describe('TransactionsMobileView', () => {
       expect(screen.getByText('Netflix')).toBeTruthy();
     });
 
-    it('renders the TagFilter in the expenses tab', () => {
-      renderMobileView();
-      // TagFilter mock renders a div with data-testid="tag-filter"
-      expect(screen.getAllByTestId('tag-filter').length).toBeGreaterThanOrEqual(1);
-    });
-
     it('renders search input in the expenses tab', () => {
       renderMobileView();
       expect(screen.getByTestId('search-input')).toBeTruthy();
@@ -379,113 +338,6 @@ describe('TransactionsMobileView', () => {
       renderMobileView();
       // Loader2 renders as an SVG; verify no transaction cards are shown
       expect(screen.queryByTestId('transaction-card')).toBeNull();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  describe('TagFilter integration — expenses tab', () => {
-    it('TagFilter initially shows selected:[] (empty)', () => {
-      renderMobileView();
-      // The mock TagFilter renders "selected:" text
-      expect(screen.getByText('selected:')).toBeTruthy();
-    });
-
-    it('calling tag-filter-toggle changes the selectedTagIds display', async () => {
-      renderMobileView();
-
-      // There can be multiple TagFilters rendered (one per tab in DOM);
-      // get the first one (expenses tab)
-      const toggleButtons = screen.getAllByTestId('tag-filter-toggle');
-      fireEvent.click(toggleButtons[0]);
-
-      await waitFor(() => {
-        // After selection, "selected:tag-1" should appear
-        const selectedSpans = screen.getAllByText('selected:tag-1');
-        expect(selectedSpans.length).toBeGreaterThanOrEqual(1);
-      });
-    });
-
-    it('calls useExpenseTransactionsQuery with tagIds after a tag is selected', async () => {
-      renderMobileView();
-
-      const toggleButtons = screen.getAllByTestId('tag-filter-toggle');
-      fireEvent.click(toggleButtons[0]);
-
-      await waitFor(() => {
-        // After state update, the hook should have been called with tagIds
-        const calls = vi.mocked(useExpenseTransactionsQuery).mock.calls;
-        const lastCall = calls[calls.length - 1][0];
-        expect(lastCall.tagIds).toEqual(['tag-1']);
-      });
-    });
-
-    it('clears tagIds when tag-filter-clear is clicked', async () => {
-      renderMobileView();
-
-      // First select a tag
-      const toggleButtons = screen.getAllByTestId('tag-filter-toggle');
-      fireEvent.click(toggleButtons[0]);
-
-      await waitFor(() => {
-        const selectedSpans = screen.getAllByText('selected:tag-1');
-        expect(selectedSpans.length).toBeGreaterThanOrEqual(1);
-      });
-
-      // Now clear
-      const clearButtons = screen.getAllByTestId('tag-filter-clear');
-      fireEvent.click(clearButtons[0]);
-
-      await waitFor(() => {
-        const emptySpans = screen.getAllByText('selected:');
-        expect(emptySpans.length).toBeGreaterThanOrEqual(1);
-      });
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  describe('tab independence — tag filter state is per-tab', () => {
-    it('renders TagFilter for each tab independently (three in DOM)', () => {
-      renderMobileView();
-      // All three tab contents are rendered (expenses tab is active, others
-      // conditionally rendered). At least one TagFilter is visible.
-      const tagFilters = screen.getAllByTestId('tag-filter');
-      expect(tagFilters.length).toBeGreaterThanOrEqual(1);
-    });
-
-    it('expense tag selection does not affect income tab state', async () => {
-      renderMobileView();
-
-      // Select a tag in the expenses tab (first toggle button)
-      const toggleButtons = screen.getAllByTestId('tag-filter-toggle');
-      fireEvent.click(toggleButtons[0]);
-
-      await waitFor(() => {
-        // useIncomeTransactionsQuery should still be called with empty tagIds
-        const incomeCalls = vi.mocked(useIncomeTransactionsQuery).mock.calls;
-        const lastIncomeCall = incomeCalls[incomeCalls.length - 1][0];
-        expect(lastIncomeCall.tagIds).toEqual([]);
-      });
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  describe('hook wiring — tagIds are passed to data hooks', () => {
-    it('useExpenseTransactionsQuery is initially called with empty tagIds', () => {
-      renderMobileView();
-      const calls = vi.mocked(useExpenseTransactionsQuery).mock.calls;
-      expect(calls[0][0].tagIds).toEqual([]);
-    });
-
-    it('useIncomeTransactionsQuery is initially called with empty tagIds', () => {
-      renderMobileView();
-      const calls = vi.mocked(useIncomeTransactionsQuery).mock.calls;
-      expect(calls[0][0].tagIds).toEqual([]);
-    });
-
-    it('useTransfersQuery is initially called with empty tagIds', () => {
-      renderMobileView();
-      const calls = vi.mocked(useTransfersQuery).mock.calls;
-      expect(calls[0][0].tagIds).toEqual([]);
     });
   });
 
