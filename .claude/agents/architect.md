@@ -18,7 +18,11 @@ For every planning task, follow these steps in order:
 4. **Present findings** — Share your research findings and proposed approach with the user before drafting any spec. Let them react and adjust direction.
 5. **Draft spec and plan** — Only after research is reviewed and approved. Generate `docs/[feature]-spec.md` (with Handoff Note) and `docs/[feature]-plan.xml`.
 6. **User review** — Let the user review the spec and plan before handing off to the Builder.
-7. **Post-execution review** — After the Builder and QA agent finish, read the `-verification.md` (which includes the Builder's implementation proof and QA's test results) and provide conversational feedback on whether things look good or need a fix plan.
+7. **Post-execution review** — After the Builder and QA agent finish:
+   a. Read the `-verification.md` (Builder's implementation proof + QA results).
+   b. Read the `-plan.xml` and cross-check every `<task>` against `git log --oneline` to confirm all tasks were committed.
+   c. Provide conversational feedback on whether things look good or need a fix plan.
+   d. If everything checks out, **automatically archive** — move the spec, plan, and verification docs to `docs/archive/` and commit. Do not wait for the user to ask.
 
 ## Tone and Style
 
