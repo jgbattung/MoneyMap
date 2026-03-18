@@ -9,7 +9,6 @@ import { useTransfersQuery } from '@/hooks/useTransferTransactionsQuery';
 import { Button } from '@/components/ui/button';
 import { InputGroup, InputGroupInput, InputGroupAddon } from '@/components/ui/input-group';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { TagFilter } from '@/components/shared/TagFilter';
 import { SearchIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -27,14 +26,12 @@ const Transactions = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   const { transfers, hasMore, isLoading } = useTransfersQuery({
     skip: 0,
     take: displayCount,
     search: debouncedSearchTerm,
     dateFilter,
-    tagIds: selectedTagIds,
   });
   
   const [selectedTransferId, setSelectedTransferId] = useState<string>('');
@@ -53,10 +50,6 @@ const Transactions = () => {
     }
   }, [debouncedSearchTerm, dateFilter]);
 
-  useEffect(() => {
-    setDisplayCount(ITEMS_PER_LOAD);
-  }, [selectedTagIds]);
-
   const handleTransferCardClick = (transferId: string) => {
     setSelectedTransferId(transferId);
     setEditTransferDrawerOpen(true);
@@ -66,7 +59,7 @@ const Transactions = () => {
     setDisplayCount(prev => prev + ITEMS_PER_LOAD);
   };
 
-  const isFiltering = debouncedSearchTerm.length > 0 || dateFilter !== dateFilterOptions.viewAll || selectedTagIds.length > 0;
+  const isFiltering = debouncedSearchTerm.length > 0 || dateFilter !== dateFilterOptions.viewAll;
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
@@ -107,12 +100,6 @@ const Transactions = () => {
               <SearchIcon className="h-4 w-4" />
             </InputGroupAddon>
           </InputGroup>
-
-          <TagFilter
-            selectedTagIds={selectedTagIds}
-            onChange={setSelectedTagIds}
-            disabled={isLoading}
-          />
 
           <ToggleGroup
             type="single"
