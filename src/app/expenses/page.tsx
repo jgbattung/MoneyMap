@@ -235,6 +235,7 @@ const Expenses = () => {
                     remainingInstallments={expense.remainingInstallments}
                     installmentStartDate={expense.installmentStartDate}
                     monthlyAmount={expense.monthlyAmount}
+                    tags={expense.tags}
                     onClick={() => handleExpenseClick(expense.id)}
                   />
                 ))}
