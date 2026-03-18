@@ -1,7 +1,7 @@
 # Tech Stack & Architecture
 
-> Shared source of truth for both Gemini and Claude Code.
-> Both agents must align on these technologies and patterns.
+> Source of truth for all agents.
+> All agents must align on these technologies and patterns.
 
 ## Core Stack
 

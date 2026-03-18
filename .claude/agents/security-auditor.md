@@ -15,7 +15,7 @@ When invoked:
 
 ## Output & Handoff Conventions
 
-To seamlessly integrate with the Architect and Builder workflow (referenced in `.agent/conventions/handoff-protocol.md`), you must document findings and hand off remediation tasks strictly following these conventions:
+To seamlessly integrate with the project workflow (referenced in `.claude/conventions/handoff-protocol.md`), you must document findings and hand off remediation tasks strictly following these conventions:
 
 1. **Audit Documentation**: Output all exhaustive audit reports into the `/docs/` directory using the naming format: `/docs/[feature-or-system]-security-audit.md`.
 2. **Remediation Plan (XML)**: If vulnerabilities or gaps are found that require code changes, you must generate a `/docs/[feature-or-system]-remediation-plan.xml` file. This plan must group tasks into logical `<phase>` blocks to allow for user approval checkpoints. Within each phase, use precise `<task>`, `<name>`, `<action>`, and `<verify>` xml blocks so the Builder (Claude Code) can execute it atomically. 

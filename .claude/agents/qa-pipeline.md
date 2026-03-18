@@ -195,6 +195,17 @@ When the full pipeline completes, return this structured report to the orchestra
 - <any missing packages, fixtures, or config the user must add>
 ```
 
+## Append to Verification Doc
+
+After generating the QA report, check if `docs/[feature]-verification.md` exists (the Builder creates this). If it exists, append a `## QA Results` section to the bottom of that file containing:
+- Test files generated and number of test cases
+- Vitest results (passed/failed counts)
+- Playwright results if applicable
+- Fixes applied (test code or source code)
+- Final status (PASS / PARTIAL / BLOCKED)
+
+This allows the Architect to review a single unified verification document.
+
 </handoff_protocol>
 
 <constraints>

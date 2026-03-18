@@ -1,10 +1,10 @@
 # Commit Conventions
 
-> Shared git and PR standards for both Gemini and Claude Code.
+> Shared git and PR standards for all agents.
 
-## 🚨 #1 CRITICAL DIRECTIVE: Never Commit Directly to `main`
+## #1 CRITICAL DIRECTIVE: Never Commit Directly to `main`
 
-**This rule applies to ALL agents — Claude Code AND Gemini/Antigravity — without exception.**
+**This rule applies to ALL agents — without exception.**
 
 **Always create a branch before making any commit.** No exceptions, even for small changes, chore commits, or config-only changes.
 

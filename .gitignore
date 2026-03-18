@@ -55,3 +55,4 @@ next-env.d.ts
 # Database backups
 *.sql
 !prisma/migrations/**/*.sql
+__pycache__/

@@ -5,7 +5,7 @@ description: Research methodology for architecture, product planning, and best p
 
 # Deep Research Skill
 
-> Gemini's skill for conducting thorough, structured research to drive technical, architectural, and product decisions.
+> Skill for conducting thorough, structured research to drive technical, architectural, and product decisions.
 
 ## IMPORTANT: Quality Bar
 
@@ -94,8 +94,8 @@ When planning a feature (spec + plan output), generate:
 - [what the Builder should pay extra attention to when verifying tasks]
 ```
 
-2. **`docs/[feature]-plan.xml`** — An atomic task list for Claude to execute. Follow the format strictly:
-   - Group tasks into `<phase>` blocks based on architectural layers or verifiable milestones (e.g., `<phase name="1: Types & Data Models">`). 
+2. **`docs/[feature]-plan.xml`** — An atomic task list for the Builder to execute. Follow the format strictly:
+   - Group tasks into `<phase>` blocks based on architectural layers or verifiable milestones (e.g., `<phase name="1: Types & Data Models">`).
    - A phase **must** represent a stable checkpoint where the codebase compiles and the user can safely review progress.
    - Aim for **1 to 5 closely related tasks per phase**. Default to smaller, more reviewable phases.
    - Each `<task>` must sit inside a `<phase>` and contain `<name>`, `<action>`, and `<verify>` tags.
@@ -103,4 +103,4 @@ When planning a feature (spec + plan output), generate:
    - The `<action>` should be specific enough for a developer to implement without guessing.
    - The `<verify>` should describe a concrete check (command, manual test, or assertion) to be run during that phase.
 
-> **CRITICAL NAMING RULE:** The file MUST end with `-plan.xml` (e.g., `ui-audit-plan.xml`, `ui-audit-part1-plan.xml`). Claude's `execute-plan` skill uses the glob `docs/*-plan.xml` to auto-discover plan files. A file named `ui-audit-plan-part1.xml` will NOT be found. If splitting a plan into multiple parts, use the pattern `[feature]-part1-plan.xml`, `[feature]-part2-plan.xml`, etc.
+> **CRITICAL NAMING RULE:** The file MUST end with `-plan.xml` (e.g., `ui-audit-plan.xml`, `ui-audit-part1-plan.xml`). The `execute-plan` skill uses the glob `docs/*-plan.xml` to auto-discover plan files. A file named `ui-audit-plan-part1.xml` will NOT be found. If splitting a plan into multiple parts, use the pattern `[feature]-part1-plan.xml`, `[feature]-part2-plan.xml`, etc.

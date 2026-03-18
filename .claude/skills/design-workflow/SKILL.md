@@ -1,13 +1,15 @@
 ---
 name: design-workflow
-description: The required handoff and formatting rules when Gemini is generating UI designs. Always use this alongside any UI design tasks to ensure output is written to /docs/ correctly.
+description: Required formatting and design rules for UI design tasks. Always use this alongside any UI design tasks to ensure output is written to /docs/ correctly.
 ---
 
 # Design Workflow Skill
 
-> Gemini's skill for designing user interfaces and user experiences for Money Map.
+> Skill for designing user interfaces and user experiences for Money Map.
 
 ## When to Activate
+
+**IMPORTANT:** When this skill is activated, the `ui-ux-pro-max` skill (`.claude/skills/ui-ux-pro-max/SKILL.md`) MUST also be invoked alongside it. They are always used together for design tasks.
 
 Activate this skill when the user asks to:
 - Design a new page, screen, or layout
@@ -42,7 +44,7 @@ If asked to "design a component", "create a table", or details a specific featur
 
 ## Output Format
 
-All design output must be written as a spec in `/docs/` following the handoff protocol at `.agent/conventions/handoff-protocol.md`. Include:
+All design output must be written as a spec in `/docs/` following the handoff protocol at `.claude/conventions/handoff-protocol.md`. Include:
 - Visual hierarchy description
 - Responsive breakpoints
 - Component state variations (loading, empty, error, populated)
@@ -50,6 +52,5 @@ All design output must be written as a spec in `/docs/` following the handoff pr
 
 ## Reference
 
-- **Tech stack:** `.agent/conventions/tech-stack.md`
+- **Tech stack:** `.claude/conventions/tech-stack.md`
 - **Component organization:** See `src/components/` structure in tech stack doc
-- **Shared design workflow:** `.agent/workflows/design.md`

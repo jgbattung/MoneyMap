@@ -1,0 +1,510 @@
+<plan>
+  <feature>workspace-consolidation</feature>
+  <branch>chore/workspace-consolidation</branch>
+
+  <phase name="1: Migrate Gemini Skills to Claude">
+    <task>
+      <name>Migrate deep-research skill</name>
+      <action>
+        Create `.claude/skills/deep-research/SKILL.md` based on `.gemini/skills/deep-research/SKILL.md`.
+
+        Changes to make:
+        - Frontmatter: keep name and description, remove any Gemini model references
+        - Line 8: "Gemini's skill for conducting..." → "Skill for conducting..."
+        - All instances of ".gemini/skills/" → ".claude/skills/"
+        - All instances of ".agent/conventions/" → ".claude/conventions/"
+        - Phase 5 alignment check: keep the `/approve` flow intact
+        - Output format section: "docs/[feature]-spec.md" with Handoff Note — replace "Handoff Note for Builder" references if they mention Gemini → use "the Architect"
+        - Keep the quality bar, methodology, and output format exactly as-is otherwise
+      </action>
+      <verify>
+        Run: `grep -i "gemini" .claude/skills/deep-research/SKILL.md` — must return zero results.
+        Run: `grep "\.agent/" .claude/skills/deep-research/SKILL.md` — must return zero results.
+        Confirm file exists and has valid frontmatter.
+      </verify>
+    </task>
+
+    <task>
+      <name>Migrate design-workflow skill</name>
+      <action>
+        Create `.claude/skills/design-workflow/SKILL.md` based on `.gemini/skills/design-workflow/SKILL.md`.
+
+        Changes to make:
+        - Frontmatter description: remove "when Gemini is generating UI designs" → "Required formatting and design rules for UI design tasks"
+        - Line 8: "Gemini's skill for designing..." → "Skill for designing..."
+        - All instances of ".gemini/skills/" → ".claude/skills/"
+        - All instances of ".agent/conventions/" → ".claude/conventions/"
+        - Add at the top of "When to Activate" section: "**IMPORTANT:** When this skill is activated, the `ui-ux-pro-max` skill (`.claude/skills/ui-ux-pro-max/SKILL.md`) MUST also be invoked alongside it. They are always used together for design tasks."
+        - Reference section: update all paths to `.claude/`
+      </action>
+      <verify>
+        Run: `grep -i "gemini" .claude/skills/design-workflow/SKILL.md` — must return zero results.
+        Run: `grep "\.agent/" .claude/skills/design-workflow/SKILL.md` — must return zero results.
+        Confirm file exists and has valid frontmatter.
+      </verify>
+    </task>
+
+    <task>
+      <name>Migrate ui-ux-pro-max skill (SKILL.md + scripts + data)</name>
+      <action>
+        1. Copy the entire `.gemini/skills/ui-ux-pro-max/` directory to `.claude/skills/ui-ux-pro-max/`.
+           This includes:
+           - `SKILL.md`
+           - `scripts/core.py`
+           - `scripts/design_system.py`
+           - `scripts/search.py`
+           - `data/` directory with ALL CSV files
+           - `data/stacks/` subdirectory with ALL stack CSV files
+
+        2. Update `SKILL.md` only:
+           - Remove any Gemini-specific references if present
+           - Update the bash command paths from `skills/ui-ux-pro-max/scripts/search.py` → `.claude/skills/ui-ux-pro-max/scripts/search.py`
+           - Keep the Python script content UNCHANGED — do NOT modify `core.py`, `design_system.py`, or `search.py`
+
+        3. Do NOT modify any CSV data files.
+      </action>
+      <verify>
+        Verify directory structure:
+        - `ls .claude/skills/ui-ux-pro-max/SKILL.md` — exists
+        - `ls .claude/skills/ui-ux-pro-max/scripts/core.py` — exists
+        - `ls .claude/skills/ui-ux-pro-max/scripts/design_system.py` — exists
+        - `ls .claude/skills/ui-ux-pro-max/scripts/search.py` — exists
+        - `ls .claude/skills/ui-ux-pro-max/data/styles.csv` — exists
+        - `ls .claude/skills/ui-ux-pro-max/data/stacks/shadcn.csv` — exists
+
+        Run: `python .claude/skills/ui-ux-pro-max/scripts/search.py "fintech dashboard" --domain product -n 1` — should return a result without errors.
+        Run: `grep -i "gemini" .claude/skills/ui-ux-pro-max/SKILL.md` — must return zero results.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="2: Migrate Conventions from .agent/ to .claude/">
+    <task>
+      <name>Migrate and update handoff-protocol.md</name>
+      <action>
+        Create `.claude/conventions/handoff-protocol.md` based on `.agent/conventions/handoff-protocol.md`.
+
+        Changes to make:
+        - Line 2 subtitle: "Shared conventions for the Gemini (Architect) and Claude Code (Builder) collaboration" → "Shared conventions for the Architect and Builder agents."
+        - Roles section: Rewrite as:
+          "- **Architect:** Research, planning, UI/UX design, architecture decisions. Produces specification files. Does NOT write executable source code.
+          - **Builder:** Executes specs, writes code, runs tests, and reports back. Does NOT make unilateral architectural decisions outside the spec."
+        - "All specs produced by Gemini" → "All specs produced by the Architect"
+        - "Claude Code" → "the Builder" throughout
+        - "Gemini" → "the Architect" throughout
+        - Key Docs Management: "Gemini must also add" → "The Architect must also add"
+        - Keep everything else: spec format, Definition of Done, task tracking XML, atomic commits, DB safety, archiving
+      </action>
+      <verify>
+        Run: `grep -i "gemini" .claude/conventions/handoff-protocol.md` — must return zero results.
+        Run: `grep -i "claude code" .claude/conventions/handoff-protocol.md` — must return zero results.
+        Confirm the spec format section (naming conventions) is preserved intact.
+      </verify>
+    </task>
+
+    <task>
+      <name>Migrate and update commit-conventions.md</name>
+      <action>
+        Create `.claude/conventions/commit-conventions.md` based on `.agent/conventions/commit-conventions.md`.
+
+        Changes:
+        - Line 2: "Shared git and PR standards for both Gemini and Claude Code" → "Shared git and PR standards for all agents."
+        - Line 8: "ALL agents — Claude Code AND Gemini/Antigravity — without exception" → "ALL agents — without exception."
+        - Keep everything else verbatim.
+      </action>
+      <verify>
+        Run: `grep -i "gemini" .claude/conventions/commit-conventions.md` — must return zero results.
+        Run: `grep -i "antigravity" .claude/conventions/commit-conventions.md` — must return zero results.
+        Confirm the commit message format table and branch naming section are preserved.
+      </verify>
+    </task>
+
+    <task>
+      <name>Migrate and update tech-stack.md</name>
+      <action>
+        Create `.claude/conventions/tech-stack.md` based on `.agent/conventions/tech-stack.md`.
+
+        Changes:
+        - Line 2: "Shared source of truth for both Gemini and Claude Code" → "Source of truth for all agents."
+        - Line 3: "Both agents must align on these technologies" → "All agents must align on these technologies"
+        - Keep everything else verbatim.
+      </action>
+      <verify>
+        Run: `grep -i "gemini" .claude/conventions/tech-stack.md` — must return zero results.
+        Run: `grep -i "claude code" .claude/conventions/tech-stack.md` — must return zero results.
+        Confirm the Core Stack table and all sections are preserved.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="3: Create Architect Agent and Update Existing Claude Rules">
+    <task>
+      <name>Create the Architect agent</name>
+      <action>
+        Create `.claude/agents/architect.md` with the following content:
+
+        Frontmatter:
+        - name: architect
+        - description: "The planning and research persona for Money Map. Handles deep research, feature design, spec creation, and XML task planning. Use for any planning, architecture, or research request. Never writes executable code."
+        - model: opus
+
+        Body:
+        - Title: "# The Architect"
+        - Identity: Responsible for research, architecture, UI/UX design, feature planning (XML plans), and spec generation. Reviews verification docs after Builder and QA complete.
+        - Planning Workflow (MANDATORY):
+          1. Ask clarifying questions (one at a time)
+          2. Activate deep-research skill (`.claude/skills/deep-research/SKILL.md`)
+          3. For any design/UI task: activate design-workflow + ui-ux-pro-max (ALWAYS together)
+          4. Present research findings to user before drafting spec
+          5. Draft spec and plan only after research is reviewed and approved
+          6. User review before handoff to Builder
+          7. Post-execution review: read the `-verification.md` (which includes Builder's implementation proof and QA's test results) and provide conversational feedback
+        - Tone and style section (thorough, structured Markdown, rationale for decisions, clear trade-offs)
+        - Hard Limitation: DO NOT write or modify executable source code. Only Markdown and XML files in `/docs/`.
+        - Git Safety: Always check branch before commit, never commit to main
+        - Output Checklist (same as original): approach summarized and approved, spec created with Handoff Note, plan created in XML format, final summary
+        - Key References:
+          - `.claude/conventions/tech-stack.md`
+          - `.claude/conventions/handoff-protocol.md`
+          - `.claude/conventions/commit-conventions.md`
+          - `.claude/skills/deep-research/SKILL.md`
+          - `.claude/skills/design-workflow/SKILL.md`
+          - `.claude/skills/ui-ux-pro-max/SKILL.md`
+      </action>
+      <verify>
+        Confirm file exists at `.claude/agents/architect.md`.
+        Confirm frontmatter has `model: opus`.
+        Run: `grep -i "gemini" .claude/agents/architect.md` — must return zero results.
+        Confirm the planning workflow has all 7 steps.
+        Confirm the hard limitation section exists.
+      </verify>
+    </task>
+
+    <task>
+      <name>Rename gemini-collab.md to execution.md and rewrite</name>
+      <action>
+        Delete `.claude/rules/gemini-collab.md`.
+        Create `.claude/rules/execution.md` with repurposed content:
+
+        Title: "# Execution Rules"
+        Subtitle: "How the Builder executes plans produced by the Architect."
+
+        Sections:
+        - "## Workflow" — Follow the handoff protocol at `.claude/conventions/handoff-protocol.md`:
+          - Read the full `-spec.md` before writing any code
+          - Execute `-plan.xml` tasks atomically
+          - One commit per task immediately after verification
+          - DB safety: never run migrations automatically
+          - Create `-verification.md` upon completion
+          - If something is ambiguous, ask the user rather than making assumptions
+      </action>
+      <verify>
+        Confirm `.claude/rules/execution.md` exists.
+        Confirm `.claude/rules/gemini-collab.md` no longer exists.
+        Run: `grep -i "gemini" .claude/rules/execution.md` — must return zero results.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update persona.md</name>
+      <action>
+        Edit `.claude/rules/persona.md`:
+
+        Changes:
+        - "Executing XML specs produced by Gemini." → "Executing XML specs produced by the Architect."
+        - Key References section: update all paths:
+          - `.agent/conventions/tech-stack.md` → `.claude/conventions/tech-stack.md`
+          - `.agent/conventions/handoff-protocol.md` → `.claude/conventions/handoff-protocol.md`
+          - `.agent/conventions/commit-conventions.md` → `.claude/conventions/commit-conventions.md`
+          - `.claude/rules/gemini-collab.md` → `.claude/rules/execution.md`
+      </action>
+      <verify>
+        Run: `grep -i "gemini" .claude/rules/persona.md` — must return zero results.
+        Run: `grep "\.agent/" .claude/rules/persona.md` — must return zero results.
+        Confirm all Key References paths point to existing files.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="4: Update Remaining Claude Agents and Skills">
+    <task>
+      <name>Update builder.md agent</name>
+      <action>
+        Edit `.claude/agents/builder.md`:
+        - If any reference says "generated by Gemini" or "Gemini's plan" → change to "generated by the Architect" / "the Architect's plan"
+        - Confirm model is `sonnet` in frontmatter
+        - Update any `.agent/` path references → `.claude/`
+      </action>
+      <verify>
+        Run: `grep -i "gemini" .claude/agents/builder.md` — must return zero results.
+        Run: `grep "\.agent/" .claude/agents/builder.md` — must return zero results.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update qa-pipeline.md agent — add verification doc append</name>
+      <action>
+        Edit `.claude/agents/qa-pipeline.md`:
+        - Confirm model is `sonnet` in frontmatter
+        - In the `handoff_protocol` section, add a new step after the output format:
+
+          "## Append to Verification Doc
+
+          After generating the QA report, check if `docs/[feature]-verification.md` exists (the Builder creates this). If it exists, append a `## QA Results` section to the bottom of that file containing:
+          - Test files generated and number of test cases
+          - Vitest results (passed/failed counts)
+          - Playwright results if applicable
+          - Fixes applied (test code or source code)
+          - Final status (PASS / PARTIAL / BLOCKED)
+
+          This allows the Architect to review a single unified verification document."
+
+        - Remove any Gemini references if present
+      </action>
+      <verify>
+        Run: `grep -i "gemini" .claude/agents/qa-pipeline.md` — must return zero results.
+        Confirm the "Append to Verification Doc" section exists in the file.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update security-auditor.md agent</name>
+      <action>
+        Edit `.claude/agents/security-auditor.md`:
+        - Confirm model is `opus` in frontmatter
+        - "Architect and Builder workflow (referenced in `.agent/conventions/handoff-protocol.md`)" → "project workflow (referenced in `.claude/conventions/handoff-protocol.md`)"
+        - Any other `.agent/` path references → `.claude/`
+      </action>
+      <verify>
+        Run: `grep "\.agent/" .claude/agents/security-auditor.md` — must return zero results.
+        Confirm model is `opus`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update dev-explainer.md agent</name>
+      <action>
+        Edit `.claude/agents/dev-explainer.md`:
+        - The workflow chain "Architect → Builder → QA → Architect Verification → Dev Explainer" — keep as-is (these are now all Claude agent names, which is correct)
+        - Verify no Gemini references exist
+        - Update any `.agent/` path references → `.claude/`
+      </action>
+      <verify>
+        Run: `grep -i "gemini" .claude/agents/dev-explainer.md` — must return zero results.
+        Run: `grep "\.agent/" .claude/agents/dev-explainer.md` — must return zero results.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update execute-plan skill</name>
+      <action>
+        Edit `.claude/skills/execute-plan/SKILL.md`:
+        - Frontmatter description: "Finds the latest unarchived Gemini plan" → "Finds the latest unarchived plan"
+        - Line 8: "full Gemini → Claude Code handoff workflow" → "full plan execution workflow"
+        - Step 1: "Ask Gemini to generate one first" → "Use the Architect agent to generate one first."
+        - Step 4d: ".agent/conventions/commit-conventions.md" → ".claude/conventions/commit-conventions.md"
+        - Step 6 Next Steps: "Ask Gemini to review the implementation" → "Ask the Architect to review the verification doc"
+      </action>
+      <verify>
+        Run: `grep -i "gemini" .claude/skills/execute-plan/SKILL.md` — must return zero results.
+        Run: `grep "\.agent/" .claude/skills/execute-plan/SKILL.md` — must return zero results.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="5: Update CLAUDE.md and Memory">
+    <task>
+      <name>Update CLAUDE.md</name>
+      <action>
+        Edit `CLAUDE.md`:
+
+        1. Architecture section:
+           - "See `.agent/conventions/tech-stack.md`" → "See `.claude/conventions/tech-stack.md`"
+
+        2. Agent Rules section — update to:
+           "## Agent Rules
+
+           See `.claude/rules/` for behavioral rules:
+           - `.claude/rules/persona.md` — Builder identity and coding standards
+           - `.claude/rules/execution.md` — How the Builder executes plans
+           - `.claude/rules/post-execution.md` — Post-build checklist
+
+           See `.claude/agents/` for agent personas:
+           - `.claude/agents/architect.md` — Research, planning, and spec generation (Opus)
+           - `.claude/agents/builder.md` — Code execution and implementation (Sonnet)
+           - `.claude/agents/qa-pipeline.md` — Test generation and healing (Sonnet)
+           - `.claude/agents/security-auditor.md` — Security audits and compliance (Opus)
+           - `.claude/agents/dev-explainer.md` — Post-feature learning docs (Sonnet)"
+
+        3. Shared Conventions section — update to:
+           "## Shared Conventions
+
+           See `.claude/conventions/` for shared standards:
+           - `.claude/conventions/handoff-protocol.md` — Spec format and execution rules
+           - `.claude/conventions/tech-stack.md` — Full tech stack reference
+           - `.claude/conventions/commit-conventions.md` — Git commit and PR standards"
+
+        4. Remove the "Workflows" line if it references `.agent/workflows/`
+
+        5. Remove any mention of "Gemini" from the entire file
+      </action>
+      <verify>
+        Run: `grep -i "gemini" CLAUDE.md` — must return zero results.
+        Run: `grep "\.agent/" CLAUDE.md` — must return zero results.
+        Run: `grep "gemini-collab" CLAUDE.md` — must return zero results.
+        Confirm the Agent Rules section lists all 5 agents.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update memory MEMORY.md</name>
+      <action>
+        Read the memory file at `C:\Users\LENOVO\.claude\projects\c--Users-LENOVO-OneDrive-Desktop-personal-projects-money-map\memory\MEMORY.md`.
+
+        Update:
+        - "Doc Files in /docs/" section: remove "Gemini owns these files and will commit them when ready." → Replace with "The Architect agent produces these files. Do not stage or commit them unless the user explicitly asks."
+        - "Project References" section: update all paths:
+          - `.agents/conventions/commit-conventions.md` → `.claude/conventions/commit-conventions.md`
+          - `.agents/conventions/handoff-protocol.md` → `.claude/conventions/handoff-protocol.md`
+          - `.agents/conventions/tech-stack.md` → `.claude/conventions/tech-stack.md`
+        - Remove any other Gemini references if present
+      </action>
+      <verify>
+        Run: `grep -i "gemini" "C:\Users\LENOVO\.claude\projects\c--Users-LENOVO-OneDrive-Desktop-personal-projects-money-map\memory\MEMORY.md"` — must return zero results.
+        Run: `grep "\.agents/" "C:\Users\LENOVO\.claude\projects\c--Users-LENOVO-OneDrive-Desktop-personal-projects-money-map\memory\MEMORY.md"` — must return zero results.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="6: Delete Obsolete Directories">
+    <task>
+      <name>Verify migration completeness and delete .agent/ directory</name>
+      <action>
+        Before deleting, verify all files have been migrated:
+        1. `.agent/conventions/handoff-protocol.md` → exists at `.claude/conventions/handoff-protocol.md`
+        2. `.agent/conventions/commit-conventions.md` → exists at `.claude/conventions/commit-conventions.md`
+        3. `.agent/conventions/tech-stack.md` → exists at `.claude/conventions/tech-stack.md`
+        4. `.agent/rules/project-rules.md` → content absorbed (not migrated as standalone — confirmed with user)
+        5. `.agent/workflows/design.md` → confirmed duplicate of design-workflow skill (not migrated — confirmed with user)
+
+        Once verified, delete the entire `.agent/` directory:
+        ```bash
+        rm -rf .agent/
+        ```
+      </action>
+      <verify>
+        Confirm `.agent/` directory does not exist: `ls .agent/ 2>&amp;1` should return error.
+        Confirm all migrated files exist at their new locations.
+      </verify>
+    </task>
+
+    <task>
+      <name>Verify migration completeness and delete .gemini/ directory</name>
+      <action>
+        Before deleting, verify all files have been migrated:
+        1. `.gemini/agents/architect.md` → new version exists at `.claude/agents/architect.md`
+        2. `.gemini/skills/deep-research/SKILL.md` → exists at `.claude/skills/deep-research/SKILL.md`
+        3. `.gemini/skills/design-workflow/SKILL.md` → exists at `.claude/skills/design-workflow/SKILL.md`
+        4. `.gemini/skills/ui-ux-pro-max/SKILL.md` → exists at `.claude/skills/ui-ux-pro-max/SKILL.md`
+        5. `.gemini/skills/ui-ux-pro-max/scripts/` → all 3 Python files exist at `.claude/skills/ui-ux-pro-max/scripts/`
+        6. `.gemini/skills/ui-ux-pro-max/data/` → CSV files exist at `.claude/skills/ui-ux-pro-max/data/`
+        7. `.gemini/rules/persona.md` → absorbed into architect agent
+        8. `.gemini/rules/research.md` → absorbed into deep-research skill
+        9. `.gemini/rules/claude-collab.md` → no longer needed
+        10. `.gemini/settings.json` → not needed
+
+        Verify CSV file count matches:
+        ```bash
+        # Count files in source
+        find .gemini/skills/ui-ux-pro-max/data/ -type f | wc -l
+        # Count files in destination
+        find .claude/skills/ui-ux-pro-max/data/ -type f | wc -l
+        ```
+
+        Once verified, delete the entire `.gemini/` directory:
+        ```bash
+        rm -rf .gemini/
+        ```
+      </action>
+      <verify>
+        Confirm `.gemini/` directory does not exist: `ls .gemini/ 2>&amp;1` should return error.
+        Confirm all migrated files exist at their new locations.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="7: Final Validation">
+    <task>
+      <name>Run comprehensive stale reference check</name>
+      <action>
+        Run these validation commands to catch any remaining stale references across the entire `.claude/` directory and `CLAUDE.md`:
+
+        1. `grep -r -i "gemini" .claude/` — must return zero results
+        2. `grep -r "\.agent/" .claude/` — must return zero results
+        3. `grep -r "\.gemini/" .claude/` — must return zero results
+        4. `grep -i "gemini" CLAUDE.md` — must return zero results
+        5. `grep "\.agent/" CLAUDE.md` — must return zero results
+
+        If any matches are found, fix them immediately.
+      </action>
+      <verify>
+        All 5 grep commands return zero results.
+      </verify>
+    </task>
+
+    <task>
+      <name>Verify ui-ux-pro-max Python scripts work from new location</name>
+      <action>
+        Run the search script from the new location to confirm it works:
+        ```bash
+        python .claude/skills/ui-ux-pro-max/scripts/search.py "fintech SaaS dashboard" --design-system -p "Money Map"
+        ```
+
+        This validates:
+        - Python script can be found and executed
+        - Relative `DATA_DIR` path resolves correctly
+        - CSV data files are accessible
+        - The BM25 search engine works
+        - Design system generation works
+      </action>
+      <verify>
+        The command produces design system output without errors.
+        Output includes sections for product, style, color, and typography recommendations.
+      </verify>
+    </task>
+
+    <task>
+      <name>Verify all agent and skill file paths resolve</name>
+      <action>
+        Verify every file referenced by agents and skills exists:
+
+        From architect.md:
+        - `.claude/skills/deep-research/SKILL.md`
+        - `.claude/skills/design-workflow/SKILL.md`
+        - `.claude/skills/ui-ux-pro-max/SKILL.md`
+        - `.claude/conventions/tech-stack.md`
+        - `.claude/conventions/handoff-protocol.md`
+        - `.claude/conventions/commit-conventions.md`
+
+        From builder.md:
+        - `.claude/skills/execute-plan/SKILL.md`
+
+        From persona.md:
+        - `.claude/conventions/tech-stack.md`
+        - `.claude/conventions/handoff-protocol.md`
+        - `.claude/conventions/commit-conventions.md`
+        - `.claude/rules/execution.md`
+
+        From execute-plan SKILL.md:
+        - `.claude/conventions/commit-conventions.md`
+        - `.claude/rules/persona.md`
+        - `.claude/rules/post-execution.md`
+
+        Run `ls` on each path to confirm existence.
+      </action>
+      <verify>
+        All listed files exist. No "file not found" errors.
+      </verify>
+    </task>
+  </phase>
+</plan>
