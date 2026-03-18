@@ -39,7 +39,7 @@ Never run migrations as part of automated plan execution, post-execution checkli
 
 ## Architecture
 
-See `.agent/conventions/tech-stack.md` for the full shared tech stack and architecture reference. Quick summary:
+See `.claude/conventions/tech-stack.md` for the full shared tech stack and architecture reference. Quick summary:
 
 - **Routing:** Next.js App Router, file-based in `src/app/`, auth pages under `(auth)`
 - **Data flow:** Components → Custom hooks (`src/hooks/`) → TanStack React Query → `/api/*` routes → Prisma → PostgreSQL
@@ -50,20 +50,23 @@ See `.agent/conventions/tech-stack.md` for the full shared tech stack and archit
 ## Agent Rules
 
 See `.claude/rules/` for behavioral rules:
-- `.claude/rules/persona.md` — Identity and coding standards
-- `.claude/rules/gemini-collab.md` — How to work with Gemini
+- `.claude/rules/persona.md` — Builder identity and coding standards
+- `.claude/rules/execution.md` — How the Builder executes plans
 - `.claude/rules/post-execution.md` — Post-build checklist
+
+See `.claude/agents/` for agent personas:
+- `.claude/agents/architect.md` — Research, planning, and spec generation (Opus)
+- `.claude/agents/builder.md` — Code execution and implementation (Sonnet)
+- `.claude/agents/qa-pipeline.md` — Test generation and healing (Sonnet)
+- `.claude/agents/security-auditor.md` — Security audits and compliance (Opus)
+- `.claude/agents/dev-explainer.md` — Post-feature learning docs (Sonnet)
 
 ## Shared Conventions
 
-See `.agent/conventions/` for shared standards:
-- `.agent/conventions/handoff-protocol.md` — Spec format and handoff rules
-- `.agent/conventions/tech-stack.md` — Full tech stack reference
-- `.agent/conventions/commit-conventions.md` — Git commit and PR standards
-
-## Workflows
-
-See `.agent/workflows/` for cross-agent workflows.
+See `.claude/conventions/` for shared standards:
+- `.claude/conventions/handoff-protocol.md` — Spec format and execution rules
+- `.claude/conventions/tech-stack.md` — Full tech stack reference
+- `.claude/conventions/commit-conventions.md` — Git commit and PR standards
 
 ## Testing Setup (IMPORTANT — Read Before Installing Test Dependencies)
 
