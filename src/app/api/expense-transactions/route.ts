@@ -133,18 +133,6 @@ export async function GET(request: NextRequest) {
       whereClause.accountId = accountId;
     }
 
-    const tagIds = searchParams.get('tagIds');
-    if (tagIds) {
-      const tagIdArray = tagIds.split(',').filter(Boolean);
-      if (tagIdArray.length > 0) {
-        whereClause.tags = {
-          some: {
-            id: { in: tagIdArray },
-          },
-        };
-      }
-    }
-
     const total = await db.expenseTransaction.count({
       where: whereClause,
     });
