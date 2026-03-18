@@ -1,0 +1,110 @@
+<plan>
+  <feature>cards-tags-display</feature>
+  <spec>docs/cards-tags-display-spec.md</spec>
+
+  <phase>
+    <name>Add tags prop and rendering to card components</name>
+
+    <task>
+      <name>Add tags display to ExpenseCard</name>
+      <action>
+        In src/components/shared/ExpenseCard.tsx:
+        1. Add `tags?: { id: string; name: string; color: string }[]` to the ExpenseCardProps interface.
+        2. Add `tags` to the destructured props in the component function signature.
+        3. Badge is already imported -- no new import needed.
+        4. Insert the ADAPTED tag badges JSX block (see spec "Badge Markup" section -- uses text-xs, h-5, px-2, w-2 h-2 dot, gap-1.5) as a new full-width row AFTER the expenseType/expenseSubcategory paragraph (line 98) and BEFORE the date/amount footer div (line 100). The parent flex-col gap-3 provides spacing -- no mt class needed on the tag container.
+        IMPORTANT: Do NOT use CompactTransactionCard's text-[10px]/h-4/px-1.5 sizing. Use the scaled-up values from the spec.
+      </action>
+      <verify>npm run lint and npm run build pass with zero errors.</verify>
+    </task>
+
+    <task>
+      <name>Add tags display to IncomeCard</name>
+      <action>
+        In src/components/shared/IncomeCard.tsx:
+        1. Add `import { Badge } from '../ui/badge'` to the imports.
+        2. Add `tags?: { id: string; name: string; color: string }[]` to the IncomeCardProps interface.
+        3. Add `tags` to the destructured props.
+        4. Insert the ADAPTED tag badges JSX block (text-xs, h-5, px-2, w-2 h-2 dot, gap-1.5) as a new row AFTER the incomeType paragraph (line 53) and BEFORE the date/amount footer div (line 55). Parent gap-3 handles spacing.
+      </action>
+      <verify>npm run lint and npm run build pass with zero errors.</verify>
+    </task>
+
+    <task>
+      <name>Add tags display to TransferCard</name>
+      <action>
+        In src/components/shared/TransferCard.tsx:
+        1. Add `import { Badge } from '../ui/badge'` to the imports.
+        2. Add `tags?: { id: string; name: string; color: string }[]` to the TransferCardProps type.
+        3. Add `tags` to the destructured props.
+        4. Insert the ADAPTED tag badges JSX block INSIDE the existing flex-col gap-1 metadata wrapper, AFTER the date paragraph (line 55) but BEFORE the closing div of that wrapper (line 56). Add mt-1 to the tag container div: className="flex flex-wrap gap-1.5 mt-1". This keeps tags grouped with the metadata, not as a separate card-level row.
+        NOTE: TransferCard placement differs from ExpenseCard/IncomeCard because of its unique metadata wrapper structure.
+      </action>
+      <verify>npm run lint and npm run build pass with zero errors.</verify>
+    </task>
+  </phase>
+
+  <phase>
+    <name>Pass tags prop from parent pages</name>
+
+    <task>
+      <name>Pass tags to ExpenseCard in expenses page</name>
+      <action>
+        In src/app/expenses/page.tsx, inside the expenseTransactions.map() block (~line 217-239), add `tags={expense.tags}` as a prop on the ExpenseCard component.
+      </action>
+      <verify>npm run lint and npm run build pass with zero errors.</verify>
+    </task>
+
+    <task>
+      <name>Pass tags to IncomeCard in income page</name>
+      <action>
+        In src/app/income/page.tsx, inside the incomeTransactions.map() block (~line 315-325), add `tags={income.tags}` as a prop on the IncomeCard component.
+      </action>
+      <verify>npm run lint and npm run build pass with zero errors.</verify>
+    </task>
+
+    <task>
+      <name>Pass tags to TransferCard in transfers page</name>
+      <action>
+        In src/app/transfers/page.tsx, inside the transfers.map() block (~line 149-159), add `tags={transfer.tags}` as a prop on the TransferCard component.
+      </action>
+      <verify>npm run lint and npm run build pass with zero errors.</verify>
+    </task>
+  </phase>
+
+  <phase>
+    <name>Update and add unit tests</name>
+
+    <task>
+      <name>Add tag rendering tests to ExpenseCard.test.tsx</name>
+      <action>
+        In src/components/shared/ExpenseCard.test.tsx, add test cases:
+        1. "renders tag badges when tags are provided" -- pass 2 tags with name and color, assert both tag names appear in the document.
+        2. "shows overflow indicator when more than 3 tags" -- pass 5 tags, assert "+2 more" text appears and only 3 tag names render.
+        3. "renders no tags section when tags is undefined" -- pass no tags prop, assert no badge elements for tags appear.
+      </action>
+      <verify>npx vitest run src/components/shared/ExpenseCard.test.tsx passes.</verify>
+    </task>
+
+    <task>
+      <name>Add tag rendering tests to IncomeCard.test.tsx</name>
+      <action>
+        In src/components/shared/IncomeCard.test.tsx, add the same three test cases as ExpenseCard (tags rendering, overflow, no tags).
+      </action>
+      <verify>npx vitest run src/components/shared/IncomeCard.test.tsx passes.</verify>
+    </task>
+
+    <task>
+      <name>Add TransferCard.test.tsx with tag tests</name>
+      <action>
+        Create src/components/shared/TransferCard.test.tsx if it does not exist. Include:
+        1. Basic rendering test (card displays name, formatted amount, from/to accounts, date, transfer type).
+        2. Tag badges rendering test (same pattern as ExpenseCard/IncomeCard tests).
+        3. Overflow indicator test.
+        4. No tags test.
+        Mock ../icons (Icons.addTransfer), ../ui/badge (Badge), and lucide-react (ArrowRight) as needed.
+      </action>
+      <verify>npx vitest run src/components/shared/TransferCard.test.tsx passes.</verify>
+    </task>
+  </phase>
+</plan>
