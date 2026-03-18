@@ -11,7 +11,6 @@ import ExpenseTable from "@/components/tables/expenses/ExpenseTable";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { TagFilter } from "@/components/shared/TagFilter";
 import { SearchIcon } from "lucide-react";
 import { useExpenseTransactionsQuery } from "@/hooks/useExpenseTransactionsQuery";
 import { useState, useEffect } from "react";
@@ -31,15 +30,13 @@ const Expenses = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
-  // Pass search, dateFilter, and tagIds to the hook
+  // Pass search and dateFilter to the hook
   const { expenseTransactions, hasMore, isLoading, error } = useExpenseTransactionsQuery({
     skip: 0,
     take: displayCount,
     search: debouncedSearchTerm,
     dateFilter,
-    tagIds: selectedTagIds,
   });
   
   // Drawer/Sheet states
@@ -63,10 +60,6 @@ const Expenses = () => {
     }
   }, [debouncedSearchTerm, dateFilter]);
 
-  useEffect(() => {
-    setDisplayCount(ITEMS_PER_LOAD);
-  }, [selectedTagIds]);
-
   const handleExpenseClick = (expenseId: string) => {
     setSelectedExpenseId(expenseId);
     setEditExpenseDrawerOpen(true);
@@ -77,7 +70,7 @@ const Expenses = () => {
   };
 
   // Determine if we're currently searching/filtering
-  const isFiltering = debouncedSearchTerm.length > 0 || dateFilter !== dateFilterOptions.viewAll || selectedTagIds.length > 0;
+  const isFiltering = debouncedSearchTerm.length > 0 || dateFilter !== dateFilterOptions.viewAll;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col">
@@ -175,12 +168,6 @@ const Expenses = () => {
                 <SearchIcon className="h-4 w-4" />
               </InputGroupAddon>
             </InputGroup>
-
-            <TagFilter
-              selectedTagIds={selectedTagIds}
-              onChange={setSelectedTagIds}
-              disabled={isLoading}
-            />
 
             <ToggleGroup
               type="single"
