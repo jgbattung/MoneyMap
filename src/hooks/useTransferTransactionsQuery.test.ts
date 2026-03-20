@@ -134,6 +134,21 @@ describe('useTransfersQuery', () => {
       const calledUrl = mockFetch.mock.calls[0][0] as string;
       expect(calledUrl).not.toContain('dateFilter');
     });
+
+    it('returns isFetchingMore as false during initial load', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockTransfersResponse,
+      });
+
+      const { result } = renderHook(() => useTransfersQuery(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      expect(result.current.isFetchingMore).toBe(false);
+    });
   });
 
   describe('createTransfer mutation', () => {

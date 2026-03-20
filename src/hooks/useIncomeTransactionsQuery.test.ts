@@ -145,6 +145,21 @@ describe('useIncomeTransactionsQuery', () => {
       const calledUrl = mockFetch.mock.calls[0][0] as string;
       expect(calledUrl).toBe('/api/income-transactions');
     });
+
+    it('returns isFetchingMore as false during initial load', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockIncomeResponse,
+      });
+
+      const { result } = renderHook(() => useIncomeTransactionsQuery(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      expect(result.current.isFetchingMore).toBe(false);
+    });
   });
 
   describe('createIncomeTransaction mutation', () => {
