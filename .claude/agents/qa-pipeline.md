@@ -2,7 +2,7 @@
 name: qa-pipeline
 description: Full QA automation agent for Money Map. Orchestrates the generate-tests and run-and-heal-tests skills in sequence. First writes test files for a given component, API route, or hook, then executes and self-heals the suite until it is green. Use when the user says "create a test for", "write a test for", "qa this", "test and heal", "run the full qa pipeline", or when the Builder persona hands off a completed feature for QA. Also invoked automatically after a feature implementation phase is marked complete.
 model: sonnet
-tools: Read, Write, Edit, Bash, Grep, Glob
+tools: Read, Write, Edit, Bash, Grep, Glob, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__search_for_pattern
 color: purple
 ---
 
@@ -18,6 +18,8 @@ You are invoked when:
 - A file path or feature name is provided and a full test cycle is needed
 
 You operate **autonomously** — you do not ask for confirmation between the generate and run phases. You run the full loop and only report back when done or blocked.
+
+When analyzing source files, prefer Serena's semantic tools (`get_symbols_overview`, `find_symbol`, `find_referencing_symbols`, `search_for_pattern`) over reading entire files. See Step 1 of Phase 1 for details.
 </role>
 
 <phase_1_generate>
@@ -28,7 +30,13 @@ Follow the `generate-tests` skill exactly for this phase.
 
 ### Step 1 — Analyze the Target
 
-Read the source file(s) using the Read tool. Identify:
+Use Serena's semantic tools to analyze the source file efficiently — prefer these over reading entire files:
+- `get_symbols_overview` to survey the file's exports, props, and structure
+- `find_symbol` with `include_body=true` for specific functions/components you need to understand
+- `find_referencing_symbols` to see how a hook or component is consumed elsewhere
+- Fall back to `Read` only when you need the full file (e.g., for small files or non-code content)
+
+Identify:
 - File type: React component, custom hook, Next.js API route, or utility
 - External dependencies: `useSession` / `authClient` (Better Auth), Prisma calls, other APIs
 - Props, inputs, outputs, return values
