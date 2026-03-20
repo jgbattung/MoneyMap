@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export type TransferTransaction = {
   id: string;
@@ -121,6 +121,8 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
     data,
     isPending,
     error,
+    isPlaceholderData,
+    isFetching,
   } = useQuery({
     queryKey: [
       ...QUERY_KEYS.transfers,
@@ -128,6 +130,7 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
     ],
     queryFn: () => fetchTransfers(skip, take, search, dateFilter, accountId),
     staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 
   const createTransferMutation = useMutation({
@@ -180,6 +183,7 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
     total: data?.total || 0,
     hasMore: data?.hasMore || false,
     isLoading: isPending,
+    isFetchingMore: isFetching && isPlaceholderData,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
     createTransfer: createTransferMutation.mutateAsync,
     updateTransfer: updateTransferMutation.mutateAsync,
