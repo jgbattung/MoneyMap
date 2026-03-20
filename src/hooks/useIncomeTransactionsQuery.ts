@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export type IncomeTransaction = {
   id: string;
@@ -104,6 +104,8 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
     data,
     isPending,
     error,
+    isPlaceholderData,
+    isFetching,
   } = useQuery({
     queryKey: [
       ...QUERY_KEYS.incomeTransactions,
@@ -111,6 +113,7 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
     ],
     queryFn: () => fetchIncomeTransactions(skip, take, search, dateFilter, accountId),
     staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 
   const createIncomeTransactionMutation = useMutation({
@@ -165,6 +168,7 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
     total: data?.total || 0,
     hasMore: data?.hasMore || false,
     isLoading: isPending,
+    isFetchingMore: isFetching && isPlaceholderData,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
     createIncomeTransaction: createIncomeTransactionMutation.mutateAsync,
     updateIncomeTransaction: updateIncomeTransactionMutation.mutateAsync,
