@@ -1,0 +1,227 @@
+<plan>
+  <feature>Table Data Sync Refactor</feature>
+  <spec>docs/table-data-sync-refactor-spec.md</spec>
+
+  <phase name="1: Create shared useEditableTable hook">
+    <task>
+      <name>Create useEditableTable hook</name>
+      <action>
+        Create `src/hooks/useEditableTable.ts` with the following implementation:
+
+        1. Define generic type constraint `T extends { id: string; tags?: any[] }`.
+        2. Accept `options: { queryData: T[], allTags?: { id: string; name: string; color: string }[] }`.
+        3. State: `pendingEdits: Record&lt;string, Partial&lt;T&gt;&gt;` via useState.
+        4. State: `editedRows: Record&lt;string, boolean&gt;` via useState.
+        5. `updateData(rowId, columnId, value)` — sets `pendingEdits` using functional setState:
+           ```
+           setPendingEdits(prev => ({
+             ...prev,
+             [rowId]: { ...prev[rowId], [columnId]: value }
+           }))
+           ```
+        6. `revertData(rowId)` — deletes the entry from `pendingEdits`:
+           ```
+           setPendingEdits(prev => {
+             const next = { ...prev };
+             delete next[rowId];
+             return next;
+           })
+           ```
+        7. `clearPendingEdits(rowId)` — same implementation as `revertData`. Separate function for semantic clarity in `saveRow` vs cancel flows.
+        8. `hasPendingEdit(rowId)` — returns `Boolean(pendingEdits[rowId])`.
+        9. `mergedData` — useMemo that:
+           a. Maps over `queryData`
+           b. For each row, if `pendingEdits[row.id]` exists, spread the pending changes: `{ ...row, ...pendingEdits[row.id] }`
+           c. If the merged row has a `tags` field and it's an array of strings (not objects), normalize by looking up each ID in `allTags`: `tags.map(id => allTags.find(t => t.id === id)).filter(Boolean)`
+           d. Return the row unchanged if no pending edit exists
+           e. Dependencies: `[queryData, pendingEdits, allTags]`
+        10. Return: `{ mergedData, editedRows, setEditedRows, updateData, revertData, clearPendingEdits, hasPendingEdit }`
+        11. Wrap `updateData`, `revertData`, `clearPendingEdits`, and `hasPendingEdit` in `useCallback`.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build` — both should pass with zero errors. The hook is not consumed yet, so no runtime verification needed.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="2: Refactor ExpenseTable">
+    <task>
+      <name>Wire ExpenseTable to useEditableTable</name>
+      <action>
+        In `src/components/tables/expenses/ExpenseTable.tsx`:
+
+        1. **Add import:** `import { useEditableTable } from '@/hooks/useEditableTable';`
+
+        2. **Call the hook** after the existing query hooks (after line ~362):
+           ```
+           const { tags } = useTagsQuery();  // already imported
+           const { mergedData, editedRows, setEditedRows, updateData, revertData, clearPendingEdits } = useEditableTable({
+             queryData: expenseTransactions,
+             allTags: tags,
+           });
+           ```
+
+        3. **Remove these declarations** (lines 366-388):
+           - `const [data, setData] = useState&lt;ExpenseTransaction[]&gt;([]);`
+           - `const [originalData, setOriginalData] = useState&lt;ExpenseTransaction[]&gt;([]);`
+           - `const [editedRows, setEditedRows] = useState({});`  (now from hook)
+           - `const prevTransactionsRef = useRef&lt;ExpenseTransaction[]&gt;([]);`
+           - The entire sync `useEffect` block (lines 377-388)
+
+        4. **Update `filteredData` useMemo** (~line 425):
+           - Change `data.filter(...)` to `mergedData.filter(...)`
+           - In the dependency array, replace `data` with `mergedData`
+           - Remove the `typeof tag === 'object'` guard from the tag search line — `mergedData` guarantees full tag objects. Change:
+             `row.tags?.some(tag =&gt; typeof tag === 'object' &amp;&amp; tag.name?.toLowerCase().includes(searchLower))`
+             to:
+             `row.tags?.some(tag =&gt; tag.name?.toLowerCase().includes(searchLower))`
+
+        5. **Remove `updateData` useCallback** (~lines 523-532) — now from hook.
+
+        6. **Remove `revertData` useCallback** (~lines 534-544) — now from hook.
+
+        7. **Update `tableMeta` useMemo** (~line 568):
+           - Add `clearPendingEdits` to the object
+           - Update dependency array: remove `originalData`-related deps, keep `editedRows, updateData, revertData, ...`
+
+        8. **Update `useReactTable` config** (~line 582):
+           - Add `autoResetPageIndex: false` after `getPaginationRowModel`
+
+        9. **Update `EditCell.saveRow()`** (~line 271):
+           - After the successful `await meta?.updateExpenseTransaction(updatePayload)`, add:
+             `meta?.clearPendingEdits(updatedRow.id);`
+           - This ensures the pending edit is cleared so fresh server data takes over on refetch.
+
+        10. **Update React import** (~line 27):
+            - Remove `useRef` from the import if no longer used elsewhere in the file.
+            - Remove `useState` only if `editedRows` was the last useState usage — check that `searchTerm`, `debouncedSearchTerm`, `dateFilter`, `deleteDialogOpen`, `transactionToDelete` still use useState.
+
+        11. **Empty-page safety** — After the `useReactTable` call, add a `useEffect` that clamps pagination:
+            ```
+            useEffect(() =&gt; {
+              const pageCount = table.getPageCount();
+              const currentPage = table.getState().pagination.pageIndex;
+              if (pageCount &gt; 0 &amp;&amp; currentPage &gt;= pageCount) {
+                table.setPageIndex(pageCount - 1);
+              }
+            }, [filteredData.length, table]);
+            ```
+      </action>
+      <verify>
+        1. Run `npm run lint` and `npm run build` — both pass with zero errors.
+        2. Manual test: Open the expenses page, navigate to page 2+, edit a cell — pagination must NOT reset.
+        3. Manual test: Add a tag to a transaction, save, then search for that tag name — it should appear immediately.
+        4. Manual test: Edit a cell, click cancel — cell reverts to original value.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="3: Refactor IncomeTable">
+    <task>
+      <name>Wire IncomeTable to useEditableTable</name>
+      <action>
+        In `src/components/tables/income/IncomeTable.tsx`, apply the same pattern as ExpenseTable:
+
+        1. **Add import:** `import { useEditableTable } from '@/hooks/useEditableTable';`
+
+        2. **Call the hook** after query hooks:
+           ```
+           const { tags } = useTagsQuery();  // already imported
+           const { mergedData, editedRows, setEditedRows, updateData, revertData, clearPendingEdits } = useEditableTable({
+             queryData: incomeTransactions,
+             allTags: tags,
+           });
+           ```
+
+        3. **Remove** (lines 294-316):
+           - `const [data, setData] = useState&lt;IncomeTransaction[]&gt;([]);`
+           - `const [originalData, setOriginalData] = useState&lt;IncomeTransaction[]&gt;([]);`
+           - `const [editedRows, setEditedRows] = useState({});`
+           - `const prevTransactionsRef = useRef&lt;IncomeTransaction[]&gt;([]);`
+           - The sync `useEffect` block (lines 305-316)
+
+        4. **Update `filteredData`** (~line 350):
+           - `data.filter(...)` → `mergedData.filter(...)`
+           - Replace `data` with `mergedData` in deps
+           - Remove `typeof tag === 'object'` guard
+
+        5. **Remove** `updateData` useCallback (~lines 440-449) and `revertData` useCallback (~lines 451-461).
+
+        6. **Update `tableMeta`** — add `clearPendingEdits`.
+
+        7. **Update `useReactTable`** — add `autoResetPageIndex: false`.
+
+        8. **Update `EditCell.saveRow()`** — add `meta?.clearPendingEdits(updatedRow.id)` after successful mutation.
+
+        9. **Clean up imports** — remove `useRef` if unused.
+
+        10. **Add empty-page safety useEffect** (same as ExpenseTable).
+      </action>
+      <verify>
+        1. Run `npm run lint` and `npm run build` — both pass.
+        2. Manual test: Same pagination, tag search, cancel, and save tests as ExpenseTable but on the income page.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="4: Refactor TransferTable">
+    <task>
+      <name>Wire TransferTable to useEditableTable</name>
+      <action>
+        In `src/components/tables/transfers/TransferTable.tsx`, apply the same pattern:
+
+        1. **Add import:** `import { useEditableTable } from '@/hooks/useEditableTable';`
+
+        2. **Call the hook** after query hooks:
+           ```
+           const { tags } = useTagsQuery();  // already imported
+           const { mergedData, editedRows, setEditedRows, updateData, revertData, clearPendingEdits } = useEditableTable({
+             queryData: transfers,
+             allTags: tags,
+           });
+           ```
+
+        3. **Remove** (lines 304-326):
+           - `const [data, setData] = useState&lt;TransferTransaction[]&gt;([]);`
+           - `const [originalData, setOriginalData] = useState&lt;TransferTransaction[]&gt;([]);`
+           - `const [editedRows, setEditedRows] = useState({});`
+           - `const prevTransactionsRef = useRef&lt;TransferTransaction[]&gt;([]);`
+           - The sync `useEffect` block (lines 315-326)
+
+        4. **Update `filteredData`** (~line 360):
+           - `data.filter(...)` → `mergedData.filter(...)`
+           - Replace `data` with `mergedData` in deps
+           - Remove `typeof tag === 'object'` guard
+           - Note: TransferTable uses `row.notes` not `row.description`
+
+        5. **Remove** `updateData` useCallback (~lines 465-474) and `revertData` useCallback (~lines 476-486).
+
+        6. **Update `tableMeta`** — add `clearPendingEdits`.
+
+        7. **Update `useReactTable`** — add `autoResetPageIndex: false`.
+
+        8. **Update `EditCell.saveRow()`** — add `meta?.clearPendingEdits(updatedRow.id)` after successful mutation.
+
+        9. **Clean up imports** — remove `useRef` if unused.
+
+        10. **Add empty-page safety useEffect** (same as ExpenseTable).
+      </action>
+      <verify>
+        1. Run `npm run lint` and `npm run build` — both pass.
+        2. Manual test: Same pagination, tag search, cancel, and save tests as ExpenseTable but on the transfers page.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="5: Final verification">
+    <task>
+      <name>Full lint and build check</name>
+      <action>
+        Run `npm run lint` and `npm run build` one final time to confirm zero errors across the entire codebase after all three tables have been refactored.
+      </action>
+      <verify>
+        Both commands exit with code 0 and zero warnings/errors.
+      </verify>
+    </task>
+  </phase>
+</plan>

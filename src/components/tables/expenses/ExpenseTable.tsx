@@ -18,13 +18,14 @@ import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 import { useCardsQuery } from '@/hooks/useCardsQuery';
 import { ExpenseTransaction, useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery';
 import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery';
+import { useEditableTable } from '@/hooks/useEditableTable';
 import { useTagsQuery } from '@/hooks/useTagsQuery';
 import { formatDateForAPI } from '@/lib/utils';
 import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
 import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { ChevronDownIcon, ChevronLeft, ChevronRight, SearchIcon, Trash2 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 const columnHelper = createColumnHelper<ExpenseTransaction>();
@@ -294,6 +295,7 @@ const EditCell = ({ row, table }: any) => {
       };
 
       await meta?.updateExpenseTransaction(updatePayload);
+      meta?.clearPendingEdits(updatedRow.id);
 
       meta?.setEditedRows((old: any) => ({
         ...old,
@@ -360,32 +362,19 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
   const { cards } = useCardsQuery();
   const { budgets } = useExpenseTypesQuery();
 
+  const { tags } = useTagsQuery();
+  const { mergedData, editedRows, setEditedRows, updateData, revertData, clearPendingEdits } = useEditableTable({
+    queryData: expenseTransactions,
+    allTags: tags,
+  });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-
-  const [data, setData] = useState<ExpenseTransaction[]>([]);
-  const [originalData, setOriginalData] = useState<ExpenseTransaction[]>([]);
-  const [editedRows, setEditedRows] = useState({});
 
   const [dateFilter, setDateFilter] = useState<string>("view-all");
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<{ id: string; name: string } | null>(null);
-
-  const prevTransactionsRef = useRef<ExpenseTransaction[]>([]);
-
-  useEffect(() => {
-    // Only update if the data actually changed
-    const hasChanged = 
-      expenseTransactions.length !== prevTransactionsRef.current.length ||
-      expenseTransactions.some((t, i) => t.id !== prevTransactionsRef.current[i]?.id);
-    
-    if (hasChanged) {
-      setData([...expenseTransactions]);
-      setOriginalData([...expenseTransactions]);
-      prevTransactionsRef.current = expenseTransactions;
-    }
-  }, [expenseTransactions]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -423,7 +412,7 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
   }
 
   const filteredData = useMemo(() => {
-    return data.filter((row) => {
+    return mergedData.filter((row) => {
       if (dateFilter !== dateFilterOptions.viewAll) {
         const expenseDate = new Date(row.date);
         const now = new Date();
@@ -451,10 +440,10 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
         row.expenseType.name.toLowerCase().includes(searchLower) ||
         row.account.name.toLowerCase().includes(searchLower) ||
         row.expenseSubcategory?.name.toLowerCase().includes(searchLower) ||
-        row.tags?.some(tag => typeof tag === 'object' && tag.name?.toLowerCase().includes(searchLower))
+        row.tags?.some(tag => tag.name?.toLowerCase().includes(searchLower))
       );
     });
-  }, [data, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);
+  }, [mergedData, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);
 
   // Memoize the columns with proper dependencies
   const columns = useMemo(() => [
@@ -519,30 +508,6 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
     }),
   ], [accountOptions, expenseTypeOptions]);
 
-  // Memoize meta functions with useCallback
-  const updateData = useCallback((rowId: string, columnId: string, value: any) => {
-    setData((old) =>
-      old.map((row) => {
-        if (row.id === rowId) {
-          return { ...row, [columnId]: value };
-        }
-        return row;
-      })
-    );
-  }, []);
-
-  const revertData = useCallback((rowId: string) => {
-    setData((old) =>
-      old.map((row) => {
-        if (row.id === rowId) {
-          const original = originalData.find((o) => o.id === rowId);
-          return original ?? row;
-        }
-        return row;
-      })
-    );
-  }, [originalData]);
-
   const handleDeleteConfirm = async () => {
     if (!transactionToDelete) return;
     
@@ -570,6 +535,7 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
     setEditedRows,
     updateData,
     revertData,
+    clearPendingEdits,
     updateExpenseTransaction,
     isUpdating,
     deleteExpenseTransaction,
@@ -577,13 +543,14 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
     setDeleteDialogOpen,
     setTransactionToDelete,
     budgets,
-  }), [editedRows, updateData, revertData, updateExpenseTransaction, isUpdating, deleteExpenseTransaction, isDeleting, budgets]);
+  }), [editedRows, setEditedRows, updateData, revertData, clearPendingEdits, updateExpenseTransaction, isUpdating, deleteExpenseTransaction, isDeleting, budgets]);
 
   const table = useReactTable({
     data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    autoResetPageIndex: false,
     meta: tableMeta,
     initialState: {
       pagination: {
@@ -591,6 +558,15 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
       },
     },
   });
+
+  // Empty-page safety: clamp to last valid page if current page is beyond bounds
+  useEffect(() => {
+    const pageCount = table.getPageCount();
+    const currentPage = table.getState().pagination.pageIndex;
+    if (pageCount > 0 && currentPage >= pageCount) {
+      table.setPageIndex(pageCount - 1);
+    }
+  }, [filteredData.length, table]);
 
   const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50] as const;
 

@@ -14,12 +14,13 @@ import { Spinner } from '@/components/ui/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
+import { useEditableTable } from '@/hooks/useEditableTable';
 import { IncomeTransaction, useIncomeTransactionsQuery } from '@/hooks/useIncomeTransactionsQuery';
 import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
 import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { ChevronDownIcon, ChevronLeft, ChevronRight, SearchIcon, Trash2 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery';
 import { useTagsQuery } from '@/hooks/useTagsQuery';
@@ -223,6 +224,7 @@ const EditCell = ({ row, table }: any) => {
       };
 
       await meta?.updateIncomeTransaction(updatePayload);
+      meta?.clearPendingEdits(updatedRow.id);
 
       meta?.setEditedRows((old: any) => ({
         ...old,
@@ -288,32 +290,19 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
   const { accounts, isLoading: accountsLoading } = useAccountsQuery({ includeCards: true });
   const { incomeTypes, isLoading: incomeTypesLoading } = useIncomeTypesQuery();
 
+  const { tags } = useTagsQuery();
+  const { mergedData, editedRows, setEditedRows, updateData, revertData, clearPendingEdits } = useEditableTable({
+    queryData: incomeTransactions,
+    allTags: tags,
+  });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-
-  const [data, setData] = useState<IncomeTransaction[]>([]);
-  const [originalData, setOriginalData] = useState<IncomeTransaction[]>([]);
-  const [editedRows, setEditedRows] = useState({});
 
   const [dateFilter, setDateFilter] = useState<string>("view-all");
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<{ id: string; name: string } | null>(null);
-
-  const prevTransactionsRef = useRef<IncomeTransaction[]>([]);
-
-  useEffect(() => {
-    // Only update if the data actually changed
-    const hasChanged = 
-      incomeTransactions.length !== prevTransactionsRef.current.length ||
-      incomeTransactions.some((t, i) => t.id !== prevTransactionsRef.current[i]?.id);
-    
-    if (hasChanged) {
-      setData([...incomeTransactions]);
-      setOriginalData([...incomeTransactions]);
-      prevTransactionsRef.current = incomeTransactions;
-    }
-  }, [incomeTransactions]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -348,7 +337,7 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
   }
 
   const filteredData = useMemo(() => {
-    return data.filter((row) => {
+    return mergedData.filter((row) => {
       if (dateFilter !== dateFilterOptions.viewAll) {
         const incomeDate = new Date(row.date);
         const now = new Date();
@@ -375,10 +364,10 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
         row.description?.toLowerCase().includes(searchLower) ||
         row.incomeType.name.toLowerCase().includes(searchLower) ||
         row.account.name.toLowerCase().includes(searchLower) ||
-        row.tags?.some(tag => typeof tag === 'object' && tag.name?.toLowerCase().includes(searchLower))
+        row.tags?.some(tag => tag.name?.toLowerCase().includes(searchLower))
       );
     });
-  }, [data, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);
+  }, [mergedData, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);
 
   // Memoize the columns with proper dependencies
   const columns = useMemo(() => [
@@ -436,30 +425,6 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
     }),
   ], [accountOptions, incomeTypeOptions]);
 
-  // Memoize meta functions with useCallback
-  const updateData = useCallback((rowId: string, columnId: string, value: any) => {
-    setData((old) =>
-      old.map((row) => {
-        if (row.id === rowId) {
-          return { ...row, [columnId]: value };
-        }
-        return row;
-      })
-    );
-  }, []);
-
-  const revertData = useCallback((rowId: string) => {
-    setData((old) =>
-      old.map((row) => {
-        if (row.id === rowId) {
-          const original = originalData.find((o) => o.id === rowId);
-          return original ?? row;
-        }
-        return row;
-      })
-    );
-  }, [originalData]);
-
   const handleDeleteConfirm = async () => {
     if (!transactionToDelete) return;
     
@@ -487,19 +452,21 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
     setEditedRows,
     updateData,
     revertData,
+    clearPendingEdits,
     updateIncomeTransaction,
     isUpdating,
     deleteIncomeTransaction,
     isDeleting,
     setDeleteDialogOpen,
     setTransactionToDelete,
-  }), [editedRows, updateData, revertData, updateIncomeTransaction, isUpdating, deleteIncomeTransaction, isDeleting]);
+  }), [editedRows, setEditedRows, updateData, revertData, clearPendingEdits, updateIncomeTransaction, isUpdating, deleteIncomeTransaction, isDeleting]);
 
   const table = useReactTable({
     data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    autoResetPageIndex: false,
     meta: tableMeta,
     initialState: {
       pagination: {
@@ -507,6 +474,15 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
       },
     },
   });
+
+  // Empty-page safety: clamp to last valid page if current page is beyond bounds
+  useEffect(() => {
+    const pageCount = table.getPageCount();
+    const currentPage = table.getState().pagination.pageIndex;
+    if (pageCount > 0 && currentPage >= pageCount) {
+      table.setPageIndex(pageCount - 1);
+    }
+  }, [filteredData.length, table]);
 
   const isLoadingData = accountsLoading || incomeTypesLoading;
 
