@@ -3,7 +3,7 @@
 import EditTransferDrawer from '@/components/forms/EditTransferDrawer';
 import TransferCard from '@/components/shared/TransferCard';
 import TransferTypesList from '@/components/shared/TransferTypesList';
-import SkeletonIncomeTypeCard from '@/components/shared/SkeletonIncomeTypeCard';
+import { SkeletonTransferCard } from '@/components/shared/SkeletonTransferCard';
 import TransferTable from '@/components/tables/transfers/TransferTable';
 import { useTransfersQuery } from '@/hooks/useTransferTransactionsQuery';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,7 @@ const Transactions = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
 
-  const { transfers, hasMore, isLoading } = useTransfersQuery({
+  const { transfers, hasMore, isLoading, isFetchingMore } = useTransfersQuery({
     skip: 0,
     take: displayCount,
     search: debouncedSearchTerm,
@@ -136,7 +136,7 @@ const Transactions = () => {
           {isLoading ? (
             <div className='grid grid-cols-1 gap-4'>
               {Array.from({ length: 4 }, (_, index) => (
-                <SkeletonIncomeTypeCard key={index} />
+                <SkeletonTransferCard key={index} />
               ))}
             </div>
           ) : transfers.length === 0 ? (
@@ -160,7 +160,15 @@ const Transactions = () => {
                 />
               ))}
               
-              {!isFiltering && hasMore && (
+              {isFetchingMore && (
+                <div className='grid grid-cols-1 gap-4 mt-4'>
+                  {Array.from({ length: 3 }, (_, index) => (
+                    <SkeletonTransferCard key={index} />
+                  ))}
+                </div>
+              )}
+
+              {!isFiltering && hasMore && !isFetchingMore && (
                 <Button
                   variant="outline"
                   className="w-full mt-4"

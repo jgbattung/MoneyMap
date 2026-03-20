@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <feature>Load More Skeleton Pagination</feature>
+  <spec>docs/load-more-skeleton-spec.md</spec>
+
+  <phase name="1: Hook Layer — Add keepPreviousData and isFetchingMore">
+    <task>
+      <name>Update useExpenseTransactionsQuery with placeholderData</name>
+      <action>
+        In `src/hooks/useExpenseTransactionsQuery.ts`:
+        1. Add `keepPreviousData` to the existing import from `@tanstack/react-query`.
+        2. Add `placeholderData: keepPreviousData` to the `useQuery` options object (after `staleTime`).
+        3. Destructure `isPlaceholderData` and `isFetching` from the `useQuery` return value (alongside `data`, `isPending`, `error`).
+        4. In the hook's return object, add: `isFetchingMore: isFetching &amp;&amp; isPlaceholderData,`
+      </action>
+      <verify>
+        Run `npx tsc --noEmit` to confirm no type errors. Run `npx vitest run src/hooks/useExpenseTransactionsQuery.test.ts` to verify existing tests still pass.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update useIncomeTransactionsQuery with placeholderData</name>
+      <action>
+        In `src/hooks/useIncomeTransactionsQuery.ts`:
+        1. Add `keepPreviousData` to the existing import from `@tanstack/react-query`.
+        2. Add `placeholderData: keepPreviousData` to the `useQuery` options object.
+        3. Destructure `isPlaceholderData` and `isFetching` from the `useQuery` return value.
+        4. In the hook's return object, add: `isFetchingMore: isFetching &amp;&amp; isPlaceholderData,`
+      </action>
+      <verify>
+        Run `npx tsc --noEmit` to confirm no type errors. Run `npx vitest run src/hooks/useIncomeTransactionsQuery.test.ts` to verify existing tests still pass.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update useTransferTransactionsQuery with placeholderData</name>
+      <action>
+        In `src/hooks/useTransferTransactionsQuery.ts`:
+        1. Add `keepPreviousData` to the existing import from `@tanstack/react-query`.
+        2. Add `placeholderData: keepPreviousData` to the `useQuery` options object.
+        3. Destructure `isPlaceholderData` and `isFetching` from the `useQuery` return value.
+        4. In the hook's return object, add: `isFetchingMore: isFetching &amp;&amp; isPlaceholderData,`
+      </action>
+      <verify>
+        Run `npx tsc --noEmit` to confirm no type errors. Run `npx vitest run src/hooks/useTransferTransactionsQuery.test.ts` to verify existing tests still pass.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="2: Skeleton Components — Create card-type-specific skeletons">
+    <task>
+      <name>Create SkeletonExpenseCard</name>
+      <action>
+        Create `src/components/shared/SkeletonExpenseCard.tsx`:
+        - Import `Skeleton` from `@/components/ui/skeleton`.
+        - Use `money-map-card` container class with `flex flex-col gap-3`.
+        - Row 1: icon placeholder (`h-9 w-9 rounded-lg bg-secondary-500`) + name bar (`h-5 w-[160px] bg-secondary-500`) in a `flex items-center gap-2` row.
+        - Row 2: category bar (`h-3 w-[120px] bg-secondary-500`).
+        - Row 3: `flex items-end justify-between` with date bar (`h-3 w-[100px]`) on left and amount bar (`h-5 w-[80px]`) on right.
+        - Export as named export `SkeletonExpenseCard`.
+      </action>
+      <verify>
+        Run `npx tsc --noEmit` to confirm the component compiles. Visually inspect that the pattern matches existing skeleton components like `SkeletonIncomeTypeCard.tsx`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Create SkeletonIncomeCard</name>
+      <action>
+        Create `src/components/shared/SkeletonIncomeCard.tsx`:
+        - Same structure as SkeletonExpenseCard but matching IncomeCard layout.
+        - Import `Skeleton` from `@/components/ui/skeleton`.
+        - Use `money-map-card` container class with `flex flex-col gap-3`.
+        - Row 1: icon placeholder (`h-9 w-9 rounded-lg bg-secondary-500`) + name bar (`h-5 w-[160px] bg-secondary-500`).
+        - Row 2: income type bar (`h-3 w-[100px] bg-secondary-500`).
+        - Row 3: `flex items-end justify-between` with date bar (`h-3 w-[100px]`) on left and amount bar (`h-5 w-[80px]`) on right.
+        - Export as named export `SkeletonIncomeCard`.
+      </action>
+      <verify>
+        Run `npx tsc --noEmit` to confirm the component compiles.
+      </verify>
+    </task>
+
+    <task>
+      <name>Create SkeletonTransferCard</name>
+      <action>
+        Create `src/components/shared/SkeletonTransferCard.tsx`:
+        - Import `Skeleton` from `@/components/ui/skeleton`.
+        - Use `money-map-card` container class with `flex flex-col gap-3`.
+        - Outer layout: `flex flex-col gap-1` top section + right-aligned amount section.
+        - Row 1: icon placeholder (`h-9 w-9 rounded-lg bg-secondary-500`) + name bar (`h-5 w-[160px] bg-secondary-500`) in `flex items-center gap-2`.
+        - Row 2: transfer type bar (`h-3 w-[100px] bg-secondary-500`).
+        - Row 3: date bar (`h-3 w-[100px] bg-secondary-500`).
+        - Right-aligned section: amount bar (`h-5 w-[80px]`) + accounts bar (`h-3 w-[120px]`) in `flex flex-col items-end`.
+        - Export as named export `SkeletonTransferCard`.
+      </action>
+      <verify>
+        Run `npx tsc --noEmit` to confirm the component compiles.
+      </verify>
+    </task>
+
+    <task>
+      <name>Create SkeletonCompactTransactionCard</name>
+      <action>
+        Create `src/components/transactions/SkeletonCompactTransactionCard.tsx`:
+        - Import `Skeleton` from `@/components/ui/skeleton`.
+        - Container: `bg-card border border-border rounded-lg p-3` (matches CompactTransactionCard).
+        - Outer: `flex items-center gap-3`.
+        - Left: icon placeholder `h-8 w-8 rounded-md bg-secondary-500 flex-shrink-0`.
+        - Right (`flex-1 min-w-0`):
+          - Top row (`flex items-start justify-between gap-2`): name bar `h-4 w-[100px]` + amount bar `h-4 w-[60px]`.
+          - Bottom row (`flex items-center justify-between mt-1`): category bar `h-3 w-[80px]` + date bar `h-3 w-[40px]`.
+        - Export as named export `SkeletonCompactTransactionCard`.
+      </action>
+      <verify>
+        Run `npx tsc --noEmit` to confirm the component compiles.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="3: Page Components — Wire up skeleton loading states">
+    <task>
+      <name>Update Expenses page loading states</name>
+      <action>
+        In `src/app/expenses/page.tsx`:
+        1. Import `SkeletonExpenseCard` from `@/components/shared/SkeletonExpenseCard`.
+        2. Destructure `isFetchingMore` from `useExpenseTransactionsQuery` (alongside existing destructured values).
+        3. Replace the mobile card loading state (currently `{isLoading ? (...Loader2 spinner...)` around line 204) with skeleton cards: render 4 `SkeletonExpenseCard` components in a `div` with `grid grid-cols-1 gap-4`.
+        4. After the `expenseTransactions.map(...)` block and before the Load More button, add a conditional block: `{isFetchingMore &amp;&amp; (` render 3 `SkeletonExpenseCard` in `grid grid-cols-1 gap-4 mt-4` `)}`.
+        5. Update the Load More button condition from `{hasMore &amp;&amp; (` to `{hasMore &amp;&amp; !isFetchingMore &amp;&amp; (`.
+        6. Keep the desktop table skeleton (`SkeletonTable`) as-is — do not change.
+      </action>
+      <verify>
+        Run `npm run lint` and `npx tsc --noEmit`. Manually verify in the browser: initial load shows skeleton cards, Load More shows skeleton cards below existing items, items do not flash.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update Income page loading states</name>
+      <action>
+        In `src/app/income/page.tsx`:
+        1. Import `SkeletonIncomeCard` from `@/components/shared/SkeletonIncomeCard`.
+        2. Destructure `isFetchingMore` from `useIncomeTransactionsQuery`.
+        3. Replace the mobile card loading state (the `isLoading` ternary that shows `SkeletonIncomeTypeCard` cards for the transaction list section) with 4 `SkeletonIncomeCard` components. Note: SkeletonIncomeTypeCard may still be used elsewhere on this page for the income types/budgets section — only replace the transaction list loading skeleton.
+        4. After `incomeTransactions.map(...)`, add: `{isFetchingMore &amp;&amp; (` 3 `SkeletonIncomeCard` in `grid grid-cols-1 gap-4 mt-4` `)}`.
+        5. Update Load More button: `{hasMore &amp;&amp; !isFetchingMore &amp;&amp; (`.
+      </action>
+      <verify>
+        Run `npm run lint` and `npx tsc --noEmit`. Manually verify in the browser.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update Transfers page loading states</name>
+      <action>
+        In `src/app/transfers/page.tsx`:
+        1. Import `SkeletonTransferCard` from `@/components/shared/SkeletonTransferCard`.
+        2. Destructure `isFetchingMore` from `useTransfersQuery`.
+        3. Replace the mobile card loading state with 4 `SkeletonTransferCard` components.
+        4. After `transfers.map(...)`, add: `{isFetchingMore &amp;&amp; (` 3 `SkeletonTransferCard` in `grid grid-cols-1 gap-4 mt-4` `)}`.
+        5. Update Load More button: `{hasMore &amp;&amp; !isFetchingMore &amp;&amp; (`.
+      </action>
+      <verify>
+        Run `npm run lint` and `npx tsc --noEmit`. Manually verify in the browser.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update TransactionsMobileView loading states</name>
+      <action>
+        In `src/components/transactions/TransactionsMobileView.tsx`:
+        1. Import `SkeletonCompactTransactionCard` from `@/components/transactions/SkeletonCompactTransactionCard`.
+        2. Destructure `isFetchingMore: expensesFetchingMore` from `useExpenseTransactionsQuery`.
+        3. Destructure `isFetchingMore: incomeFetchingMore` from `useIncomeTransactionsQuery`.
+        4. Destructure `isFetchingMore: transfersFetchingMore` from `useTransfersQuery`.
+        5. For each of the 3 tabs (expenses, income, transfers):
+           a. Replace the `Loader2` spinner loading state with 4 `SkeletonCompactTransactionCard` in a `space-y-2` container.
+           b. After the `map(...)` block, add: `{[tabName]FetchingMore &amp;&amp; (` 3 `SkeletonCompactTransactionCard` in `space-y-2 mt-2` `)}`.
+           c. Update Load More button: `{[tabName]HasMore &amp;&amp; ![tabName]FetchingMore &amp;&amp; (`.
+      </action>
+      <verify>
+        Run `npm run lint` and `npx tsc --noEmit`. Manually verify all 3 tabs in the Transactions page mobile view.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="4: Tests — Update hook tests for new return values">
+    <task>
+      <name>Update useExpenseTransactionsQuery tests</name>
+      <action>
+        In `src/hooks/useExpenseTransactionsQuery.test.ts`:
+        1. Add a test that verifies the hook returns `isFetchingMore` as `false` during initial load.
+        2. Verify the hook still returns all existing properties correctly (no regressions).
+        No need to test the actual `keepPreviousData` behavior in unit tests — that is TanStack Query's responsibility. Just verify the shape of the returned object.
+      </action>
+      <verify>
+        Run `npx vitest run src/hooks/useExpenseTransactionsQuery.test.ts` — all tests pass.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update useIncomeTransactionsQuery tests</name>
+      <action>
+        In `src/hooks/useIncomeTransactionsQuery.test.ts`:
+        1. Add a test that verifies the hook returns `isFetchingMore` as `false` during initial load.
+        2. Verify existing tests still pass.
+      </action>
+      <verify>
+        Run `npx vitest run src/hooks/useIncomeTransactionsQuery.test.ts` — all tests pass.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update useTransferTransactionsQuery tests</name>
+      <action>
+        In `src/hooks/useTransferTransactionsQuery.test.ts`:
+        1. Add a test that verifies the hook returns `isFetchingMore` as `false` during initial load.
+        2. Verify existing tests still pass.
+      </action>
+      <verify>
+        Run `npx vitest run src/hooks/useTransferTransactionsQuery.test.ts` — all tests pass.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="5: Final Verification">
+    <task>
+      <name>Lint, build, and full test suite</name>
+      <action>
+        1. Run `npm run lint` — zero errors.
+        2. Run `npm run build` — zero errors.
+        3. Run `npx vitest run` — all tests pass.
+        4. Generate `docs/load-more-skeleton-verification.md` documenting results.
+      </action>
+      <verify>
+        All commands exit with code 0. Verification doc is created.
+      </verify>
+    </task>
+  </phase>
+</plan>

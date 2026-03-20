@@ -139,6 +139,21 @@ describe('useExpenseTransactionsQuery', () => {
       expect(calledUrl).not.toContain('dateFilter');
     });
 
+    it('returns isFetchingMore as false during initial load', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockExpensesResponse,
+      });
+
+      const { result } = renderHook(() => useExpenseTransactionsQuery(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      expect(result.current.isFetchingMore).toBe(false);
+    });
+
     it('uses base URL when no params provided', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,

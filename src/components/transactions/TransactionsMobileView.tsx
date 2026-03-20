@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
 import { InputGroup, InputGroupInput, InputGroupAddon } from '@/components/ui/input-group';
-import { SearchIcon, Loader2 } from 'lucide-react';
+import { SearchIcon } from 'lucide-react';
 import CompactTransactionCard from './CompactTransactionCard';
+import { SkeletonCompactTransactionCard } from './SkeletonCompactTransactionCard';
 import { useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery';
 import { useIncomeTransactionsQuery } from '@/hooks/useIncomeTransactionsQuery';
 import { useTransfersQuery } from '@/hooks/useTransferTransactionsQuery';
@@ -55,7 +56,8 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
   const {
     expenseTransactions,
     hasMore: expensesHasMore,
-    isLoading: expensesLoading
+    isLoading: expensesLoading,
+    isFetchingMore: expensesFetchingMore,
   } = useExpenseTransactionsQuery({
     skip: 0,
     take: expensesDisplayCount,
@@ -67,7 +69,8 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
   const {
     incomeTransactions,
     hasMore: incomeHasMore,
-    isLoading: incomeLoading
+    isLoading: incomeLoading,
+    isFetchingMore: incomeFetchingMore,
   } = useIncomeTransactionsQuery({
     skip: 0,
     take: incomeDisplayCount,
@@ -79,7 +82,8 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
   const {
     transfers,
     hasMore: transfersHasMore,
-    isLoading: transfersLoading
+    isLoading: transfersLoading,
+    isFetchingMore: transfersFetchingMore,
   } = useTransfersQuery({
     skip: 0,
     take: transfersDisplayCount,
@@ -242,8 +246,10 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
             {/* Transaction Cards */}
             <div className="space-y-2">
               {expensesLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="space-y-2">
+                  {Array.from({ length: 4 }, (_, index) => (
+                    <SkeletonCompactTransactionCard key={index} />
+                  ))}
                 </div>
               ) : expenseTransactions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8">
@@ -266,7 +272,14 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
                       onClick={() => handleExpenseClick(expense.id)}
                     />
                   ))}
-                  {!isExpenseFiltering && expensesHasMore && (
+                  {expensesFetchingMore && (
+                    <div className="space-y-2 mt-2">
+                      {Array.from({ length: 3 }, (_, index) => (
+                        <SkeletonCompactTransactionCard key={index} />
+                      ))}
+                    </div>
+                  )}
+                  {!isExpenseFiltering && expensesHasMore && !expensesFetchingMore && (
                     <Button
                       variant="outline"
                       className="w-full mt-4"
@@ -332,8 +345,10 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
             {/* Transaction Cards */}
             <div className="space-y-2">
               {incomeLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="space-y-2">
+                  {Array.from({ length: 4 }, (_, index) => (
+                    <SkeletonCompactTransactionCard key={index} />
+                  ))}
                 </div>
               ) : incomeTransactions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8">
@@ -355,7 +370,14 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
                       onClick={() => handleIncomeClick(income.id)}
                     />
                   ))}
-                  {!isIncomeFiltering && incomeHasMore && (
+                  {incomeFetchingMore && (
+                    <div className="space-y-2 mt-2">
+                      {Array.from({ length: 3 }, (_, index) => (
+                        <SkeletonCompactTransactionCard key={index} />
+                      ))}
+                    </div>
+                  )}
+                  {!isIncomeFiltering && incomeHasMore && !incomeFetchingMore && (
                     <Button
                       variant="outline"
                       className="w-full mt-4"
@@ -421,8 +443,10 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
             {/* Transaction Cards */}
             <div className="space-y-2">
               {transfersLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="space-y-2">
+                  {Array.from({ length: 4 }, (_, index) => (
+                    <SkeletonCompactTransactionCard key={index} />
+                  ))}
                 </div>
               ) : transfers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8">
@@ -445,7 +469,14 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
                       onClick={() => handleTransferClick(transfer.id)}
                     />
                   ))}
-                  {!isTransferFiltering && transfersHasMore && (
+                  {transfersFetchingMore && (
+                    <div className="space-y-2 mt-2">
+                      {Array.from({ length: 3 }, (_, index) => (
+                        <SkeletonCompactTransactionCard key={index} />
+                      ))}
+                    </div>
+                  )}
+                  {!isTransferFiltering && transfersHasMore && !transfersFetchingMore && (
                     <Button
                       variant="outline"
                       className="w-full mt-4"

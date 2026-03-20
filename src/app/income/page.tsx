@@ -9,6 +9,7 @@ import { Icons } from '@/components/icons';
 import IncomeCard from '@/components/shared/IncomeCard';
 import IncomeTypeCard from '@/components/shared/IncomeTypeCard';
 import SkeletonIncomeTypeCard from '@/components/shared/SkeletonIncomeTypeCard';
+import { SkeletonIncomeCard } from '@/components/shared/SkeletonIncomeCard';
 import IncomeTable from '@/components/tables/income/IncomeTable';
 import { Button } from '@/components/ui/button';
 import { InputGroup, InputGroupInput, InputGroupAddon } from '@/components/ui/input-group';
@@ -56,7 +57,7 @@ const Income = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
 
-  const { incomeTransactions, hasMore, isLoading } = useIncomeTransactionsQuery({
+  const { incomeTransactions, hasMore, isLoading, isFetchingMore } = useIncomeTransactionsQuery({
     skip: 0,
     take: displayCount,
     search: debouncedSearchTerm,
@@ -302,7 +303,7 @@ const Income = () => {
           {isLoading ? (
             <div className='grid grid-cols-1 gap-4'>
               {Array.from({ length: 4 }, (_, index) => (
-                <SkeletonIncomeTypeCard key={index} />
+                <SkeletonIncomeCard key={index} />
               ))}
             </div>
           ) : incomeTransactions.length === 0 ? (
@@ -326,7 +327,15 @@ const Income = () => {
                 />
               ))}
               
-              {!isFiltering && hasMore && (
+              {isFetchingMore && (
+                <div className='grid grid-cols-1 gap-4 mt-4'>
+                  {Array.from({ length: 3 }, (_, index) => (
+                    <SkeletonIncomeCard key={index} />
+                  ))}
+                </div>
+              )}
+
+              {!isFiltering && hasMore && !isFetchingMore && (
                 <Button
                   variant="outline"
                   className="w-full mt-4"

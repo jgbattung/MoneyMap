@@ -5,7 +5,7 @@ import CreateExpenseTransactionSheet from "@/components/forms/CreateExpenseTrans
 import EditExpenseDrawer from "@/components/forms/EditExpenseDrawer";
 import { Icons } from "@/components/icons";
 import ExpenseCard from "@/components/shared/ExpenseCard";
-import SkeletonIncomeTypeCard from "@/components/shared/SkeletonIncomeTypeCard";
+import { SkeletonExpenseCard } from "@/components/shared/SkeletonExpenseCard";
 import SkeletonTable from "@/components/shared/SkeletonTable";
 import ExpenseTable from "@/components/tables/expenses/ExpenseTable";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ const Expenses = () => {
   const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
 
   // Pass search and dateFilter to the hook
-  const { expenseTransactions, hasMore, isLoading, error } = useExpenseTransactionsQuery({
+  const { expenseTransactions, hasMore, isLoading, isFetchingMore, error } = useExpenseTransactionsQuery({
     skip: 0,
     take: displayCount,
     search: debouncedSearchTerm,
@@ -204,7 +204,7 @@ const Expenses = () => {
             {isLoading ? (
               <div className='grid grid-cols-1 gap-4'>
                 {Array.from({ length: 4 }, (_, index) => (
-                  <SkeletonIncomeTypeCard key={index} />
+                  <SkeletonExpenseCard key={index} />
                 ))}
               </div>
             ) : expenseTransactions.length === 0 ? (
@@ -240,7 +240,15 @@ const Expenses = () => {
                   />
                 ))}
                 
-                {!isFiltering && hasMore && (
+                {isFetchingMore && (
+                  <div className='grid grid-cols-1 gap-4 mt-4'>
+                    {Array.from({ length: 3 }, (_, index) => (
+                      <SkeletonExpenseCard key={index} />
+                    ))}
+                  </div>
+                )}
+
+                {!isFiltering && hasMore && !isFetchingMore && (
                   <Button
                     variant="outline"
                     className="w-full mt-4"
