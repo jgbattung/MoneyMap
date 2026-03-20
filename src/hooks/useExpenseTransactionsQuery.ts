@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export type ExpenseTransaction = {
   id: string;
@@ -113,6 +113,8 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
     data,
     isPending,
     error,
+    isPlaceholderData,
+    isFetching,
   } = useQuery({
     queryKey: [
       ...QUERY_KEYS.expenseTransactions,
@@ -120,6 +122,7 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
     ],
     queryFn: () => fetchExpenseTransactions(skip, take, search, dateFilter, accountId),
     staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 
   const createExpenseTransactionMutation = useMutation({
@@ -175,6 +178,7 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
     total: data?.total || 0,
     hasMore: data?.hasMore || false,
     isLoading: isPending,
+    isFetchingMore: isFetching && isPlaceholderData,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
     createExpenseTransaction: createExpenseTransactionMutation.mutateAsync,
     updateExpenseTransaction: updateExpenseTransactionMutation.mutateAsync,
