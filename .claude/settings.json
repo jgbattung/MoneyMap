@@ -29,12 +29,10 @@
       "Bash(gh pr view*)",
       "Bash(gh pr list*)",
       "Bash(gh pr create*)",
-      "Bash(gh issue view*)"
-    ],
-    "ask": [
-      "Bash(git push*)",
-      "Bash(git reset*)",
-      "Bash(rm *)"
+      "Bash(gh issue view*)",
+      "mcp__serena__onboarding",
+      "mcp__serena__list_dir",
+      "mcp__serena__write_memory"
     ],
     "deny": [
       "Bash(sudo *)",
@@ -49,6 +47,11 @@
       "Bash(prisma db push*)",
       "Bash(prisma db seed*)",
       "Bash(prisma db reset*)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(git reset*)",
+      "Bash(rm *)"
     ]
   },
   "hooks": {
