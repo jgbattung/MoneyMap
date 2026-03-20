@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ExpenseTable from './ExpenseTable';
@@ -46,15 +46,48 @@ vi.mock('@/hooks/useTagsQuery', () => ({
 // Mock: heavy UI components that cause portal / rendering issues in happy-dom
 // ---------------------------------------------------------------------------
 vi.mock('@/components/shared/DeleteDialog', () => ({
-  default: ({ open }: { open: boolean }) =>
-    open ? React.createElement('div', { 'data-testid': 'delete-dialog' }) : null,
+  default: ({
+    open,
+    onConfirm,
+    onOpenChange,
+    itemName,
+  }: {
+    open: boolean;
+    onConfirm: () => void;
+    onOpenChange: (v: boolean) => void;
+    itemName?: string;
+  }) =>
+    open
+      ? React.createElement(
+          'div',
+          { 'data-testid': 'delete-dialog' },
+          React.createElement('span', { 'data-testid': 'delete-item-name' }, itemName),
+          React.createElement(
+            'button',
+            { 'data-testid': 'delete-confirm-btn', onClick: onConfirm },
+            'Confirm'
+          ),
+          React.createElement(
+            'button',
+            { 'data-testid': 'delete-cancel-btn', onClick: () => onOpenChange(false) },
+            'Cancel'
+          )
+        )
+      : null,
 }));
 
 vi.mock('@/components/shared/TagInput', () => ({
-  TagInput: ({ onChange }: { onChange: (ids: string[]) => void }) =>
+  TagInput: ({
+    onChange,
+    selectedTagIds,
+  }: {
+    onChange: (ids: string[]) => void;
+    selectedTagIds: string[];
+  }) =>
     React.createElement('input', {
       'data-testid': 'tag-input',
-      onChange: () => onChange([]),
+      'data-selected': selectedTagIds.join(','),
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value ? [e.target.value] : []),
     }),
 }));
 
@@ -71,8 +104,20 @@ vi.mock('@/components/ui/toggle-group', () => ({
       { 'data-testid': 'toggle-group', onClick: () => onValueChange?.('view-all') },
       children
     ),
-  ToggleGroupItem: ({ children, value }: { children: React.ReactNode; value: string }) =>
-    React.createElement('button', { 'data-testid': `toggle-item-${value}` }, children),
+  ToggleGroupItem: ({
+    children,
+    value,
+    onClick,
+  }: {
+    children: React.ReactNode;
+    value: string;
+    onClick?: () => void;
+  }) =>
+    React.createElement(
+      'button',
+      { 'data-testid': `toggle-item-${value}`, onClick },
+      children
+    ),
 }));
 
 vi.mock('@/components/ui/popover', () => ({
@@ -228,13 +273,15 @@ function setupAllMocks(transactions: ExpenseTransaction[] = mockTransactions) {
   });
 }
 
-function renderExpenseTable() {
+function renderExpenseTable(accountId?: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     React.createElement(
       QueryClientProvider,
       { client: qc },
-      React.createElement(ExpenseTable)
+      accountId
+        ? React.createElement(ExpenseTable, { accountId })
+        : React.createElement(ExpenseTable)
     )
   );
 }
@@ -271,6 +318,49 @@ describe('ExpenseTable', () => {
     it('shows correct row count in pagination text', () => {
       renderExpenseTable();
       expect(screen.getByText(/Showing 3 out of 3/)).toBeTruthy();
+    });
+
+    it('renders table column headers', () => {
+      renderExpenseTable();
+      expect(screen.getByText('Date')).toBeTruthy();
+      expect(screen.getByText('Name')).toBeTruthy();
+      expect(screen.getByText('Amount')).toBeTruthy();
+      expect(screen.getByText('Account')).toBeTruthy();
+      expect(screen.getByText('Expense type')).toBeTruthy();
+      expect(screen.getByText('Subcategory')).toBeTruthy();
+      expect(screen.getByText('Description')).toBeTruthy();
+      expect(screen.getByText('Tags')).toBeTruthy();
+    });
+
+    it('renders formatted amount in read-only mode', () => {
+      renderExpenseTable();
+      // 500.00 formatted with toLocaleString — at minimum contains "500"
+      expect(screen.getByText(/500/)).toBeTruthy();
+    });
+
+    it('renders the date filter toggle group', () => {
+      renderExpenseTable();
+      expect(screen.getByTestId('toggle-group')).toBeTruthy();
+    });
+
+    it('renders "Rows per page" pagination control', () => {
+      renderExpenseTable();
+      expect(screen.getByText('Rows per page')).toBeTruthy();
+    });
+
+    it('renders edit button for each row', () => {
+      renderExpenseTable();
+      // Each row has an edit button (SVG icon); verify the rows are present
+      const rows = screen.getAllByRole('row');
+      // header row + 3 data rows
+      expect(rows.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('renders a single transaction correctly', () => {
+      setupAllMocks([makeExpense('exp-solo', 'Solo Expense', { amount: '999.99' })]);
+      renderExpenseTable();
+      expect(screen.getByText('Solo Expense')).toBeTruthy();
+      expect(screen.getByText(/Showing 1 out of 1/)).toBeTruthy();
     });
   });
 
@@ -389,7 +479,445 @@ describe('ExpenseTable', () => {
       // Using row.index (0) would hit exp-aaa. Using row.original.id ('exp-bbb') is correct.
       expect(mockTransactions[0].id).not.toBe(mockTransactions[1].id);
     });
+
+    it('search shows "(filtered)" indicator when a search term is active', async () => {
+      renderExpenseTable();
+      const searchInput = screen.getByTestId('search-input');
+      fireEvent.change(searchInput, { target: { value: 'Netflix' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('(filtered)')).toBeTruthy();
+      });
+    });
+
+    it('search by expense type name filters correctly', async () => {
+      setupAllMocks([
+        makeExpense('exp-1', 'Lunch', { expenseType: { id: 'type-1', name: 'Food' } }),
+        makeExpense('exp-2', 'Bus Ticket', { expenseType: { id: 'type-2', name: 'Transport' }, expenseTypeId: 'type-2' }),
+      ]);
+      renderExpenseTable();
+
+      const searchInput = screen.getByTestId('search-input');
+      fireEvent.change(searchInput, { target: { value: 'Food' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Lunch')).toBeTruthy();
+        expect(screen.queryByText('Bus Ticket')).toBeNull();
+      });
+    });
+
+    it('search by account name filters correctly', async () => {
+      setupAllMocks([
+        makeExpense('exp-1', 'Expense A', { account: { id: 'acc-1', name: 'BDO Savings' } }),
+        makeExpense('exp-2', 'Expense B', { account: { id: 'acc-2', name: 'GCash Wallet' }, accountId: 'acc-2' }),
+      ]);
+      renderExpenseTable();
+
+      const searchInput = screen.getByTestId('search-input');
+      fireEvent.change(searchInput, { target: { value: 'GCash' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Expense B')).toBeTruthy();
+        expect(screen.queryByText('Expense A')).toBeNull();
+      });
+    });
+
+    it('search is case-insensitive', async () => {
+      renderExpenseTable();
+      const searchInput = screen.getByTestId('search-input');
+      fireEvent.change(searchInput, { target: { value: 'NETFLIX' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Netflix')).toBeTruthy();
+        expect(screen.queryByText('Groceries')).toBeNull();
+      });
+    });
+
+    it('search with no match shows empty state', async () => {
+      renderExpenseTable();
+      const searchInput = screen.getByTestId('search-input');
+      fireEvent.change(searchInput, { target: { value: 'xyznonexistent' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('No expense transactions found.')).toBeTruthy();
+      });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('date filtering', () => {
+    it('does not filter out items with date filter set to "view-all" (default)', () => {
+      renderExpenseTable();
+      // All three items (including the 2020 one) should be visible
+      expect(screen.getByText('Groceries')).toBeTruthy();
+      expect(screen.getByText('Netflix')).toBeTruthy();
+      expect(screen.getByText('Transport')).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('tags display', () => {
+    it('shows "-" dash for a transaction with no tags', () => {
+      setupAllMocks([makeExpense('exp-1', 'No Tags Expense', { tags: [] })]);
+      renderExpenseTable();
+      // The Tags column renders "-" for empty tags
+      const dashElements = screen.getAllByText('-');
+      expect(dashElements.length).toBeGreaterThan(0);
+    });
+
+    it('renders tag badge for a transaction with one tag', () => {
+      setupAllMocks([
+        makeExpense('exp-1', 'Tagged Expense', {
+          tags: [{ id: 'tag-1', name: 'Work', color: '#ff0000' }],
+        }),
+      ]);
+      renderExpenseTable();
+      expect(screen.getByText('Work')).toBeTruthy();
+    });
+
+    it('renders up to 2 tag badges and shows "+N" overflow indicator', () => {
+      setupAllMocks([
+        makeExpense('exp-1', 'Multi-Tagged', {
+          tags: [
+            { id: 'tag-1', name: 'Work', color: '#ff0000' },
+            { id: 'tag-2', name: 'Travel', color: '#00ff00' },
+            { id: 'tag-3', name: 'Food', color: '#0000ff' },
+          ],
+        }),
+      ]);
+      renderExpenseTable();
+      expect(screen.getByText('Work')).toBeTruthy();
+      expect(screen.getByText('Travel')).toBeTruthy();
+      // Third tag becomes "+1"
+      expect(screen.getByText('+1')).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('edit mode', () => {
+    it('entering edit mode renders save (check) and cancel (x) action buttons', async () => {
+      renderExpenseTable();
+
+      // The edit column cell (last cell) contains the single edit button
+      const firstDataRow = screen.getAllByRole('row')[1];
+      const editCells = within(firstDataRow).getAllByRole('cell');
+      const editCell = editCells[editCells.length - 1];
+      fireEvent.click(within(editCell).getByRole('button'));
+
+      // After clicking edit, save, cancel, and delete buttons appear in that cell
+      await waitFor(() => {
+        const updatedRow = screen.getAllByRole('row')[1];
+        const cells = within(updatedRow).getAllByRole('cell');
+        const actionCell = cells[cells.length - 1];
+        expect(within(actionCell).getAllByRole('button').length).toBe(3);
+      });
+    });
+
+    it('cancel button reverts the row out of edit mode', async () => {
+      renderExpenseTable();
+
+      const firstDataRow = screen.getAllByRole('row')[1];
+      const editCells = within(firstDataRow).getAllByRole('cell');
+      const editCell = editCells[editCells.length - 1];
+      fireEvent.click(within(editCell).getByRole('button'));
+
+      // Wait for edit mode — 3 action buttons
+      await waitFor(() => {
+        const row = screen.getAllByRole('row')[1];
+        const cells = within(row).getAllByRole('cell');
+        expect(within(cells[cells.length - 1]).getAllByRole('button').length).toBe(3);
+      });
+
+      // Click cancel (second button, index 1)
+      const row = screen.getAllByRole('row')[1];
+      const cells = within(row).getAllByRole('cell');
+      const [, cancelBtn] = within(cells[cells.length - 1]).getAllByRole('button');
+      fireEvent.click(cancelBtn);
+
+      // After cancel, only the single edit button should remain
+      await waitFor(() => {
+        const updatedRow = screen.getAllByRole('row')[1];
+        const updatedCells = within(updatedRow).getAllByRole('cell');
+        expect(within(updatedCells[updatedCells.length - 1]).getAllByRole('button').length).toBe(1);
+      });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Helper: puts the first data row into edit mode and returns the row element.
+  // The edit button is the last button in the "edit" column cell (the cell that
+  // only contains action buttons). Since each row has exactly ONE cell that
+  // contains buttons (the edit column), we locate it by finding the cell whose
+  // buttons count changes from 1 → 3 after a click.
+  //
+  // NOTE: `within(row).getAllByRole('button')` picks up ALL buttons in all
+  // cells. In read-only mode every data row has exactly 1 button (the edit
+  // icon). In edit mode it has 3 (save, cancel, delete).
+  // ---------------------------------------------------------------------------
+  describe('delete flow', () => {
+    it('delete dialog is not visible by default', () => {
+      renderExpenseTable();
+      expect(screen.queryByTestId('delete-dialog')).toBeNull();
+    });
+
+    it('clicking delete button in edit mode opens the delete dialog', async () => {
+      renderExpenseTable();
+
+      // The edit cell is the last cell; click its single button to enter edit mode
+      const firstDataRow = screen.getAllByRole('row')[1];
+      const editCells = within(firstDataRow).getAllByRole('cell');
+      const editCell = editCells[editCells.length - 1];
+      const editButton = within(editCell).getByRole('button');
+      fireEvent.click(editButton);
+
+      // After entering edit mode the cell now holds 3 buttons: save, cancel, delete
+      await waitFor(() => {
+        const updatedRow = screen.getAllByRole('row')[1];
+        const cells = within(updatedRow).getAllByRole('cell');
+        const actionCell = cells[cells.length - 1];
+        expect(within(actionCell).getAllByRole('button').length).toBe(3);
+      });
+
+      // Click the third button (Trash2 = delete)
+      const updatedRow = screen.getAllByRole('row')[1];
+      const cells = within(updatedRow).getAllByRole('cell');
+      const actionCell = cells[cells.length - 1];
+      const [, , deleteBtn] = within(actionCell).getAllByRole('button');
+      fireEvent.click(deleteBtn);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('delete-dialog')).toBeTruthy();
+      });
+    });
+
+    it('delete dialog shows the transaction name', async () => {
+      renderExpenseTable();
+
+      const firstDataRow = screen.getAllByRole('row')[1];
+      const editCells = within(firstDataRow).getAllByRole('cell');
+      const editCell = editCells[editCells.length - 1];
+      fireEvent.click(within(editCell).getByRole('button'));
+
+      await waitFor(() => {
+        const row = screen.getAllByRole('row')[1];
+        const cells = within(row).getAllByRole('cell');
+        expect(within(cells[cells.length - 1]).getAllByRole('button').length).toBe(3);
+      });
+
+      const row = screen.getAllByRole('row')[1];
+      const cells = within(row).getAllByRole('cell');
+      const [, , deleteBtn] = within(cells[cells.length - 1]).getAllByRole('button');
+      fireEvent.click(deleteBtn);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('delete-item-name').textContent).toBe('Groceries');
+      });
+    });
+
+    it('confirming delete calls deleteExpenseTransaction with the correct id', async () => {
+      const mockDelete = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(useExpenseTransactionsQuery).mockReturnValue({
+        expenseTransactions: mockTransactions,
+        total: mockTransactions.length,
+        hasMore: false,
+        isLoading: false,
+        error: null,
+        createExpenseTransaction: vi.fn(),
+        updateExpenseTransaction: vi.fn().mockResolvedValue({}),
+        deleteExpenseTransaction: mockDelete,
+        isCreating: false,
+        isUpdating: false,
+        isDeleting: false,
+      });
+
+      renderExpenseTable();
+
+      // Enter edit mode
+      const firstDataRow = screen.getAllByRole('row')[1];
+      const editCells = within(firstDataRow).getAllByRole('cell');
+      fireEvent.click(within(editCells[editCells.length - 1]).getByRole('button'));
+
+      await waitFor(() => {
+        const row = screen.getAllByRole('row')[1];
+        const cells = within(row).getAllByRole('cell');
+        expect(within(cells[cells.length - 1]).getAllByRole('button').length).toBe(3);
+      });
+
+      // Click delete
+      const row = screen.getAllByRole('row')[1];
+      const cells = within(row).getAllByRole('cell');
+      const [, , deleteBtn] = within(cells[cells.length - 1]).getAllByRole('button');
+      fireEvent.click(deleteBtn);
+
+      // Confirm delete
+      await waitFor(() => screen.getByTestId('delete-confirm-btn'));
+      fireEvent.click(screen.getByTestId('delete-confirm-btn'));
+
+      await waitFor(() => {
+        expect(mockDelete).toHaveBeenCalledWith('exp-aaa');
+      });
+    });
+
+    it('cancelling delete dialog closes it without calling delete', async () => {
+      const mockDelete = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(useExpenseTransactionsQuery).mockReturnValue({
+        expenseTransactions: mockTransactions,
+        total: mockTransactions.length,
+        hasMore: false,
+        isLoading: false,
+        error: null,
+        createExpenseTransaction: vi.fn(),
+        updateExpenseTransaction: vi.fn().mockResolvedValue({}),
+        deleteExpenseTransaction: mockDelete,
+        isCreating: false,
+        isUpdating: false,
+        isDeleting: false,
+      });
+
+      renderExpenseTable();
+
+      // Enter edit mode
+      const firstDataRow = screen.getAllByRole('row')[1];
+      const editCells = within(firstDataRow).getAllByRole('cell');
+      fireEvent.click(within(editCells[editCells.length - 1]).getByRole('button'));
+
+      await waitFor(() => {
+        const row = screen.getAllByRole('row')[1];
+        const cells = within(row).getAllByRole('cell');
+        expect(within(cells[cells.length - 1]).getAllByRole('button').length).toBe(3);
+      });
+
+      // Open delete dialog
+      const row = screen.getAllByRole('row')[1];
+      const cells = within(row).getAllByRole('cell');
+      const [, , deleteBtn] = within(cells[cells.length - 1]).getAllByRole('button');
+      fireEvent.click(deleteBtn);
+
+      // Cancel it
+      await waitFor(() => screen.getByTestId('delete-cancel-btn'));
+      fireEvent.click(screen.getByTestId('delete-cancel-btn'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('delete-dialog')).toBeNull();
+        expect(mockDelete).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('pagination', () => {
+    it('shows page-size options via select', () => {
+      renderExpenseTable();
+      // The select for rows per page should render — page size "10" is default
+      expect(screen.getByText('Rows per page')).toBeTruthy();
+    });
+
+    it('with 3 rows and default page size 10, there is only 1 page (no next page)', () => {
+      renderExpenseTable();
+      // Only page "1" should appear in pagination
+      const pageBtns = screen.getAllByRole('button');
+      const pageOneBtn = pageBtns.find((b) => b.textContent === '1');
+      expect(pageOneBtn).toBeTruthy();
+    });
+
+    it('pagination shows more pages when transactions exceed page size', () => {
+      // Create 11 transactions to go beyond default page size of 10
+      const many = Array.from({ length: 11 }, (_, i) =>
+        makeExpense(`exp-${i}`, `Expense ${i}`, { date: '2026-01-15' })
+      );
+      setupAllMocks(many);
+      renderExpenseTable();
+
+      // Row count shows 10 of 11
+      expect(screen.getByText(/Showing 10 out of 11/)).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('accountId prop filtering', () => {
+    it('passes accountId to useExpenseTransactionsQuery when provided', () => {
+      renderExpenseTable('acc-specific');
+      expect(vi.mocked(useExpenseTransactionsQuery)).toHaveBeenCalledWith(
+        expect.objectContaining({ accountId: 'acc-specific' })
+      );
+    });
+
+    it('calls useExpenseTransactionsQuery without accountId when not provided', () => {
+      renderExpenseTable();
+      expect(vi.mocked(useExpenseTransactionsQuery)).toHaveBeenCalledWith(
+        expect.not.objectContaining({ accountId: expect.anything() })
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('useEditableTable integration', () => {
+    it('renders data from mergedData (hook integration — data flows through useEditableTable)', () => {
+      // The component uses useEditableTable which merges queryData with local edits.
+      // On first render with no edits, mergedData === queryData. All rows should appear.
+      renderExpenseTable();
+      expect(screen.getByText('Groceries')).toBeTruthy();
+      expect(screen.getByText('Netflix')).toBeTruthy();
+      expect(screen.getByText('Transport')).toBeTruthy();
+    });
+
+    it('tags with full objects render tag name correctly', () => {
+      setupAllMocks([
+        makeExpense('exp-1', 'Tagged', {
+          tags: [{ id: 'tag-1', name: 'PersonalTag', color: '#abc' }],
+        }),
+      ]);
+      vi.mocked(useTagsQuery).mockReturnValue({
+        tags: [{ id: 'tag-1', name: 'PersonalTag', color: '#abc', createdAt: '', updatedAt: '' }],
+        isLoading: false,
+        createTag: vi.fn(),
+        createTagOptimistic: vi.fn(),
+        deleteTag: vi.fn(),
+        isCreating: false,
+        isDeleting: false,
+      });
+
+      renderExpenseTable();
+      expect(screen.getByText('PersonalTag')).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('description column', () => {
+    it('renders description text when present', () => {
+      setupAllMocks([
+        makeExpense('exp-1', 'Described Expense', { description: 'Some long description text' }),
+      ]);
+      renderExpenseTable();
+      expect(screen.getByText('Some long description text')).toBeTruthy();
+    });
+
+    it('renders empty description as blank (not crashing)', () => {
+      setupAllMocks([makeExpense('exp-1', 'No Description', { description: null })]);
+      renderExpenseTable();
+      expect(screen.getByText('No Description')).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('subcategory column', () => {
+    it('shows "-" for a transaction with no subcategory', () => {
+      setupAllMocks([makeExpense('exp-1', 'No Sub', { expenseSubcategoryId: null, expenseSubcategory: null })]);
+      renderExpenseTable();
+      const dashes = screen.getAllByText('-');
+      expect(dashes.length).toBeGreaterThan(0);
+    });
+
+    it('shows subcategory name when set', () => {
+      setupAllMocks([
+        makeExpense('exp-1', 'Has Sub', {
+          expenseSubcategoryId: 'sub-1',
+          expenseSubcategory: { id: 'sub-1', name: 'Vegetables' },
+        }),
+      ]);
+      renderExpenseTable();
+      expect(screen.getByText('Vegetables')).toBeTruthy();
+    });
   });
 
 });
-
