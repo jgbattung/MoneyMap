@@ -248,7 +248,7 @@ describe('TransferTable', () => {
     it('renders empty state when no transfers exist', () => {
       setupAllMocks([]);
       renderTransferTable();
-      expect(screen.getByText('No transfer transactions found.')).toBeTruthy();
+      expect(screen.getByText('No transfers found')).toBeTruthy();
     });
 
     it('shows correct row count in pagination text', () => {
