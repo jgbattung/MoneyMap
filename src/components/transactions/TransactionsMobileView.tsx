@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
 import { InputGroup, InputGroupInput, InputGroupAddon } from '@/components/ui/input-group';
-import { SearchIcon } from 'lucide-react';
+import { SearchIcon, SearchX } from 'lucide-react';
+import { EmptyState } from '@/components/shared/EmptyState';
 import CompactTransactionCard from './CompactTransactionCard';
 import { SkeletonCompactTransactionCard } from './SkeletonCompactTransactionCard';
 import { useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery';
@@ -252,9 +253,12 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
                   ))}
                 </div>
               ) : expenseTransactions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <p className="text-muted-foreground">No results found for your search.</p>
-                </div>
+                <EmptyState
+                  icon={SearchX}
+                  title="No results found"
+                  description="Try adjusting your search or filters."
+                  variant="table"
+                />
               ) : (
                 <>
                   {expenseTransactions.map((expense) => (
@@ -351,9 +355,12 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
                   ))}
                 </div>
               ) : incomeTransactions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <p className="text-muted-foreground">No results found for your search.</p>
-                </div>
+                <EmptyState
+                  icon={SearchX}
+                  title="No results found"
+                  description="Try adjusting your search or filters."
+                  variant="table"
+                />
               ) : (
                 <>
                   {incomeTransactions.map((income) => (
@@ -449,9 +456,12 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
                   ))}
                 </div>
               ) : transfers.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <p className="text-muted-foreground">No results found for your search.</p>
-                </div>
+                <EmptyState
+                  icon={SearchX}
+                  title="No results found"
+                  description="Try adjusting your search or filters."
+                  variant="table"
+                />
               ) : (
                 <>
                   {transfers.map((transfer) => (

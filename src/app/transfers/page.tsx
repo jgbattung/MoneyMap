@@ -1,6 +1,7 @@
 "use client"
 
 import EditTransferDrawer from '@/components/forms/EditTransferDrawer';
+import { EmptyState } from '@/components/shared/EmptyState';
 import TransferCard from '@/components/shared/TransferCard';
 import TransferTypesList from '@/components/shared/TransferTypesList';
 import { SkeletonTransferCard } from '@/components/shared/SkeletonTransferCard';
@@ -9,7 +10,7 @@ import { useTransfersQuery } from '@/hooks/useTransferTransactionsQuery';
 import { Button } from '@/components/ui/button';
 import { InputGroup, InputGroupInput, InputGroupAddon } from '@/components/ui/input-group';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { SearchIcon } from 'lucide-react';
+import { SearchIcon, SearchX } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const ITEMS_PER_LOAD = 15;
@@ -140,9 +141,12 @@ const Transactions = () => {
               ))}
             </div>
           ) : transfers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8">
-              <p className="text-muted-foreground">No results found for your search.</p>
-            </div>
+            <EmptyState
+              icon={SearchX}
+              title="No results found"
+              description="Try adjusting your search or filters."
+              variant="table"
+            />
           ) : (
             <>
               {transfers.map((transfer) => (
