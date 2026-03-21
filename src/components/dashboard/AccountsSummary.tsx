@@ -4,6 +4,7 @@ import React from 'react';
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 import { useCardsQuery } from '@/hooks/useCardsQuery';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/format';
 import {
@@ -133,30 +134,6 @@ const SkeletonList = () => (
   </div>
 );
 
-interface EmptyStateProps {
-  type: 'accounts' | 'cards';
-}
-
-const EmptyState = ({ type }: EmptyStateProps) => {
-  const isAccounts = type === 'accounts';
-  const Icon = isAccounts ? Wallet : CreditCard;
-
-  return (
-    <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
-      <Icon className="h-8 w-8 text-muted-foreground/50" />
-      <p className="text-sm text-muted-foreground">
-        {isAccounts ? 'No accounts yet' : 'No credit cards yet'}
-      </p>
-      <p className="text-xs text-muted-foreground mt-1">
-        {isAccounts
-          ? 'Add your first account to start tracking'
-          : 'Add your first credit card to track debt'
-        }
-      </p>
-    </div>
-  );
-};
-
 interface ErrorStateProps {
   error: string;
   type: 'accounts' | 'cards';
@@ -196,7 +173,15 @@ const TopAccounts = () => {
   }
 
   if (accounts.length === 0) {
-    return <EmptyState type="accounts" />;
+    return (
+      <EmptyState
+        icon={Wallet}
+        title="No accounts yet"
+        description="Add an account to start tracking"
+        action={{ label: "Go to Accounts", href: "/accounts" }}
+        variant="widget"
+      />
+    );
   }
 
   return (
@@ -250,7 +235,15 @@ const TopCreditCards = () => {
   }
 
   if (cards.length === 0) {
-    return <EmptyState type="cards" />;
+    return (
+      <EmptyState
+        icon={CreditCard}
+        title="No credit cards yet"
+        description="Add a credit card to track debt"
+        action={{ label: "Go to Cards", href: "/cards" }}
+        variant="widget"
+      />
+    );
   }
 
   return (
