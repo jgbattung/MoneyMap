@@ -5,13 +5,14 @@ import CreateExpenseTransactionSheet from "@/components/forms/CreateExpenseTrans
 import EditExpenseDrawer from "@/components/forms/EditExpenseDrawer";
 import { Icons } from "@/components/icons";
 import ExpenseCard from "@/components/shared/ExpenseCard";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { SkeletonExpenseCard } from "@/components/shared/SkeletonExpenseCard";
 import SkeletonTable from "@/components/shared/SkeletonTable";
 import ExpenseTable from "@/components/tables/expenses/ExpenseTable";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { SearchIcon } from "lucide-react";
+import { Receipt, SearchIcon } from "lucide-react";
 import { useExpenseTransactionsQuery } from "@/hooks/useExpenseTransactionsQuery";
 import { useState, useEffect } from "react";
 
@@ -130,29 +131,22 @@ const Expenses = () => {
           </Button>
         </div>
       ) : expenseTransactions.length === 0 && !isFiltering && !isLoading ? (
-        <div className='flex-1 flex flex-col items-center justify-center py-16'>
-          <Icons.wallet
-            className='h-24 w-24 mb-10'
-            strokeWidth={1.25}
-          />
-          <div className='flex flex-col px-4 items-center justify-center gap-3 text-center'>
-            <p className='text-2xl min-md:text-4xl font-semibold'>No expenses, yet.</p>
-            <p className='text-muted-foreground'>You have no expenses, yet! Start managing your finances by adding one.</p>
-          </div>
-          <Button
-            onClick={() => setCreateExpenseSheetOpen(true)}
-            className="hidden md:flex mt-10 text-lg px-6 py-6"
-          >
-            Add your first expense
-          </Button>
-          
-          <Button
-            onClick={() => setCreateExpenseDrawerOpen(true)}
-            className="flex md:hidden mt-10"
-          >
-            Add your first expense
-          </Button>
-        </div>
+        <EmptyState
+          icon={Receipt}
+          title="No expenses yet"
+          description="Add your first expense to start tracking your spending."
+          action={{
+            label: "Add your first expense",
+            onClick: () => {
+              if (window.innerWidth >= 768) {
+                setCreateExpenseSheetOpen(true);
+              } else {
+                setCreateExpenseDrawerOpen(true);
+              }
+            },
+          }}
+          variant="page"
+        />
       ) : (
         <div className="mt-10">
           <div className='md:hidden space-y-4'>
