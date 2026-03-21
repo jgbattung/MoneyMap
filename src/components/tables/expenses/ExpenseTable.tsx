@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import DeleteDialog from '@/components/shared/DeleteDialog';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { TagInput } from '@/components/shared/TagInput';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,7 @@ import { formatDateForAPI } from '@/lib/utils';
 import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
 import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import { ChevronDownIcon, ChevronLeft, ChevronRight, SearchIcon, Trash2 } from 'lucide-react';
+import { ChevronDownIcon, ChevronLeft, ChevronRight, SearchIcon, SearchX, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -692,10 +693,13 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-32 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <p className="text-muted-foreground">No expense transactions found.</p>
-                    </div>
+                  <TableCell colSpan={columns.length}>
+                    <EmptyState
+                      icon={SearchX}
+                      title="No expenses found"
+                      description="Try adjusting your search or filters."
+                      variant="table"
+                    />
                   </TableCell>
                 </TableRow>
               )}
