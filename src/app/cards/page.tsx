@@ -6,13 +6,15 @@ import EditCardDrawer from '@/components/forms/EditCardDrawer';
 import EditCardSheet from '@/components/forms/EditCardSheet';
 import { Icons } from '@/components/icons';
 import CreditCardCard from '@/components/shared/CreditCardCard';
+import DeleteDialog from '@/components/shared/DeleteDialog';
+import { EmptyState } from '@/components/shared/EmptyState';
 import GroupCard from '@/components/shared/GroupCard';
 import SkeletonCardCard from '@/components/shared/SkeletonCardCard';
 import { Button } from '@/components/ui/button';
 import { useCardsQuery } from '@/hooks/useCardsQuery';
+import { CreditCard } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useState, useMemo } from 'react'
-import DeleteDialog from '@/components/shared/DeleteDialog';
 import { toast } from 'sonner';
 
 const Cards = () => {
@@ -217,25 +219,22 @@ const Cards = () => {
           </Button>
         </div>
       ) : cards.length === 0 ? (
-        <div className='flex-1 flex flex-col items-center justify-center py-16'>
-          <Icons.creditCardIcon className='h-24 w-24 mb-10' strokeWidth={1.25} />
-          <div className='flex flex-col px-4 items-center justify-center gap-3 text-center'>
-            <p className='text-2xl min-md:text-4xl font-semibold'>No credit cards, yet.</p>
-            <p className='text-muted-foreground'>You have no credit cards, yet! Start tracking your credit cards by adding one.</p>
-          </div>
-          <Button
-            onClick={() => setCreateCardsSheetOpen(true)}
-            className="hidden md:flex mt-10 text-lg px-6 py-6"
-          >
-            Add your first credit card
-          </Button>
-          <Button
-            onClick={() => setCreateCardsDrawerOpen(true)}
-            className="flex md:hidden mt-10"
-          >
-            Add your first credit card
-          </Button>
-        </div>
+        <EmptyState
+          icon={CreditCard}
+          title="No credit cards yet"
+          description="Add your first credit card to start tracking your debt."
+          action={{
+            label: "Add your first credit card",
+            onClick: () => {
+              if (window.innerWidth >= 768) {
+                setCreateCardsSheetOpen(true);
+              } else {
+                setCreateCardsDrawerOpen(true);
+              }
+            },
+          }}
+          variant="page"
+        />
       ) : (
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
           {sortedItems.map((item) => {
