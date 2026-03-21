@@ -5,13 +5,14 @@ import React, { useState } from 'react'
 import { ExpenseTypeValidation } from "@/lib/validations/expense";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "../ui/drawer";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "../ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { useForm } from "react-hook-form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
 import { useExpenseTypesQuery } from "@/hooks/useExpenseTypesQuery";
 import { Plus, X } from "lucide-react";
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface CreateExpenseTypeDrawerProps {
   open: boolean;
@@ -31,11 +32,13 @@ const CreateExpenseTypeDrawer = ({ open, onOpenChange, className }: CreateExpens
 
   const form = useForm<z.infer<typeof ExpenseTypeValidation>>({
     resolver: zodResolver(ExpenseTypeValidation),
+    mode: "onTouched",
     defaultValues: {
       name: "",
       monthlyBudget: "",
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   const generateTempId = () => `temp-${Date.now()}-${Math.random()}`;
 
@@ -126,6 +129,7 @@ const CreateExpenseTypeDrawer = ({ open, onOpenChange, className }: CreateExpens
                         disabled={isCreating}
                       />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -148,6 +152,7 @@ const CreateExpenseTypeDrawer = ({ open, onOpenChange, className }: CreateExpens
                         disabled={isCreating}
                       />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -216,6 +221,7 @@ const CreateExpenseTypeDrawer = ({ open, onOpenChange, className }: CreateExpens
               <Button
                 type="submit"
                 disabled={isCreating}
+                className={shakeClassName}
               >
                 {isCreating ? "Adding budget" : "Add budget"}
               </Button>

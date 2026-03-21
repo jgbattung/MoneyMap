@@ -11,6 +11,7 @@ import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHe
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface CreateIncomeTypeSheetProps {
   open: boolean;
@@ -29,6 +30,7 @@ const CreateIncomeTypeSheet = ({ open, onOpenChange, className }: CreateIncomeTy
       monthlyTarget: "",
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   const onSubmit = async (values: z.infer<typeof IncomeTypeValidation>) => {
     try {
@@ -110,6 +112,7 @@ const CreateIncomeTypeSheet = ({ open, onOpenChange, className }: CreateIncomeTy
               <Button
                 type="submit"
                 disabled={isCreating}
+                className={shakeClassName}
               >
                 {isCreating ? "Adding income category" : "Add income category"}
               </Button>

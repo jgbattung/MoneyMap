@@ -20,6 +20,7 @@ import { Separator } from '../ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface EditCardDrawerProps {
   open: boolean;
@@ -61,6 +62,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
       dueDate: undefined,
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     if (cardData) {
@@ -456,6 +458,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
                 <Button
                   type="submit"
                   disabled={isUpdating}
+                  className={shakeClassName}
                 >
                   {isUpdating ? "Updating credit card" : "Update credit card"}
                 </Button>

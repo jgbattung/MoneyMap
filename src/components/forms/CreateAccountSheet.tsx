@@ -13,6 +13,7 @@ import { Checkbox } from '../ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { toast } from 'sonner'
 import { useAccountsQuery } from '@/hooks/useAccountsQuery'
+import { useShakeOnError } from '@/hooks/useShakeOnError'
 
 interface CreateAccountSheetProps {
   open: boolean;
@@ -32,6 +33,7 @@ const CreateAccountSheet = ({ open, onOpenChange, className }: CreateAccountShee
       addToNetWorth: true,
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   const onSubmit = async (values: z.infer<typeof AccountValidation>) => {
     try {
@@ -159,6 +161,7 @@ const CreateAccountSheet = ({ open, onOpenChange, className }: CreateAccountShee
               <Button
                 type="submit"
                 disabled={isCreating}
+                className={shakeClassName}
               >
                 {isCreating ? "Creating account" : "Create account"}
               </Button>

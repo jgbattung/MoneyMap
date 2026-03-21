@@ -17,6 +17,7 @@ import SkeletonEditAccountSheetForm from '../shared/SkeletonEditAccountSheetForm
 import { useAccountQuery, useAccountsQuery } from '@/hooks/useAccountsQuery'
 import { Separator } from '../ui/separator'
 import DeleteDialog from '../shared/DeleteDialog'
+import { useShakeOnError } from '@/hooks/useShakeOnError'
 
 interface EditAccountSheetProps {
   open: boolean;
@@ -39,6 +40,7 @@ const EditAccountSheet = ({ open, onOpenChange, className, accountId }: EditAcco
       addToNetWorth: true,
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     if (accountData) {
@@ -259,6 +261,7 @@ const EditAccountSheet = ({ open, onOpenChange, className, accountId }: EditAcco
                 <Button
                   type="submit"
                   disabled={isUpdating}
+                  className={shakeClassName}
                 >
                   {isUpdating ? "Updating account" : "Update account"}
                 </Button>

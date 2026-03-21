@@ -15,6 +15,7 @@ import { useIncomeTypeQuery, useIncomeTypesQuery } from "@/hooks/useIncomeTypesQ
 import SkeletonEditIncomeTypeSheetForm from "../shared/SkeletonEditIncomeTypeSheetForm";
 import DeleteDialog from "../shared/DeleteDialog";
 import { Separator } from "../ui/separator";
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface EditIncomeTypeSheetProps {
   open: boolean;
@@ -36,6 +37,7 @@ const EditIncomeTypeSheet = ({ open, onOpenChange, className, incomeTypeId }: Ed
       monthlyTarget: "",
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     if (incomeTypeData) {
@@ -178,6 +180,7 @@ const EditIncomeTypeSheet = ({ open, onOpenChange, className, incomeTypeId }: Ed
                   <Button
                     type="submit"
                     disabled={isUpdating}
+                    className={shakeClassName}
                   >
                     {isUpdating ? "Updating income type" : "Update income type"}
                   </Button>

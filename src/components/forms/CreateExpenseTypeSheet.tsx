@@ -5,13 +5,14 @@ import React, { useState } from 'react'
 import { ExpenseTypeValidation } from "@/lib/validations/expense";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "../ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { useForm } from "react-hook-form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
 import { useExpenseTypesQuery } from "@/hooks/useExpenseTypesQuery";
 import { Plus, X } from "lucide-react";
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface CreateExpenseTypeSheetProps {
   open: boolean;
@@ -31,11 +32,13 @@ const CreateExpenseTypeSheet = ({ open, onOpenChange, className }: CreateExpense
 
   const form = useForm<z.infer<typeof ExpenseTypeValidation>>({
     resolver: zodResolver(ExpenseTypeValidation),
+    mode: "onTouched",
     defaultValues: {
       name: "",
       monthlyBudget: "",
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   const generateTempId = () => `temp-${Date.now()}-${Math.random()}`;
 
@@ -122,6 +125,7 @@ const CreateExpenseTypeSheet = ({ open, onOpenChange, className }: CreateExpense
                       disabled={isCreating}
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -144,6 +148,7 @@ const CreateExpenseTypeSheet = ({ open, onOpenChange, className }: CreateExpense
                       disabled={isCreating}
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -211,6 +216,7 @@ const CreateExpenseTypeSheet = ({ open, onOpenChange, className }: CreateExpense
               <Button
                 type="submit"
                 disabled={isCreating}
+                className={shakeClassName}
               >
                 {isCreating ? "Adding budget" : "Add budget"}
               </Button>

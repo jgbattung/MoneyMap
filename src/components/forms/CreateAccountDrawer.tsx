@@ -13,6 +13,7 @@ import { Checkbox } from '../ui/checkbox';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 import { ScrollArea } from '../ui/scroll-area';
 
 interface CreateAccountDrawerProps {
@@ -35,6 +36,7 @@ const CreateAccountDrawer = ({ open, onOpenChange, className }: CreateAccountDra
       addToNetWorth: true,
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     const checkScroll = () => {
@@ -210,6 +212,7 @@ const CreateAccountDrawer = ({ open, onOpenChange, className }: CreateAccountDra
               <Button
                 type="submit"
                 disabled={isCreating}
+                className={shakeClassName}
               >
                 {isCreating ? "Creating account" : "Create account"}
               </Button>

@@ -16,6 +16,7 @@ import { useExpenseTypeQuery, useExpenseTypesQuery } from "@/hooks/useExpenseTyp
 import DeleteDialog from "../shared/DeleteDialog";
 import { Separator } from "../ui/separator";
 import { Plus, X, Check } from "lucide-react";
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface EditExpenseTypeDrawerProps {
   open: boolean;
@@ -51,6 +52,7 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, budgetId, className }: Edit
       monthlyBudget: "",
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     if (budgetData) {
@@ -442,6 +444,7 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, budgetId, className }: Edit
                   <Button
                     type="submit"
                     disabled={isUpdating}
+                    className={shakeClassName}
                   >
                     {isUpdating ? "Updating budget" : "Update budget"}
                   </Button>

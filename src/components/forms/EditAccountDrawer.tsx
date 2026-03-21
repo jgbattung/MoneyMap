@@ -17,6 +17,7 @@ import { useAccountQuery, useAccountsQuery } from '@/hooks/useAccountsQuery'
 import { Separator } from '../ui/separator'
 import DeleteDialog from '../shared/DeleteDialog'
 import { ScrollArea } from '../ui/scroll-area'
+import { useShakeOnError } from '@/hooks/useShakeOnError'
 
 interface EditAccountDrawerProps {
   open: boolean;
@@ -41,6 +42,7 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId }: EditAcc
         addToNetWorth: true,
       }
     });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     if (accountData) {
@@ -289,6 +291,7 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId }: EditAcc
                 <Button
                   type="submit"
                   disabled={isUpdating}
+                  className={shakeClassName}
                 >
                   {isUpdating ? "Updating account" : "Update account"}
                 </Button>

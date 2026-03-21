@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface CreateCardSheetProps {
   open: boolean;
@@ -51,6 +52,7 @@ const CreateCardSheet = ({ open, onOpenChange, className }: CreateCardSheetProps
       cardGroup: '',
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   const onSubmit = async (values: z.infer<typeof CardValidation>) => {
     try {
@@ -307,6 +309,7 @@ const CreateCardSheet = ({ open, onOpenChange, className }: CreateCardSheetProps
               <Button
                 type="submit"
                 disabled={isCreating}
+                className={shakeClassName}
               >
                 {isCreating ? "Adding credit card" : "Add credit card"}
               </Button>

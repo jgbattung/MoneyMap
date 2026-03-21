@@ -4,7 +4,7 @@ import React from 'react'
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useIncomeTransactionsQuery } from "@/hooks/useIncomeTransactionsQuery";
@@ -20,6 +20,7 @@ import { Textarea } from "../ui/textarea";
 import { format } from "date-fns";
 import { formatDateForAPI } from "@/lib/utils";
 import { TagInput } from '@/components/shared/TagInput';
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface CreateIncomeTransactionProps {
   open: boolean;
@@ -36,6 +37,7 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
 
   const form = useForm<z.infer<typeof IncomeTransactionValidation>> ({
     resolver: zodResolver(IncomeTransactionValidation),
+    mode: "onTouched",
       defaultValues: {
       name: "",
       amount: "",
@@ -46,6 +48,7 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
       tagIds: [],
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   const onSubmit = async (values: z.infer<typeof IncomeTransactionValidation>) => {
     try {
@@ -100,6 +103,7 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
                       disabled={isCreating}
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -119,6 +123,7 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
                       disabled={isCreating}
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -143,6 +148,7 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -167,6 +173,7 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -207,6 +214,7 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
                       />
                     </PopoverContent>
                   </Popover>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -224,6 +232,7 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
                     disabled={isCreating}
                   />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -241,6 +250,7 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
                     disabled={isCreating}
                   />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -249,6 +259,7 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
             <Button
               type="submit"
               disabled={isCreating}
+              className={shakeClassName}
             >
               {isCreating ? "Adding income" : "Add income"}
             </Button>

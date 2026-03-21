@@ -4,7 +4,7 @@ import React from 'react'
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useTransfersQuery } from "@/hooks/useTransferTransactionsQuery";
@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { TransferTransactionValidation } from "@/lib/validations/transfer-transactions";
 import { Checkbox } from "../ui/checkbox";
 import { formatDateForAPI } from "@/lib/utils";
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface CreateTransferSheetProps {
   open: boolean;
@@ -36,6 +37,7 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
 
   const form = useForm<z.infer<typeof TransferTransactionValidation>> ({
     resolver: zodResolver(TransferTransactionValidation),
+    mode: "onTouched",
       defaultValues: {
       name: "",
       amount: "",
@@ -47,6 +49,7 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
       feeAmount: "",
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   const selectedFromAccountId = form.watch("fromAccountId");
   const selectedToAccountId = form.watch("toAccountId");
@@ -108,6 +111,7 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
                       disabled={isCreating}
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -127,6 +131,7 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
                       disabled={isCreating}
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -163,6 +168,7 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
                           disabled={isCreating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -177,9 +183,9 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
                 render={({ field }) => (
                   <FormItem className="flex-1">
                     <FormLabel>From Account</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value} 
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
                       disabled={isCreating}
                     >
                       <FormControl>
@@ -197,6 +203,7 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
                           ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -209,9 +216,9 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
                 render={({ field }) => (
                   <FormItem className="flex-1">
                     <FormLabel>To Account</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value} 
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
                       disabled={isCreating}
                     >
                       <FormControl>
@@ -229,6 +236,7 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
                           ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -254,6 +262,7 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -294,6 +303,7 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
                       />
                     </PopoverContent>
                   </Popover>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -312,6 +322,7 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
                     disabled={isCreating}
                   />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -320,6 +331,7 @@ const CreateTransferSheet = ({ open, onOpenChange, className }: CreateTransferSh
             <Button
               type="submit"
               disabled={isCreating}
+              className={shakeClassName}
             >
               {isCreating ? "Adding transfer" : "Add transfer"}
             </Button>

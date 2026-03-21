@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
-import { Form, FormControl, FormField, FormItem, FormLabel } from '../ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { z } from "zod"
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -28,6 +28,7 @@ import DeleteDialog from '../shared/DeleteDialog';
 import { Separator } from '../ui/separator';
 import { formatDateForAPI } from '@/lib/utils';
 import { TagInput } from '@/components/shared/TagInput';
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface EditExpenseDrawerProps {
   open: boolean;
@@ -51,6 +52,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
 
   const form = useForm<z.infer<typeof createExpenseTransactionSchema>>({
     resolver: zodResolver(createExpenseTransactionSchema),
+    mode: "onTouched",
     defaultValues: {
       name: "",
       amount: "",
@@ -65,6 +67,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
       tagIds: [],
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     if (expenseTransactionData) {
@@ -235,6 +238,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                             disabled={isUpdating}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -254,6 +258,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                             disabled={isUpdating}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -264,8 +269,8 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                     render={({ field }) => (
                       <FormItem className="p-4">
                         <FormLabel>Account</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
+                        <Select
+                          onValueChange={field.onChange}
                           defaultValue={field.value}
                           key={field.value || 'account-select'}
                           disabled={isUpdating}
@@ -283,6 +288,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -319,6 +325,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                                     disabled={isUpdating}
                                   />
                                 </FormControl>
+                                <FormMessage />
                               </FormItem>
                             )}
                           />
@@ -358,6 +365,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                                     />
                                   </PopoverContent>
                                 </Popover>
+                                <FormMessage />
                               </FormItem>
                             )}
                           />
@@ -372,8 +380,8 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                     render={({ field }) => (
                       <FormItem className="p-4">
                         <FormLabel>Expense type</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
+                        <Select
+                          onValueChange={field.onChange}
                           defaultValue={field.value}
                           key={field.value || 'expense-type-select'}
                           disabled={isUpdating}
@@ -391,6 +399,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -403,8 +412,8 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                       render={({ field }) => (
                         <FormItem className="p-4">
                           <FormLabel>Subcategory (Optional)</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
+                          <Select
+                            onValueChange={field.onChange}
                             defaultValue={field.value || "none"}
                             key={field.value || 'subcategory-select'}
                             disabled={isUpdating}
@@ -423,6 +432,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                               ))}
                             </SelectContent>
                           </Select>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -465,6 +475,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                               />
                             </PopoverContent>
                           </Popover>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -483,6 +494,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                             disabled={isUpdating}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -500,6 +512,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                             disabled={isUpdating}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -515,6 +528,7 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                 <Button
                   type="submit"
                   disabled={isUpdating}
+                  className={shakeClassName}
                 >
                   {isUpdating ? "Updating expense" : "Update expense"}
                 </Button>

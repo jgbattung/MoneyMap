@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
-import { Form, FormControl, FormField, FormItem, FormLabel } from '../ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useAccountsQuery } from "@/hooks/useAccountsQuery";
@@ -22,6 +22,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Checkbox } from "../ui/checkbox";
 import { formatDateForAPI } from "@/lib/utils";
 import { TagInput } from '@/components/shared/TagInput';
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface CreateTransferDrawerProps {
   open: boolean;
@@ -40,6 +41,7 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
 
   const form = useForm<z.infer<typeof TransferTransactionValidation>> ({
     resolver: zodResolver(TransferTransactionValidation),
+    mode: "onTouched",
       defaultValues: {
       name: "",
       amount: "",
@@ -52,6 +54,7 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
       tagIds: [],
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     const checkScroll = () => {
@@ -145,6 +148,7 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
                           disabled={isCreating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -164,6 +168,7 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
                           disabled={isCreating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -200,6 +205,7 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
                               disabled={isCreating}
                             />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -214,9 +220,9 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
                     render={({ field }) => (
                       <FormItem className="flex-1">
                         <FormLabel>From Account</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value} 
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
                           disabled={isCreating}
                         >
                           <FormControl>
@@ -234,6 +240,7 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
                               ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -246,9 +253,9 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
                     render={({ field }) => (
                       <FormItem className="flex-1">
                         <FormLabel>To Account</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value} 
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
                           disabled={isCreating}
                         >
                           <FormControl>
@@ -266,6 +273,7 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
                               ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -291,6 +299,7 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -331,6 +340,7 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
                           />
                         </PopoverContent>
                       </Popover>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -349,6 +359,7 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
                           disabled={isCreating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -366,6 +377,7 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
                           disabled={isCreating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -380,6 +392,7 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
               <Button
                 type="submit"
                 disabled={isCreating}
+                className={shakeClassName}
               >
                 {isCreating ? "Adding transfer" : "Add transfer"}
               </Button>

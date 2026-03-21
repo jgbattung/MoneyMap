@@ -17,6 +17,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface CreateCardDrawerProps {
   open: boolean;
@@ -53,11 +54,12 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
       cardGroup: '',
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     const checkScroll = () => {
       const scrollElement = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-      
+
       if (scrollElement) {
         const { scrollTop, scrollHeight, clientHeight } = scrollElement;
         const isScrollable = scrollHeight > clientHeight;
@@ -345,6 +347,7 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
               <Button
                 type="submit"
                 disabled={isCreating}
+                className={shakeClassName}
               >
                 {isCreating ? "Adding credit card" : "Add credit card"}
               </Button>

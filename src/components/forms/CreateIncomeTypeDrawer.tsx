@@ -8,6 +8,7 @@ import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, Dr
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 import { toast } from 'sonner';
 import { useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery';
 import { IncomeTypeValidation } from '@/lib/validations/income';
@@ -29,6 +30,7 @@ const CreateIncomeTypeDrawer = ({ open, onOpenChange, className }: CreateIncomeT
       monthlyTarget: '',
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   const onSubmit = async (values: z.infer<typeof IncomeTypeValidation>) => {
     try {
@@ -111,6 +113,7 @@ const CreateIncomeTypeDrawer = ({ open, onOpenChange, className }: CreateIncomeT
               <Button
                 type="submit"
                 disabled={isCreating}
+                className={shakeClassName}
               >
                 {isCreating ? "Adding income category" : "Add income category"}
               </Button>
