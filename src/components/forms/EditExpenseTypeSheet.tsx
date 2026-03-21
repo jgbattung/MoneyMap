@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "../ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ import { useExpenseTypeQuery, useExpenseTypesQuery } from "@/hooks/useExpenseTyp
 import DeleteDialog from "../shared/DeleteDialog";
 import { Separator } from "../ui/separator";
 import { Plus, X, Check } from "lucide-react";
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface EditExpenseTypeSheetProps {
   open: boolean;
@@ -45,11 +46,13 @@ const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId }: EditE
 
   const form = useForm<z.infer<typeof ExpenseTypeValidation>>({
     resolver: zodResolver(ExpenseTypeValidation),
+    mode: "onTouched",
     defaultValues: {
       name: "",
       monthlyBudget: "",
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     if (budgetData) {
@@ -289,6 +292,7 @@ const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId }: EditE
                           disabled={isUpdating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -311,6 +315,7 @@ const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId }: EditE
                           disabled={isUpdating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -434,6 +439,7 @@ const EditExpenseTypeSheet = ({ open, onOpenChange, className, budgetId }: EditE
                   <Button
                     type="submit"
                     disabled={isUpdating}
+                    className={shakeClassName}
                   >
                     {isUpdating ? "Updating budget" : "Update budget"}
                   </Button>

@@ -17,6 +17,7 @@ import { useAccountQuery, useAccountsQuery } from '@/hooks/useAccountsQuery'
 import { Separator } from '../ui/separator'
 import DeleteDialog from '../shared/DeleteDialog'
 import { ScrollArea } from '../ui/scroll-area'
+import { useShakeOnError } from '@/hooks/useShakeOnError'
 
 interface EditAccountDrawerProps {
   open: boolean;
@@ -34,12 +35,14 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId }: EditAcc
 
   const form = useForm<z.infer<typeof AccountValidation>>({
       resolver: zodResolver(AccountValidation),
+      mode: "onTouched",
       defaultValues: {
         name: '',
         initialBalance: '',
         addToNetWorth: true,
       }
     });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     if (accountData) {
@@ -89,6 +92,14 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId }: EditAcc
       });
     }
   }
+
+  const onError = () => {
+    const firstError = document.querySelector('[aria-invalid="true"]') as HTMLElement | null;
+    if (firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstError.focus({ preventScroll: true });
+    }
+  };
 
   const handleDeleteClick = async () => {
     const response = await fetch(`/api/accounts/${accountId}/transaction-count`);
@@ -162,7 +173,7 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId }: EditAcc
             </>
           ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85dvh]'>
+            <form onSubmit={form.handleSubmit(onSubmit, onError)} className='flex flex-col h-full max-h-[85dvh]'>
               <DrawerHeader className='flex-shrink-0'>
                 <DrawerTitle className='text-xl'>Edit account</DrawerTitle>
                 <DrawerDescription>
@@ -288,6 +299,7 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId }: EditAcc
                 <Button
                   type="submit"
                   disabled={isUpdating}
+                  className={shakeClassName}
                 >
                   {isUpdating ? "Updating account" : "Update account"}
                 </Button>

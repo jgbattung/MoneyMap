@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
-import { Form, FormControl, FormField, FormItem, FormLabel } from '../ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { z } from "zod"
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -25,6 +25,7 @@ import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 import { formatDateForAPI } from '@/lib/utils';
 import { TagInput } from '@/components/shared/TagInput';
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface CreateExpenseTransactionProps {
   open: boolean;
@@ -46,6 +47,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
 
   const form = useForm<z.infer<typeof createExpenseTransactionSchema>>({
     resolver: zodResolver(createExpenseTransactionSchema),
+    mode: "onTouched",
     defaultValues: {
       name: "",
       amount: "",
@@ -60,6 +62,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
       tagIds: [],
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     const checkScroll = () => {
@@ -132,6 +135,14 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
     }
   }
 
+  const onError = () => {
+    const firstError = document.querySelector('[aria-invalid="true"]') as HTMLElement | null;
+    if (firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstError.focus({ preventScroll: true });
+    }
+  };
+
   return (
     <Drawer repositionInputs={false} open={open} onOpenChange={onOpenChange}>
       <DrawerContent
@@ -139,7 +150,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
         className={`${className}`}
       >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85dvh]'>
+          <form onSubmit={form.handleSubmit(onSubmit, onError)} className='flex flex-col h-full max-h-[85dvh]'>
             <DrawerHeader className='flex-shrink-0'>
               <DrawerTitle className='text-xl'>
                 Add Expense Transaction
@@ -164,6 +175,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                           disabled={isCreating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -183,6 +195,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                           disabled={isCreating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -207,6 +220,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -247,6 +261,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                                   disabled={isCreating}
                                 />
                               </FormControl>
+                              <FormMessage />
                             </FormItem>
                           )}
                         />
@@ -286,6 +301,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                                   />
                                 </PopoverContent>
                               </Popover>
+                              <FormMessage />
                             </FormItem>
                           )}
                         />
@@ -314,6 +330,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -326,9 +343,9 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                     render={({ field }) => (
                       <FormItem className="p-4">
                         <FormLabel>Subcategory (Optional)</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          value={field.value || "none"} 
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value || "none"}
                           disabled={isCreating}
                         >
                           <FormControl>
@@ -345,6 +362,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -387,6 +405,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                             />
                           </PopoverContent>
                         </Popover>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -405,6 +424,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                           disabled={isCreating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -422,6 +442,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                           disabled={isCreating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -437,6 +458,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
               <Button
                 type="submit"
                 disabled={isCreating}
+                className={shakeClassName}
               >
                 {isCreating ? "Adding expense" : "Add expense"}
               </Button>

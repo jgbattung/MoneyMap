@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { z } from "zod"
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from '../ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { toast } from 'sonner';
@@ -14,6 +14,7 @@ import { useIncomeTypeQuery, useIncomeTypesQuery } from '@/hooks/useIncomeTypesQ
 import SkeletonEditIncomeTypeDrawerForm from '../shared/SkeletonEditIncomeTypeDrawerForm';
 import DeleteDialog from '../shared/DeleteDialog';
 import { Separator } from '../ui/separator';
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface EditIncomeTypeDrawerProps {
   open: boolean;
@@ -29,11 +30,13 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
 
   const form = useForm<z.infer<typeof IncomeTypeValidation>>({
     resolver: zodResolver(IncomeTypeValidation),
+    mode: "onTouched",
     defaultValues: {
       name: '',
       monthlyTarget: '',
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     if (incomeTypeData) {
@@ -147,6 +150,7 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
                             disabled={isUpdating}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -169,6 +173,7 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
                             disabled={isUpdating}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -178,6 +183,7 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
                   <Button
                     type="submit"
                     disabled={isUpdating}
+                    className={shakeClassName}
                   >
                     {isUpdating ? "Updating income type" : "Update income type"}
                   </Button>

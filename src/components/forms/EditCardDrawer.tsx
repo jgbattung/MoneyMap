@@ -20,6 +20,7 @@ import { Separator } from '../ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface EditCardDrawerProps {
   open: boolean;
@@ -52,6 +53,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
 
   const form = useForm<z.infer<typeof CardValidation>>({
     resolver: zodResolver(CardValidation),
+    mode: "onTouched",
     defaultValues: {
       name: '',
       initialBalance: '',
@@ -60,6 +62,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
       dueDate: undefined,
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     if (cardData) {
@@ -120,6 +123,14 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
       });
     }
   }
+
+  const onError = () => {
+    const firstError = document.querySelector('[aria-invalid="true"]') as HTMLElement | null;
+    if (firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstError.focus({ preventScroll: true });
+    }
+  };
 
   const handleDeleteClick = async () => {
     const response = await fetch(`/api/cards/${cardId}/transaction-count`);
@@ -200,7 +211,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
           </>
         ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85dvh]'>
+            <form onSubmit={form.handleSubmit(onSubmit, onError)} className='flex flex-col h-full max-h-[85dvh]'>
               <DrawerHeader className='flex-shrink-0'>
                 <DrawerTitle className='text-xl'>
                   Edit credit card
@@ -455,6 +466,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
                 <Button
                   type="submit"
                   disabled={isUpdating}
+                  className={shakeClassName}
                 >
                   {isUpdating ? "Updating credit card" : "Update credit card"}
                 </Button>

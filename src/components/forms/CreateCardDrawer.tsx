@@ -17,6 +17,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface CreateCardDrawerProps {
   open: boolean;
@@ -46,17 +47,19 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
 
   const form = useForm<z.infer<typeof CardValidation>>({
     resolver: zodResolver(CardValidation),
+    mode: "onTouched",
     defaultValues: {
       name: '',
       initialBalance: '',
       cardGroup: '',
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     const checkScroll = () => {
       const scrollElement = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-      
+
       if (scrollElement) {
         const { scrollTop, scrollHeight, clientHeight } = scrollElement;
         const isScrollable = scrollHeight > clientHeight;
@@ -101,13 +104,21 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
     }
   }
 
+  const onError = () => {
+    const firstError = document.querySelector('[aria-invalid="true"]') as HTMLElement | null;
+    if (firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstError.focus({ preventScroll: true });
+    }
+  };
+
   return (
     <Drawer repositionInputs={false} open={open} onOpenChange={onOpenChange}>
       <DrawerContent
         onEscapeKeyDown={(e) => isCreating && e.preventDefault()} className={`${className}`}
       >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85dvh]'>
+          <form onSubmit={form.handleSubmit(onSubmit, onError)} className='flex flex-col h-full max-h-[85dvh]'>
             <DrawerHeader className='flex-shrink-0'>
               <DrawerTitle className='text-xl'>
                 Add Credit Card
@@ -298,6 +309,7 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
                           </SelectContent>
                         </Select>
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -328,6 +340,7 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
                           </SelectContent>
                         </Select>
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -342,6 +355,7 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
               <Button
                 type="submit"
                 disabled={isCreating}
+                className={shakeClassName}
               >
                 {isCreating ? "Adding credit card" : "Add credit card"}
               </Button>

@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "../ui/drawer";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useTransfersQuery, useTransferQuery } from "@/hooks/useTransferTransactionsQuery";
@@ -26,6 +26,7 @@ import { Separator } from "../ui/separator";
 import { Checkbox } from "../ui/checkbox";
 import { formatDateForAPI } from "@/lib/utils";
 import { TagInput } from '@/components/shared/TagInput';
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface EditTransferDrawerProps {
   open: boolean;
@@ -47,6 +48,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
 
   const form = useForm<z.infer<typeof TransferTransactionValidation>>({
     resolver: zodResolver(TransferTransactionValidation),
+    mode: "onTouched",
     defaultValues: {
       name: "",
       amount: "",
@@ -59,6 +61,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
       tagIds: [],
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     if (transactionData) {
@@ -135,6 +138,14 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
     }
   }
 
+  const onError = () => {
+    const firstError = document.querySelector('[aria-invalid="true"]') as HTMLElement | null;
+    if (firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstError.focus({ preventScroll: true });
+    }
+  };
+
   const handleDeleteClick = async () => {
     setDeleteDialogOpen(true);
   }
@@ -194,7 +205,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
             </>
           ) : (
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85dvh]'>
+              <form onSubmit={form.handleSubmit(onSubmit, onError)} className='flex flex-col h-full max-h-[85dvh]'>
                 <DrawerHeader className='flex-shrink-0'>
                   <DrawerTitle className='text-xl'>
                     Edit Transfer Transaction
@@ -219,6 +230,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                               disabled={isUpdating}
                             />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -238,6 +250,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                               disabled={isUpdating}
                             />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -274,6 +287,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                                   disabled={isUpdating}
                                 />
                               </FormControl>
+                              <FormMessage />
                             </FormItem>
                           )}
                         />
@@ -288,8 +302,8 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                         render={({ field }) => (
                           <FormItem className="flex-1">
                             <FormLabel>From Account</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
+                            <Select
+                              onValueChange={field.onChange}
                               defaultValue={field.value}
                               key={field.value || 'from-account-select'}
                               disabled={isUpdating}
@@ -309,6 +323,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                                   ))}
                               </SelectContent>
                             </Select>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -321,9 +336,9 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                         render={({ field }) => (
                           <FormItem className="flex-1">
                             <FormLabel>To Account</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
-                              defaultValue={field.value} 
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
                               key={field.value || 'to-account-select'}
                               disabled={isUpdating}
                             >
@@ -342,6 +357,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                                   ))}
                               </SelectContent>
                             </Select>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -353,13 +369,13 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                       render={({ field }) => (
                         <FormItem className="p-4">
                           <FormLabel>Transfer type</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
+                          <Select
+                            onValueChange={field.onChange}
                             defaultValue={field.value}
                             key={field.value || 'from-account-select'}
                             disabled={isUpdating}
                           >
-                              <FormControl>
+                            <FormControl>
                               <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Select transfer type" />
                               </SelectTrigger>
@@ -372,6 +388,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                               ))}
                             </SelectContent>
                           </Select>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -412,6 +429,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                               />
                             </PopoverContent>
                           </Popover>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -430,6 +448,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                               disabled={isUpdating}
                             />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -447,6 +466,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                               disabled={isUpdating}
                             />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -461,6 +481,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                   <Button
                     type="submit"
                     disabled={isUpdating}
+                    className={shakeClassName}
                   >
                     {isUpdating ? "Updating transfer" : "Update transfer"}
                   </Button>

@@ -4,7 +4,7 @@ import React, { useEffect } from 'react'
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { useExpenseTransactionsQuery } from "@/hooks/useExpenseTransactionsQuery";
 import { useForm } from "react-hook-form";
 import { createExpenseTransactionSchema } from "@/lib/validations/expense-transactions";
@@ -24,6 +24,7 @@ import { Textarea } from "../ui/textarea";
 import { ScrollArea } from "../ui/scroll-area";
 import { formatDateForAPI } from "@/lib/utils";
 import { TagInput } from '@/components/shared/TagInput';
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface CreateExpenseTransactionProps {
   open: boolean;
@@ -43,6 +44,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
 
   const form = useForm<z.infer<typeof createExpenseTransactionSchema>>({
     resolver: zodResolver(createExpenseTransactionSchema),
+    mode: "onTouched",
     defaultValues: {
       name: "",
       amount: "",
@@ -57,6 +59,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
       tagIds: [],
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   const selectedAccountId = form.watch("accountId");
   const selectedAccount = allAccounts.find(acc => acc.id === selectedAccountId);
@@ -133,6 +136,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                         disabled={isCreating}
                       />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -152,6 +156,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                         disabled={isCreating}
                       />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -176,6 +181,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -216,6 +222,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                                 disabled={isCreating}
                               />
                             </FormControl>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -255,6 +262,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                                 />
                               </PopoverContent>
                             </Popover>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -283,6 +291,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -295,8 +304,8 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                   render={({ field }) => (
                     <FormItem className="p-4">
                       <FormLabel>Subcategory (Optional)</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         value={field.value || "none"}  // ← Default to "none"
                         disabled={isCreating}
                       >
@@ -314,6 +323,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -356,6 +366,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                           />
                         </PopoverContent>
                       </Popover>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -374,6 +385,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                         disabled={isCreating}
                       />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -391,6 +403,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
                         disabled={isCreating}
                       />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -400,6 +413,7 @@ const CreateExpenseTransactionSheet = ({ open, onOpenChange, className }: Create
               <Button
                 type="submit"
                 disabled={isCreating}
+                className={shakeClassName}
               >
                 {isCreating ? "Adding expense" : "Add expense"}
               </Button>

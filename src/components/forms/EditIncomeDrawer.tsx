@@ -23,6 +23,7 @@ import { Separator } from '../ui/separator';
 import SkeletonEditIncomeDrawerForm from '../shared/SkeletonEditIncomeDrawerForm';
 import { formatDateForAPI } from '@/lib/utils';
 import { TagInput } from '@/components/shared/TagInput';
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface EditIncomeDrawerProps {
   open: boolean;
@@ -43,6 +44,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
 
   const form = useForm<z.infer<typeof IncomeTransactionValidation>>({
     resolver: zodResolver(IncomeTransactionValidation),
+    mode: "onTouched",
     defaultValues: {
       name: "",
       amount: "",
@@ -53,6 +55,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
       tagIds: [],
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     if (incomeTransactionData) {
@@ -111,6 +114,14 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
       });
     }
   }
+
+  const onError = () => {
+    const firstError = document.querySelector('[aria-invalid="true"]') as HTMLElement | null;
+    if (firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstError.focus({ preventScroll: true });
+    }
+  };
 
   const handleDeleteClick = async () => {
     setDeleteDialogOpen(true);
@@ -171,7 +182,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
         ) : (
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit(onSubmit)}
+              onSubmit={form.handleSubmit(onSubmit, onError)}
               className='flex flex-col h-full max-h-[85dvh]'
             >  
               <DrawerHeader className='flex-shrink-0'>
@@ -198,6 +209,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                             disabled={isUpdating}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -217,6 +229,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                             disabled={isUpdating}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -227,8 +240,8 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                     render={({ field }) => (
                       <FormItem className="p-4">
                         <FormLabel>Account</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
+                        <Select
+                          onValueChange={field.onChange}
                           defaultValue={field.value}
                           key={field.value || 'account-select'}
                           disabled={isUpdating}
@@ -238,7 +251,6 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                               <SelectValue placeholder="Select account" />
                             </SelectTrigger>
                           </FormControl>
-                          <FormMessage />
                           <SelectContent>
                             {accounts.map((account) => (
                               <SelectItem key={account.id} value={account.id}>
@@ -247,6 +259,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -257,13 +270,13 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                     render={({ field }) => (
                       <FormItem className="p-4">
                         <FormLabel>Income type</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
+                        <Select
+                          onValueChange={field.onChange}
                           defaultValue={field.value}
                           key={field.value || 'income-type-select'}
                           disabled={isUpdating}
-                        >                          
-                        <FormControl>
+                        >
+                          <FormControl>
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select income type" />
                             </SelectTrigger>
@@ -276,6 +289,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -316,6 +330,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                             />
                           </PopoverContent>
                         </Popover>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -333,6 +348,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                             disabled={isUpdating}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -350,6 +366,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                             disabled={isUpdating}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -365,6 +382,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                 <Button
                   type="submit"
                   disabled={isUpdating}
+                  className={shakeClassName}
                 >
                   {isUpdating ? "Updating income" : "Update income"}
                 </Button>

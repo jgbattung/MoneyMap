@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod"
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "../ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
@@ -20,6 +20,7 @@ import { Separator } from "../ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface EditCardSheetProps {
   open: boolean;
@@ -50,6 +51,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
 
   const form = useForm<z.infer<typeof CardValidation>>({
     resolver: zodResolver(CardValidation),
+    mode: "onTouched",
     defaultValues: {
       name: '',
       initialBalance: '',
@@ -58,6 +60,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
       dueDate: undefined,
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     if (cardData) {
@@ -198,6 +201,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
                         disabled={isUpdating}
                       />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -232,6 +236,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
                         disabled={isUpdating}
                       />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -346,6 +351,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
                         </Command>
                       </PopoverContent>
                     </Popover>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -364,7 +370,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
                         onValueChange={(value) => field.onChange(parseInt(value))}
                         defaultValue={field.value?.toString()}
                         key={field.value?.toString() || 'statement-date-select'}
-                        disabled={isUpdating}  
+                        disabled={isUpdating}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select day" />
@@ -378,6 +384,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
                         </SelectContent>
                       </Select>
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -396,7 +403,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
                         onValueChange={(value) => field.onChange(parseInt(value))}
                         defaultValue={field.value?.toString()}
                         key={field.value?.toString() || 'due-date-select'}
-                        disabled={isUpdating}  
+                        disabled={isUpdating}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select day" />
@@ -410,6 +417,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
                         </SelectContent>
                       </Select>
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -418,6 +426,7 @@ const EditCardSheet = ({ open, onOpenChange, className, cardId }: EditCardSheetP
                 <Button
                   type="submit"
                   disabled={isUpdating}
+                  className={shakeClassName}
                 >
                   {isUpdating ? "Updating credit card" : "Update credit card"}
                 </Button>

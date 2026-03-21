@@ -13,6 +13,7 @@ import { Checkbox } from '../ui/checkbox';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 import { ScrollArea } from '../ui/scroll-area';
 
 interface CreateAccountDrawerProps {
@@ -28,12 +29,14 @@ const CreateAccountDrawer = ({ open, onOpenChange, className }: CreateAccountDra
 
   const form = useForm<z.infer<typeof AccountValidation>>({
     resolver: zodResolver(AccountValidation),
+    mode: "onTouched",
     defaultValues: {
       name: '',
       initialBalance: '',
       addToNetWorth: true,
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     const checkScroll = () => {
@@ -87,13 +90,21 @@ const CreateAccountDrawer = ({ open, onOpenChange, className }: CreateAccountDra
     }
   }
 
+  const onError = () => {
+    const firstError = document.querySelector('[aria-invalid="true"]') as HTMLElement | null;
+    if (firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstError.focus({ preventScroll: true });
+    }
+  };
+
   return (
     <Drawer repositionInputs={false} open={open} onOpenChange={onOpenChange}>
       <DrawerContent
         onEscapeKeyDown={(e) => isCreating && e.preventDefault()} className={`${className}`}
       >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85dvh]'>
+          <form onSubmit={form.handleSubmit(onSubmit, onError)} className='flex flex-col h-full max-h-[85dvh]'>
             <DrawerHeader>
               <DrawerTitle className='text-xl'>
                 Create account
@@ -209,6 +220,7 @@ const CreateAccountDrawer = ({ open, onOpenChange, className }: CreateAccountDra
               <Button
                 type="submit"
                 disabled={isCreating}
+                className={shakeClassName}
               >
                 {isCreating ? "Creating account" : "Create account"}
               </Button>

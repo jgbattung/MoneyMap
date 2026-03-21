@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
-import { Form, FormControl, FormField, FormItem, FormLabel } from '../ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useAccountsQuery } from "@/hooks/useAccountsQuery";
@@ -21,6 +21,7 @@ import { format } from "date-fns";
 import { ScrollArea } from "../ui/scroll-area";
 import { formatDateForAPI } from "@/lib/utils";
 import { TagInput } from '@/components/shared/TagInput';
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface CreateIncomeTransactionProps {
   open: boolean;
@@ -38,6 +39,7 @@ const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: Create
 
   const form = useForm<z.infer<typeof IncomeTransactionValidation>> ({
     resolver: zodResolver(IncomeTransactionValidation),
+    mode: "onTouched",
       defaultValues: {
       name: "",
       amount: "",
@@ -48,6 +50,7 @@ const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: Create
       tagIds: [],
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   useEffect(() => {
     const checkScroll = () => {
@@ -102,13 +105,21 @@ const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: Create
     }
   }
 
+  const onError = () => {
+    const firstError = document.querySelector('[aria-invalid="true"]') as HTMLElement | null;
+    if (firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstError.focus({ preventScroll: true });
+    }
+  };
+
   return (
     <Drawer repositionInputs={false} open={open} onOpenChange={onOpenChange}>
       <DrawerContent
         onEscapeKeyDown={(e) => isCreating && e.preventDefault()} className={`${className}`}
       >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85dvh]'>
+          <form onSubmit={form.handleSubmit(onSubmit, onError)} className='flex flex-col h-full max-h-[85dvh]'>
             <DrawerHeader>
               <DrawerTitle className='text-xl'>
                 Add Income Transaction
@@ -133,6 +144,7 @@ const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: Create
                           disabled={isCreating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -152,6 +164,7 @@ const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: Create
                           disabled={isCreating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -176,6 +189,7 @@ const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: Create
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -200,6 +214,7 @@ const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: Create
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -240,6 +255,7 @@ const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: Create
                           />
                         </PopoverContent>
                       </Popover>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -257,6 +273,7 @@ const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: Create
                           disabled={isCreating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -274,6 +291,7 @@ const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: Create
                           disabled={isCreating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -288,6 +306,7 @@ const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: Create
               <Button
                 type="submit"
                 disabled={isCreating}
+                className={shakeClassName}
               >
                 {isCreating ? "Adding income category" : "Add income category"}
               </Button>

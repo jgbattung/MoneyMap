@@ -8,9 +8,10 @@ import { IncomeTypeValidation } from "@/lib/validations/income";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "../ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
+import { useShakeOnError } from '@/hooks/useShakeOnError';
 
 interface CreateIncomeTypeSheetProps {
   open: boolean;
@@ -23,11 +24,13 @@ const CreateIncomeTypeSheet = ({ open, onOpenChange, className }: CreateIncomeTy
   
   const form = useForm<z.infer<typeof IncomeTypeValidation>> ({
     resolver: zodResolver(IncomeTypeValidation),
+    mode: "onTouched",
     defaultValues: {
       name: "",
       monthlyTarget: "",
     }
   });
+  const { shakeClassName } = useShakeOnError(form.formState);
 
   const onSubmit = async (values: z.infer<typeof IncomeTypeValidation>) => {
     try {
@@ -77,6 +80,7 @@ const CreateIncomeTypeSheet = ({ open, onOpenChange, className }: CreateIncomeTy
                       disabled={isCreating}
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -99,6 +103,7 @@ const CreateIncomeTypeSheet = ({ open, onOpenChange, className }: CreateIncomeTy
                       disabled={isCreating}
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -107,6 +112,7 @@ const CreateIncomeTypeSheet = ({ open, onOpenChange, className }: CreateIncomeTy
               <Button
                 type="submit"
                 disabled={isCreating}
+                className={shakeClassName}
               >
                 {isCreating ? "Adding income category" : "Add income category"}
               </Button>
