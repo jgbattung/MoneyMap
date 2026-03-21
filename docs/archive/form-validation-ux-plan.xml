@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <feature>form-validation-ux</feature>
+  <spec>docs/form-validation-ux-spec.md</spec>
+  <branch>fix/form-validation-ux</branch>
+
+  <!-- ============================================================ -->
+  <!-- PHASE 1: Schema Fix                                          -->
+  <!-- ============================================================ -->
+  <phase name="Schema Fix">
+    <task>
+      <name>Fix createExpenseTransactionSchema refinement</name>
+      <action>
+        In `src/lib/validations/expense-transactions.ts`, replace the `.refine()` on
+        `createExpenseTransactionSchema` with `.superRefine()` that emits separate
+        Zod issues for each error case:
+        - Non-installment missing date: path `["date"]`, message "Date is required"
+        - Installment missing duration: path `["installmentDuration"]`, message "Duration is required for installment expenses"
+        - Installment missing start date: path `["installmentStartDate"]`, message "Start date is required for installment expenses"
+
+        Do NOT change `ExpenseTransactionValidation`, `updateExpenseTransactionSchema`,
+        `ExpenseTransactionInput`, or `UpdateExpenseTransactionInput`.
+      </action>
+      <verify>
+        Run `npm run build` to confirm no type errors.
+        Write a unit test in `src/lib/validations/__tests__/expense-transactions.test.ts`
+        that validates all four cases (non-installment missing date, installment missing
+        duration, installment missing start date, valid submission for both paths).
+        Run `npx vitest run src/lib/validations/__tests__/expense-transactions.test.ts`.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- ============================================================ -->
+  <!-- PHASE 2: Add FormMessage + mode:"onTouched" to all forms     -->
+  <!-- Batched by form category. Each batch is one commit.          -->
+  <!-- ============================================================ -->
+  <phase name="FormMessage and Validation Mode">
+    <task>
+      <name>Add FormMessage + onTouched to expense transaction forms</name>
+      <action>
+        Update the following 3 files:
+        - `src/components/forms/CreateExpenseTransactionSheet.tsx` (10 FormItem blocks)
+        - `src/components/forms/CreateExpenseTransactionDrawer.tsx` (10 FormItem blocks)
+        - `src/components/forms/EditExpenseDrawer.tsx` (10 FormItem blocks)
+
+        For each file:
+        1. Add `FormMessage` to the import from `../ui/form` (or `../../ui/form`).
+        2. Add `<FormMessage />` as the last child inside every `<FormItem>` block,
+           after `</FormControl>` or after wrapper components like `</Select>` / `</Popover>`.
+        3. Add `mode: "onTouched"` to the `useForm()` options object.
+      </action>
+      <verify>Run `npm run build` to confirm no type errors or JSX issues.</verify>
+    </task>
+
+    <task>
+      <name>Add FormMessage + onTouched to income transaction forms</name>
+      <action>
+        Update the following 3 files:
+        - `src/components/forms/CreateIncomeTransactionSheet.tsx` (7 FormItem blocks)
+        - `src/components/forms/CreateIncomeTransactionDrawer.tsx` (7 FormItem blocks)
+        - `src/components/forms/EditIncomeDrawer.tsx` (7 FormItem blocks, already has 1 FormMessage -- add to the other 6)
+
+        For each file:
+        1. Add `FormMessage` to the import if not already present.
+        2. Add `<FormMessage />` inside every `<FormItem>` that does not already have one.
+        3. Add `mode: "onTouched"` to the `useForm()` options object.
+      </action>
+      <verify>Run `npm run build` to confirm no type errors or JSX issues.</verify>
+    </task>
+
+    <task>
+      <name>Add FormMessage + onTouched to transfer forms</name>
+      <action>
+        Update the following 3 files:
+        - `src/components/forms/CreateTransferSheet.tsx` (8 FormItem blocks)
+        - `src/components/forms/CreateTransferDrawer.tsx` (9 FormItem blocks)
+        - `src/components/forms/EditTransferDrawer.tsx` (9 FormItem blocks)
+
+        For each file:
+        1. Add `FormMessage` to the import.
+        2. Add `<FormMessage />` inside every `<FormItem>`.
+        3. Add `mode: "onTouched"` to the `useForm()` options object.
+      </action>
+      <verify>Run `npm run build` to confirm no type errors or JSX issues.</verify>
+    </task>
+
+    <task>
+      <name>Add FormMessage + onTouched to expense type forms</name>
+      <action>
+        Update the following 4 files:
+        - `src/components/forms/CreateExpenseTypeSheet.tsx` (2 FormItem blocks)
+        - `src/components/forms/CreateExpenseTypeDrawer.tsx` (2 FormItem blocks)
+        - `src/components/forms/EditExpenseTypeSheet.tsx` (2 FormItem blocks)
+        - `src/components/forms/EditExpenseTypeDrawer.tsx` (2 FormItem blocks)
+
+        For each file:
+        1. Add `FormMessage` to the import.
+        2. Add `<FormMessage />` inside every `<FormItem>`.
+        3. Add `mode: "onTouched"` to the `useForm()` options object.
+      </action>
+      <verify>Run `npm run build` to confirm no type errors or JSX issues.</verify>
+    </task>
+
+    <task>
+      <name>Add FormMessage + onTouched to income type forms</name>
+      <action>
+        Update the following 4 files:
+        - `src/components/forms/CreateIncomeTypeSheet.tsx` (2 FormItem blocks)
+        - `src/components/forms/CreateIncomeTypeDrawer.tsx` (2 FormItem blocks)
+        - `src/components/forms/EditIncomeTypeSheet.tsx` (2 FormItem blocks)
+        - `src/components/forms/EditIncomeTypeDrawer.tsx` (2 FormItem blocks)
+
+        For each file:
+        1. Add `FormMessage` to the import.
+        2. Add `<FormMessage />` inside every `<FormItem>`.
+        3. Add `mode: "onTouched"` to the `useForm()` options object.
+      </action>
+      <verify>Run `npm run build` to confirm no type errors or JSX issues.</verify>
+    </task>
+
+    <task>
+      <name>Add FormMessage + onTouched to card and account forms</name>
+      <action>
+        Update the following files that need partial fixes or only the mode change:
+        - `src/components/forms/EditCardSheet.tsx` (5 FormItem, 0 FormMessage -- add all 5)
+        - `src/components/forms/CreateCardDrawer.tsx` (5 FormItem, 3 FormMessage -- add to the 2 missing)
+
+        And add `mode: "onTouched"` to ALL card and account forms (including those
+        that already have full FormMessage coverage):
+        - `src/components/forms/CreateAccountSheet.tsx`
+        - `src/components/forms/CreateAccountDrawer.tsx`
+        - `src/components/forms/CreateCardSheet.tsx`
+        - `src/components/forms/CreateCardDrawer.tsx`
+        - `src/components/forms/EditAccountSheet.tsx`
+        - `src/components/forms/EditAccountDrawer.tsx`
+        - `src/components/forms/EditCardSheet.tsx`
+        - `src/components/forms/EditCardDrawer.tsx`
+
+        For each file:
+        1. Add `FormMessage` to the import if not present.
+        2. Add `<FormMessage />` to any `<FormItem>` that does not already have one
+           (skip checkbox-only FormItems like `includeInNetWorth`).
+        3. Add `mode: "onTouched"` to the `useForm()` options object.
+      </action>
+      <verify>Run `npm run build` to confirm no type errors or JSX issues.</verify>
+    </task>
+  </phase>
+
+  <!-- ============================================================ -->
+  <!-- PHASE 3: Shake Animation                                     -->
+  <!-- ============================================================ -->
+  <phase name="Shake Animation">
+    <task>
+      <name>Add shake keyframe animation to global CSS</name>
+      <action>
+        In `src/app/globals.css`, add the shake keyframe animation:
+
+        ```css
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          20%, 60% { transform: translateX(-4px); }
+          40%, 80% { transform: translateX(4px); }
+        }
+
+        .animate-shake {
+          animation: shake 0.3s ease-in-out;
+        }
+        ```
+
+        Place it after the existing global styles but outside any `@layer` directives
+        (or inside `@layer utilities` if other custom utilities are defined there --
+        follow the existing pattern in the file).
+      </action>
+      <verify>Run `npm run build` to confirm no CSS parsing errors.</verify>
+    </task>
+
+    <task>
+      <name>Create useShakeOnError hook</name>
+      <action>
+        Create `src/hooks/useShakeOnError.ts` with a custom hook that:
+        1. Accepts a React Hook Form `formState` object (specifically `submitCount` and `isSubmitSuccessful`).
+        2. Returns a `ref` (for the submit button) and a `shakeClassName` string.
+        3. When `submitCount` increments and `isSubmitSuccessful` is false, sets the
+           className to `"animate-shake"` for 300ms, then clears it.
+        4. Uses `useEffect` watching `submitCount` to detect failed submissions.
+        5. Uses a timeout ref to clean up properly.
+
+        Export signature:
+        ```typescript
+        export function useShakeOnError(formState: {
+          submitCount: number;
+          isSubmitSuccessful: boolean;
+        }): {
+          buttonRef: React.RefObject<HTMLButtonElement | null>;
+          shakeClassName: string;
+        }
+        ```
+      </action>
+      <verify>
+        Run `npm run build` to confirm the hook compiles.
+        Write a unit test in `src/hooks/__tests__/useShakeOnError.test.ts` that
+        verifies the className is set and cleared correctly.
+        Run `npx vitest run src/hooks/__tests__/useShakeOnError.test.ts`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Apply useShakeOnError to all form submit buttons</name>
+      <action>
+        In all 26 form files in `src/components/forms/` (excluding `SetTargetDialog.tsx`):
+        1. Import `useShakeOnError` from `@/hooks/useShakeOnError`.
+        2. Call `const { shakeClassName } = useShakeOnError(form.formState);` inside the component.
+        3. Add the `shakeClassName` to the submit `<Button>`'s className using `cn()`:
+           `className={cn("existing-classes", shakeClassName)}`
+
+        The `ref` from the hook is optional -- if the hook uses `useEffect` + className
+        approach (not DOM manipulation), a ref is not needed. The Builder should
+        choose the cleaner pattern.
+      </action>
+      <verify>Run `npm run build` and `npm run lint` to confirm no errors.</verify>
+    </task>
+  </phase>
+
+  <!-- ============================================================ -->
+  <!-- PHASE 4: Scroll-to-Error Verification and Fix                -->
+  <!-- ============================================================ -->
+  <phase name="Scroll-to-Error">
+    <task>
+      <name>Verify and fix scroll-to-error inside ScrollArea</name>
+      <action>
+        Test whether React Hook Form's default `shouldFocusError: true` scrolls to the
+        first errored field inside Radix `ScrollArea` containers. The forms that use
+        `ScrollArea` include:
+        - CreateExpenseTransactionDrawer
+        - CreateIncomeTransactionDrawer
+        - CreateTransferDrawer
+        - EditExpenseDrawer
+        - EditTransferDrawer
+        - EditIncomeDrawer
+        - EditCardDrawer
+        - CreateCardDrawer
+        - CreateAccountDrawer
+        - EditAccountDrawer
+
+        If scrolling does NOT work (the field gets focus but the ScrollArea does not
+        scroll to show it), implement a fix by adding an `onError` handler to
+        `form.handleSubmit()` that calls `scrollIntoView()` on the first errored field.
+
+        The fix should be applied as a reusable utility or inline pattern. The
+        `onSubmit` form handler currently uses `form.handleSubmit(onSubmit)`. Change
+        it to `form.handleSubmit(onSubmit, onError)` where `onError` scrolls to the
+        first error:
+
+        ```typescript
+        const onError: SubmitErrorHandler<FormValues> = (errors) => {
+          const firstKey = Object.keys(errors)[0];
+          if (firstKey) {
+            const el = document.querySelector(`[name="${firstKey}"]`)
+              ?? document.getElementById(`form-${firstKey}-form-item`);
+            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        };
+        ```
+
+        Only implement this if the default behavior is insufficient. If the default
+        works, skip this and note it in the verification doc.
+      </action>
+      <verify>
+        Manual test: Open a drawer form with many fields (e.g., CreateExpenseTransactionDrawer).
+        Scroll to the bottom of the form. Fill only the bottom fields. Submit.
+        Confirm the form scrolls to the first errored field at the top.
+        Run `npm run build` and `npm run lint`.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- ============================================================ -->
+  <!-- PHASE 5: Final QA                                            -->
+  <!-- ============================================================ -->
+  <phase name="Final QA">
+    <task>
+      <name>Full lint, build, and test pass</name>
+      <action>
+        Run the full QA pipeline:
+        1. `npm run lint` -- fix any lint errors.
+        2. `npm run build` -- fix any build errors.
+        3. `npx vitest run` -- run all tests, fix any failures.
+        4. Spawn the QA pipeline agent on all new/changed files.
+      </action>
+      <verify>
+        All three commands pass with zero errors.
+        QA pipeline returns green.
+        Generate `docs/form-validation-ux-verification.md` with results.
+      </verify>
+    </task>
+  </phase>
+</plan>
