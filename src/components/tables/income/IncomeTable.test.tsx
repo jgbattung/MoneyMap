@@ -243,7 +243,7 @@ describe('IncomeTable', () => {
     it('renders empty state when no transactions exist', () => {
       setupAllMocks([]);
       renderIncomeTable();
-      expect(screen.getByText('No income transactions found.')).toBeTruthy();
+      expect(screen.getByText('No income found')).toBeTruthy();
     });
 
     it('shows correct row count in pagination text', () => {
