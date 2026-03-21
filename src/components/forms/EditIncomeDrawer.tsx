@@ -115,6 +115,14 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
     }
   }
 
+  const onError = () => {
+    const firstError = document.querySelector('[aria-invalid="true"]') as HTMLElement | null;
+    if (firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstError.focus({ preventScroll: true });
+    }
+  };
+
   const handleDeleteClick = async () => {
     setDeleteDialogOpen(true);
   }
@@ -174,7 +182,7 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
         ) : (
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit(onSubmit)}
+              onSubmit={form.handleSubmit(onSubmit, onError)}
               className='flex flex-col h-full max-h-[85dvh]'
             >  
               <DrawerHeader className='flex-shrink-0'>

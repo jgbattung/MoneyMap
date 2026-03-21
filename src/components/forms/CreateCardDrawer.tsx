@@ -104,13 +104,21 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
     }
   }
 
+  const onError = () => {
+    const firstError = document.querySelector('[aria-invalid="true"]') as HTMLElement | null;
+    if (firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstError.focus({ preventScroll: true });
+    }
+  };
+
   return (
     <Drawer repositionInputs={false} open={open} onOpenChange={onOpenChange}>
       <DrawerContent
         onEscapeKeyDown={(e) => isCreating && e.preventDefault()} className={`${className}`}
       >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col h-full max-h-[85dvh]'>
+          <form onSubmit={form.handleSubmit(onSubmit, onError)} className='flex flex-col h-full max-h-[85dvh]'>
             <DrawerHeader className='flex-shrink-0'>
               <DrawerTitle className='text-xl'>
                 Add Credit Card
