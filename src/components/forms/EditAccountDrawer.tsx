@@ -34,6 +34,7 @@ const EditAccountDrawer = ({ open, onOpenChange, className, accountId }: EditAcc
 
   const form = useForm<z.infer<typeof AccountValidation>>({
       resolver: zodResolver(AccountValidation),
+      mode: "onTouched",
       defaultValues: {
         name: '',
         initialBalance: '',

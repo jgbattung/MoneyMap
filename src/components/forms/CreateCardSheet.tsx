@@ -44,6 +44,7 @@ const CreateCardSheet = ({ open, onOpenChange, className }: CreateCardSheetProps
 
   const form = useForm<z.infer<typeof CardValidation>>({
     resolver: zodResolver(CardValidation),
+    mode: "onTouched",
     defaultValues: {
       name: '',
       initialBalance: '',

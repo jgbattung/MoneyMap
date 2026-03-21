@@ -8,7 +8,7 @@ import { IncomeTypeValidation } from "@/lib/validations/income";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "../ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 
@@ -23,6 +23,7 @@ const CreateIncomeTypeSheet = ({ open, onOpenChange, className }: CreateIncomeTy
   
   const form = useForm<z.infer<typeof IncomeTypeValidation>> ({
     resolver: zodResolver(IncomeTypeValidation),
+    mode: "onTouched",
     defaultValues: {
       name: "",
       monthlyTarget: "",
@@ -77,6 +78,7 @@ const CreateIncomeTypeSheet = ({ open, onOpenChange, className }: CreateIncomeTy
                       disabled={isCreating}
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -99,6 +101,7 @@ const CreateIncomeTypeSheet = ({ open, onOpenChange, className }: CreateIncomeTy
                       disabled={isCreating}
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />

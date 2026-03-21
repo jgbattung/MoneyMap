@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { z } from "zod"
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from '../ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { toast } from 'sonner';
@@ -29,6 +29,7 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
 
   const form = useForm<z.infer<typeof IncomeTypeValidation>>({
     resolver: zodResolver(IncomeTypeValidation),
+    mode: "onTouched",
     defaultValues: {
       name: '',
       monthlyTarget: '',
@@ -147,6 +148,7 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
                             disabled={isUpdating}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -169,6 +171,7 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
                             disabled={isUpdating}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />

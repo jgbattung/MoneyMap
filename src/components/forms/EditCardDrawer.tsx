@@ -52,6 +52,7 @@ const EditCardDrawer = ({ open, onOpenChange, className, cardId }: EditCardDrawe
 
   const form = useForm<z.infer<typeof CardValidation>>({
     resolver: zodResolver(CardValidation),
+    mode: "onTouched",
     defaultValues: {
       name: '',
       initialBalance: '',

@@ -32,6 +32,7 @@ const EditAccountSheet = ({ open, onOpenChange, className, accountId }: EditAcco
 
   const form = useForm<z.infer<typeof AccountValidation>>({
     resolver: zodResolver(AccountValidation),
+    mode: "onTouched",
     defaultValues: {
       name: '',
       initialBalance: '',

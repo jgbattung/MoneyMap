@@ -25,6 +25,7 @@ const CreateAccountSheet = ({ open, onOpenChange, className }: CreateAccountShee
 
   const form = useForm<z.infer<typeof AccountValidation>>({
     resolver: zodResolver(AccountValidation),
+    mode: "onTouched",
     defaultValues: {
       name: '',
       initialBalance: '',

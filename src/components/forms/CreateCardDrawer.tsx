@@ -46,6 +46,7 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
 
   const form = useForm<z.infer<typeof CardValidation>>({
     resolver: zodResolver(CardValidation),
+    mode: "onTouched",
     defaultValues: {
       name: '',
       initialBalance: '',
@@ -298,6 +299,7 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
                           </SelectContent>
                         </Select>
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -328,6 +330,7 @@ const CreateCardDrawer = ({ open, onOpenChange, className }: CreateCardDrawerPro
                           </SelectContent>
                         </Select>
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />

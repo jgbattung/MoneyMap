@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "../ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
@@ -30,6 +30,7 @@ const EditIncomeTypeSheet = ({ open, onOpenChange, className, incomeTypeId }: Ed
 
   const form = useForm<z.infer<typeof IncomeTypeValidation>>({
     resolver: zodResolver(IncomeTypeValidation),
+    mode: "onTouched",
     defaultValues: {
       name: "",
       monthlyTarget: "",
@@ -145,6 +146,7 @@ const EditIncomeTypeSheet = ({ open, onOpenChange, className, incomeTypeId }: Ed
                           disabled={isUpdating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -167,6 +169,7 @@ const EditIncomeTypeSheet = ({ open, onOpenChange, className, incomeTypeId }: Ed
                           disabled={isUpdating}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />

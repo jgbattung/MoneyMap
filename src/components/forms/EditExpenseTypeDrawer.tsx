@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "../ui/drawer";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "../ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
@@ -45,6 +45,7 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, budgetId, className }: Edit
 
   const form = useForm<z.infer<typeof ExpenseTypeValidation>>({
     resolver: zodResolver(ExpenseTypeValidation),
+    mode: "onTouched",
     defaultValues: {
       name: "",
       monthlyBudget: "",
@@ -293,6 +294,7 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, budgetId, className }: Edit
                             disabled={isUpdating}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -315,6 +317,7 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, budgetId, className }: Edit
                             disabled={isUpdating}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
