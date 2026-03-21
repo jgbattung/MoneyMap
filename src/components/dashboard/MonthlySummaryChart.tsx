@@ -1,8 +1,9 @@
 "use client"
 
 import React from 'react'
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, BarChart3 } from 'lucide-react'
 import { useMonthlySummary } from '@/hooks/useMonthlySummary'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const MonthlySummaryChart = () => {
@@ -63,9 +64,12 @@ const MonthlySummaryChart = () => {
     return (
       <div className='flex flex-col gap-3'>
         <h2 className='text-lg font-semibold text-foreground tracking-tight'>Monthly Summary</h2>
-        <div className='flex flex-col items-center justify-center py-12 text-center'>
-          <p className='text-muted-foreground text-sm'>No data available</p>
-        </div>
+        <EmptyState
+          icon={BarChart3}
+          title="No data for this period"
+          description="Data will appear once transactions are recorded."
+          variant="widget"
+        />
       </div>
     );
   }

@@ -19,13 +19,14 @@ import { IncomeTransaction, useIncomeTransactionsQuery } from '@/hooks/useIncome
 import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
 import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import { ChevronDownIcon, ChevronLeft, ChevronRight, SearchIcon, Trash2 } from 'lucide-react';
+import { ChevronDownIcon, ChevronLeft, ChevronRight, SearchIcon, SearchX, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery';
 import { useTagsQuery } from '@/hooks/useTagsQuery';
 import SkeletonTable from '@/components/shared/SkeletonTable';
 import DeleteDialog from '@/components/shared/DeleteDialog';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { formatDateForAPI } from '@/lib/utils';
 
 const columnHelper = createColumnHelper<IncomeTransaction>();
@@ -618,10 +619,13 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-32 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <p className="text-muted-foreground">No income transactions found.</p>
-                    </div>
+                  <TableCell colSpan={columns.length}>
+                    <EmptyState
+                      icon={SearchX}
+                      title="No income found"
+                      description="Try adjusting your search or filters."
+                      variant="table"
+                    />
                   </TableCell>
                 </TableRow>
               )}

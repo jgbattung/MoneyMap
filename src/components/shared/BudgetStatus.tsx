@@ -3,10 +3,11 @@
 import React from 'react';
 import { useBudgetStatus } from '@/hooks/useBudgetStatus';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/format';
 import { motion, useReducedMotion } from 'framer-motion';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, PiggyBank } from 'lucide-react';
 import Link from 'next/link';
 
 interface BudgetStatusItemProps {
@@ -103,15 +104,6 @@ const SkeletonBudgetList = () => (
   </div>
 );
 
-const EmptyState = () => (
-  <div className="flex flex-col items-center justify-center py-8 text-center">
-    <p className="text-sm text-muted-foreground">No budget activity this month</p>
-    <p className="text-xs text-muted-foreground mt-1">
-      Start tracking by adding budgets and expenses
-    </p>
-  </div>
-);
-
 const ErrorState = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
   <div className="flex flex-col items-center justify-center py-8 text-center">
     <AlertCircle className="h-8 w-8 text-error-600 mx-auto mb-2" />
@@ -141,7 +133,15 @@ const BudgetStatus = () => {
 
       {!isLoading && error && <ErrorState error={error} onRetry={() => refetch()} />}
 
-      {!isLoading && !error && budgets.length === 0 && <EmptyState />}
+      {!isLoading && !error && budgets.length === 0 && (
+        <EmptyState
+          icon={PiggyBank}
+          title="No budget activity"
+          description="Create a budget to track spending"
+          action={{ label: "Go to Budgets", href: "/budgets" }}
+          variant="widget"
+        />
+      )}
 
       {!isLoading && !error && budgets.length > 0 && (
         <>

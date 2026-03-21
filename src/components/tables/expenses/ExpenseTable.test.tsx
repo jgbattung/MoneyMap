@@ -312,7 +312,7 @@ describe('ExpenseTable', () => {
     it('renders empty state when no transactions exist', () => {
       setupAllMocks([]);
       renderExpenseTable();
-      expect(screen.getByText('No expense transactions found.')).toBeTruthy();
+      expect(screen.getByText('No expenses found')).toBeTruthy();
     });
 
     it('shows correct row count in pagination text', () => {
@@ -539,7 +539,7 @@ describe('ExpenseTable', () => {
       fireEvent.change(searchInput, { target: { value: 'xyznonexistent' } });
 
       await waitFor(() => {
-        expect(screen.getByText('No expense transactions found.')).toBeTruthy();
+        expect(screen.getByText('No expenses found')).toBeTruthy();
       });
     });
   });

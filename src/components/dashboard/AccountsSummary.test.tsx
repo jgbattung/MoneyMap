@@ -245,7 +245,7 @@ describe('AccountsSummary', () => {
     it('renders contextual helper text for empty accounts', () => {
       render(React.createElement(AccountsSummary), { wrapper: createWrapper() });
 
-      expect(screen.getByText('Add your first account to start tracking')).toBeTruthy();
+      expect(screen.getByText('Add an account to start tracking')).toBeTruthy();
     });
 
     it('renders a Wallet icon in the accounts empty state', () => {
@@ -467,7 +467,7 @@ describe('AccountsSummary', () => {
     it('renders contextual helper text for empty cards', () => {
       render(React.createElement(AccountsSummary), { wrapper: createWrapper() });
 
-      expect(screen.getByText('Add your first credit card to track debt')).toBeTruthy();
+      expect(screen.getByText('Add a credit card to track debt')).toBeTruthy();
     });
 
     it('renders a CreditCard icon in the cards empty state', () => {

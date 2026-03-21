@@ -330,7 +330,7 @@ describe('TransactionsMobileView', () => {
     it('shows empty state when no expenses exist', () => {
       setupAllMocks({ expenses: [] });
       renderMobileView();
-      expect(screen.getByText('No results found for your search.')).toBeTruthy();
+      expect(screen.getByText('No results found')).toBeTruthy();
     });
   });
 

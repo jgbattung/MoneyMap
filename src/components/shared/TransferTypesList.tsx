@@ -4,9 +4,10 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Icons } from '../icons'
+import { EmptyState } from '@/components/shared/EmptyState';
 import { useTransferTypesQuery } from '@/hooks/useTransferTypesQuery'
 import { toast } from 'sonner'
-import { Trash2, Check, X, Plus } from 'lucide-react'
+import { Trash2, Check, X, Plus, ArrowLeftRight } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -283,9 +284,12 @@ const TransferTypesList = () => {
         </div>
 
         {transferTypes.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            <p>No transfer types yet. Add your first one above!</p>
-          </div>
+          <EmptyState
+            icon={ArrowLeftRight}
+            title="No transfer types yet"
+            description="Add your first transfer type above."
+            variant="table"
+          />
         )}
       </div>
 

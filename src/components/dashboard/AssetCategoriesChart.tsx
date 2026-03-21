@@ -3,11 +3,12 @@
 import React from 'react'
 import { calculateAssetCategories } from '@/lib/utils'
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/lib/format';
 import { motion, useReducedMotion } from 'framer-motion';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, PieChart } from 'lucide-react';
 
 const AssetCategoriesChart = () => {
   const { accounts, isLoading, error, refetch } = useAccountsQuery();
@@ -66,12 +67,13 @@ const AssetCategoriesChart = () => {
     return (
       <div className='flex flex-col gap-3'>
         <h2 className='text-lg font-semibold text-foreground tracking-tight'>Asset Categories</h2>
-        <div className='flex flex-col items-center justify-center py-12 text-center'>
-          <p className='text-muted-foreground text-sm'>No asset categories</p>
-          <p className='text-muted-foreground text-xs mt-1'>
-            Add accounts to see your asset distribution
-          </p>
-        </div>
+        <EmptyState
+          icon={PieChart}
+          title="No asset categories"
+          description="Add accounts to see distribution"
+          action={{ label: "Go to Accounts", href: "/accounts" }}
+          variant="widget"
+        />
       </div>
     );
   }

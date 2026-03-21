@@ -169,7 +169,7 @@ describe('ExpenseBreakdownChart', () => {
         wrapper: createWrapper(),
       });
 
-      expect(screen.getByText('No expenses recorded for this month.')).toBeTruthy();
+      expect(screen.getByText('No expenses this month')).toBeTruthy();
     });
 
     it('renders empty state when breakdown has empty data array', () => {
@@ -183,7 +183,7 @@ describe('ExpenseBreakdownChart', () => {
         wrapper: createWrapper(),
       });
 
-      expect(screen.getByText('No expenses recorded for this month.')).toBeTruthy();
+      expect(screen.getByText('No expenses this month')).toBeTruthy();
     });
   });
 

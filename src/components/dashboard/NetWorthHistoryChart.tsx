@@ -9,6 +9,8 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { useNetWorthHistory } from '@/hooks/useNetWorthHistory'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { TrendingUp } from 'lucide-react'
 
 const chartConfig = {
   netWorth: {
@@ -65,12 +67,12 @@ const NetWorthHistoryChart = () => {
   if (history.length === 0) {
     return (
       <div className='flex flex-col gap-3'>
-        <div className='flex flex-col items-center justify-center py-16 text-center'>
-          <p className='text-muted-foreground'>No net worth history available</p>
-          <p className='text-muted-foreground text-sm mt-2'>
-            Start adding transactions to see your net worth trends
-          </p>
-        </div>
+        <EmptyState
+          icon={TrendingUp}
+          title="No history available"
+          description="Net worth trends will appear over time."
+          variant="widget"
+        />
       </div>
     );
   }

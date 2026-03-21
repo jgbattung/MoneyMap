@@ -11,6 +11,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useExpenseBreakdown } from '@/hooks/useExpenseBreakdown'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { PieChart as PieChartIcon } from 'lucide-react'
 
 interface ExpenseBreakdownChartProps {
   month: number
@@ -161,9 +163,12 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
             </SelectContent>
           </Select>
         </div>
-        <div className='flex flex-col items-center justify-center py-16 text-center'>
-          <p className='text-muted-foreground'>No expenses recorded for this month.</p>
-        </div>
+        <EmptyState
+          icon={PieChartIcon}
+          title="No expenses this month"
+          description="Expenses will appear here once recorded."
+          variant="table"
+        />
       </div>
     )
   }

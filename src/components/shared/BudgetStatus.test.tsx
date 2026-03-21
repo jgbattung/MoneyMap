@@ -69,6 +69,7 @@ vi.mock('@/components/ui/button', () => ({
 // Mock lucide-react icons
 vi.mock('lucide-react', () => ({
   AlertCircle: () => React.createElement('svg', { 'data-testid': 'icon-alert-circle' }),
+  PiggyBank: () => React.createElement('svg', { 'data-testid': 'icon-piggy-bank' }),
 }));
 
 // Mock next/link — render a plain <a> so "See All Budgets" is queryable
@@ -262,12 +263,12 @@ describe('BudgetStatus', () => {
 
   // -------------------------------------------------------------------------
   describe('empty state', () => {
-    it('renders "No budget activity this month" when budgets array is empty', () => {
+    it('renders "No budget activity" when budgets array is empty', () => {
       vi.mocked(useBudgetStatus).mockReturnValue(makeDefaultReturn({ budgets: [] }));
 
       render(React.createElement(BudgetStatus), { wrapper: createWrapper() });
 
-      expect(screen.getByText('No budget activity this month')).toBeTruthy();
+      expect(screen.getByText('No budget activity')).toBeTruthy();
     });
 
     it('renders helper text to guide user in empty state', () => {
@@ -275,7 +276,7 @@ describe('BudgetStatus', () => {
 
       render(React.createElement(BudgetStatus), { wrapper: createWrapper() });
 
-      expect(screen.getByText('Start tracking by adding budgets and expenses')).toBeTruthy();
+      expect(screen.getByText('Create a budget to track spending')).toBeTruthy();
     });
 
     it('does not render the summary line in empty state', () => {

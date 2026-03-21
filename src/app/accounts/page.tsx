@@ -11,6 +11,8 @@ import SkeletonAccountCard from '@/components/shared/SkeletonAccountCard'
 import EditAccountSheet from '@/components/forms/EditAccountSheet'
 import EditAccountDrawer from '@/components/forms/EditAccountDrawer'
 import DeleteDialog from '@/components/shared/DeleteDialog'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
 const Accounts = () => {
@@ -151,30 +153,22 @@ const Accounts = () => {
           </Button>
         </div>
       ) : accounts.length === 0 ? (
-        <div className='flex-1 flex flex-col items-center justify-center py-16'>
-          <Icons.wallet
-            className='h-24 w-24 mb-10'
-            strokeWidth={1.25}
-          />
-          <div className='flex flex-col px-4 items-center justify-center gap-3 text-center'>
-            <p className='text-2xl min-md:text-4xl font-semibold'>No accounts, yet.</p>
-            <p className='text-muted-foreground'>You have no accounts, yet! Start managing your finances by adding an account.</p>
-          </div>
-          <Button
-            onClick={() => setCreateAccountSheetOpen(true)}
-            className="hidden md:flex mt-10 text-lg px-6 py-6"
-          >
-            Create your first account
-          </Button>
-
-          {/* Mobile button */}
-          <Button
-            onClick={() => setCreateAccountDrawerOpen(true)}
-            className="flex md:hidden mt-10"
-          >
-            Create your first account
-          </Button>
-        </div>
+        <EmptyState
+          icon={Wallet}
+          title="No accounts yet"
+          description="Add your first account to start tracking your finances."
+          action={{
+            label: "Add your first account",
+            onClick: () => {
+              if (window.innerWidth >= 768) {
+                setCreateAccountSheetOpen(true);
+              } else {
+                setCreateAccountDrawerOpen(true);
+              }
+            },
+          }}
+          variant="page"
+        />
       ) : (
         <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'>
           {accounts.map((account) => (

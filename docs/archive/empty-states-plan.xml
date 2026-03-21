@@ -1,0 +1,538 @@
+<plan>
+  <feature>empty-states</feature>
+  <spec>docs/empty-states-spec.md</spec>
+  <branch>refactor/empty-states</branch>
+
+  <!-- Phase 1: Create the shared EmptyState component -->
+  <phase>
+    <name>Phase 1 - Shared Component</name>
+
+    <task>
+      <name>Create shared EmptyState component</name>
+      <action>
+        Create `src/components/shared/EmptyState.tsx` with the following:
+
+        1. Define `EmptyStateAction` interface with optional `href` (string) and optional `onClick` (() => void), plus required `label` (string).
+        2. Define `EmptyStateProps` interface with `icon` (LucideIcon), `title` (string), `description` (string), optional `action` (EmptyStateAction), and `variant` ('page' | 'widget' | 'table').
+        3. Implement the component as a named export `EmptyState`.
+        4. Use a variant config object (not if/else chains) to map variant names to Tailwind class sets. Reference the exact design tokens from the spec's Visual Design Tokens section.
+        5. Render structure: container div > icon > title (p tag) > description (p tag) > optional CTA.
+        6. CTA rendering logic:
+           - If `action.href` is provided: render `<Link href={action.href}>` with link styling for widget variant.
+           - If `action.onClick` is provided: render `<Button onClick={action.onClick}>` for page variant.
+             For page variant, apply responsive sizing: `h-9 md:h-10 px-4 md:px-6 text-sm md:text-base`.
+           - If no `action`: render nothing.
+        7. All icons get `aria-hidden="true"`.
+        8. Import `Link` from `next/link`, `Button` from `@/components/ui/button`, and `LucideIcon` type from `lucide-react`.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build` to confirm the new file compiles without errors.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 2: Refactor full-page empty states -->
+  <phase>
+    <name>Phase 2 - Full-Page Empty States</name>
+
+    <task>
+      <name>Refactor Accounts page empty state</name>
+      <action>
+        In `src/app/accounts/page.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `Wallet` from `lucide-react`.
+        2. Replace the inline empty state block (the div with `Icons.wallet`, "No accounts, yet." text, and the two desktop/mobile Button elements) with:
+           ```
+           <EmptyState
+             icon={Wallet}
+             title="No accounts yet"
+             description="Add your first account to start tracking your finances."
+             action={{ label: "Add your first account", onClick: () => { ... } }}
+             variant="page"
+           />
+           ```
+        3. For the onClick handler: use the existing pattern that checks `window.innerWidth >= 768` to open Sheet vs Drawer.
+           Look at the existing `handleEdit` function for the pattern. Create a similar handler or inline the logic.
+        4. Remove the now-unused `Icons.wallet` import if no other references remain in this file.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. Visually confirm the empty state renders correctly by checking the component structure.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor Budgets page empty state</name>
+      <action>
+        In `src/app/budgets/page.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `PiggyBank` from `lucide-react`.
+        2. Replace the inline empty state block with:
+           ```
+           <EmptyState
+             icon={PiggyBank}
+             title="No budgets yet"
+             description="Add your first budget to start managing your spending."
+             action={{ label: "Add your first budget", onClick: [handler to open create budget Sheet/Drawer] }}
+             variant="page"
+           />
+           ```
+        3. Wire the onClick to the existing create budget Sheet/Drawer open logic (same pattern as Accounts).
+        4. Clean up unused icon imports.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor Cards page empty state</name>
+      <action>
+        In `src/app/cards/page.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `CreditCard` from `lucide-react`.
+        2. Replace the inline empty state block with:
+           ```
+           <EmptyState
+             icon={CreditCard}
+             title="No credit cards yet"
+             description="Add your first credit card to start tracking your debt."
+             action={{ label: "Add your first credit card", onClick: [handler to open create card Sheet/Drawer] }}
+             variant="page"
+           />
+           ```
+        3. Wire onClick to existing create card Sheet/Drawer logic.
+        4. Clean up unused icon imports.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor Expenses page empty state</name>
+      <action>
+        In `src/app/expenses/page.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `Receipt` from `lucide-react`.
+        2. Replace the inline empty state block with:
+           ```
+           <EmptyState
+             icon={Receipt}
+             title="No expenses yet"
+             description="Add your first expense to start tracking your spending."
+             action={{ label: "Add your first expense", onClick: [handler to open create expense Sheet/Drawer] }}
+             variant="page"
+           />
+           ```
+        3. Wire onClick to existing create expense Sheet/Drawer logic.
+        4. Clean up unused icon imports.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor Income page empty state</name>
+      <action>
+        In `src/app/income/page.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `HandCoins` from `lucide-react`.
+        2. Replace the inline empty state block with:
+           ```
+           <EmptyState
+             icon={HandCoins}
+             title="No income categories yet"
+             description="Add your first income category to start tracking earnings."
+             action={{ label: "Add your first income category", onClick: [handler to open create income category Sheet/Drawer] }}
+             variant="page"
+           />
+           ```
+        3. Wire onClick to existing create income category Sheet/Drawer logic.
+        4. Clean up unused icon imports.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor Card Group detail page empty state</name>
+      <action>
+        In `src/app/cards/groups/[groupName]/page.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `CreditCard` from `lucide-react`.
+        2. Replace the inline empty state block with:
+           ```
+           <EmptyState
+             icon={CreditCard}
+             title="No cards in this group"
+             description="This card group has no cards assigned to it."
+             action={{ label: "Back to Cards", href: "/cards" }}
+             variant="page"
+           />
+           ```
+        3. Note: This uses `action.href` instead of `action.onClick` because it navigates back to the cards list.
+           The EmptyState component renders this as a Link-styled Button for the page variant.
+           Implementation detail: For the page variant with `href`, render a `<Button asChild><Link href={href}>{label}</Link></Button>` to get Button styling with Link navigation.
+        4. Clean up unused icon imports.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 3: Refactor dashboard widget empty states -->
+  <phase>
+    <name>Phase 3 - Dashboard Widget Empty States</name>
+
+    <task>
+      <name>Refactor AccountsSummary empty states</name>
+      <action>
+        In `src/components/dashboard/AccountsSummary.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `Wallet`, `CreditCard` from `lucide-react`.
+        2. Remove the local `EmptyState` component definition (lines ~136-158) and `EmptyStateProps` interface.
+        3. Where the old `<EmptyState type="accounts" />` was used, replace with:
+           ```
+           <EmptyState
+             icon={Wallet}
+             title="No accounts yet"
+             description="Add an account to start tracking"
+             action={{ label: "Go to Accounts", href: "/accounts" }}
+             variant="widget"
+           />
+           ```
+        4. Where the old `<EmptyState type="cards" />` was used, replace with:
+           ```
+           <EmptyState
+             icon={CreditCard}
+             title="No credit cards yet"
+             description="Add a credit card to track debt"
+             action={{ label: "Go to Cards", href: "/cards" }}
+             variant="widget"
+           />
+           ```
+        5. Remove the now-unused `Wallet` and `CreditCard` imports from `lucide-react` if the only usage was in the old local EmptyState. Check if they are used elsewhere in the file first.
+        6. Update tests in `AccountsSummary.test.tsx`:
+           - The title text "No accounts yet" and "No credit cards yet" are UNCHANGED, so those assertions remain.
+           - Update any assertions on description text (e.g., "Add your first account to start tracking" becomes "Add an account to start tracking").
+           - Add assertions for the new link CTAs if desired (check for "Go to Accounts" / "Go to Cards" text).
+      </action>
+      <verify>
+        Run `npx vitest run src/components/dashboard/AccountsSummary.test.tsx` to confirm tests pass.
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor RecentTransactions empty state</name>
+      <action>
+        In `src/components/dashboard/RecentTransactions.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `ArrowLeftRight` from `lucide-react`.
+        2. Replace the inline empty state block (the div with "No transactions yet" text) with:
+           ```
+           <EmptyState
+             icon={ArrowLeftRight}
+             title="No transactions yet"
+             description="Record a transaction to see activity"
+             action={{ label: "Go to Expenses", href: "/expenses" }}
+             variant="widget"
+           />
+           ```
+        3. IMPORTANT: Preserve the outer wrapper that includes the `<h2>Recent Transactions</h2>` heading. Only replace the inner content div.
+        4. Update tests in `RecentTransactions.test.tsx`:
+           - Title "No transactions yet" is UNCHANGED.
+           - Update description assertion from "Start tracking your finances by creating your first transaction" to "Record a transaction to see activity".
+      </action>
+      <verify>
+        Run `npx vitest run src/components/dashboard/RecentTransactions.test.tsx` to confirm tests pass.
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor BudgetStatus empty state</name>
+      <action>
+        In `src/components/shared/BudgetStatus.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `PiggyBank` from `lucide-react`.
+        2. Remove the local `EmptyState` component definition (lines ~106-113).
+        3. Where the old `<EmptyState />` was used, replace with:
+           ```
+           <EmptyState
+             icon={PiggyBank}
+             title="No budget activity"
+             description="Create a budget to track spending"
+             action={{ label: "Go to Budgets", href: "/budgets" }}
+             variant="widget"
+           />
+           ```
+        4. Update tests in `BudgetStatus.test.tsx`:
+           - Change "No budget activity this month" assertion to "No budget activity".
+           - Update description assertion from "Start tracking by adding budgets and expenses" to "Create a budget to track spending".
+      </action>
+      <verify>
+        Run `npx vitest run src/components/shared/BudgetStatus.test.tsx` to confirm tests pass.
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor AssetCategoriesChart empty state</name>
+      <action>
+        In `src/components/dashboard/AssetCategoriesChart.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `PieChart` from `lucide-react`.
+        2. Replace the inline empty state block with:
+           ```
+           <EmptyState
+             icon={PieChart}
+             title="No asset categories"
+             description="Add accounts to see distribution"
+             action={{ label: "Go to Accounts", href: "/accounts" }}
+             variant="widget"
+           />
+           ```
+        3. IMPORTANT: Preserve the outer wrapper with the `<h2>Asset Categories</h2>` heading.
+        4. Update tests in `AssetCategoriesChart.test.tsx`:
+           - Title "No asset categories" is UNCHANGED.
+           - Update description assertion from "Add accounts to see your asset distribution" to "Add accounts to see distribution".
+      </action>
+      <verify>
+        Run `npx vitest run src/components/dashboard/AssetCategoriesChart.test.tsx` to confirm tests pass.
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor MonthlySummaryChart empty state</name>
+      <action>
+        In `src/components/dashboard/MonthlySummaryChart.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `BarChart3` from `lucide-react`.
+        2. Replace the inline empty state block with:
+           ```
+           <EmptyState
+             icon={BarChart3}
+             title="No data for this period"
+             description="Data will appear once transactions are recorded."
+             variant="widget"
+           />
+           ```
+        3. No CTA for this widget (no action prop).
+        4. Preserve the outer wrapper with the `<h2>Monthly Summary</h2>` heading.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor NetWorthHistoryChart empty state</name>
+      <action>
+        In `src/components/dashboard/NetWorthHistoryChart.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `TrendingUp` from `lucide-react`.
+        2. Replace the inline empty state block with:
+           ```
+           <EmptyState
+             icon={TrendingUp}
+             title="No history available"
+             description="Net worth trends will appear over time."
+             variant="widget"
+           />
+           ```
+        3. No CTA for this widget (no action prop).
+        4. Preserve the outer wrapper structure.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 4: Refactor table/list empty states -->
+  <phase>
+    <name>Phase 4 - Table and List Empty States</name>
+
+    <task>
+      <name>Refactor ExpenseTable empty state</name>
+      <action>
+        In `src/components/tables/expenses/ExpenseTable.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `SearchX` from `lucide-react`.
+        2. Replace the inline empty state inside the `<TableCell>` (lines ~694-700) with:
+           ```
+           <EmptyState
+             icon={SearchX}
+             title="No expenses found"
+             description="Try adjusting your search or filters."
+             variant="table"
+           />
+           ```
+        3. Keep the wrapping `<TableRow>` and `<TableCell colSpan={columns.length}>` -- only replace the inner content.
+        4. The TableCell currently has `className="h-32 text-center"`. The EmptyState component provides its own `h-32` and centering, so remove `h-32 text-center` from the TableCell to avoid doubling. Keep `colSpan`.
+        5. Update tests in `ExpenseTable.test.tsx`:
+           - Change "No expense transactions found." to "No expenses found".
+      </action>
+      <verify>
+        Run `npx vitest run src/components/tables/expenses/ExpenseTable.test.tsx` to confirm tests pass.
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor IncomeTable empty state</name>
+      <action>
+        In `src/components/tables/income/IncomeTable.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `SearchX` from `lucide-react`.
+        2. Replace the inline empty state inside the `<TableCell>` with:
+           ```
+           <EmptyState
+             icon={SearchX}
+             title="No income found"
+             description="Try adjusting your search or filters."
+             variant="table"
+           />
+           ```
+        3. Same TableCell cleanup as ExpenseTable (remove `h-32 text-center` from TableCell).
+        4. Update tests in `IncomeTable.test.tsx`:
+           - Change "No income transactions found." to "No income found".
+      </action>
+      <verify>
+        Run `npx vitest run src/components/tables/income/IncomeTable.test.tsx` to confirm tests pass.
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor TransferTable empty state</name>
+      <action>
+        In `src/components/tables/transfers/TransferTable.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `SearchX` from `lucide-react`.
+        2. Replace the inline empty state inside the `<TableCell>` with:
+           ```
+           <EmptyState
+             icon={SearchX}
+             title="No transfers found"
+             description="Try adjusting your search or filters."
+             variant="table"
+           />
+           ```
+        3. Same TableCell cleanup as ExpenseTable.
+        4. Update tests in `TransferTable.test.tsx`:
+           - Change "No transfer transactions found." to "No transfers found".
+      </action>
+      <verify>
+        Run `npx vitest run src/components/tables/transfers/TransferTable.test.tsx` to confirm tests pass.
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor Transfers mobile empty state</name>
+      <action>
+        In `src/app/transfers/page.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `SearchX` from `lucide-react`.
+        2. Replace the inline empty state block (lines ~143-145, the div with "No results found for your search.") with:
+           ```
+           <EmptyState
+             icon={SearchX}
+             title="No results found"
+             description="Try adjusting your search or filters."
+             variant="table"
+           />
+           ```
+        3. Note: This is in a mobile card list context, not inside a table. The `table` variant works here because the visual treatment is the same (compact, minimal).
+
+        Also check `src/components/transactions/TransactionsMobileView.tsx` for a similar empty state.
+        If it has "No results found for your search.", refactor it the same way.
+        Update `TransactionsMobileView.test.tsx` accordingly:
+           - Change "No results found for your search." to "No results found".
+      </action>
+      <verify>
+        Run `npx vitest run src/components/transactions/TransactionsMobileView.test.tsx` to confirm tests pass (if applicable).
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor TransferTypesList empty state</name>
+      <action>
+        In `src/components/shared/TransferTypesList.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `ArrowLeftRight` from `lucide-react`.
+        2. Replace the inline text "No transfer types yet. Add your first one above!" with:
+           ```
+           <EmptyState
+             icon={ArrowLeftRight}
+             title="No transfer types yet"
+             description="Add your first transfer type above."
+             variant="table"
+           />
+           ```
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor AnnualSummaryTable empty state</name>
+      <action>
+        In `src/components/shared/AnnualSummaryTable.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `CalendarX2` from `lucide-react`.
+        2. Replace the inline text "No transaction data available." with:
+           ```
+           <EmptyState
+             icon={CalendarX2}
+             title="No transaction data"
+             description="Data will appear once transactions are recorded."
+             variant="table"
+           />
+           ```
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor ExpenseBreakdownChart empty state</name>
+      <action>
+        In `src/components/shared/ExpenseBreakdownChart.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState` and `PieChart` from `lucide-react`.
+        2. Replace the inline text "No expenses recorded for this month." with:
+           ```
+           <EmptyState
+             icon={PieChart}
+             title="No expenses this month"
+             description="Expenses will appear here once recorded."
+             variant="table"
+           />
+           ```
+        3. Preserve the outer wrapper with the header/month picker above the empty state.
+        4. Update tests in `ExpenseBreakdownChart.test.tsx`:
+           - Change "No expenses recorded for this month." to "No expenses this month".
+      </action>
+      <verify>
+        Run `npx vitest run src/components/shared/ExpenseBreakdownChart.test.tsx` to confirm tests pass.
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor CategoryBreakdownChart empty state</name>
+      <action>
+        In `src/components/shared/CategoryBreakdownChart.tsx`:
+        1. Import `EmptyState` from `@/components/shared/EmptyState`, `PieChart` and `HandCoins` from `lucide-react`.
+        2. Update the `TYPE_CONFIG` object:
+           - Change `expense.emptyMessage` to `'No expenses this month'` and add `expense.emptyDescription: 'Expenses will appear here once recorded.'` and `expense.emptyIcon: PieChart`.
+           - Change `income.emptyMessage` to `'No income this month'` and add `income.emptyDescription: 'Income will appear here once recorded.'` and `income.emptyIcon: HandCoins`.
+           - OR: Remove the emptyMessage fields entirely and inline the EmptyState props per type.
+        3. Replace the inline empty state with:
+           ```
+           <EmptyState
+             icon={config.emptyIcon}  // or PieChart/HandCoins based on type
+             title={config.emptyMessage}  // or the new title
+             description={config.emptyDescription}
+             variant="table"
+           />
+           ```
+        4. The cleaner approach: remove `emptyMessage` from TYPE_CONFIG and determine icon/title/description inline based on the `type` prop.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+  </phase>
+</plan>
