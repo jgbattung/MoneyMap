@@ -6,6 +6,7 @@ import EditIncomeDrawer from '@/components/forms/EditIncomeDrawer';
 import EditIncomeTypeDrawer from '@/components/forms/EditIncomeTypeDrawer';
 import EditIncomeTypeSheet from '@/components/forms/EditIncomeTypeSheet';
 import { Icons } from '@/components/icons';
+import { EmptyState } from '@/components/shared/EmptyState';
 import IncomeCard from '@/components/shared/IncomeCard';
 import IncomeTypeCard from '@/components/shared/IncomeTypeCard';
 import SkeletonIncomeTypeCard from '@/components/shared/SkeletonIncomeTypeCard';
@@ -14,7 +15,7 @@ import IncomeTable from '@/components/tables/income/IncomeTable';
 import { Button } from '@/components/ui/button';
 import { InputGroup, InputGroupInput, InputGroupAddon } from '@/components/ui/input-group';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { SearchIcon } from 'lucide-react';
+import { HandCoins, SearchIcon } from 'lucide-react';
 import { IncomeTransaction, useIncomeTransactionsQuery } from '@/hooks/useIncomeTransactionsQuery';
 import { useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery'
 import React, { useState, useEffect } from 'react'
@@ -200,30 +201,22 @@ const Income = () => {
         </Button>
       </div>
       ) : incomeTypes.length === 0 ? (
-      <div className='flex-1 flex flex-col items-center justify-center py-16'>
-        <Icons.wallet
-          className='h-24 w-24 mb-10'
-          strokeWidth={1.25}
-        />
-        <div className='flex flex-col px-4 items-center justify-center gap-3 text-center'>
-          <p className='text-2xl min-md:text-4xl font-semibold'>No income categories, yet.</p>
-          <p className='text-muted-foreground'>You have no income categories, yet! Start managing your finances by adding one.</p>
-        </div>
-        <Button
-          onClick={() => setCreateIncomeTypeSheetOpen(true)}
-          className="hidden md:flex mt-10 text-lg px-6 py-6"
-        >
-          Add your first income category
-        </Button>
-        
-        {/* Mobile button */}
-        <Button
-          onClick={() => setCreateIncomeTypeDrawerOpen(true)}
-          className="flex md:hidden mt-10"
-        >
-          Add your first income category
-        </Button>
-      </div>
+      <EmptyState
+        icon={HandCoins}
+        title="No income categories yet"
+        description="Add your first income category to start tracking earnings."
+        action={{
+          label: "Add your first income category",
+          onClick: () => {
+            if (window.innerWidth >= 768) {
+              setCreateIncomeTypeSheetOpen(true);
+            } else {
+              setCreateIncomeTypeDrawerOpen(true);
+            }
+          },
+        }}
+        variant="page"
+      />
       ) : (
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
         {sortedIncomeTypes
