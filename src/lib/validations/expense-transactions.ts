@@ -23,20 +23,32 @@ export const ExpenseTransactionValidation = z.object({
   tagIds: z.array(z.string()).max(10).optional(),
 });
 
-export const createExpenseTransactionSchema = ExpenseTransactionValidation.refine(
-  (data) => {
+export const createExpenseTransactionSchema = ExpenseTransactionValidation.superRefine(
+  (data, ctx) => {
     if (data.isInstallment) {
-      return data.installmentDuration && data.installmentDuration > 0 && data.installmentStartDate;
+      if (!data.installmentDuration || data.installmentDuration <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Duration is required for installment expenses",
+          path: ["installmentDuration"],
+        });
+      }
+      if (!data.installmentStartDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Start date is required for installment expenses",
+          path: ["installmentStartDate"],
+        });
+      }
+    } else {
+      if (data.date === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Date is required",
+          path: ["date"],
+        });
+      }
     }
-
-    if (!data.isInstallment) {
-      return data.date !== undefined;
-    }
-    return true;
-  },
-  {
-    message: "Duration and start date are required for installment expenses",
-    path: ["installmentDuration"],
   }
 );
 
