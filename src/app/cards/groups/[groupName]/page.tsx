@@ -6,7 +6,9 @@ import { useCardGroupQuery } from '@/hooks/useCardsQuery';
 import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import CreditCardCard from '@/components/shared/CreditCardCard';
+import { EmptyState } from '@/components/shared/EmptyState';
 import SkeletonCardCard from '@/components/shared/SkeletonCardCard';
+import { CreditCard } from 'lucide-react';
 import { getOrdinalSuffix } from '@/lib/utils';
 
 const CardGroupPage = () => {
@@ -96,22 +98,13 @@ const CardGroupPage = () => {
   if (!cardGroupData || cardGroupData.cards.length === 0) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6">
-        <div className='flex-1 flex flex-col items-center justify-center py-16'>
-          <Icons.creditCardIcon
-            className='h-24 w-24 mb-10'
-            strokeWidth={1.25}
-          />
-          <div className='flex flex-col px-4 items-center justify-center gap-3 text-center'>
-            <p className='text-2xl md:text-4xl font-semibold'>No cards found in this group</p>
-            <p className='text-muted-foreground'>This card group doesn&apos;t exist or has no cards.</p>
-          </div>
-          <Button
-            onClick={() => router.push('/cards')}
-            className="mt-10"
-          >
-            Back to Cards
-          </Button>
-        </div>
+        <EmptyState
+          icon={CreditCard}
+          title="No cards in this group"
+          description="This card group has no cards assigned to it."
+          action={{ label: "Back to Cards", href: "/cards" }}
+          variant="page"
+        />
       </div>
     );
   }
