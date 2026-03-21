@@ -60,6 +60,7 @@ vi.mock('@/components/ui/skeleton', () => ({
 // lucide-react icons
 vi.mock('lucide-react', () => ({
   AlertCircle: () => React.createElement('svg', { 'data-testid': 'icon-alert-circle' }),
+  PieChart: () => React.createElement('svg', { 'data-testid': 'icon-pie-chart' }),
 }));
 
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
@@ -230,7 +231,7 @@ describe('AssetCategoriesChart', () => {
 
       render(React.createElement(AssetCategoriesChart), { wrapper: createWrapper() });
 
-      expect(screen.getByText('Add accounts to see your asset distribution')).toBeTruthy();
+      expect(screen.getByText('Add accounts to see distribution')).toBeTruthy();
     });
 
     it('renders the "Asset Categories" title in the empty state', () => {
