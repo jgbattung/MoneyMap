@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, CalendarX2 } from "lucide-react";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAnnualSummary, type AnnualSummaryMonth } from "@/hooks/useAnnualSummary";
 
@@ -98,9 +99,12 @@ export default function AnnualSummaryTable() {
 
       {/* Empty state */}
       {!isLoading && years.length === 0 && (
-        <p className="text-muted-foreground text-sm text-center py-8">
-          No transaction data available.
-        </p>
+        <EmptyState
+          icon={CalendarX2}
+          title="No transaction data"
+          description="Data will appear once transactions are recorded."
+          variant="table"
+        />
       )}
 
       {/* Data rows */}
