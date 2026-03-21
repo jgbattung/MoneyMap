@@ -3,8 +3,10 @@
 import React from 'react';
 import { useRecentTransactions, TransactionType } from '@/hooks/useRecentTransactions';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { IconArrowDown, IconArrowUp, IconArrowRight } from '@tabler/icons-react';
+import { ArrowLeftRight } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 
@@ -113,12 +115,13 @@ const RecentTransactions = () => {
     return (
       <div className='flex flex-col gap-3'>
         <h2 className='text-lg font-semibold text-foreground tracking-tight'>Recent Transactions</h2>
-        <div className='flex flex-col items-center justify-center py-8 text-center'>
-          <p className='text-muted-foreground'>No transactions yet</p>
-          <p className='text-muted-foreground text-sm mt-2'>
-            Start tracking your finances by creating your first transaction
-          </p>
-        </div>
+        <EmptyState
+          icon={ArrowLeftRight}
+          title="No transactions yet"
+          description="Record a transaction to see activity"
+          action={{ label: "Go to Expenses", href: "/expenses" }}
+          variant="widget"
+        />
       </div>
     );
   }

@@ -95,7 +95,7 @@ describe('RecentTransactions', () => {
       render(React.createElement(RecentTransactions), { wrapper: createWrapper() });
 
       expect(screen.getByText('No transactions yet')).toBeTruthy();
-      expect(screen.getByText(/Start tracking your finances/)).toBeTruthy();
+      expect(screen.getByText('Record a transaction to see activity')).toBeTruthy();
     });
   });
 
