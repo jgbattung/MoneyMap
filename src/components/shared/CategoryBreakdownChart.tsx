@@ -11,6 +11,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { useExpenseBreakdown } from '@/hooks/useExpenseBreakdown'
 import { useIncomeBreakdown } from '@/hooks/useIncomeBreakdown'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { PieChart as PieChartIcon, HandCoins } from 'lucide-react'
 
 type BreakdownType = 'expense' | 'income'
 
@@ -23,11 +25,9 @@ interface CategoryBreakdownChartProps {
 // Config per type for labels and messaging
 const TYPE_CONFIG = {
   expense: {
-    emptyMessage: 'No expenses recorded for this month.',
     errorMessage: 'Failed to load expense breakdown',
   },
   income: {
-    emptyMessage: 'No income recorded for this month.',
     errorMessage: 'Failed to load income breakdown',
   },
 } as const
@@ -115,11 +115,19 @@ const CategoryBreakdownChart = ({ type, month, year }: CategoryBreakdownChartPro
 
   // Empty state
   if (!breakdown || breakdown.data.length === 0) {
+    const emptyIcon = type === 'expense' ? PieChartIcon : HandCoins
+    const emptyTitle = type === 'expense' ? 'No expenses this month' : 'No income this month'
+    const emptyDescription = type === 'expense'
+      ? 'Expenses will appear here once recorded.'
+      : 'Income will appear here once recorded.'
     return (
       <div className='flex flex-col gap-4'>
-        <div className='flex flex-col items-center justify-center py-16 text-center'>
-          <p className='text-muted-foreground'>{config.emptyMessage}</p>
-        </div>
+        <EmptyState
+          icon={emptyIcon}
+          title={emptyTitle}
+          description={emptyDescription}
+          variant="table"
+        />
       </div>
     )
   }
