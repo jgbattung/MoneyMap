@@ -7,17 +7,17 @@ interface PageHeaderProps {
 
 export const PageHeader = ({ title, actions }: PageHeaderProps) => {
   return (
-    <div className="mb-6 border-b border-border pb-4">
+    <div className="mb-6">
       {/* Row 1: title + UserMenu */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pb-4 border-b border-border">
         <h1 className="text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold">
           {title}
         </h1>
         <UserMenu />
       </div>
-      {/* Row 2: actions (right-aligned), only when provided */}
+      {/* Actions slot: below the divider, right-aligned */}
       {actions && (
-        <div className="flex justify-end mt-3">
+        <div className="flex justify-end mt-4">
           {actions}
         </div>
       )}

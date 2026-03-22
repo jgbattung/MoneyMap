@@ -8,7 +8,7 @@ interface MobileDetailHeaderProps {
 
 export const MobileDetailHeader = ({ backHref, title }: MobileDetailHeaderProps) => {
   return (
-    <div className="relative flex items-center justify-center py-3 md:hidden">
+    <div className="relative flex items-center justify-center py-3 mb-4 md:hidden">
       <Link
         href={backHref}
         className="absolute left-0 text-muted-foreground hover:text-foreground transition-colors"
