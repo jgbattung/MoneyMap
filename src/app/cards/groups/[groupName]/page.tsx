@@ -1,6 +1,7 @@
 "use client"
 
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import React from 'react'
 import { useCardGroupQuery } from '@/hooks/useCardsQuery';
 import { Icons } from '@/components/icons';
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import CreditCardCard from '@/components/shared/CreditCardCard';
 import { EmptyState } from '@/components/shared/EmptyState';
 import SkeletonCardCard from '@/components/shared/SkeletonCardCard';
-import { CreditCard } from 'lucide-react';
+import { ArrowLeft, CreditCard } from 'lucide-react';
 import { getOrdinalSuffix } from '@/lib/utils';
 
 const CardGroupPage = () => {
@@ -115,6 +116,13 @@ const CardGroupPage = () => {
       <div className="w-full rounded-lg md:rounded-xl p-4 md:p-8 bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border border-border/50 shadow-sm hover:shadow-md transition-shadow">
         {/* Mobile Layout - Stacked */}
         <div className="flex md:hidden flex-col gap-3">
+          <Link
+            href="/cards"
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
+          >
+            <ArrowLeft size={16} />
+            <span>Cards</span>
+          </Link>
           <div className="flex items-center gap-2">
             <div className="p-2 bg-primary/20 rounded-lg">
               <Icons.creditCardIcon size={18} className="text-primary" />
