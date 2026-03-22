@@ -19,7 +19,7 @@ export const PageHeader = ({ title, actions }: PageHeaderProps) => {
       </div>
       {/* Non-sticky: actions slot */}
       {actions && (
-        <div className="flex justify-end mt-4 mb-3 md:mb-5">
+        <div className="flex justify-end mt-4 md:mb-5">
           {actions}
         </div>
       )}

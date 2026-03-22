@@ -33,7 +33,7 @@ export const MobileHeroSummary = () => {
 
   if (isLoading) {
     return (
-      <div className="md:hidden flex flex-col gap-3">
+      <div className="md:hidden flex flex-col gap-3 -mt-6">
         <div className="grid grid-cols-2 gap-3">
           <Skeleton className="h-20 rounded-lg" />
           <Skeleton className="h-20 rounded-lg" />
@@ -57,7 +57,7 @@ export const MobileHeroSummary = () => {
   const ExpenseIcon = getChangeIcon(expenseChange)
 
   return (
-    <div className="md:hidden flex flex-col gap-3">
+    <div className="md:hidden flex flex-col gap-3 -mt-6">
       <div className="grid grid-cols-2 gap-3">
         {/* Income Card */}
         <div className="flex flex-col gap-1 p-3 rounded-lg bg-success-950/20 border border-success-900/30">

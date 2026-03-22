@@ -4,7 +4,7 @@ import NetWorthInsights from './NetWorthInsights'
 
 const NetWorthSection = () => {
   return (
-    <section className='w-full'>
+    <section className='w-full -mt-6'>
       <div className='grid grid-cols-1 lg:grid-cols-5 max-lg:gap-4'>
         <div className='lg:col-span-3'>
           <NetWorthDisplay />

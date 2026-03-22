@@ -118,43 +118,117 @@ describe('PageHeader', () => {
       expect(screen.getByTestId('btn-1')).toBeTruthy();
       expect(screen.getByTestId('btn-2')).toBeTruthy();
     });
+
+    it('actions slot is rendered OUTSIDE the sticky wrapper', () => {
+      const actionsNode = React.createElement(
+        'button',
+        { 'data-testid': 'outside-action' },
+        'Add'
+      );
+      const { container } = render(
+        React.createElement(PageHeader, { title: 'Accounts', actions: actionsNode })
+      );
+      // The sticky outer wrapper is the first child element of the fragment root
+      const stickyWrapper = container.querySelector('.sticky');
+      // The action button must NOT be a descendant of the sticky wrapper
+      expect(stickyWrapper?.querySelector('[data-testid="outside-action"]')).toBeNull();
+      // But it must exist in the overall output
+      expect(screen.getByTestId('outside-action')).toBeTruthy();
+    });
   });
 
-  describe('sticky header (header polish redesign)', () => {
+  describe('spacer div (no-actions state)', () => {
+    it('renders a spacer div when no actions are provided', () => {
+      const { container } = render(
+        React.createElement(PageHeader, { title: 'Dashboard' })
+      );
+      // Spacer: <div className="mb-3 md:mb-5" />
+      const spacer = container.querySelector('.mb-3');
+      expect(spacer).toBeTruthy();
+    });
+
+    it('spacer div has mb-3 class', () => {
+      const { container } = render(
+        React.createElement(PageHeader, { title: 'Transactions' })
+      );
+      const spacer = container.querySelector('.mb-3');
+      expect(spacer?.className).toContain('mb-3');
+    });
+
+    it('does NOT render the spacer when actions are provided', () => {
+      const actionsNode = React.createElement('button', null, 'Action');
+      const { container } = render(
+        React.createElement(PageHeader, { title: 'Accounts', actions: actionsNode })
+      );
+      // With actions, there is no standalone spacer div — mb-3 is on the actions row itself
+      // The spacer is only rendered in the !actions branch
+      const actionsRow = container.querySelector('.flex.justify-end.mt-4');
+      expect(actionsRow).toBeTruthy();
+      // Confirm exactly one element carries mb-3 (the actions row), not a separate spacer
+      const allMb3 = container.querySelectorAll('.mb-3');
+      // The actions row has mb-3 via "mb-3 md:mb-5" class — that's the only one
+      expect(allMb3.length).toBe(1);
+    });
+
+    it('spacer is rendered OUTSIDE the sticky wrapper', () => {
+      const { container } = render(
+        React.createElement(PageHeader, { title: 'Dashboard' })
+      );
+      const stickyWrapper = container.querySelector('.sticky');
+      // The spacer div must not be inside the sticky wrapper
+      expect(stickyWrapper?.querySelector('.mb-3')).toBeNull();
+    });
+  });
+
+  describe('sticky header (hotfix — title row only)', () => {
     it('outer container has sticky class', () => {
       const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
-      const outer = container.firstElementChild as HTMLElement;
+      const outer = container.querySelector('.sticky') as HTMLElement;
       expect(outer.className).toContain('sticky');
     });
 
     it('outer container has top-0 class', () => {
       const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
-      const outer = container.firstElementChild as HTMLElement;
+      const outer = container.querySelector('.sticky') as HTMLElement;
       expect(outer.className).toContain('top-0');
     });
 
     it('outer container has z-10 class for stacking context', () => {
       const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
-      const outer = container.firstElementChild as HTMLElement;
+      const outer = container.querySelector('.sticky') as HTMLElement;
       expect(outer.className).toContain('z-10');
     });
 
     it('outer container has bg-background to opacify the sticky bar', () => {
       const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
-      const outer = container.firstElementChild as HTMLElement;
+      const outer = container.querySelector('.sticky') as HTMLElement;
       expect(outer.className).toContain('bg-background');
     });
 
     it('outer container has pt-6 top padding', () => {
       const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
-      const outer = container.firstElementChild as HTMLElement;
+      const outer = container.querySelector('.sticky') as HTMLElement;
       expect(outer.className).toContain('pt-6');
     });
 
-    it('outer container has mb-3 bottom margin', () => {
+    it('sticky wrapper does NOT have mb-3 (bottom margin moved outside)', () => {
+      // After the hotfix, mb-3 was removed from the sticky wrapper so it
+      // does not contribute to the sticky element's height on scroll.
       const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
-      const outer = container.firstElementChild as HTMLElement;
-      expect(outer.className).toContain('mb-3');
+      const outer = container.querySelector('.sticky') as HTMLElement;
+      expect(outer.className).not.toContain('mb-3');
+    });
+
+    it('sticky wrapper contains the h1 title', () => {
+      const { container } = render(React.createElement(PageHeader, { title: 'Reports' }));
+      const outer = container.querySelector('.sticky') as HTMLElement;
+      expect(outer.querySelector('h1')).toBeTruthy();
+    });
+
+    it('sticky wrapper contains the UserMenu', () => {
+      const { container } = render(React.createElement(PageHeader, { title: 'Reports' }));
+      const outer = container.querySelector('.sticky') as HTMLElement;
+      expect(outer.querySelector('[data-testid="user-menu"]')).toBeTruthy();
     });
   });
 
@@ -172,9 +246,9 @@ describe('PageHeader', () => {
       expect(innerRow?.className).toContain('pb-4');
     });
 
-    it('outer container does NOT carry border-b (border moved to inner row)', () => {
+    it('outer container does NOT carry border-b (border on inner row only)', () => {
       const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
-      const outer = container.firstElementChild as HTMLElement;
+      const outer = container.querySelector('.sticky') as HTMLElement;
       expect(outer.className).not.toContain('border-b');
     });
   });
