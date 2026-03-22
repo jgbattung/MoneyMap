@@ -8,6 +8,7 @@ import EditIncomeTypeSheet from '@/components/forms/EditIncomeTypeSheet';
 import { Icons } from '@/components/icons';
 import { EmptyState } from '@/components/shared/EmptyState';
 import IncomeCard from '@/components/shared/IncomeCard';
+import { PageHeader } from '@/components/shared/PageHeader';
 import IncomeTypeCard from '@/components/shared/IncomeTypeCard';
 import SkeletonIncomeTypeCard from '@/components/shared/SkeletonIncomeTypeCard';
 import { SkeletonIncomeCard } from '@/components/shared/SkeletonIncomeCard';
@@ -122,37 +123,37 @@ const Income = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col">
-      <div className='flex items-center justify-between flex-wrap gap-4'>
-        <h1 className='text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold'>Income</h1>
-
-        <button
-          onClick={() => setCreateIncomeTypeSheetOpen(true)}
-          className="hidden md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-base transition-all"
-        >
-          <Icons.createAccount size={20} />
-          <span>Add income category</span>
-        </button>
-
-        <CreateIncomeTypeSheet
-          open={createIncomeTypeSheetOpen}
-          onOpenChange={setCreateIncomeTypeSheetOpen}
-          className='hidden md:block'
-        />
-
-        <button
-          onClick={() => setCreateIncomeTypeDrawerOpen(true)}
-          className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"
-        >
-          <Icons.createAccount size={16} />
-          <span>Add income category</span>
-        </button>
-
-        <CreateIncomeTypeDrawer
-          open={createIncomeTypeDrawerOpen}
-          onOpenChange={setCreateIncomeTypeDrawerOpen}
-          className='block md:hidden'
-        />
-      </div>
+      <PageHeader
+        title="Income"
+        actions={
+          <>
+            <button
+              onClick={() => setCreateIncomeTypeSheetOpen(true)}
+              className="hidden md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-base transition-all"
+            >
+              <Icons.createAccount size={20} />
+              <span>Add income category</span>
+            </button>
+            <button
+              onClick={() => setCreateIncomeTypeDrawerOpen(true)}
+              className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"
+            >
+              <Icons.createAccount size={16} />
+              <span>Add income category</span>
+            </button>
+          </>
+        }
+      />
+      <CreateIncomeTypeSheet
+        open={createIncomeTypeSheetOpen}
+        onOpenChange={setCreateIncomeTypeSheetOpen}
+        className='hidden md:block'
+      />
+      <CreateIncomeTypeDrawer
+        open={createIncomeTypeDrawerOpen}
+        onOpenChange={setCreateIncomeTypeDrawerOpen}
+        className='block md:hidden'
+      />
       
       <EditIncomeTypeSheet
         open={editIncomeTypeSheetOpen}
