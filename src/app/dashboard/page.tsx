@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 
 const Dashboard = () => {
   return (
-    <div className='pt-0 px-4 md:px-6 pb-20 md:pb-6 flex flex-col gap-6 mx-auto'>
+    <div className='pt-0 px-4 md:px-6 pb-20 md:pb-6 flex flex-col gap-6 -mt-4 mx-auto'>
       <PageHeader title="Dashboard" />
       <MobileHeroSummary />
 
