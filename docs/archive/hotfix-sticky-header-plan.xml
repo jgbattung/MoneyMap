@@ -1,0 +1,34 @@
+<plan>
+  <feature>hotfix-sticky-header</feature>
+  <spec>docs/hotfix-sticky-header-spec.md</spec>
+  <branch>fix/sticky-header</branch>
+
+  <phase name="Fix sticky header bugs">
+    <task>
+      <name>Split PageHeader sticky boundary so actions scroll with content</name>
+      <action>
+        In src/components/shared/PageHeader.tsx:
+        1. Change the component return from a single div to a Fragment.
+        2. The sticky div should wrap ONLY the title row: keep className "sticky top-0 z-10 bg-background pt-6" but REMOVE "mb-3 md:mb-5" from it.
+        3. Move the actions block OUTSIDE and BELOW the sticky div. Add "mb-3 md:mb-5" to the actions div (alongside existing "flex justify-end mt-4").
+        4. When actions is NOT provided, render a simple spacer div with className "mb-3 md:mb-5" after the sticky div to preserve existing spacing.
+        5. No changes to the PageHeaderProps interface.
+      </action>
+      <verify>
+        Run "npm run lint" and "npm run build". Both must pass with zero errors.
+      </verify>
+    </task>
+
+    <task>
+      <name>Remove wrapper div around PageHeader on Transactions page</name>
+      <action>
+        In src/app/transactions/page.tsx:
+        1. Remove the wrapping div with className "mb-6" around PageHeader (lines 9-11).
+        2. Render PageHeader as a direct child of the outer container div, matching the pattern used by Dashboard, Accounts, and Cards pages.
+      </action>
+      <verify>
+        Run "npm run lint" and "npm run build". Both must pass with zero errors.
+      </verify>
+    </task>
+  </phase>
+</plan>
