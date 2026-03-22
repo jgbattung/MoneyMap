@@ -1,7 +1,6 @@
 "use client"
 
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import React from 'react'
 import { useCardGroupQuery } from '@/hooks/useCardsQuery';
 import { Icons } from '@/components/icons';
@@ -9,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import CreditCardCard from '@/components/shared/CreditCardCard';
 import { EmptyState } from '@/components/shared/EmptyState';
 import SkeletonCardCard from '@/components/shared/SkeletonCardCard';
-import { ArrowLeft, CreditCard } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
+import { MobileDetailHeader } from '@/components/shared/MobileDetailHeader';
 import { getOrdinalSuffix } from '@/lib/utils';
 
 const CardGroupPage = () => {
@@ -112,17 +112,11 @@ const CardGroupPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col gap-6">
+      <MobileDetailHeader backHref="/cards" title="Cards" />
       {/* Header Section with Outstanding Balance - Gradient Design */}
       <div className="w-full rounded-lg md:rounded-xl p-4 md:p-8 bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border border-border/50 shadow-sm hover:shadow-md transition-shadow">
         {/* Mobile Layout - Stacked */}
         <div className="flex md:hidden flex-col gap-3">
-          <Link
-            href="/cards"
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
-          >
-            <ArrowLeft size={16} />
-            <span>Cards</span>
-          </Link>
           <div className="flex items-center gap-2">
             <div className="p-2 bg-primary/20 rounded-lg">
               <Icons.creditCardIcon size={18} className="text-primary" />
