@@ -68,7 +68,8 @@ describe('PageHeader', () => {
       const { container } = render(
         React.createElement(PageHeader, { title: 'Dashboard' })
       );
-      const actionsRow = container.querySelector('.flex.justify-end.mt-3');
+      // actions div uses flex justify-end mt-4 in the current implementation
+      const actionsRow = container.querySelector('.flex.justify-end.mt-4');
       expect(actionsRow).toBeNull();
     });
 
@@ -81,7 +82,8 @@ describe('PageHeader', () => {
       const { container } = render(
         React.createElement(PageHeader, { title: 'Dashboard', actions: actionsNode })
       );
-      const actionsRow = container.querySelector('.flex.justify-end.mt-3');
+      // actions div uses mt-4 (updated from mt-3 in header redesign)
+      const actionsRow = container.querySelector('.flex.justify-end.mt-4');
       expect(actionsRow).toBeTruthy();
     });
 
@@ -118,23 +120,62 @@ describe('PageHeader', () => {
     });
   });
 
-  describe('border divider', () => {
-    it('outer container has border-b class', () => {
+  describe('sticky header (header polish redesign)', () => {
+    it('outer container has sticky class', () => {
       const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
       const outer = container.firstElementChild as HTMLElement;
-      expect(outer.className).toContain('border-b');
+      expect(outer.className).toContain('sticky');
     });
 
-    it('outer container has mb-6 spacing class', () => {
+    it('outer container has top-0 class', () => {
       const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
       const outer = container.firstElementChild as HTMLElement;
-      expect(outer.className).toContain('mb-6');
+      expect(outer.className).toContain('top-0');
     });
 
-    it('outer container has pb-4 padding class', () => {
+    it('outer container has z-10 class for stacking context', () => {
       const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
       const outer = container.firstElementChild as HTMLElement;
-      expect(outer.className).toContain('pb-4');
+      expect(outer.className).toContain('z-10');
+    });
+
+    it('outer container has bg-background to opacify the sticky bar', () => {
+      const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
+      const outer = container.firstElementChild as HTMLElement;
+      expect(outer.className).toContain('bg-background');
+    });
+
+    it('outer container has pt-6 top padding', () => {
+      const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
+      const outer = container.firstElementChild as HTMLElement;
+      expect(outer.className).toContain('pt-6');
+    });
+
+    it('outer container has mb-3 bottom margin', () => {
+      const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
+      const outer = container.firstElementChild as HTMLElement;
+      expect(outer.className).toContain('mb-3');
+    });
+  });
+
+  describe('border divider (inner row)', () => {
+    it('inner row has border-b class', () => {
+      const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
+      // border-b lives on the inner row div, not the outer wrapper
+      const innerRow = container.querySelector('.flex.items-center.justify-between');
+      expect(innerRow?.className).toContain('border-b');
+    });
+
+    it('inner row has pb-4 padding class', () => {
+      const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
+      const innerRow = container.querySelector('.flex.items-center.justify-between');
+      expect(innerRow?.className).toContain('pb-4');
+    });
+
+    it('outer container does NOT carry border-b (border moved to inner row)', () => {
+      const { container } = render(React.createElement(PageHeader, { title: 'Dashboard' }));
+      const outer = container.firstElementChild as HTMLElement;
+      expect(outer.className).not.toContain('border-b');
     });
   });
 });

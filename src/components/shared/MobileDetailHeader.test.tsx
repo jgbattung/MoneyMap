@@ -61,6 +61,40 @@ describe('MobileDetailHeader', () => {
     });
   });
 
+  describe('sticky header (header polish redesign)', () => {
+    it('outer container has sticky class', () => {
+      const { container } = render(
+        React.createElement(MobileDetailHeader, { backHref: '/accounts', title: 'Accounts' })
+      );
+      const outer = container.firstElementChild as HTMLElement;
+      expect(outer.className).toContain('sticky');
+    });
+
+    it('outer container has top-0 class', () => {
+      const { container } = render(
+        React.createElement(MobileDetailHeader, { backHref: '/accounts', title: 'Accounts' })
+      );
+      const outer = container.firstElementChild as HTMLElement;
+      expect(outer.className).toContain('top-0');
+    });
+
+    it('outer container has z-10 class for stacking context', () => {
+      const { container } = render(
+        React.createElement(MobileDetailHeader, { backHref: '/accounts', title: 'Accounts' })
+      );
+      const outer = container.firstElementChild as HTMLElement;
+      expect(outer.className).toContain('z-10');
+    });
+
+    it('outer container has bg-background to opacify the sticky bar', () => {
+      const { container } = render(
+        React.createElement(MobileDetailHeader, { backHref: '/accounts', title: 'Accounts' })
+      );
+      const outer = container.firstElementChild as HTMLElement;
+      expect(outer.className).toContain('bg-background');
+    });
+  });
+
   describe('title', () => {
     it('renders the title text in a span', () => {
       render(
