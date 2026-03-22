@@ -5,7 +5,7 @@ import React from 'react'
 
 const Transactions = () => {
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-20 md:pb-6 flex flex-col">
+    <div className="max-w-7xl mx-auto px-4 md:px-8 pt-0 pb-20 md:pb-6 flex flex-col">
       <div className="mb-6">
         <PageHeader title="Transactions" />
       </div>

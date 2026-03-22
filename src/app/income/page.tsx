@@ -122,7 +122,7 @@ const Income = () => {
   const isFiltering = debouncedSearchTerm.length > 0 || dateFilter !== dateFilterOptions.viewAll;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col">
+    <div className="max-w-7xl mx-auto px-4 pt-0 pb-20 md:pb-6 flex flex-col">
       <PageHeader
         title="Income"
         actions={
