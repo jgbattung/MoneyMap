@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan feature="header-polish" branch="feature/dashboard-redesign">
+  <spec>docs/header-polish-spec.md</spec>
+  <overview>
+    Two layout improvements: (1) PageHeader restructured to two rows with a divider, and
+    (2) a new MobileDetailHeader component added above the gradient card on the three
+    detail pages, replacing the embedded back-link.
+  </overview>
+
+  <!-- ═══════════════════════════════════════════════════════
+       PHASE 1 — PageHeader two-row layout
+       ═══════════════════════════════════════════════════════ -->
+
+  <task id="1.1">
+    <title>Restructure PageHeader to two-row layout with divider</title>
+    <file>src/components/shared/PageHeader.tsx</file>
+    <description>
+      Replace the current single-row flex layout with a two-row structure:
+      - Row 1: h1 title (left) + UserMenu (right), always rendered.
+      - Row 2: actions slot, right-aligned, only rendered when actions prop is provided.
+      - A border-b divider (border-border) sits below the two-row block.
+      - Wrap both rows in a single container div with mb-6 (or whatever spacing
+        currently sits on the consumer pages above the content).
+      - The PageHeaderProps interface (title, actions?) is UNCHANGED.
+    </description>
+    <verification>
+      Open any list page (e.g. /accounts) — title and UserMenu on row 1, Add button
+      on row 2 right-aligned, divider visible below. No layout regressions on pages
+      without an actions prop (dashboard, more, settings).
+    </verification>
+  </task>
+
+  <!-- ═══════════════════════════════════════════════════════
+       PHASE 2 — MobileDetailHeader component
+       ═══════════════════════════════════════════════════════ -->
+
+  <task id="2.1">
+    <title>Create MobileDetailHeader component</title>
+    <file>src/components/shared/MobileDetailHeader.tsx</file>
+    <description>
+      New shared component. Props: backHref (string), title (string).
+      Layout: relative flex items-center justify-center, md:hidden wrapper.
+      - Left: Link wrapping ArrowLeft icon (size 20), href=backHref,
+        absolute left-0, text-muted-foreground hover:text-foreground.
+      - Center: span with the title text, font-semibold text-base.
+      - Right: empty (nothing rendered).
+      Transparent background, no border, no divider.
+      Add padding: py-3 (vertical breathing room between this and the gradient card).
+    </description>
+    <verification>
+      Component file exists and compiles. Props typed correctly. No runtime errors.
+    </verification>
+  </task>
+
+  <task id="2.2">
+    <title>Apply MobileDetailHeader to accounts/[id] page</title>
+    <file>src/app/accounts/[id]/page.tsx</file>
+    <description>
+      In the happy-path return block:
+      1. Import MobileDetailHeader.
+      2. Add &lt;MobileDetailHeader backHref="/accounts" title="Accounts" /&gt;
+         immediately before the gradient card div (before the mb-6 wrapper div).
+      3. Remove the existing back-link from inside the mobile layout of the gradient
+         card (the Link with ArrowLeft and "Accounts" text inside the
+         "flex md:hidden flex-col gap-3" div).
+      4. Remove the now-unused ArrowLeft import from lucide-react if no longer needed.
+      Do NOT touch the skeleton or error return blocks.
+    </description>
+    <verification>
+      On mobile viewport: back arrow + "Accounts" header appears above gradient card.
+      Gradient card no longer contains a back-link. Desktop layout is unaffected.
+    </verification>
+  </task>
+
+  <task id="2.3">
+    <title>Apply MobileDetailHeader to cards/[id] page</title>
+    <file>src/app/cards/[id]/page.tsx</file>
+    <description>
+      Same pattern as task 2.2:
+      1. Import MobileDetailHeader.
+      2. Add &lt;MobileDetailHeader backHref="/cards" title="Cards" /&gt;
+         immediately before the gradient card div.
+      3. Remove the back-link from inside the mobile layout of the gradient card.
+      4. Remove the now-unused ArrowLeft import from lucide-react if no longer needed.
+      Do NOT touch skeleton or error return blocks.
+    </description>
+    <verification>
+      On mobile: back arrow + "Cards" header above gradient card. Gradient card clean.
+      Desktop unaffected.
+    </verification>
+  </task>
+
+  <task id="2.4">
+    <title>Apply MobileDetailHeader to cards/groups/[groupName] page</title>
+    <file>src/app/cards/groups/[groupName]/page.tsx</file>
+    <description>
+      Same pattern as task 2.2:
+      1. Import MobileDetailHeader.
+      2. Add &lt;MobileDetailHeader backHref="/cards" title="Cards" /&gt;
+         immediately before the gradient card div.
+      3. Remove the back-link from inside the mobile layout of the gradient card.
+      4. Remove the now-unused ArrowLeft import from lucide-react if no longer needed.
+      Do NOT touch skeleton or error return blocks.
+    </description>
+    <verification>
+      On mobile: back arrow + "Cards" header above gradient card. Gradient card clean.
+      Desktop unaffected.
+    </verification>
+  </task>
+
+  <!-- ═══════════════════════════════════════════════════════
+       PHASE 3 — Post-execution
+       ═══════════════════════════════════════════════════════ -->
+
+  <task id="3.1">
+    <title>Lint and build</title>
+    <description>
+      Run npm run lint — fix any errors.
+      Run npm run build — ensure zero errors.
+    </description>
+    <verification>Lint and build both exit 0.</verification>
+  </task>
+
+  <task id="3.2">
+    <title>QA pipeline</title>
+    <description>
+      Spawn the qa-pipeline agent for:
+      - src/components/shared/PageHeader.tsx
+      - src/components/shared/MobileDetailHeader.tsx
+      - src/app/accounts/[id]/page.tsx
+      - src/app/cards/[id]/page.tsx
+      - src/app/cards/groups/[groupName]/page.tsx
+    </description>
+    <verification>qa-pipeline returns a green report.</verification>
+  </task>
+
+  <task id="3.3">
+    <title>Write verification doc</title>
+    <file>docs/header-polish-verification.md</file>
+    <description>
+      Document what was built, what was changed, and how each task was verified.
+    </description>
+    <verification>File exists and covers all tasks.</verification>
+  </task>
+
+</plan>
