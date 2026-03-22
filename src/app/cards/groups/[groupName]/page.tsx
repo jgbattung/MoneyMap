@@ -9,6 +9,7 @@ import CreditCardCard from '@/components/shared/CreditCardCard';
 import { EmptyState } from '@/components/shared/EmptyState';
 import SkeletonCardCard from '@/components/shared/SkeletonCardCard';
 import { CreditCard } from 'lucide-react';
+import { MobileDetailHeader } from '@/components/shared/MobileDetailHeader';
 import { getOrdinalSuffix } from '@/lib/utils';
 
 const CardGroupPage = () => {
@@ -111,6 +112,7 @@ const CardGroupPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col gap-6">
+      <MobileDetailHeader backHref="/cards" title="Cards" />
       {/* Header Section with Outstanding Balance - Gradient Design */}
       <div className="w-full rounded-lg md:rounded-xl p-4 md:p-8 bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border border-border/50 shadow-sm hover:shadow-md transition-shadow">
         {/* Mobile Layout - Stacked */}

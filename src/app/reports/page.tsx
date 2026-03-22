@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useEarliestTransaction } from '@/hooks/useEarliestTransaction'
 import AnnualSummaryTable from '@/components/shared/AnnualSummaryTable'
+import { PageHeader } from '@/components/shared/PageHeader'
 import React, { useState } from 'react'
 
 const Reports = () => {
@@ -58,13 +59,10 @@ const Reports = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-20 md:pb-6 flex flex-col">
-      {/* Page Header */}
-      <div className='flex items-center justify-between flex-wrap gap-4'>
-        <h1 className='text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold'>Reports</h1>
-      </div>
+    <div className="max-w-7xl mx-auto px-4 md:px-8 pt-0 pb-20 md:pb-6 flex flex-col">
+      <PageHeader title="Reports" />
 
-      <div className='mt-10 space-y-6'>
+      <div className='mt-2 space-y-6'>
         <div>
           <NetWorthCard />
         </div>

@@ -6,6 +6,7 @@ import EditExpenseDrawer from "@/components/forms/EditExpenseDrawer";
 import { Icons } from "@/components/icons";
 import ExpenseCard from "@/components/shared/ExpenseCard";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { SkeletonExpenseCard } from "@/components/shared/SkeletonExpenseCard";
 import SkeletonTable from "@/components/shared/SkeletonTable";
 import ExpenseTable from "@/components/tables/expenses/ExpenseTable";
@@ -74,38 +75,38 @@ const Expenses = () => {
   const isFiltering = debouncedSearchTerm.length > 0 || dateFilter !== dateFilterOptions.viewAll;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col">
-      <div className='flex items-center justify-between flex-wrap gap-4'>
-        <h1 className='text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold'>Expenses</h1>
-
-        <button
-          onClick={() => setCreateExpenseSheetOpen(true)}
-          className="hidden md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-base transition-all"
-        >
-          <Icons.createAccount size={20} />
-          <span>Add expense</span>
-        </button>
-
-        <button
-          onClick={() => setCreateExpenseDrawerOpen(true)}
-          className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"
-        >
-          <Icons.createAccount size={16} />
-          <span>Add expense</span>
-        </button>
-
-        <CreateExpenseTransactionSheet
-          open={createExpenseSheetOpen}
-          onOpenChange={setCreateExpenseSheetOpen}
-          className='hidden md:block'
-        />
-
-        <CreateExpenseTransactionDrawer
-          open={createExpenseDrawerOpen}
-          onOpenChange={setCreateExpenseDrawerOpen}
-          className="block md:hidden"
-        />
-      </div>
+    <div className="max-w-7xl mx-auto px-4 pt-0 pb-20 md:pb-6 flex flex-col">
+      <PageHeader
+        title="Expenses"
+        actions={
+          <>
+            <button
+              onClick={() => setCreateExpenseSheetOpen(true)}
+              className="hidden md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-base transition-all"
+            >
+              <Icons.createAccount size={20} />
+              <span>Add expense</span>
+            </button>
+            <button
+              onClick={() => setCreateExpenseDrawerOpen(true)}
+              className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"
+            >
+              <Icons.createAccount size={16} />
+              <span>Add expense</span>
+            </button>
+          </>
+        }
+      />
+      <CreateExpenseTransactionSheet
+        open={createExpenseSheetOpen}
+        onOpenChange={setCreateExpenseSheetOpen}
+        className='hidden md:block'
+      />
+      <CreateExpenseTransactionDrawer
+        open={createExpenseDrawerOpen}
+        onOpenChange={setCreateExpenseDrawerOpen}
+        className="block md:hidden"
+      />
 
       <EditExpenseDrawer
         open={editExpenseDrawerOpen}
@@ -148,7 +149,7 @@ const Expenses = () => {
           variant="page"
         />
       ) : (
-        <div className="mt-10">
+        <div className="mt-2">
           <div className='md:hidden space-y-4'>
             <InputGroup>
               <InputGroupInput

@@ -1,0 +1,672 @@
+<plan>
+  <feature>dashboard-redesign</feature>
+  <spec>docs/dashboard-redesign-spec.md</spec>
+  <branch>feature/dashboard-redesign</branch>
+
+  <!-- Phase 1: PageHeader Component + Refactor All Pages -->
+  <phase>
+    <name>Phase 1 - PageHeader Component</name>
+
+    <task>
+      <name>Create shared PageHeader component</name>
+      <action>
+        Create `src/components/shared/PageHeader.tsx` with the following:
+
+        1. Define `PageHeaderProps` interface with `title` (string, required) and `actions` (React.ReactNode, optional).
+        2. Export named component `PageHeader`.
+        3. Render structure:
+           ```tsx
+           &lt;div className="flex items-center justify-between flex-wrap gap-4"&gt;
+             &lt;h1 className="text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold"&gt;
+               {title}
+             &lt;/h1&gt;
+             {actions &amp;&amp; &lt;div className="flex items-center gap-2"&gt;{actions}&lt;/div&gt;}
+           &lt;/div&gt;
+           ```
+        4. Use named export (not default export), consistent with other shared components.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build` to confirm the new file compiles without errors.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor Dashboard page to use PageHeader</name>
+      <action>
+        In `src/app/dashboard/page.tsx`:
+
+        1. Import `PageHeader` from `@/components/shared/PageHeader`.
+        2. Replace the wrapper div (lines 27-37) that contains both the h1 and the mobile logout button with:
+           ```tsx
+           &lt;PageHeader title="Dashboard" /&gt;
+           ```
+        3. KEEP the `handleLogout`, `signOut`, `useRouter`, and `Icons` imports for now -- they will be removed in Phase 2 task "Remove dashboard logout button". For this task, only move the logout button out of the header area.
+           Actually, since the h1 wrapper div ALSO contains the logout button, and we are replacing the whole div with PageHeader, the logout button disappears. Therefore:
+           - The `handleLogout` function, `signOut` import, `useRouter` import, and `Icons` import become unused.
+           - Remove all of them in this task.
+           - Remove the `"use client"` directive only if the page no longer has any client-side hooks. Check: `React` import is still used (JSX). No hooks remain. However, child components may need client context. Keep `"use client"` to be safe since the page imports client components.
+        4. Final dashboard page should look like:
+           ```tsx
+           "use client"
+
+           import React from 'react'
+           import NetWorthSection from '@/components/dashboard/NetWorthSection'
+           import RecentTransactions from '@/components/dashboard/RecentTransactions'
+           import { AccountsSummary } from '@/components/dashboard/AccountsSummary'
+           import { BudgetStatus } from '@/components/shared/BudgetStatus'
+           import { PageHeader } from '@/components/shared/PageHeader'
+
+           const Dashboard = () =&gt; {
+             return (
+               &lt;div className='py-6 px-4 md:px-6 pb-20 md:pb-6 flex flex-col gap-6 mx-auto'&gt;
+                 &lt;PageHeader title="Dashboard" /&gt;
+                 &lt;NetWorthSection /&gt;
+                 ...rest unchanged...
+               &lt;/div&gt;
+             )
+           }
+           ```
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. Run `npx vitest run` to check for broken tests.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor Accounts page to use PageHeader</name>
+      <action>
+        In `src/app/accounts/page.tsx`:
+
+        1. Import `PageHeader` from `@/components/shared/PageHeader`.
+        2. Find the header block (lines ~79-107):
+           ```
+           &lt;div className='flex items-center justify-between flex-wrap gap-4'&gt;
+             &lt;h1&gt;Accounts&lt;/h1&gt;
+             ...desktop button...
+             ...CreateAccountSheet...
+             ...mobile button...
+             ...CreateAccountDrawer...
+           &lt;/div&gt;
+           ```
+        3. Replace with:
+           ```tsx
+           &lt;PageHeader
+             title="Accounts"
+             actions={
+               &lt;&gt;
+                 &lt;button onClick={() =&gt; setCreateAccountSheetOpen(true)} className="hidden md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-base transition-all"&gt;
+                   &lt;Icons.createAccount size={20} /&gt;
+                   &lt;span&gt;Add account&lt;/span&gt;
+                 &lt;/button&gt;
+                 &lt;button onClick={() =&gt; setCreateAccountDrawerOpen(true)} className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"&gt;
+                   &lt;Icons.createAccount size={16} /&gt;
+                   &lt;span&gt;Add account&lt;/span&gt;
+                 &lt;/button&gt;
+               &lt;/&gt;
+             }
+           /&gt;
+           ```
+        4. Move the CreateAccountSheet and CreateAccountDrawer components OUTSIDE of PageHeader (they are portals, they can be placed anywhere in the JSX tree). They may already be elsewhere -- check and ensure they are not inside the actions prop.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor Cards page to use PageHeader</name>
+      <action>
+        In `src/app/cards/page.tsx`:
+
+        1. Import `PageHeader` from `@/components/shared/PageHeader`.
+        2. Replace the header block (lines ~151-178) with `&lt;PageHeader title="Cards" actions={...}&gt;`.
+        3. Pass the desktop + mobile "Add credit card" buttons as `actions`.
+        4. Move CreateCardSheet and CreateCardDrawer outside the actions prop.
+        5. Follow the same pattern as the Accounts refactor.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor Expenses page to use PageHeader</name>
+      <action>
+        In `src/app/expenses/page.tsx`:
+
+        1. Import `PageHeader` from `@/components/shared/PageHeader`.
+        2. Replace the header block (lines ~78-108) with `&lt;PageHeader title="Expenses" actions={...}&gt;`.
+        3. Pass the desktop + mobile "Add expense" buttons as `actions`.
+        4. Move CreateExpenseTransactionSheet and CreateExpenseTransactionDrawer outside the actions prop.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor Income page to use PageHeader</name>
+      <action>
+        In `src/app/income/page.tsx`:
+
+        1. Import `PageHeader` from `@/components/shared/PageHeader`.
+        2. Replace the header block (lines ~125-155) with `&lt;PageHeader title="Income" actions={...}&gt;`.
+        3. Pass the desktop + mobile "Add income category" buttons as `actions`.
+        4. Move CreateIncomeTypeSheet and CreateIncomeTypeDrawer outside the actions prop.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor Budgets page to use PageHeader</name>
+      <action>
+        In `src/app/budgets/page.tsx`:
+
+        1. Import `PageHeader` from `@/components/shared/PageHeader`.
+        2. Replace the header block (lines ~78-108) with `&lt;PageHeader title="Budgets" actions={...}&gt;`.
+        3. Pass the desktop + mobile "Add budget" buttons as `actions`.
+        4. Move CreateExpenseTypeSheet and CreateExpenseTypeDrawer outside the actions prop.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor Transfers page to use PageHeader</name>
+      <action>
+        In `src/app/transfers/page.tsx`:
+
+        1. Import `PageHeader` from `@/components/shared/PageHeader`.
+        2. Replace the standalone h1 (line ~67):
+           ```tsx
+           &lt;h1 className="text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold"&gt;Transfers&lt;/h1&gt;
+           ```
+           with:
+           ```tsx
+           &lt;PageHeader title="Transfers" /&gt;
+           ```
+        3. No actions -- Transfers page has no create button in the header.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor Transactions page to use PageHeader</name>
+      <action>
+        In `src/app/transactions/page.tsx`:
+
+        1. Import `PageHeader` from `@/components/shared/PageHeader`.
+        2. Replace the h1 (lines ~8-10):
+           ```tsx
+           &lt;h1 className="text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold mb-6"&gt;
+             Transactions
+           &lt;/h1&gt;
+           ```
+           with:
+           ```tsx
+           &lt;div className="mb-6"&gt;
+             &lt;PageHeader title="Transactions" /&gt;
+           &lt;/div&gt;
+           ```
+           Note: The `mb-6` was on the h1 itself. Move it to a wrapper div around PageHeader to preserve spacing.
+        3. No actions.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor Reports page to use PageHeader</name>
+      <action>
+        In `src/app/reports/page.tsx`:
+
+        1. Import `PageHeader` from `@/components/shared/PageHeader`.
+        2. Replace the header block (lines ~63-65):
+           ```tsx
+           &lt;div className='flex items-center justify-between flex-wrap gap-4'&gt;
+             &lt;h1 className='text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold'&gt;Reports&lt;/h1&gt;
+           &lt;/div&gt;
+           ```
+           with:
+           ```tsx
+           &lt;PageHeader title="Reports" /&gt;
+           ```
+        3. No actions.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor More page to use PageHeader</name>
+      <action>
+        In `src/app/more/page.tsx`:
+
+        1. Import `PageHeader` from `@/components/shared/PageHeader`.
+        2. Replace the header block (lines ~24-27):
+           ```tsx
+           &lt;div className="mb-6"&gt;
+             &lt;h1 className='text-2xl font-semibold'&gt;More&lt;/h1&gt;
+             &lt;p className='text-muted-foreground mt-2 text-sm md:text-base'&gt;Browse more pages and features&lt;/p&gt;
+           &lt;/div&gt;
+           ```
+           with:
+           ```tsx
+           &lt;div className="mb-6"&gt;
+             &lt;PageHeader title="More" /&gt;
+             &lt;p className='text-muted-foreground mt-2 text-sm md:text-base'&gt;Browse more pages and features&lt;/p&gt;
+           &lt;/div&gt;
+           ```
+        3. The h1 will now get standard responsive sizing classes via PageHeader. This is an intentional normalization.
+        4. The subtitle `&lt;p&gt;` stays outside PageHeader as a sibling element.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. Run `npx vitest run` to verify all tests pass after Phase 1 refactors.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 2: UserMenu Component + Sidebar Cleanup + Settings Placeholder -->
+  <phase>
+    <name>Phase 2 - UserMenu Component</name>
+
+    <task>
+      <name>Create UserMenu component</name>
+      <action>
+        Create `src/components/shared/UserMenu.tsx`:
+
+        1. Import dependencies:
+           - `useSession`, `signOut` from `@/lib/auth-client`
+           - `useRouter` from `next/navigation`
+           - `Link` from `next/link`
+           - `DropdownMenu`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuSeparator`, `DropdownMenuTrigger` from `@/components/ui/dropdown-menu`
+           - `Settings`, `LogOut`, `ChevronDown` from `lucide-react`
+
+        2. Component has no props. Internally calls `useSession()` and `useRouter()`.
+
+        3. Define `getUserInitial()` helper (same logic as current Sidebar):
+           - If `session?.user?.name`, return first char uppercased.
+           - Else if `session?.user?.email`, return first char uppercased.
+           - Else return 'U'.
+
+        4. Define `handleLogout()` (same as current Sidebar):
+           ```
+           signOut({ fetchOptions: { onSuccess: () => router.push("/sign-in") } })
+           ```
+
+        5. If `!session`, return null (do not render anything while session is loading or absent).
+
+        6. Render:
+           ```tsx
+           &lt;DropdownMenu&gt;
+             &lt;DropdownMenuTrigger asChild&gt;
+               &lt;button className="flex items-center gap-2 cursor-pointer outline-none" aria-label="User menu"&gt;
+                 {/* Avatar circle */}
+                 &lt;div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-sm shrink-0"&gt;
+                   {session.user.image ? (
+                     &lt;img src={session.user.image} alt="" className="w-8 h-8 rounded-full object-cover" /&gt;
+                   ) : (
+                     getUserInitial()
+                   )}
+                 &lt;/div&gt;
+                 {/* Name + Email (desktop only) */}
+                 &lt;div className="hidden md:flex flex-col items-start"&gt;
+                   &lt;span className="text-sm font-medium truncate max-w-[120px]"&gt;
+                     {session.user.name || session.user.email}
+                   &lt;/span&gt;
+                   {session.user.name &amp;&amp; (
+                     &lt;span className="text-xs text-muted-foreground truncate max-w-[160px]"&gt;
+                       {session.user.email}
+                     &lt;/span&gt;
+                   )}
+                 &lt;/div&gt;
+                 {/* Chevron (desktop only) */}
+                 &lt;ChevronDown size={16} className="hidden md:block text-muted-foreground" /&gt;
+               &lt;/button&gt;
+             &lt;/DropdownMenuTrigger&gt;
+             &lt;DropdownMenuContent align="end" className="w-48"&gt;
+               &lt;DropdownMenuLabel className="truncate"&gt;
+                 {session.user.name || session.user.email}
+               &lt;/DropdownMenuLabel&gt;
+               &lt;DropdownMenuSeparator /&gt;
+               &lt;DropdownMenuItem asChild&gt;
+                 &lt;Link href="/settings"&gt;
+                   &lt;Settings className="mr-2 h-4 w-4" /&gt;
+                   Settings
+                 &lt;/Link&gt;
+               &lt;/DropdownMenuItem&gt;
+               &lt;DropdownMenuSeparator /&gt;
+               &lt;DropdownMenuItem onClick={handleLogout}&gt;
+                 &lt;LogOut className="mr-2 h-4 w-4" /&gt;
+                 Log out
+               &lt;/DropdownMenuItem&gt;
+             &lt;/DropdownMenuContent&gt;
+           &lt;/DropdownMenu&gt;
+           ```
+
+        7. Use named export: `export { UserMenu }` or `export const UserMenu = ...`.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build` to confirm compilation.
+      </verify>
+    </task>
+
+    <task>
+      <name>Integrate UserMenu into PageHeader</name>
+      <action>
+        In `src/components/shared/PageHeader.tsx`:
+
+        1. Import `UserMenu` from `@/components/shared/UserMenu`.
+        2. Update the render to always include UserMenu on the right side:
+           ```tsx
+           &lt;div className="flex items-center justify-between flex-wrap gap-4"&gt;
+             &lt;h1 className="text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold"&gt;
+               {title}
+             &lt;/h1&gt;
+             &lt;div className="flex items-center gap-3"&gt;
+               {actions}
+               &lt;UserMenu /&gt;
+             &lt;/div&gt;
+           &lt;/div&gt;
+           ```
+        3. The right-side div always renders (UserMenu is always present). If there are no actions, it just shows UserMenu.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Remove user section from Sidebar</name>
+      <action>
+        In `src/components/shared/Sidebar.tsx`:
+
+        1. Delete the entire user section block (lines ~222-270), which includes:
+           - The `{/* User section */}` comment
+           - The `&lt;div className={...pb-6...}&gt;` wrapper
+           - Both collapsed and expanded user variants (avatar, name, logout button)
+
+        2. Delete the `handleLogout` function (lines ~36-43).
+        3. Delete the `getUserInitial` function (lines ~45-52).
+        4. Remove these imports that are now unused:
+           - `useSession` and `signOut` from `@/lib/auth-client` (check: useSession was only used for the user section)
+           - `useRouter` from `next/navigation` (check: only used in handleLogout)
+           - `Icons` from `../icons` (check: only Icons.logOut was used; verify no other Icons references remain)
+        5. Remove the `session` variable declaration from the component body.
+        6. Remove the `router` variable declaration if useRouter is removed.
+        7. Keep all other imports and code intact (navigation, quick actions, Sheet/Drawer forms).
+        8. Verify remaining code compiles -- the Sidebar still needs: `usePathname`, `Link`, `useState`, navigation constants, `useSidebarState`, Tabler icons, Tooltip components, and the create Sheet/Drawer forms.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. Verify no references to removed functions or imports remain.
+      </verify>
+    </task>
+
+    <task>
+      <name>Create placeholder Settings page</name>
+      <action>
+        Create `src/app/settings/page.tsx`:
+
+        ```tsx
+        "use client"
+
+        import { PageHeader } from '@/components/shared/PageHeader'
+
+        export default function SettingsPage() {
+          return (
+            &lt;div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-20 md:pb-6 flex flex-col"&gt;
+              &lt;PageHeader title="Settings" /&gt;
+              &lt;div className="mt-10 flex flex-col items-center justify-center text-center py-16"&gt;
+                &lt;p className="text-muted-foreground"&gt;Settings page coming soon.&lt;/p&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+          )
+        }
+        ```
+
+        This page is NOT added to navigation constants (Sidebar or BottomBar). It is only accessible via the UserMenu dropdown link.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. Navigate to /settings in the browser and confirm it renders.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 3: MobileHeroSummary + Hide MonthlySummaryChart on Mobile -->
+  <phase>
+    <name>Phase 3 - Mobile Hero Summary</name>
+
+    <task>
+      <name>Create MobileHeroSummary component</name>
+      <action>
+        Create `src/components/dashboard/MobileHeroSummary.tsx`:
+
+        1. Import dependencies:
+           - `useMonthlySummary` from `@/hooks/useMonthlySummary`
+           - `TrendingUp`, `TrendingDown`, `Minus` from `lucide-react`
+           - `Skeleton` from `@/components/ui/skeleton`
+
+        2. No props. Internally calls `useMonthlySummary()`.
+
+        3. Define `formatCurrency` helper (same as MonthlySummaryChart):
+           ```
+           return `₱${value.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+           ```
+
+        4. Loading state: if `isLoading`, return:
+           ```tsx
+           &lt;div className="md:hidden flex flex-col gap-3"&gt;
+             &lt;div className="grid grid-cols-2 gap-3"&gt;
+               &lt;Skeleton className="h-20 rounded-lg" /&gt;
+               &lt;Skeleton className="h-20 rounded-lg" /&gt;
+             &lt;/div&gt;
+             &lt;Skeleton className="h-12 rounded-lg" /&gt;
+           &lt;/div&gt;
+           ```
+
+        5. Error or no data: if `error` or `!summary`, return `null`.
+
+        6. Calculate percentage changes (same logic as MonthlySummaryChart):
+           ```
+           const incomeChange = summary.lastMonth.income &gt; 0
+             ? ((summary.currentMonth.income - summary.lastMonth.income) / summary.lastMonth.income) * 100
+             : 0;
+           const expenseChange = summary.lastMonth.expenses &gt; 0
+             ? ((summary.currentMonth.expenses - summary.lastMonth.expenses) / summary.lastMonth.expenses) * 100
+             : 0;
+           ```
+
+        7. Define `getChangeIcon(change)` and `getChangeColor(change, isExpense)` helpers (same as MonthlySummaryChart).
+
+        8. Render (wrapped in `md:hidden`):
+           ```tsx
+           &lt;div className="md:hidden flex flex-col gap-3"&gt;
+             &lt;div className="grid grid-cols-2 gap-3"&gt;
+               {/* Income Card */}
+               &lt;div className="flex flex-col gap-1 p-3 rounded-lg bg-success-950/20 border border-success-900/30"&gt;
+                 &lt;span className="text-muted-foreground text-xs"&gt;Income&lt;/span&gt;
+                 &lt;span className="text-foreground text-lg font-semibold"&gt;
+                   {formatCurrency(summary.currentMonth.income)}
+                 &lt;/span&gt;
+                 &lt;div className={`flex items-center gap-1 text-xs ${getChangeColor(incomeChange)}`}&gt;
+                   &lt;IncomeIcon className="w-3 h-3" /&gt;
+                   &lt;span&gt;{Math.abs(incomeChange).toFixed(0)}% vs last month&lt;/span&gt;
+                 &lt;/div&gt;
+               &lt;/div&gt;
+
+               {/* Expense Card */}
+               &lt;div className="flex flex-col gap-1 p-3 rounded-lg bg-error-950/20 border border-error-900/30"&gt;
+                 &lt;span className="text-muted-foreground text-xs"&gt;Expenses&lt;/span&gt;
+                 &lt;span className="text-foreground text-lg font-semibold"&gt;
+                   {formatCurrency(summary.currentMonth.expenses)}
+                 &lt;/span&gt;
+                 &lt;div className={`flex items-center gap-1 text-xs ${getChangeColor(expenseChange, true)}`}&gt;
+                   &lt;ExpenseIcon className="w-3 h-3" /&gt;
+                   &lt;span&gt;{Math.abs(expenseChange).toFixed(0)}% vs last month&lt;/span&gt;
+                 &lt;/div&gt;
+               &lt;/div&gt;
+             &lt;/div&gt;
+
+             {/* Net Savings Bar */}
+             &lt;div className="flex items-center justify-between p-3 rounded-lg bg-secondary-950/50 border border-border"&gt;
+               &lt;span className="text-muted-foreground text-sm"&gt;Net savings&lt;/span&gt;
+               &lt;span className={`text-xl font-bold ${summary.currentMonth.savings &gt;= 0 ? 'text-text-success' : 'text-text-error'}`}&gt;
+                 {formatCurrency(summary.currentMonth.savings)}
+               &lt;/span&gt;
+             &lt;/div&gt;
+           &lt;/div&gt;
+           ```
+
+        9. Use named export.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Add MobileHeroSummary to dashboard page</name>
+      <action>
+        In `src/app/dashboard/page.tsx`:
+
+        1. Import `MobileHeroSummary` from `@/components/dashboard/MobileHeroSummary`.
+        2. Add `&lt;MobileHeroSummary /&gt;` after `&lt;PageHeader title="Dashboard" /&gt;` and before `&lt;NetWorthSection /&gt;`:
+           ```tsx
+           &lt;PageHeader title="Dashboard" /&gt;
+           &lt;MobileHeroSummary /&gt;
+           &lt;NetWorthSection /&gt;
+           ```
+        3. The dashboard page already has `flex flex-col gap-6` on the container, so the hero summary will have automatic spacing.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Hide MonthlySummaryChart on mobile</name>
+      <action>
+        In `src/components/dashboard/NetWorthInsights.tsx`:
+
+        1. Wrap the border separator AND the MonthlySummaryChart together in a `hidden lg:block` container:
+
+           Current code:
+           ```tsx
+           &lt;div className='border-t border-border' /&gt;
+           &lt;MonthlySummaryChart /&gt;
+           ```
+
+           Replace with:
+           ```tsx
+           &lt;div className="hidden lg:block"&gt;
+             &lt;div className='border-t border-border' /&gt;
+             &lt;MonthlySummaryChart /&gt;
+           &lt;/div&gt;
+           ```
+
+        2. IMPORTANT: Both the separator and MonthlySummaryChart must be inside the same hidden wrapper. Do not hide them separately.
+        3. The `lg:` breakpoint matches the `NetWorthSection` grid breakpoint (`lg:grid-cols-5`), ensuring consistent behavior.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. Run `npx vitest run` to verify all tests pass after Phase 3.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 4: Mobile Back Button on Detail Pages -->
+  <phase>
+    <name>Phase 4 - Mobile Back Button</name>
+
+    <task>
+      <name>Add back link to Account Detail page</name>
+      <action>
+        In `src/app/accounts/[id]/page.tsx`:
+
+        1. Import `Link` from `next/link` (may already be imported -- check first).
+        2. Import `ArrowLeft` from `lucide-react` (or use `IconArrowLeft` from `@tabler/icons-react` if Tabler icons are already imported in this file).
+        3. Find the mobile layout block:
+           ```tsx
+           &lt;div className="flex md:hidden flex-col gap-3"&gt;
+             &lt;div className="flex items-center justify-between"&gt;
+           ```
+        4. Insert a back link as the FIRST child of the `md:hidden` container, before the existing `flex items-center justify-between` div:
+           ```tsx
+           &lt;Link
+             href="/accounts"
+             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
+           &gt;
+             &lt;ArrowLeft size={16} /&gt;
+             &lt;span&gt;Accounts&lt;/span&gt;
+           &lt;/Link&gt;
+           ```
+        5. Do NOT modify the desktop layout (`hidden md:flex`).
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Add back link to Card Detail page</name>
+      <action>
+        In `src/app/cards/[id]/page.tsx`:
+
+        1. Import `Link` from `next/link` (check if already imported).
+        2. Import `ArrowLeft` from `lucide-react` (or Tabler equivalent if already imported).
+        3. Find the mobile layout block:
+           ```tsx
+           &lt;div className="flex md:hidden flex-col gap-3"&gt;
+             &lt;div className="flex items-center gap-2"&gt;
+           ```
+        4. Insert a back link as the FIRST child:
+           ```tsx
+           &lt;Link
+             href="/cards"
+             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
+           &gt;
+             &lt;ArrowLeft size={16} /&gt;
+             &lt;span&gt;Cards&lt;/span&gt;
+           &lt;/Link&gt;
+           ```
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Add back link to Card Group Detail page</name>
+      <action>
+        In `src/app/cards/groups/[groupName]/page.tsx`:
+
+        1. Import `Link` from `next/link` (check if already imported).
+        2. Import `ArrowLeft` from `lucide-react` (or Tabler equivalent if already imported).
+        3. Find the mobile layout block:
+           ```tsx
+           &lt;div className="flex md:hidden flex-col gap-3"&gt;
+             &lt;div className="flex items-center gap-2"&gt;
+           ```
+        4. Insert a back link as the FIRST child:
+           ```tsx
+           &lt;Link
+             href="/cards"
+             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
+           &gt;
+             &lt;ArrowLeft size={16} /&gt;
+             &lt;span&gt;Cards&lt;/span&gt;
+           &lt;/Link&gt;
+           ```
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. Run `npx vitest run` to verify all tests pass after all phases.
+      </verify>
+    </task>
+  </phase>
+</plan>

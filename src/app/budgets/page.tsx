@@ -7,6 +7,7 @@ import EditExpenseTypeSheet from '@/components/forms/EditExpenseTypeSheet'
 import { Icons } from '@/components/icons'
 import BudgetCard from '@/components/shared/BudgetCard'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { PageHeader } from '@/components/shared/PageHeader'
 import SkeletonBudgetCard from '@/components/shared/SkeletonBudgetCard'
 import { Button } from '@/components/ui/button'
 import { ExpenseTransaction, useExpenseTransactionsQuery } from '@/hooks/useExpenseTransactionsQuery'
@@ -74,38 +75,38 @@ const Budgets = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col">
-      <div className='flex items-center justify-between flex-wrap gap-4'>
-        <h1 className='text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold'>Budgets</h1>
-
-        <button
-          onClick={() => setCreateExpenseTypeSheetOpen(true)}
-          className="hidden md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-base transition-all"
-        >
-          <Icons.createAccount size={20} />
-          <span>Add budget</span>
-        </button>
-
-        <CreateExpenseTypeSheet
-          open={createExpenseTypeSheetOpen}
-          onOpenChange={setCreateExpenseTypeSheetOpen}
-          className='hidden md:block'
-        />
-
-        <button
-          onClick={() => setCreateExpenseTypeDrawerOpen(true)}
-          className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"
-        >
-          <Icons.createAccount size={16} />
-          <span>Add budget</span>
-        </button>
-
-        <CreateExpenseTypeDrawer
-          open={createExpenseTypeDrawerOpen}
-          onOpenChange={setCreateExpenseTypeDrawerOpen}
-          className="block md:hidden"
-        />
-      </div>
+    <div className="max-w-7xl mx-auto px-4 pt-0 pb-20 md:pb-6 flex flex-col">
+      <PageHeader
+        title="Budgets"
+        actions={
+          <>
+            <button
+              onClick={() => setCreateExpenseTypeSheetOpen(true)}
+              className="hidden md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-base transition-all"
+            >
+              <Icons.createAccount size={20} />
+              <span>Add budget</span>
+            </button>
+            <button
+              onClick={() => setCreateExpenseTypeDrawerOpen(true)}
+              className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"
+            >
+              <Icons.createAccount size={16} />
+              <span>Add budget</span>
+            </button>
+          </>
+        }
+      />
+      <CreateExpenseTypeSheet
+        open={createExpenseTypeSheetOpen}
+        onOpenChange={setCreateExpenseTypeSheetOpen}
+        className='hidden md:block'
+      />
+      <CreateExpenseTypeDrawer
+        open={createExpenseTypeDrawerOpen}
+        onOpenChange={setCreateExpenseTypeDrawerOpen}
+        className="block md:hidden"
+      />
 
       <EditExpenseTypeSheet
         open={editExpenseTypeSheetOpen}

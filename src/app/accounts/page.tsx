@@ -12,6 +12,7 @@ import EditAccountSheet from '@/components/forms/EditAccountSheet'
 import EditAccountDrawer from '@/components/forms/EditAccountDrawer'
 import DeleteDialog from '@/components/shared/DeleteDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -75,36 +76,38 @@ const Accounts = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col">
-      <div className='flex items-center justify-between flex-wrap gap-4'>
-        <h1 className='text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold'>Accounts</h1>
-
-        <button 
-          onClick={() => setCreateAccountSheetOpen(true)}
-          className="hidden md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-base transition-all"
-        >
-          <Icons.createAccount size={20} />
-          <span>Add account</span>
-        </button>
-        <CreateAccountSheet
-          open={createAccountSheetOpen}
-          onOpenChange={setCreateAccountSheetOpen}
-          className="hidden md:block"
-        />
-
-        <button 
-          onClick={() => setCreateAccountDrawerOpen(true)}
-          className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"
-        >
-          <Icons.createAccount size={16} />
-          <span>Add account</span>
-        </button>
-        <CreateAccountDrawer
-          open={createAccountDrawerOpen}
-          onOpenChange={setCreateAccountDrawerOpen}
-          className="block md:hidden"
-        />
-      </div>
+    <div className="max-w-7xl mx-auto px-4 pt-0 pb-20 md:pb-6 flex flex-col">
+      <PageHeader
+        title="Accounts"
+        actions={
+          <>
+            <button
+              onClick={() => setCreateAccountSheetOpen(true)}
+              className="hidden md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-base transition-all"
+            >
+              <Icons.createAccount size={20} />
+              <span>Add account</span>
+            </button>
+            <button
+              onClick={() => setCreateAccountDrawerOpen(true)}
+              className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"
+            >
+              <Icons.createAccount size={16} />
+              <span>Add account</span>
+            </button>
+          </>
+        }
+      />
+      <CreateAccountSheet
+        open={createAccountSheetOpen}
+        onOpenChange={setCreateAccountSheetOpen}
+        className="hidden md:block"
+      />
+      <CreateAccountDrawer
+        open={createAccountDrawerOpen}
+        onOpenChange={setCreateAccountDrawerOpen}
+        className="block md:hidden"
+      />
 
       <EditAccountSheet
         open={editAccountSheetOpen}
@@ -130,7 +133,7 @@ const Accounts = () => {
       />
 
       {isLoading ? (
-        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'>
+        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-2'>
           {Array.from({ length: 4 }, (_, index) => (
             <SkeletonAccountCard key={index} />
           ))}
@@ -170,7 +173,7 @@ const Accounts = () => {
           variant="page"
         />
       ) : (
-        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-10'>
+        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-2'>
           {accounts.map((account) => (
             <AccountCard
               key={account.id}

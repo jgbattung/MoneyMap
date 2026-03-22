@@ -6,18 +6,6 @@ import React from 'react';
 // Mocks — must be declared before importing the component
 // ---------------------------------------------------------------------------
 
-vi.mock('@/lib/auth-client', () => ({
-  useSession: vi.fn(() => ({
-    data: {
-      user: { id: 'user-123', name: 'Test User', email: 'test@example.com' },
-      session: { id: 'session-abc' },
-    },
-    isPending: false,
-    error: null,
-  })),
-  signOut: vi.fn(),
-}));
-
 vi.mock('@/hooks/useSidebarState', () => ({
   useSidebarState: vi.fn(() => ({
     isCollapsed: false,
@@ -29,7 +17,6 @@ vi.mock('@/hooks/useSidebarState', () => ({
 
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/dashboard'),
-  useRouter: vi.fn(() => ({ push: vi.fn() })),
 }));
 
 vi.mock('@/app/constants/navigation', async () => {
@@ -128,7 +115,6 @@ vi.mock('../icons', () => ({
 // ---------------------------------------------------------------------------
 
 import Sidebar from './Sidebar';
-import { useSession, signOut } from '@/lib/auth-client';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { usePathname } from 'next/navigation';
 
@@ -160,16 +146,6 @@ function renderSidebar() {
 
 beforeEach(() => {
   vi.resetAllMocks();
-
-  // Re-apply default mocks after resetAllMocks
-  vi.mocked(useSession).mockReturnValue({
-    data: {
-      user: { id: 'user-123', name: 'Test User', email: 'test@example.com' },
-      session: { id: 'session-abc' },
-    },
-    isPending: false,
-    error: null,
-  } as ReturnType<typeof useSession>);
 
   vi.mocked(useSidebarState).mockReturnValue(expandedState);
   vi.mocked(usePathname).mockReturnValue('/dashboard');
@@ -219,55 +195,6 @@ describe('Sidebar', () => {
       expect(screen.getByRole('button', { name: 'Collapse sidebar' })).toBeTruthy();
     });
 
-    it('renders the logout button with aria-label "Log out"', () => {
-      renderSidebar();
-      expect(screen.getByRole('button', { name: 'Log out' })).toBeTruthy();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  describe('user initial', () => {
-    it('shows user initial from name (first char uppercase)', () => {
-      vi.mocked(useSession).mockReturnValue({
-        data: { user: { id: 'u1', name: 'Alice', email: 'alice@test.com' }, session: { id: 's1' } },
-        isPending: false,
-        error: null,
-      } as ReturnType<typeof useSession>);
-
-      renderSidebar();
-      // The user initial appears inside the avatar circle
-      const avatars = screen.getAllByText('A');
-      expect(avatars.length).toBeGreaterThan(0);
-    });
-
-    it('shows first char of email when name is absent', () => {
-      vi.mocked(useSession).mockReturnValue({
-        data: { user: { id: 'u2', name: '', email: 'bob@test.com' }, session: { id: 's2' } },
-        isPending: false,
-        error: null,
-      } as ReturnType<typeof useSession>);
-
-      renderSidebar();
-      const avatars = screen.getAllByText('B');
-      expect(avatars.length).toBeGreaterThan(0);
-    });
-
-    it('falls back to "U" when session has no user data', () => {
-      vi.mocked(useSession).mockReturnValue({
-        data: null,
-        isPending: false,
-        error: null,
-      } as ReturnType<typeof useSession>);
-
-      renderSidebar();
-      const avatars = screen.getAllByText('U');
-      expect(avatars.length).toBeGreaterThan(0);
-    });
-
-    it('displays user name below the avatar in expanded mode', () => {
-      renderSidebar();
-      expect(screen.getByText('Test User')).toBeTruthy();
-    });
   });
 
   // -------------------------------------------------------------------------
@@ -414,22 +341,4 @@ describe('Sidebar', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
-  describe('logout', () => {
-    it('calls signOut when the logout button is clicked', () => {
-      renderSidebar();
-      fireEvent.click(screen.getByRole('button', { name: 'Log out' }));
-      expect(vi.mocked(signOut)).toHaveBeenCalledTimes(1);
-    });
-
-    it('passes fetchOptions with onSuccess callback to signOut', () => {
-      renderSidebar();
-      fireEvent.click(screen.getByRole('button', { name: 'Log out' }));
-
-      const callArg = vi.mocked(signOut).mock.calls[0][0] as {
-        fetchOptions: { onSuccess: () => void };
-      };
-      expect(typeof callArg.fetchOptions.onSuccess).toBe('function');
-    });
-  });
 });

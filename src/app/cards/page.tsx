@@ -9,6 +9,7 @@ import CreditCardCard from '@/components/shared/CreditCardCard';
 import DeleteDialog from '@/components/shared/DeleteDialog';
 import { EmptyState } from '@/components/shared/EmptyState';
 import GroupCard from '@/components/shared/GroupCard';
+import { PageHeader } from '@/components/shared/PageHeader';
 import SkeletonCardCard from '@/components/shared/SkeletonCardCard';
 import { Button } from '@/components/ui/button';
 import { useCardsQuery } from '@/hooks/useCardsQuery';
@@ -147,36 +148,38 @@ const Cards = () => {
   }, [groupedCards, ungroupedCards]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col">
-      <div className='flex items-center justify-between flex-wrap gap-4'>
-        <h1 className='text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold'>Cards</h1>
-
-        <button
-          onClick={() => setCreateCardsSheetOpen(true)}
-          className="hidden md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-base transition-all"
-        >
-          <Icons.createAccount size={20} />
-          <span>Add credit card</span>
-        </button>
-        <CreateCardSheet
-          open={createCardsSheetOpen}
-          onOpenChange={setCreateCardsSheetOpen}
-          className='hidden md:block'
-        />
-
-        <button
-          onClick={() => setCreateCardsDrawerOpen(true)}
-          className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"
-        >
-          <Icons.createAccount size={16} />
-          <span>Add credit card</span>
-        </button>
-        <CreateCardDrawer
-          open={createCardsDrawerOpen}
-          onOpenChange={setCreateCardsDrawerOpen}
-          className='block md:hidden'
-        />
-      </div>
+    <div className="max-w-7xl mx-auto px-4 pt-0 pb-20 md:pb-6 flex flex-col">
+      <PageHeader
+        title="Cards"
+        actions={
+          <>
+            <button
+              onClick={() => setCreateCardsSheetOpen(true)}
+              className="hidden md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-base transition-all"
+            >
+              <Icons.createAccount size={20} />
+              <span>Add credit card</span>
+            </button>
+            <button
+              onClick={() => setCreateCardsDrawerOpen(true)}
+              className="hidden max-md:flex gap-2 items-center border rounded-md bg-secondary-600 hover:bg-secondary-700 px-4 py-2 text-sm transition-all"
+            >
+              <Icons.createAccount size={16} />
+              <span>Add credit card</span>
+            </button>
+          </>
+        }
+      />
+      <CreateCardSheet
+        open={createCardsSheetOpen}
+        onOpenChange={setCreateCardsSheetOpen}
+        className='hidden md:block'
+      />
+      <CreateCardDrawer
+        open={createCardsDrawerOpen}
+        onOpenChange={setCreateCardsDrawerOpen}
+        className='block md:hidden'
+      />
 
       <EditCardSheet
         open={editCardSheetOpen}
@@ -202,7 +205,7 @@ const Cards = () => {
       />
 
       {isLoading ? (
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2'>
           {Array.from({ length: 3 }, (_, index) => (
             <SkeletonCardCard key={index} />
           ))}
@@ -236,7 +239,7 @@ const Cards = () => {
           variant="page"
         />
       ) : (
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-10'>
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2'>
           {sortedItems.map((item) => {
             if (item.type === "group") {
               return (

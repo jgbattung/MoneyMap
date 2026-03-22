@@ -1,6 +1,7 @@
 "use client"
 
 import { navRoutes, mobileNavRoutes } from '@/app/constants/navigation'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { IconChevronRight } from '@tabler/icons-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -20,9 +21,9 @@ const More = () => {
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col">
+    <div className="max-w-7xl mx-auto px-4 pt-0 flex flex-col">
       <div className="mb-6">
-        <h1 className='text-2xl font-semibold'>More</h1>
+        <PageHeader title="More" />
         <p className='text-muted-foreground mt-2 text-sm md:text-base'>Browse more pages and features</p>
       </div>
 
