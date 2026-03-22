@@ -17,7 +17,7 @@ export const PageHeader = ({ title, actions }: PageHeaderProps) => {
       </div>
       {/* Actions slot: below the divider, right-aligned */}
       {actions && (
-        <div className="flex justify-end mt-2">
+        <div className="flex justify-end mt-3">
           {actions}
         </div>
       )}

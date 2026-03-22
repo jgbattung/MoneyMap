@@ -149,7 +149,7 @@ const Expenses = () => {
           variant="page"
         />
       ) : (
-        <div className="mt-10">
+        <div className="mt-4">
           <div className='md:hidden space-y-4'>
             <InputGroup>
               <InputGroupInput
