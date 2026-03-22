@@ -2,6 +2,7 @@
 
 import EditTransferDrawer from '@/components/forms/EditTransferDrawer';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { PageHeader } from '@/components/shared/PageHeader';
 import TransferCard from '@/components/shared/TransferCard';
 import TransferTypesList from '@/components/shared/TransferTypesList';
 import { SkeletonTransferCard } from '@/components/shared/SkeletonTransferCard';
@@ -64,7 +65,7 @@ const Transactions = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col">
-      <h1 className="text-2xl font-semibold md:text-3xl lg:text-4xl md:font-bold">Transfers</h1>
+      <PageHeader title="Transfers" />
       
       <div className="my-3 md:my-6 lg:my-8">
         <div className="mb-6">
