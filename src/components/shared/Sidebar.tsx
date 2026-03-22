@@ -4,19 +4,16 @@ import React, { useState } from 'react'
 import { Icons } from '../icons'
 import { dashboardRoute, navGroups, NavRoute } from '@/app/constants/navigation'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import CreateIncomeTransactionSheet from '../forms/CreateIncomeTransactionSheet'
 import CreateTransferSheet from '../forms/CreateTransferSheet'
 import CreateExpenseTransactionSheet from '../forms/CreateExpenseTransactionSheet'
-import { useSession, signOut } from '@/lib/auth-client'
 import { useSidebarState } from '@/hooks/useSidebarState'
 import { IconChevronDown, IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 const Sidebar = () => {
   const pathname = usePathname();
-  const router = useRouter();
-  const { data: session } = useSession();
   const { isCollapsed, toggleCollapsed, isGroupExpanded, toggleGroup } = useSidebarState(pathname);
   const [createIncomeTransactionSheetOpen, setCreateIncomeTransactionSheetOpen] = useState(false);
   const [createTransferSheetOpen, setCreateTransferSheetOpen] = useState(false);
@@ -33,26 +30,6 @@ const Sidebar = () => {
   const handleAddExpense = () => {
     setCreateExpenseSheetOpen(true);
   }
-
-  const handleLogout = () => {
-    signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          router.push("/sign-in")
-        }
-      }
-    });
-  };
-
-  const getUserInitial = () => {
-    if (session?.user?.name) {
-      return session.user.name.charAt(0).toUpperCase();
-    }
-    if (session?.user?.email) {
-      return session.user.email.charAt(0).toUpperCase();
-    }
-    return 'U';
-  };
 
   const renderNavLink = (route: NavRoute) => {
     const isActive = pathname.startsWith(route.path);
@@ -219,55 +196,6 @@ const Sidebar = () => {
           </nav>
         </div>
 
-        {/* User section */}
-        <div className={`pb-6 flex items-center ${isCollapsed ? 'flex-col gap-2' : 'justify-between'}`}>
-          {isCollapsed ? (
-            <>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className='w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold'>
-                    {getUserInitial()}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  {session?.user?.name || session?.user?.email || 'User'}
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={handleLogout}
-                    className='p-2 hover:bg-white/10 rounded-md transition-colors cursor-pointer'
-                    aria-label='Log out'
-                  >
-                    <Icons.logOut size={20} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">Log out</TooltipContent>
-              </Tooltip>
-            </>
-          ) : (
-            <>
-              <div className='flex items-center gap-2'>
-                <div className='w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold'>
-                  {getUserInitial()}
-                </div>
-                <div className='flex flex-col'>
-                  <p className='text-sm font-medium truncate max-w-[120px]'>
-                    {session?.user?.name || session?.user?.email}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={handleLogout}
-                className='p-2 hover:bg-white/10 rounded-md transition-colors cursor-pointer'
-                aria-label='Log out'
-              >
-                <Icons.logOut size={20} />
-              </button>
-            </>
-          )}
-        </div>
       </div>
 
       <CreateIncomeTransactionSheet
