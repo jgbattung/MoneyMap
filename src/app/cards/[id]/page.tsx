@@ -1,7 +1,6 @@
 "use client"
 
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import React from 'react'
 import { useCardQuery } from '@/hooks/useCardsQuery';
 import { Icons } from '@/components/icons';
@@ -10,8 +9,7 @@ import ExpenseTable from '@/components/tables/expenses/ExpenseTable';
 import IncomeTable from '@/components/tables/income/IncomeTable';
 import TransferTable from '@/components/tables/transfers/TransferTable';
 import TransactionsMobileView from '@/components/transactions/TransactionsMobileView';
-import { ArrowLeft } from 'lucide-react';
-
+import { MobileDetailHeader } from '@/components/shared/MobileDetailHeader';
 
 const CardDetailPage = () => {
   const params = useParams();
@@ -116,18 +114,12 @@ const CardDetailPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-20 md:pb-6 flex flex-col">
+      <MobileDetailHeader backHref="/cards" title="Cards" />
       {/* Header Section with Outstanding Balance - Gradient Design */}
       <div className="mb-6 md:mb-8">
         <div className="bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border border-border rounded-lg md:rounded-xl p-4 md:p-8 shadow-sm hover:shadow-md transition-shadow">
           {/* Mobile Layout - Stacked */}
           <div className="flex md:hidden flex-col gap-3">
-            <Link
-              href="/cards"
-              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
-            >
-              <ArrowLeft size={16} />
-              <span>Cards</span>
-            </Link>
             <div className="flex items-center gap-2">
               <div className="p-2 bg-primary/20 rounded-lg">
                 <Icons.creditCardIcon size={18} className="text-primary" />
