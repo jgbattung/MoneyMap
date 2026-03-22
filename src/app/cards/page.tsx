@@ -205,7 +205,7 @@ const Cards = () => {
       />
 
       {isLoading ? (
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4'>
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2'>
           {Array.from({ length: 3 }, (_, index) => (
             <SkeletonCardCard key={index} />
           ))}
@@ -239,7 +239,7 @@ const Cards = () => {
           variant="page"
         />
       ) : (
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4'>
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2'>
           {sortedItems.map((item) => {
             if (item.type === "group") {
               return (

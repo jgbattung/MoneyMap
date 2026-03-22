@@ -62,7 +62,7 @@ const Reports = () => {
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-20 md:pb-6 flex flex-col">
       <PageHeader title="Reports" />
 
-      <div className='mt-4 space-y-6'>
+      <div className='mt-2 space-y-6'>
         <div>
           <NetWorthCard />
         </div>
