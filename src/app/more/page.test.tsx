@@ -25,6 +25,13 @@ const { mockIcon, mockActiveIcon } = vi.hoisted(() => {
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
+vi.mock('@/components/shared/PageHeader', () => ({
+  PageHeader: ({ title }: { title: string }) =>
+    React.createElement('div', { 'data-testid': 'page-header' },
+      React.createElement('h1', null, title)
+    ),
+}));
+
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/dashboard'),
 }));

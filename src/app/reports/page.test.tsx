@@ -4,6 +4,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import Reports from './page';
 
+// Mock PageHeader to avoid pulling in UserMenu auth dependencies
+vi.mock('@/components/shared/PageHeader', () => ({
+  PageHeader: ({ title }: { title: string }) =>
+    React.createElement('div', { 'data-testid': 'page-header' },
+      React.createElement('h1', null, title)
+    ),
+}));
+
 // Mock useEarliestTransaction hook
 vi.mock('@/hooks/useEarliestTransaction', () => ({
   useEarliestTransaction: vi.fn(),
