@@ -160,14 +160,13 @@ describe('PageHeader', () => {
       const { container } = render(
         React.createElement(PageHeader, { title: 'Accounts', actions: actionsNode })
       );
-      // With actions, there is no standalone spacer div — mb-3 is on the actions row itself
-      // The spacer is only rendered in the !actions branch
+      // With actions, the spacer div (!actions branch) must not be rendered.
+      // The actions row uses "flex justify-end mt-4 md:mb-5" — no mb-3 class.
       const actionsRow = container.querySelector('.flex.justify-end.mt-4');
       expect(actionsRow).toBeTruthy();
-      // Confirm exactly one element carries mb-3 (the actions row), not a separate spacer
+      // No element should carry mb-3 — the standalone spacer is suppressed.
       const allMb3 = container.querySelectorAll('.mb-3');
-      // The actions row has mb-3 via "mb-3 md:mb-5" class — that's the only one
-      expect(allMb3.length).toBe(1);
+      expect(allMb3.length).toBe(0);
     });
 
     it('spacer is rendered OUTSIDE the sticky wrapper', () => {
