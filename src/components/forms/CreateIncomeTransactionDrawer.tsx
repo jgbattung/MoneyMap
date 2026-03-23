@@ -82,27 +82,22 @@ const CreateIncomeTransactionDrawer = ({ open, onOpenChange, className }: Create
     };
   }, [open]);
 
-  const onSubmit = async (values: z.infer<typeof IncomeTransactionValidation>) => {
-    try {
-      const payload = {
-        ...values,
-        date: formatDateForAPI(values.date),
-      };
+  const onSubmit = (values: z.infer<typeof IncomeTransactionValidation>) => {
+    const payload = {
+      ...values,
+      date: formatDateForAPI(values.date),
+    };
 
-      const newIncomeTransaction = await createIncomeTransaction(payload);
+    const accountName = accounts.find(a => a.id === payload.accountId)?.name ?? '';
+    const incomeTypeName = incomeTypes.find(t => t.id === payload.incomeTypeId)?.name ?? '';
 
-      toast.success("Income type created successfully", {
-        description: `${newIncomeTransaction.name} has been added to your income transactions.`,
-        duration: 5000,
-      });
-      form.reset();
-      onOpenChange(false);
-    } catch (error) {
-      toast.error("Failed to create income transaction", {
-        description: error instanceof Error ? error.message : "Please check your information and try again.",
-        duration: 6000
-      });
-    }
+    toast.success("Income transaction created successfully", {
+      description: `${values.name} has been added to your income transactions.`,
+      duration: 5000,
+    });
+    form.reset();
+    onOpenChange(false);
+    createIncomeTransaction({ payload, meta: { accountName, incomeTypeName } });
   }
 
   const onError = () => {

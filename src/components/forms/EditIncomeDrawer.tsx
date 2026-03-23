@@ -127,22 +127,14 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
     setDeleteDialogOpen(true);
   }
 
-  const handleDeleteConfirm = async () => {
-    try {
-      await deleteIncomeTransaction(incomeTransactionId);
-
-      setDeleteDialogOpen(false);
-      onOpenChange(false);
-
-      toast.success("Income transaction deleted successfully", {
-        duration: 5000
-      });
-    } catch (error) {
-      toast.error("Failed to delete income transaction", {
-        description: error instanceof Error ? error.message : "Please try again.",
-        duration: 6000
-      });
-    }
+  const handleDeleteConfirm = () => {
+    const idToDelete = incomeTransactionId;
+    setDeleteDialogOpen(false);
+    onOpenChange(false);
+    toast.success("Income transaction deleted successfully", {
+      duration: 5000
+    });
+    deleteIncomeTransaction(idToDelete);
   }
 
   return (
@@ -404,9 +396,9 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                     variant='outline'
                     className="w-full text-error-700 hover:text-error-600 hover:bg-error-50 border-error-300"
                     onClick={handleDeleteClick}
-                    disabled={isUpdating || isDeleting}
+                    disabled={isUpdating}
                   >
-                    {isDeleting ? "Deleting..." : "Delete income"}
+                    Delete income
                   </Button>
                 </div>
               </DrawerFooter>
