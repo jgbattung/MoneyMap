@@ -150,22 +150,14 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
     setDeleteDialogOpen(true);
   }
 
-  const handleDeleteConfirm = async () => {
-    try {
-      await deleteTransfer(transferId);
-
-      setDeleteDialogOpen(false);
-      onOpenChange(false);
-
-      toast.success("Transfer deleted successfully", {
-        duration: 5000
-      });
-    } catch (error) {
-      toast.error("Failed to delete transfer", {
-        description: error instanceof Error ? error.message : "Please try again.",
-        duration: 6000
-      });
-    }
+  const handleDeleteConfirm = () => {
+    const idToDelete = transferId;
+    setDeleteDialogOpen(false);
+    onOpenChange(false);
+    toast.success("Transfer deleted successfully", {
+      duration: 5000
+    });
+    deleteTransfer(idToDelete);
   }
 
   return (
@@ -502,9 +494,9 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                     variant='outline'
                     className="w-full text-error-700 hover:text-error-600 hover:bg-error-50 border-error-300"
                     onClick={handleDeleteClick}
-                    disabled={isUpdating || isDeleting}
+                    disabled={isUpdating}
                   >
-                    {isDeleting ? "Deleting..." : "Delete transfer"}
+                    Delete transfer
                   </Button>
                 </DrawerFooter>
 
