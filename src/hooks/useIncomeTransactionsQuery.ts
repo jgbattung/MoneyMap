@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { formatDateForAPI } from "@/lib/utils";
-import type { RecentTransaction } from "./useRecentTransactions";
+import { RECENT_TRANSACTION_QUERY_KEYS, type RecentTransaction } from "./useRecentTransactions";
 
 export type IncomeTransaction = {
   id: string;
@@ -56,7 +56,7 @@ const QUERY_KEYS = {
   incomeTransaction: (id: string) => ['incomeTransactions', id] as const,
 }
 
-const RECENT_TRANSACTIONS_KEY = ['recentTransactions'] as const;
+const RECENT_TRANSACTIONS_KEY = RECENT_TRANSACTION_QUERY_KEYS.recentTransactions;
 
 function buildOptimisticIncome(
   formValues: Record<string, unknown>,
