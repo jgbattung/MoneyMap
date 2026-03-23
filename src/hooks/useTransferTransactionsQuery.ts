@@ -1,4 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { formatDateForAPI } from "@/lib/utils";
+import type { RecentTransaction } from "./useRecentTransactions";
 
 export type TransferTransaction = {
   id: string;
@@ -55,9 +58,67 @@ interface UseTransfersOptions {
   accountId?: string;
 }
 
+type CreateTransferVariables = {
+  payload: Record<string, unknown>;
+  meta: {
+    fromAccountName: string;
+    toAccountName: string;
+    transferTypeName: string;
+  };
+};
+
 const QUERY_KEYS = {
   transfers: ['transfers'] as const,
   transfer: (id: string) => ['transfers', id] as const,
+}
+
+const RECENT_TRANSACTIONS_KEY = ['recentTransactions'] as const;
+
+function buildOptimisticTransfer(
+  formValues: Record<string, unknown>,
+  meta: { fromAccountName: string; toAccountName: string; transferTypeName: string }
+): TransferTransaction {
+  const now = new Date().toISOString();
+  return {
+    id: `optimistic-${crypto.randomUUID()}`,
+    userId: '',
+    name: formValues.name as string,
+    amount: parseFloat(formValues.amount as string),
+    fromAccountId: formValues.fromAccountId as string,
+    toAccountId: formValues.toAccountId as string,
+    transferTypeId: formValues.transferTypeId as string,
+    date: formValues.date ? formatDateForAPI(formValues.date as Date) : now,
+    notes: (formValues.notes as string) || null,
+    feeAmount: formValues.feeAmount ? parseFloat(formValues.feeAmount as string) : null,
+    feeExpenseId: null,
+    createdAt: now,
+    updatedAt: now,
+    fromAccount: { id: formValues.fromAccountId as string, name: meta.fromAccountName, currentBalance: 0 },
+    toAccount: { id: formValues.toAccountId as string, name: meta.toAccountName, currentBalance: 0 },
+    transferType: { id: formValues.transferTypeId as string, name: meta.transferTypeName },
+    feeExpense: null,
+    tags: [],
+  };
+}
+
+function buildOptimisticRecentTransfer(
+  formValues: Record<string, unknown>,
+  meta: { fromAccountName: string; toAccountName: string; transferTypeName: string }
+): RecentTransaction {
+  const now = new Date().toISOString();
+  return {
+    id: `optimistic-${crypto.randomUUID()}`,
+    type: 'TRANSFER',
+    name: formValues.name as string,
+    amount: parseFloat(formValues.amount as string),
+    date: formValues.date ? formatDateForAPI(formValues.date as Date) : now,
+    accountId: formValues.fromAccountId as string,
+    accountName: meta.fromAccountName,
+    categoryId: formValues.transferTypeId as string,
+    categoryName: meta.transferTypeName,
+    toAccountId: formValues.toAccountId as string,
+    toAccountName: meta.toAccountName,
+  };
 }
 
 const fetchTransfers = async (
@@ -73,7 +134,7 @@ const fetchTransfers = async (
   if (search) params.append('search', search);
   if (dateFilter && dateFilter !== 'view-all') params.append('dateFilter', dateFilter);
   if (accountId) params.append('accountId', accountId);
-  
+
   const url = `/api/transfer-transactions${params.toString() ? `?${params.toString()}` : ''}`;
   const response = await fetch(url);
   if (!response.ok) throw new Error('Failed to fetch transactions');
@@ -134,15 +195,74 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
   });
 
   const createTransferMutation = useMutation({
-    mutationFn: createTransfer,
-    onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: QUERY_KEYS.transfers });
+    mutationFn: (variables: CreateTransferVariables) => createTransfer(variables.payload),
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.transfers });
+      await queryClient.cancelQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
+
+      const previousTransactions = queryClient.getQueriesData<TransferTransactionsResponse>({
+        queryKey: QUERY_KEYS.transfers,
+      });
+      const previousRecent = queryClient.getQueryData<RecentTransaction[]>(RECENT_TRANSACTIONS_KEY);
+
+      const optimisticTransaction = buildOptimisticTransfer(variables.payload, variables.meta);
+      const optimisticRecent = buildOptimisticRecentTransfer(variables.payload, variables.meta);
+
+      queryClient.setQueriesData<TransferTransactionsResponse>(
+        {
+          queryKey: QUERY_KEYS.transfers,
+          predicate: (query) => {
+            const params = query.queryKey[1] as UseTransfersOptions | undefined;
+            if (!params) return true;
+            const isFirstPage = !params.skip || params.skip === 0;
+            const noSearch = !params.search;
+            const dateOk = !params.dateFilter || params.dateFilter === 'view-all'
+              || params.dateFilter === 'this-month' || params.dateFilter === 'this-year';
+            return isFirstPage && noSearch && dateOk;
+          },
+        },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            transactions: [optimisticTransaction, ...old.transactions],
+            total: old.total + 1,
+          };
+        }
+      );
+
+      queryClient.setQueryData<RecentTransaction[]>(
+        RECENT_TRANSACTIONS_KEY,
+        (old) => {
+          if (!old) return [optimisticRecent];
+          return [optimisticRecent, ...old].slice(0, 5);
+        }
+      );
+
+      return { previousTransactions, previousRecent };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousTransactions) {
+        context.previousTransactions.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      if (context?.previousRecent !== undefined) {
+        queryClient.setQueryData(RECENT_TRANSACTIONS_KEY, context.previousRecent);
+      }
+      toast.error("Failed to create transfer transaction", {
+        description: "The transaction could not be saved. Please try again.",
+        duration: 6000,
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.transfers });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['netWorth'] });
       queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
       queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
       queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
-      queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
+      queryClient.invalidateQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
       queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
       queryClient.invalidateQueries({ queryKey: ['expenseTransactions'] });
     },
@@ -151,28 +271,73 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
   const updateTransferMutation = useMutation({
     mutationFn: updateTransfer,
     onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: QUERY_KEYS.transfers });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
-      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
-      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
-      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
-      queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
-      queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
-      queryClient.invalidateQueries({ queryKey: ['expenseTransactions'] });
-    }
-  });
-
-  const deleteTransferMutation = useMutation({
-    mutationFn: deleteTransfer,
-    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.transfers });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['netWorth'] });
       queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
       queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
       queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
-      queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
+      queryClient.invalidateQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
+      queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['expenseTransactions'] });
+    },
+  });
+
+  const deleteTransferMutation = useMutation({
+    mutationFn: deleteTransfer,
+    onMutate: async (deletedId: string) => {
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.transfers });
+      await queryClient.cancelQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
+
+      const previousTransactions = queryClient.getQueriesData<TransferTransactionsResponse>({
+        queryKey: QUERY_KEYS.transfers,
+      });
+      const previousRecent = queryClient.getQueryData<RecentTransaction[]>(RECENT_TRANSACTIONS_KEY);
+
+      queryClient.setQueriesData<TransferTransactionsResponse>(
+        { queryKey: QUERY_KEYS.transfers },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            transactions: old.transactions.filter(t => t.id !== deletedId),
+            total: Math.max(0, old.total - 1),
+          };
+        }
+      );
+
+      queryClient.setQueryData<RecentTransaction[]>(
+        RECENT_TRANSACTIONS_KEY,
+        (old) => {
+          if (!old) return old;
+          return old.filter(t => t.id !== deletedId);
+        }
+      );
+
+      return { previousTransactions, previousRecent };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousTransactions) {
+        context.previousTransactions.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      if (context?.previousRecent !== undefined) {
+        queryClient.setQueryData(RECENT_TRANSACTIONS_KEY, context.previousRecent);
+      }
+      toast.error("Failed to delete transfer transaction", {
+        description: "The transaction could not be deleted. Please try again.",
+        duration: 6000,
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.transfers });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
+      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
+      queryClient.invalidateQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
       queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
       queryClient.invalidateQueries({ queryKey: ['expenseTransactions'] });
     },
@@ -185,9 +350,11 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
     isLoading: isPending,
     isFetchingMore: isFetching && isPlaceholderData,
     error: error ? (error instanceof Error ? error.message : 'An error occurred') : null,
-    createTransfer: createTransferMutation.mutateAsync,
+    createTransfer: createTransferMutation.mutate,
+    createTransferAsync: createTransferMutation.mutateAsync,
     updateTransfer: updateTransferMutation.mutateAsync,
-    deleteTransfer: deleteTransferMutation.mutateAsync,
+    deleteTransfer: deleteTransferMutation.mutate,
+    deleteTransferAsync: deleteTransferMutation.mutateAsync,
     isCreating: createTransferMutation.isPending,
     isUpdating: updateTransferMutation.isPending,
     isDeleting: deleteTransferMutation.isPending,
