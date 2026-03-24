@@ -1,6 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { formatDateForAPI } from "@/lib/utils";
 import { RECENT_TRANSACTION_QUERY_KEYS, type RecentTransaction } from "./useRecentTransactions";
 
 export type ExpenseTransaction = {
@@ -82,14 +81,12 @@ function buildOptimisticExpense(
     expenseSubcategoryId: (formValues.expenseSubcategoryId === 'none' ? null : formValues.expenseSubcategoryId) as string | null,
     name: formValues.name as string,
     amount: formValues.amount as string,
-    date: formValues.date ? formatDateForAPI(formValues.date as Date) : now,
+    date: (formValues.date as string) || now,
     description: (formValues.description as string) || null,
     isInstallment: formValues.isInstallment as boolean,
     installmentDuration: (formValues.installmentDuration as number) || null,
     remainingInstallments: (formValues.installmentDuration as number) || null,
-    installmentStartDate: formValues.installmentStartDate
-      ? formatDateForAPI(formValues.installmentStartDate as Date)
-      : null,
+    installmentStartDate: (formValues.installmentStartDate as string) || null,
     monthlyAmount: null,
     createdAt: now,
     updatedAt: now,
@@ -112,7 +109,7 @@ function buildOptimisticRecentExpense(
     type: 'EXPENSE',
     name: formValues.name as string,
     amount: parseFloat(formValues.amount as string),
-    date: formValues.date ? formatDateForAPI(formValues.date as Date) : now,
+    date: (formValues.date as string) || now,
     accountId: formValues.accountId as string,
     accountName: meta.accountName,
     categoryId: formValues.expenseTypeId as string,

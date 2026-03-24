@@ -1,6 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { formatDateForAPI } from "@/lib/utils";
 import { RECENT_TRANSACTION_QUERY_KEYS, type RecentTransaction } from "./useRecentTransactions";
 
 export type IncomeTransaction = {
@@ -70,7 +69,7 @@ function buildOptimisticIncome(
     incomeTypeId: formValues.incomeTypeId as string,
     name: formValues.name as string,
     amount: formValues.amount as string,
-    date: formValues.date ? formatDateForAPI(formValues.date as Date) : now,
+    date: (formValues.date as string) || now,
     description: (formValues.description as string) || null,
     createdAt: now,
     updatedAt: now,
@@ -90,7 +89,7 @@ function buildOptimisticRecentIncome(
     type: 'INCOME',
     name: formValues.name as string,
     amount: parseFloat(formValues.amount as string),
-    date: formValues.date ? formatDateForAPI(formValues.date as Date) : now,
+    date: (formValues.date as string) || now,
     accountId: formValues.accountId as string,
     accountName: meta.accountName,
     categoryId: formValues.incomeTypeId as string,

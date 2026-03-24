@@ -1,6 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { formatDateForAPI } from "@/lib/utils";
 import { RECENT_TRANSACTION_QUERY_KEYS, type RecentTransaction } from "./useRecentTransactions";
 
 export type TransferTransaction = {
@@ -87,7 +86,7 @@ function buildOptimisticTransfer(
     fromAccountId: formValues.fromAccountId as string,
     toAccountId: formValues.toAccountId as string,
     transferTypeId: formValues.transferTypeId as string,
-    date: formValues.date ? formatDateForAPI(formValues.date as Date) : now,
+    date: (formValues.date as string) || now,
     notes: (formValues.notes as string) || null,
     feeAmount: formValues.feeAmount ? parseFloat(formValues.feeAmount as string) : null,
     feeExpenseId: null,
@@ -111,7 +110,7 @@ function buildOptimisticRecentTransfer(
     type: 'TRANSFER',
     name: formValues.name as string,
     amount: parseFloat(formValues.amount as string),
-    date: formValues.date ? formatDateForAPI(formValues.date as Date) : now,
+    date: (formValues.date as string) || now,
     accountId: formValues.fromAccountId as string,
     accountName: meta.fromAccountName,
     categoryId: formValues.transferTypeId as string,
