@@ -33,8 +33,8 @@ interface EditIncomeDrawerProps {
 }
 
 const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }: EditIncomeDrawerProps) => {
-  const { updateIncomeTransaction, isUpdating, deleteIncomeTransaction, isDeleting } = useIncomeTransactionsQuery();
-  const { incomeTransactionData, isFetching, error } = useIncomeTransactionQuery(incomeTransactionId);
+  const { updateIncomeTransaction, isUpdating, deleteIncomeTransaction } = useIncomeTransactionsQuery();
+  const { incomeTransactionData, isFetching, error } = useIncomeTransactionQuery(incomeTransactionId, { enabled: open });
   const { accounts } = useAccountsQuery({ includeCards: true });
   const { incomeTypes } = useIncomeTypesQuery();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -127,22 +127,14 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
     setDeleteDialogOpen(true);
   }
 
-  const handleDeleteConfirm = async () => {
-    try {
-      await deleteIncomeTransaction(incomeTransactionId);
-
-      setDeleteDialogOpen(false);
-      onOpenChange(false);
-
-      toast.success("Income transaction deleted successfully", {
-        duration: 5000
-      });
-    } catch (error) {
-      toast.error("Failed to delete income transaction", {
-        description: error instanceof Error ? error.message : "Please try again.",
-        duration: 6000
-      });
-    }
+  const handleDeleteConfirm = () => {
+    const idToDelete = incomeTransactionId;
+    setDeleteDialogOpen(false);
+    onOpenChange(false);
+    toast.success("Income transaction deleted successfully", {
+      duration: 5000
+    });
+    deleteIncomeTransaction(idToDelete);
   }
 
   return (
@@ -404,9 +396,9 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
                     variant='outline'
                     className="w-full text-error-700 hover:text-error-600 hover:bg-error-50 border-error-300"
                     onClick={handleDeleteClick}
-                    disabled={isUpdating || isDeleting}
+                    disabled={isUpdating}
                   >
-                    {isDeleting ? "Deleting..." : "Delete income"}
+                    Delete income
                   </Button>
                 </div>
               </DrawerFooter>
@@ -422,7 +414,6 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
         onConfirm={handleDeleteConfirm}
         title="Delete Income Transaction"
         itemName={incomeTransactionData?.name}
-        isDeleting={isDeleting}
       />
     </>
   )

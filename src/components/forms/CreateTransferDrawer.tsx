@@ -96,24 +96,20 @@ const CreateTransferDrawer = ({ open, onOpenChange, className }: CreateTransferD
     }
   };
 
-  const onSubmit = async (values: z.infer<typeof TransferTransactionValidation>) => {
-    try {
-      const payload = {
-        ...values,
-        date: formatDateForAPI(values.date),
-      };
+  const onSubmit = (values: z.infer<typeof TransferTransactionValidation>) => {
+    const payload = {
+      ...values,
+      date: formatDateForAPI(values.date),
+    };
 
-      const newTransfer = await createTransfer(payload);
+    const fromAccountName = accounts.find(a => a.id === payload.fromAccountId)?.name ?? '';
+    const toAccountName = accounts.find(a => a.id === payload.toAccountId)?.name ?? '';
+    const transferTypeName = transferTypes.find(t => t.id === payload.transferTypeId)?.name ?? '';
 
-      toast.success(`${newTransfer.name} has been added to your transfer transactions`);
-      form.reset();
-      onOpenChange(false);
-    } catch (error) {
-      toast.error("Failed to create transfer transaction", {
-        description: error instanceof Error ? error.message : "Please try again",
-        duration: 6000
-      });
-    }
+    toast.success(`${values.name} has been added to your transfer transactions`);
+    form.reset();
+    onOpenChange(false);
+    createTransfer({ payload, meta: { fromAccountName, toAccountName, transferTypeName } });
   }
 
   const onError = () => {

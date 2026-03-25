@@ -37,8 +37,8 @@ interface EditExpenseDrawerProps {
 }
 
 const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerProps) => {
-  const { updateExpenseTransaction, isUpdating, deleteExpenseTransaction, isDeleting } = useExpenseTransactionsQuery();
-  const { expenseTransactionData, isFetching, error } = useExpenseTransactionQuery(expenseId);
+  const { updateExpenseTransaction, isUpdating, deleteExpenseTransaction } = useExpenseTransactionsQuery();
+  const { expenseTransactionData, isFetching, error } = useExpenseTransactionQuery(expenseId, { enabled: open });
   const { accounts } = useAccountsQuery();
   const { cards } = useCardsQuery();
   const { budgets } = useExpenseTypesQuery();
@@ -167,22 +167,14 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
     setDeleteDialogOpen(true);
   }
 
-  const handleDeleteConfirm = async () => {
-    try {
-      await deleteExpenseTransaction(expenseId);
-
-      setDeleteDialogOpen(false);
-      onOpenChange(false);
-
-      toast.success("Expense transaction deleted successfully", {
-        duration: 5000
-      });
-    } catch (error) {
-      toast.error("Failed to delete expense transaction", {
-        description: error instanceof Error ? error.message : "Please try again.",
-        duration: 6000
-      });
-    }
+  const handleDeleteConfirm = () => {
+    const idToDelete = expenseId;
+    setDeleteDialogOpen(false);
+    onOpenChange(false);
+    toast.success("Expense transaction deleted successfully", {
+      duration: 5000
+    });
+    deleteExpenseTransaction(idToDelete);
   }
 
   return (
@@ -557,9 +549,9 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
                   variant='outline'
                   className="w-full text-error-700 hover:text-error-600 hover:bg-error-50 border-error-300"
                   onClick={handleDeleteClick}
-                  disabled={isUpdating || isDeleting}
+                  disabled={isUpdating}
                 >
-                  {isDeleting ? "Deleting..." : "Delete expense"}
+                  Delete expense
                 </Button>
               </DrawerFooter>
 
@@ -575,7 +567,6 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
         onConfirm={handleDeleteConfirm}
         title="Delete Expense Transaction"
         itemName={expenseTransactionData?.name}
-        isDeleting={isDeleting}
       />
     </>
   )

@@ -509,25 +509,18 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
     }),
   ], [accountOptions, expenseTypeOptions]);
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = () => {
     if (!transactionToDelete) return;
-    
-    try {
-      await deleteExpenseTransaction(transactionToDelete.id);
-      
-      setDeleteDialogOpen(false);
-      setTransactionToDelete(null);
-      setEditedRows({});
-      
-      toast.success("Expense transaction deleted successfully", {
-        duration: 5000
-      });
-    } catch (error) {
-      toast.error("Failed to delete expense transaction", {
-        description: error instanceof Error ? error.message : "Please try again.",
-        duration: 6000
-      });
-    }
+    const idToDelete = transactionToDelete.id;
+
+    setDeleteDialogOpen(false);
+    setTransactionToDelete(null);
+    setEditedRows({});
+
+    toast.success("Expense transaction deleted successfully", {
+      duration: 5000
+    });
+    deleteExpenseTransaction(idToDelete);
   };
 
   // Memoize the table meta object

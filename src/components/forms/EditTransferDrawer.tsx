@@ -36,8 +36,8 @@ interface EditTransferDrawerProps {
 }
 
 const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditTransferDrawerProps) => {
-  const { updateTransfer, isUpdating, deleteTransfer, isDeleting } = useTransfersQuery();
-  const { transactionData, isFetching, error } = useTransferQuery(transferId);
+  const { updateTransfer, isUpdating, deleteTransfer } = useTransfersQuery();
+  const { transactionData, isFetching, error } = useTransferQuery(transferId, { enabled: open });
   const { accounts } = useAccountsQuery({ includeCards: true });
   const { transferTypes } = useTransferTypesQuery();
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -150,22 +150,14 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
     setDeleteDialogOpen(true);
   }
 
-  const handleDeleteConfirm = async () => {
-    try {
-      await deleteTransfer(transferId);
-
-      setDeleteDialogOpen(false);
-      onOpenChange(false);
-
-      toast.success("Transfer deleted successfully", {
-        duration: 5000
-      });
-    } catch (error) {
-      toast.error("Failed to delete transfer", {
-        description: error instanceof Error ? error.message : "Please try again.",
-        duration: 6000
-      });
-    }
+  const handleDeleteConfirm = () => {
+    const idToDelete = transferId;
+    setDeleteDialogOpen(false);
+    onOpenChange(false);
+    toast.success("Transfer deleted successfully", {
+      duration: 5000
+    });
+    deleteTransfer(idToDelete);
   }
 
   return (
@@ -502,9 +494,9 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                     variant='outline'
                     className="w-full text-error-700 hover:text-error-600 hover:bg-error-50 border-error-300"
                     onClick={handleDeleteClick}
-                    disabled={isUpdating || isDeleting}
+                    disabled={isUpdating}
                   >
-                    {isDeleting ? "Deleting..." : "Delete transfer"}
+                    Delete transfer
                   </Button>
                 </DrawerFooter>
 
@@ -520,7 +512,6 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
         onConfirm={handleDeleteConfirm}
         title="Delete Transfer Transaction"
         itemName={transactionData?.name}
-        isDeleting={isDeleting}
       />
     </>
   )

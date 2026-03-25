@@ -109,9 +109,7 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
     form.setValue("expenseSubcategoryId", "none");
   }, [selectedExpenseTypeId, form]);
 
-  const onSubmit = async (values: z.infer<typeof createExpenseTransactionSchema>) => {
-    try {
-      // Convert "none" to undefined for optional subcategory
+  const onSubmit = (values: z.infer<typeof createExpenseTransactionSchema>) => {
     const payload = {
       ...values,
       expenseSubcategoryId: values.expenseSubcategoryId === "none" ? undefined : values.expenseSubcategoryId,
@@ -119,20 +117,19 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
       installmentStartDate: values.installmentStartDate ? formatDateForAPI(values.installmentStartDate) : null,
     };
 
-      const newExpenseTransaction = await createExpenseTransaction(payload);
+    const accountName = allAccounts.find(a => a.id === payload.accountId)?.name ?? '';
+    const expenseTypeName = budgets.find(b => b.id === payload.expenseTypeId)?.name ?? '';
+    const subcategoryName = selectedExpenseType?.subcategories?.find(
+      s => s.id === payload.expenseSubcategoryId
+    )?.name;
 
-      toast.success("Expense transaction created successfully", {
-        description: `${newExpenseTransaction.name} has been added to your expense transactions.`,
-        duration: 5000,
-      });
-      form.reset();
-      onOpenChange(false);
-    } catch (error) {
-      toast.error("Failed to create expense transaction", {
-        description: error instanceof Error ? error.message : "Please check your information and try again.",
-        duration: 6000
-      });
-    }
+    toast.success("Expense transaction created successfully", {
+      description: `${values.name} has been added to your expense transactions.`,
+      duration: 5000,
+    });
+    form.reset();
+    onOpenChange(false);
+    createExpenseTransaction({ payload, meta: { accountName, expenseTypeName, subcategoryName } });
   }
 
   const onError = () => {

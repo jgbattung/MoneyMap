@@ -20,7 +20,7 @@ interface RecentTransactionsResponse {
   transactions: RecentTransaction[];
 }
 
-const QUERY_KEYS = {
+export const RECENT_TRANSACTION_QUERY_KEYS = {
   recentTransactions: ['recentTransactions'] as const,
 };
 
@@ -37,7 +37,7 @@ export const useRecentTransactions = () => {
     isPending,
     error,
   } = useQuery({
-    queryKey: QUERY_KEYS.recentTransactions,
+    queryKey: RECENT_TRANSACTION_QUERY_KEYS.recentTransactions,
     queryFn: fetchRecentTransactions,
     staleTime: 1 * 60 * 1000,
   });

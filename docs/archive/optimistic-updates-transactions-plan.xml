@@ -1,0 +1,601 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <feature>Optimistic Updates -- Transactions</feature>
+  <spec>docs/optimistic-updates-transactions-spec.md</spec>
+
+  <!-- ============================================================ -->
+  <!-- PHASE 1: Expenses (create + delete, both cache layers)        -->
+  <!-- ============================================================ -->
+
+  <phase name="1: Expense Optimistic Create">
+    <task>
+      <name>Add optimistic create to useExpenseTransactionsQuery</name>
+      <action>
+        In `src/hooks/useExpenseTransactionsQuery.ts`:
+
+        1. Add a `buildOptimisticExpense` helper function that takes form payload + meta
+           (accountName, expenseTypeName, subcategoryName?) and returns a full
+           `ExpenseTransaction` object with a `crypto.randomUUID()` temp ID prefixed
+           with `optimistic-`. See spec section 2a for the exact shape.
+
+        2. Add a `buildOptimisticRecentExpense` helper that returns a `RecentTransaction`
+           object for the recent transactions cache. Import `TransactionType` and
+           `RecentTransaction` from `../hooks/useRecentTransactions`.
+
+        3. Change the `createExpenseTransactionMutation` variables type:
+           - Define a type `CreateExpenseVariables = { payload: Record&lt;string, unknown&gt;; meta: { accountName: string; expenseTypeName: string; subcategoryName?: string } }`
+           - Change `mutationFn` to `(variables: CreateExpenseVariables) => createExpenseTransaction(variables.payload)`
+
+        4. Add `onMutate` to `createExpenseTransactionMutation`:
+           - Cancel queries for `QUERY_KEYS.expenseTransactions` and `['recentTransactions']`
+           - Snapshot via `getQueriesData` (paginated) and `getQueryData` (recent)
+           - Build optimistic objects from `variables.payload` + `variables.meta`
+           - Use `setQueriesData` with a predicate to prepend to eligible paginated cache entries
+             (skip=0, no search, dateFilter is undefined/view-all/this-month/this-year)
+           - Use `setQueryData` to prepend to recentTransactions and slice to 5
+           - Return `{ previousTransactions, previousRecent }`
+
+        5. Add `onError` to `createExpenseTransactionMutation`:
+           - Restore paginated caches from context
+           - Restore recentTransactions from context
+           - Show error toast: "Failed to create expense transaction"
+
+        6. Change existing `onSuccess` to `onSettled`:
+           - Keep the exact same list of `invalidateQueries` calls
+           - Remove the `onSuccess` key entirely
+
+        7. Update the returned `createExpenseTransaction` to expose the new variables type.
+           The hook should now expose the raw `mutate` function (not `mutateAsync`) for
+           fire-and-forget usage. Add a second property:
+           `createExpenseTransactionAsync: createExpenseTransactionMutation.mutateAsync`
+           Keep `createExpenseTransaction: createExpenseTransactionMutation.mutate` as the
+           primary. (This allows the drawer to use fire-and-forget while other consumers
+           can still await if needed.)
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. Verify no TypeScript errors.
+        Confirm that the `ExpenseTransaction` type is fully satisfied by the
+        optimistic builder (no missing fields).
+      </verify>
+    </task>
+
+    <task>
+      <name>Update CreateExpenseTransactionDrawer for optimistic create</name>
+      <action>
+        In `src/components/forms/CreateExpenseTransactionDrawer.tsx`:
+
+        1. Change the destructured hook to get `createExpenseTransaction` (which is now
+           the `mutate` fire-and-forget version).
+
+        2. Rewrite `onSubmit`:
+           - Build the `payload` object (same as current)
+           - Look up display names from already-loaded data:
+             - `accountName` from `allAccounts.find(a => a.id === payload.accountId)?.name ?? ''`
+             - `expenseTypeName` from `budgets.find(b => b.id === payload.expenseTypeId)?.name ?? ''`
+             - `subcategoryName` from `selectedExpenseType?.subcategories?.find(s => s.id === payload.expenseSubcategoryId)?.name`
+           - Fire success toast FIRST: `toast.success("Expense transaction created successfully", { description: ... })`
+           - Call `form.reset()`
+           - Call `onOpenChange(false)` to close drawer
+           - Call `createExpenseTransaction({ payload, meta: { accountName, expenseTypeName, subcategoryName } })`
+             as fire-and-forget (no await, no try/catch)
+           - Remove the entire try/catch block
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. Open the app, create an expense.
+        Verify: drawer closes immediately, success toast appears, item appears in list.
+        Check browser console for any errors.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="2: Expense Optimistic Delete">
+    <task>
+      <name>Add optimistic delete to useExpenseTransactionsQuery</name>
+      <action>
+        In `src/hooks/useExpenseTransactionsQuery.ts`:
+
+        1. Add `onMutate` to `deleteExpenseTransactionMutation`:
+           - Cancel queries for `QUERY_KEYS.expenseTransactions` and `['recentTransactions']`
+           - Snapshot paginated caches and recent cache
+           - Use `setQueriesData` to filter out the deleted ID from ALL paginated cache
+             entries (no predicate filter -- remove from all pages)
+           - Also decrement `total` by 1 in each affected cache entry
+           - Use `setQueryData` to filter out from recentTransactions
+           - Return `{ previousTransactions, previousRecent }`
+
+        2. Add `onError` to `deleteExpenseTransactionMutation`:
+           - Same rollback pattern as create
+           - Error toast: "Failed to delete expense transaction"
+
+        3. Change existing `onSuccess` to `onSettled` (same invalidation list).
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. No TypeScript errors.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update ExpenseTable for optimistic delete</name>
+      <action>
+        In `src/components/tables/expenses/ExpenseTable.tsx`:
+
+        1. Rewrite `handleDeleteConfirm`:
+           - Remove `try/catch` and `await`
+           - FIRST: close dialog and reset state:
+             `setDeleteDialogOpen(false)`
+             `setTransactionToDelete(null)`
+             `setEditedRows({})`
+           - Fire success toast: `toast.success("Expense transaction deleted successfully", { duration: 5000 })`
+           - Call `deleteExpenseTransaction(transactionToDelete.id)` as fire-and-forget
+           - The guard `if (!transactionToDelete) return` stays at the top
+           - Capture `transactionToDelete.id` in a local const BEFORE clearing state
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. Open the app, delete an expense via desktop table.
+        Verify: dialog closes immediately, item disappears from list, success toast.
+        Test error scenario: verify rollback restores the item.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update EditExpenseDrawer for optimistic delete</name>
+      <action>
+        In `src/components/forms/EditExpenseDrawer.tsx`:
+
+        1. Rewrite `handleDeleteConfirm`:
+           - Capture ID in a local const at the top: `const idToDelete = expenseId`
+           - Remove `try/catch` and `await`
+           - FIRST: close dialog and drawer:
+             `setDeleteDialogOpen(false)`
+             `onOpenChange(false)`
+           - Fire success toast: `toast.success("Expense transaction deleted successfully", { duration: 5000 })`
+           - Call `deleteExpenseTransaction(idToDelete)` as fire-and-forget
+           - The hook's `onMutate`/`onError`/`onSettled` handle the rest
+        2. The `isDeleting` disabled state on the delete button can be removed
+           (drawer closes before mutation resolves, so spinner is never visible).
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. On mobile, tap an expense row,
+        confirm delete in the drawer. Verify: drawer closes immediately, item
+        disappears from mobile list, success toast appears.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- ============================================================ -->
+  <!-- PHASE 2: Income + Transfers (same patterns as Phase 1)       -->
+  <!-- ============================================================ -->
+
+  <phase name="3: Income Optimistic Create + Delete">
+    <task>
+      <name>Add optimistic create and delete to useIncomeTransactionsQuery</name>
+      <action>
+        In `src/hooks/useIncomeTransactionsQuery.ts`:
+
+        Apply the same pattern as the expense hook:
+
+        1. Add `buildOptimisticIncome` helper (see spec section 2b).
+        2. Add `buildOptimisticRecentIncome` helper producing a `RecentTransaction`
+           with `type: 'INCOME'`.
+        3. Define `CreateIncomeVariables = { payload: Record&lt;string, unknown&gt;; meta: { accountName: string; incomeTypeName: string } }`.
+        4. Add `onMutate`, `onError` to `createIncomeTransactionMutation` (same pattern
+           as expense -- cancel, snapshot, optimistic prepend with predicate, rollback, error toast).
+        5. Add `onMutate`, `onError` to `deleteIncomeTransactionMutation` (same pattern
+           as expense delete -- cancel, snapshot, filter out, rollback, error toast).
+        6. Change BOTH `onSuccess` handlers to `onSettled` (preserve exact invalidation lists).
+        7. Expose `createIncomeTransaction` as the `mutate` (fire-and-forget) version.
+           Add `createIncomeTransactionAsync` for backward compat if needed.
+
+        Note: Income invalidation list has `incomeBreakdown` instead of `expenseBreakdown`
+        and does NOT have `cards`. Preserve these differences.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. No TypeScript errors.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update CreateIncomeTransactionDrawer and IncomeTable for optimistic flow</name>
+      <action>
+        1. In `src/components/forms/CreateIncomeTransactionDrawer.tsx`:
+           - Same pattern as expense drawer
+           - Look up `accountName` from `accounts` array, `incomeTypeName` from `incomeTypes` array
+           - Fire toast + reset + close BEFORE calling `createIncomeTransaction({ payload, meta })`
+           - Remove try/catch
+
+        2. In `src/components/tables/income/IncomeTable.tsx`:
+           - Same pattern as expense table
+           - Rewrite `handleDeleteConfirm`: close dialog, reset state, success toast, fire-and-forget delete
+           - Remove try/catch and await
+
+        3. In `src/components/forms/EditIncomeDrawer.tsx`:
+           - Same pattern as EditExpenseDrawer
+           - Capture `incomeTransactionId` in a local const before closing
+           - Close dialog + drawer, fire success toast, then call `deleteIncomeTransaction(idToDelete)` fire-and-forget
+           - Remove try/catch, await, and isDeleting disabled state on the delete button
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. Test create and delete for income
+        transactions on both desktop (table) and mobile (edit drawer).
+        Verify optimistic behavior matches expense.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="4: Transfer Optimistic Create + Delete">
+    <task>
+      <name>Add optimistic create and delete to useTransfersQuery</name>
+      <action>
+        In `src/hooks/useTransferTransactionsQuery.ts`:
+
+        Apply the same pattern:
+
+        1. Add `buildOptimisticTransfer` helper (see spec section 2c).
+           IMPORTANT: `TransferTransaction.amount` is `number` (not string).
+           Use `parseFloat(formValues.amount as string)`.
+        2. Add `buildOptimisticRecentTransfer` helper producing a `RecentTransaction`
+           with `type: 'TRANSFER'`, including `toAccountId` and `toAccountName`.
+        3. Define `CreateTransferVariables = { payload: Record&lt;string, unknown&gt;; meta: { fromAccountName: string; toAccountName: string; transferTypeName: string } }`.
+        4. Add `onMutate`, `onError` to `createTransferMutation` (same pattern).
+        5. Add `onMutate`, `onError` to `deleteTransferMutation` (same pattern).
+        6. Change BOTH `onSuccess` handlers to `onSettled` (preserve exact invalidation lists).
+           Note: Transfer invalidation includes `expenseTransactions` (not `expenseBreakdown`).
+        7. Expose `createTransfer` as `mutate`, add `createTransferAsync`.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. No TypeScript errors.
+      </verify>
+    </task>
+
+    <task>
+      <name>Update CreateTransferDrawer and TransferTable for optimistic flow</name>
+      <action>
+        1. In `src/components/forms/CreateTransferDrawer.tsx`:
+           - Look up `fromAccountName` from `accounts` array by `fromAccountId`
+           - Look up `toAccountName` from `accounts` array by `toAccountId`
+           - Look up `transferTypeName` from `transferTypes` array by `transferTypeId`
+           - Fire toast + reset + close BEFORE calling `createTransfer({ payload, meta })`
+           - Remove try/catch
+
+        2. In `src/components/tables/transfers/TransferTable.tsx`:
+           - Same pattern as expense/income tables
+           - Rewrite `handleDeleteConfirm`: close dialog, reset state, success toast, fire-and-forget delete
+           - Remove try/catch and await
+
+        3. In `src/components/forms/EditTransferDrawer.tsx`:
+           - Same pattern as EditExpenseDrawer
+           - Capture `transferId` in a local const before closing
+           - Close dialog + drawer, fire success toast, then call `deleteTransfer(idToDelete)` fire-and-forget
+           - Remove try/catch, await, and isDeleting disabled state on the delete button
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. Test create and delete for transfers
+        on both desktop (table) and mobile (edit drawer).
+        Verify optimistic behavior. Pay special attention to the `amount` type
+        (should be `number` in the optimistic object).
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="5: Export recentTransactions QUERY_KEYS">
+    <task>
+      <name>Export QUERY_KEYS from useRecentTransactions</name>
+      <action>
+        In `src/hooks/useRecentTransactions.ts`:
+
+        1. Export the `QUERY_KEYS` constant: change `const QUERY_KEYS` to `export const QUERY_KEYS`.
+           Rename it to `RECENT_TRANSACTION_QUERY_KEYS` to avoid naming collisions when
+           imported alongside other hooks' QUERY_KEYS.
+
+        2. Also export `RecentTransaction` type and `TransactionType` type (verify these
+           are already exported -- they are. Just confirm no changes needed).
+
+        3. Update imports in the three transaction hooks to use the exported constant
+           instead of the literal `['recentTransactions']` string. This ensures a single
+           source of truth for the query key.
+
+        NOTE: This task may be done earlier if the Builder finds it more natural to do
+        during Phase 1. The plan places it here for logical grouping, but execution
+        order is flexible.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. Grep for `['recentTransactions']` in
+        the three transaction hooks -- should be replaced with the imported constant.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- ============================================================ -->
+  <!-- PHASE 7: Bugfixes for mobile edit drawer delete              -->
+  <!-- ============================================================ -->
+
+  <phase name="7: Fix snapshot corruption + stale isDeleting">
+    <task>
+      <name>Filter undefined entries from getQueriesData snapshots</name>
+      <action>
+        In all three transaction hooks, add `.filter(([, data]) => data !== undefined)`
+        to every `getQueriesData` call inside `onMutate` handlers.
+
+        1. `src/hooks/useExpenseTransactionsQuery.ts`:
+           - In `createExpenseTransactionMutation.onMutate`: add filter after `getQueriesData`
+           - In `deleteExpenseTransactionMutation.onMutate`: add filter after `getQueriesData`
+
+        2. `src/hooks/useIncomeTransactionsQuery.ts`:
+           - In `createIncomeTransactionMutation.onMutate`: add filter after `getQueriesData`
+           - In `deleteIncomeTransactionMutation.onMutate`: add filter after `getQueriesData`
+
+        3. `src/hooks/useTransferTransactionsQuery.ts`:
+           - In `createTransferMutation.onMutate`: add filter after `getQueriesData`
+           - In `deleteTransferMutation.onMutate`: add filter after `getQueriesData`
+
+        The change is the same in all 6 locations:
+        ```
+        // Before:
+        const previousTransactions = queryClient.getQueriesData&lt;XxxResponse&gt;({
+          queryKey: QUERY_KEYS.xxxTransactions,
+        });
+
+        // After:
+        const previousTransactions = queryClient.getQueriesData&lt;XxxResponse&gt;({
+          queryKey: QUERY_KEYS.xxxTransactions,
+        }).filter(([, data]) => data !== undefined);
+        ```
+
+        This prevents `undefined` cache entries (created by bare hook calls in edit
+        drawers) from being included in the rollback snapshot, which would wipe real
+        cache data on `onError` rollback.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. No TypeScript errors.
+        Grep all three hooks for `getQueriesData` — every call should now have
+        `.filter(([, data]) => data !== undefined)` chained.
+      </verify>
+    </task>
+
+    <task>
+      <name>Remove isDeleting from DeleteDialog in edit drawers</name>
+      <action>
+        In the three edit drawers, remove the `isDeleting` prop from `DeleteDialog`:
+
+        1. `src/components/forms/EditExpenseDrawer.tsx`:
+           - Remove `isDeleting={isDeleting}` from the `&lt;DeleteDialog&gt;` component (line ~570).
+           - The `isDeleting` destructure from the hook can stay (it's used nowhere else
+             in this file after this change, but removing it is optional — the hook still
+             exposes it for other consumers).
+
+        2. `src/components/forms/EditIncomeDrawer.tsx`:
+           - Remove `isDeleting={isDeleting}` from the `&lt;DeleteDialog&gt;` component (line ~417).
+
+        3. `src/components/forms/EditTransferDrawer.tsx`:
+           - Remove `isDeleting={isDeleting}` from the `&lt;DeleteDialog&gt;` component (line ~515).
+
+        Rationale: The dialog and drawer close immediately on confirm. There is nothing
+        to disable. Passing `isDeleting` is a leftover from the pre-optimistic flow and
+        could cause a stale `true` to block the delete button if a previous mutation is
+        still settling.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. Grep for `isDeleting` in the three edit
+        drawer files — it should no longer appear in any `&lt;DeleteDialog&gt;` JSX.
+      </verify>
+    </task>
+
+    <task>
+      <name>Verify mobile edit drawer delete works end-to-end</name>
+      <action>
+        1. Run `npm run lint` — must pass.
+        2. Run `npm run build` — must pass.
+        3. Manual test on mobile viewport (or responsive mode):
+           a. Open expenses page, tap a row → edit drawer opens
+           b. Tap "Delete expense" → confirm → dialog+drawer close immediately,
+              success toast, item removed from list
+           c. Repeat for income and transfers
+           d. After mobile deletes, switch to desktop table view and delete a
+              transaction — verify it still works (no cascade failure)
+           e. Verify recentTransactions on dashboard reflects all deletions
+        4. Update `docs/optimistic-updates-transactions-verification.md`:
+           - Mark the mobile delete checkboxes as passing
+           - Remove the "Known Issues" section
+           - Add Phase 7 tasks to the task table
+      </action>
+      <verify>
+        Lint and build pass. Mobile delete works for all 3 transaction types.
+        Desktop table delete still works after mobile deletes. No cascade failure.
+        Verification doc updated.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- ============================================================ -->
+  <!-- PHASE 8: Fix cross-endpoint fetch in TransactionsMobileView -->
+  <!-- ============================================================ -->
+
+  <phase name="8: Gate edit-drawer queries behind open state">
+    <task>
+      <name>Add enabled parameter to single-transaction query hooks</name>
+      <action>
+        TransactionsMobileView renders all 3 edit drawers simultaneously, sharing
+        a single `selectedTransactionId`. When a user clicks an expense row, the
+        income and transfer drawers are still mounted — their internal hooks fire
+        because `enabled: !!id` is true, causing 404s to `/api/income-transactions/`
+        and `/api/transfer-transactions/` with an expense ID.
+
+        Fix: gate each single-transaction query behind the drawer's `open` state.
+
+        1. `src/hooks/useExpenseTransactionsQuery.ts`:
+           - Find the single-expense query (the one that fetches `/api/expense-transactions/{id}`).
+           - It likely accepts an `expenseId` parameter and has `enabled: !!expenseId`.
+           - Add an optional second parameter or extend the options: `{ enabled?: boolean }`.
+           - Change the query's `enabled` to `!!expenseId &amp;&amp; (options?.enabled ?? true)`.
+
+        2. `src/hooks/useIncomeTransactionsQuery.ts`:
+           - Same pattern for the single-income query.
+           - Change `enabled` to `!!incomeTransactionId &amp;&amp; (options?.enabled ?? true)`.
+
+        3. `src/hooks/useTransferTransactionsQuery.ts`:
+           - Same pattern for the single-transfer query.
+           - Change `enabled` to `!!transferId &amp;&amp; (options?.enabled ?? true)`.
+
+        NOTE: Only modify the **single-record** query in each hook (the one used by
+        the edit drawer to fetch a specific transaction by ID), NOT the paginated
+        list queries.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. No TypeScript errors.
+        Grep for the new `enabled` parameter in each hook — confirm it gates the query.
+      </verify>
+    </task>
+
+    <task>
+      <name>Pass open prop to edit drawer hooks</name>
+      <action>
+        In each edit drawer, pass the drawer's `open` prop to the hook so the
+        single-transaction query only fires when the drawer is visible.
+
+        1. `src/components/forms/EditExpenseDrawer.tsx`:
+           - The drawer receives an `open` prop (or equivalent like `isOpen`).
+           - Pass `{ enabled: open }` to the single-expense query hook call.
+
+        2. `src/components/forms/EditIncomeDrawer.tsx`:
+           - Same pattern — pass `{ enabled: open }` to the hook.
+
+        3. `src/components/forms/EditTransferDrawer.tsx`:
+           - Same pattern — pass `{ enabled: open }` to the hook.
+
+        This ensures that when TransactionsMobileView mounts all 3 drawers with
+        the same `selectedTransactionId`, only the drawer that is actually open
+        will fetch from its respective API endpoint.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. No TypeScript errors.
+        Manual test: on `/transactions` mobile view, click an expense row.
+        Check Network tab — should see ONLY a GET to `/api/expense-transactions/{id}`,
+        no requests to `/api/income-transactions/` or `/api/transfer-transactions/`.
+        Repeat for income and transfer rows.
+      </verify>
+    </task>
+
+    <task>
+      <name>Re-test mobile edit drawer delete end-to-end</name>
+      <action>
+        1. Run `npm run lint` — must pass.
+        2. Run `npm run build` — must pass.
+        3. Manual test on mobile viewport:
+           a. Open /transactions, tap an expense row → edit drawer opens
+           b. Tap delete → confirm → dialog+drawer close immediately,
+              success toast, item removed from list
+           c. Repeat for income and transfers
+           d. After mobile deletes, switch to desktop and delete via table —
+              verify no cascade failure
+           e. Check dashboard recentTransactions reflects deletions
+           f. Check Network tab — no 404s to wrong endpoints
+        4. Update `docs/optimistic-updates-transactions-verification.md`:
+           - Add Phase 8 tasks to the task table
+           - Mark mobile delete checkboxes as passing
+           - Remove or update the Known Issues section
+      </action>
+      <verify>
+        Lint and build pass. Mobile delete works for all 3 types.
+        No cross-endpoint 404s. Verification doc updated.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- ============================================================ -->
+  <!-- PHASE 9: Fix query key collision in optimistic onMutate      -->
+  <!-- ============================================================ -->
+
+  <phase name="9: Add predicate guard to setQueriesData/getQueriesData/cancelQueries">
+    <task>
+      <name>Add list-query predicate to all optimistic onMutate handlers</name>
+      <action>
+        The root cause of the mobile edit drawer delete failure is a query key
+        collision. `setQueriesData({ queryKey: ['expenseTransactions'] })` uses
+        prefix matching and accidentally matches the single-transaction query
+        `['expenseTransactions', id]`, whose data is a flat `ExpenseTransaction`
+        (no `.transactions` property). The updater crashes with a TypeError.
+
+        Fix: add a predicate to every `cancelQueries`, `getQueriesData`, and
+        `setQueriesData` call in the create and delete `onMutate` handlers so
+        they only match list queries (where the second key element is an object),
+        not single-transaction queries (where it's a string ID).
+
+        Define a helper in each hook (or inline):
+        ```typescript
+        const isListQuery = (query: { queryKey: readonly unknown[] }) =&gt;
+          typeof query.queryKey[1] === 'object' &amp;&amp; query.queryKey[1] !== null;
+        ```
+
+        1. `src/hooks/useExpenseTransactionsQuery.ts`:
+           - `createExpenseTransactionMutation.onMutate`:
+             - `cancelQueries`: add `predicate: isListQuery` (alongside existing queryKey)
+             - `getQueriesData`: add `predicate: isListQuery`
+             - `setQueriesData` (the optimistic prepend): add `predicate: isListQuery`
+           - `deleteExpenseTransactionMutation.onMutate`:
+             - `cancelQueries`: add `predicate: isListQuery`
+             - `getQueriesData`: add `predicate: isListQuery`
+             - `setQueriesData` (the optimistic filter): add `predicate: isListQuery`
+
+        2. `src/hooks/useIncomeTransactionsQuery.ts`:
+           - Same 6 locations (create onMutate + delete onMutate)
+
+        3. `src/hooks/useTransferTransactionsQuery.ts`:
+           - Same 6 locations (create onMutate + delete onMutate)
+
+        NOTE: The `cancelQueries` and `getQueriesData`/`setQueriesData` for
+        `RECENT_TRANSACTIONS_KEY` do NOT need predicates — those are flat
+        queries with no key collision risk. Only the transaction list queries
+        need the predicate.
+
+        Total: 18 call sites across 3 files (6 per hook: 3 in create onMutate,
+        3 in delete onMutate).
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`. No TypeScript errors.
+        Grep for `isListQuery` — should appear in all 3 hooks.
+        Grep for `predicate` in the hooks — should appear 6 times per hook (18 total).
+      </verify>
+    </task>
+
+    <task>
+      <name>Verify mobile edit drawer delete works end-to-end</name>
+      <action>
+        1. Run `npm run lint` — must pass.
+        2. Run `npm run build` — must pass.
+        3. Manual test on mobile viewport:
+           a. Open /expenses, tap a row → edit drawer → delete → confirm
+              → dialog+drawer close, success toast, DELETE visible in Network tab,
+              item removed from list
+           b. Repeat for income (/income) and transfers (/transfers)
+           c. Open /transactions, tap an expense → delete from drawer → works
+           d. Desktop table delete still works (no regression)
+           e. Dashboard recentTransactions reflects deletions
+           f. No TypeError in console, no 404s to wrong endpoints
+      </action>
+      <verify>
+        Lint and build pass. Mobile delete works for all 3 types.
+        DELETE request visible in Network tab. No console errors.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="6: Final Verification">
+    <task>
+      <name>End-to-end verification and verification document</name>
+      <action>
+        1. Run `npm run lint` -- must pass with zero errors.
+        2. Run `npm run build` -- must pass with zero errors.
+        3. Manual test all 9 flows (create + desktop delete + mobile delete for each of expense, income, transfer):
+           - Happy path: verify instant UI update, correct toast timing
+           - Verify recentTransactions updates on dashboard
+           - Verify no double toasts
+           - Verify mobile edit drawer closes immediately on delete
+        4. Generate `docs/optimistic-updates-transactions-verification.md` documenting
+           all test results.
+      </action>
+      <verify>
+        Lint and build pass. All manual test scenarios documented in verification file.
+      </verify>
+    </task>
+  </phase>
+</plan>
