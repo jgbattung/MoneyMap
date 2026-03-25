@@ -66,6 +66,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { TransactionAnalysisResponse } from "@/types/transaction-analysis";
 
+const ALL_VALUE = "__all__";
+
 const DEFAULT_FORM_VALUES: TransactionAnalysisFormValues = {
   type: "expense",
   startDate: null,
@@ -382,9 +384,9 @@ export function TransactionAnalyzer() {
                   <FormItem>
                     <FormLabel>Category</FormLabel>
                     <Select
-                      value={field.value ?? ""}
+                      value={field.value || ALL_VALUE}
                       onValueChange={(value) => {
-                        field.onChange(value);
+                        field.onChange(value === ALL_VALUE ? "" : value);
                         form.setValue("subcategoryId", "");
                       }}
                     >
@@ -394,7 +396,7 @@ export function TransactionAnalyzer() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">All categories</SelectItem>
+                        <SelectItem value={ALL_VALUE}>All categories</SelectItem>
                         {categories.map((cat) => (
                           <SelectItem key={cat.id} value={cat.id}>
                             {cat.name}
@@ -416,8 +418,10 @@ export function TransactionAnalyzer() {
                     <FormItem>
                       <FormLabel>Subcategory</FormLabel>
                       <Select
-                        value={field.value ?? ""}
-                        onValueChange={field.onChange}
+                        value={field.value || ALL_VALUE}
+                        onValueChange={(value) =>
+                          field.onChange(value === ALL_VALUE ? "" : value)
+                        }
                       >
                         <FormControl>
                           <SelectTrigger className="w-full">
@@ -425,7 +429,7 @@ export function TransactionAnalyzer() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">All subcategories</SelectItem>
+                          <SelectItem value={ALL_VALUE}>All subcategories</SelectItem>
                           {subcategories.map((sub) => (
                             <SelectItem key={sub.id} value={sub.id}>
                               {sub.name}
@@ -521,8 +525,10 @@ export function TransactionAnalyzer() {
                   <FormItem>
                     <FormLabel>Account</FormLabel>
                     <Select
-                      value={field.value ?? ""}
-                      onValueChange={field.onChange}
+                      value={field.value || ALL_VALUE}
+                      onValueChange={(value) =>
+                        field.onChange(value === ALL_VALUE ? "" : value)
+                      }
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
@@ -530,7 +536,7 @@ export function TransactionAnalyzer() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">All accounts</SelectItem>
+                        <SelectItem value={ALL_VALUE}>All accounts</SelectItem>
                         {accounts.map((acc) => (
                           <SelectItem key={acc.id} value={acc.id}>
                             {acc.name}
