@@ -37,8 +37,8 @@ interface EditExpenseDrawerProps {
 }
 
 const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerProps) => {
-  const { updateExpenseTransaction, isUpdating, deleteExpenseTransaction, isDeleting } = useExpenseTransactionsQuery();
-  const { expenseTransactionData, isFetching, error } = useExpenseTransactionQuery(expenseId);
+  const { updateExpenseTransaction, isUpdating, deleteExpenseTransaction } = useExpenseTransactionsQuery();
+  const { expenseTransactionData, isFetching, error } = useExpenseTransactionQuery(expenseId, { enabled: open });
   const { accounts } = useAccountsQuery();
   const { cards } = useCardsQuery();
   const { budgets } = useExpenseTypesQuery();
@@ -567,7 +567,6 @@ const EditExpenseDrawer = ({ open, onOpenChange, expenseId }: EditExpenseDrawerP
         onConfirm={handleDeleteConfirm}
         title="Delete Expense Transaction"
         itemName={expenseTransactionData?.name}
-        isDeleting={isDeleting}
       />
     </>
   )

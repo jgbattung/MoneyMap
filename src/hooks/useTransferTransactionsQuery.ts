@@ -71,6 +71,9 @@ const QUERY_KEYS = {
   transfer: (id: string) => ['transfers', id] as const,
 }
 
+const isListQuery = (query: { queryKey: readonly unknown[] }) =>
+  typeof query.queryKey[1] === 'object' && query.queryKey[1] !== null;
+
 const RECENT_TRANSACTIONS_KEY = RECENT_TRANSACTION_QUERY_KEYS.recentTransactions;
 
 function buildOptimisticTransfer(
@@ -196,12 +199,13 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
   const createTransferMutation = useMutation({
     mutationFn: (variables: CreateTransferVariables) => createTransfer(variables.payload),
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.transfers });
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.transfers, predicate: isListQuery });
       await queryClient.cancelQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
 
       const previousTransactions = queryClient.getQueriesData<TransferTransactionsResponse>({
         queryKey: QUERY_KEYS.transfers,
-      });
+        predicate: isListQuery,
+      }).filter(([, data]) => data !== undefined);
       const previousRecent = queryClient.getQueryData<RecentTransaction[]>(RECENT_TRANSACTIONS_KEY);
 
       const optimisticTransaction = buildOptimisticTransfer(variables.payload, variables.meta);
@@ -211,6 +215,7 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
         {
           queryKey: QUERY_KEYS.transfers,
           predicate: (query) => {
+            if (!isListQuery(query)) return false;
             const params = query.queryKey[1] as UseTransfersOptions | undefined;
             if (!params) return true;
             const isFirstPage = !params.skip || params.skip === 0;
@@ -285,16 +290,17 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
   const deleteTransferMutation = useMutation({
     mutationFn: deleteTransfer,
     onMutate: async (deletedId: string) => {
-      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.transfers });
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.transfers, predicate: isListQuery });
       await queryClient.cancelQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
 
       const previousTransactions = queryClient.getQueriesData<TransferTransactionsResponse>({
         queryKey: QUERY_KEYS.transfers,
-      });
+        predicate: isListQuery,
+      }).filter(([, data]) => data !== undefined);
       const previousRecent = queryClient.getQueryData<RecentTransaction[]>(RECENT_TRANSACTIONS_KEY);
 
       queryClient.setQueriesData<TransferTransactionsResponse>(
-        { queryKey: QUERY_KEYS.transfers },
+        { queryKey: QUERY_KEYS.transfers, predicate: isListQuery },
         (old) => {
           if (!old) return old;
           return {
@@ -366,11 +372,11 @@ const fetchTransfer = async (id: string): Promise<TransferTransaction> => {
   return response.json();
 }
 
-export const useTransferQuery = (id: string) => {
+export const useTransferQuery = (id: string, options?: { enabled?: boolean }) => {
   const { data, isPending, error } = useQuery({
     queryKey: QUERY_KEYS.transfer(id),
     queryFn: () => fetchTransfer(id),
-    enabled: !!id,
+    enabled: !!id && (options?.enabled ?? true),
     staleTime: 5 * 60 * 1000,
   });
 

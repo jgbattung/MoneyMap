@@ -33,8 +33,8 @@ interface EditIncomeDrawerProps {
 }
 
 const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }: EditIncomeDrawerProps) => {
-  const { updateIncomeTransaction, isUpdating, deleteIncomeTransaction, isDeleting } = useIncomeTransactionsQuery();
-  const { incomeTransactionData, isFetching, error } = useIncomeTransactionQuery(incomeTransactionId);
+  const { updateIncomeTransaction, isUpdating, deleteIncomeTransaction } = useIncomeTransactionsQuery();
+  const { incomeTransactionData, isFetching, error } = useIncomeTransactionQuery(incomeTransactionId, { enabled: open });
   const { accounts } = useAccountsQuery({ includeCards: true });
   const { incomeTypes } = useIncomeTypesQuery();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -414,7 +414,6 @@ const EditIncomeDrawer = ({ open, onOpenChange, className, incomeTransactionId }
         onConfirm={handleDeleteConfirm}
         title="Delete Income Transaction"
         itemName={incomeTransactionData?.name}
-        isDeleting={isDeleting}
       />
     </>
   )

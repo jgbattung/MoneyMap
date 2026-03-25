@@ -66,6 +66,9 @@ const QUERY_KEYS = {
   expenseTransaction: (id: string) => ['expenseTransactions', id] as const,
 }
 
+const isListQuery = (query: { queryKey: readonly unknown[] }) =>
+  typeof query.queryKey[1] === 'object' && query.queryKey[1] !== null;
+
 const RECENT_TRANSACTIONS_KEY = RECENT_TRANSACTION_QUERY_KEYS.recentTransactions;
 
 function buildOptimisticExpense(
@@ -190,12 +193,13 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
   const createExpenseTransactionMutation = useMutation({
     mutationFn: (variables: CreateExpenseVariables) => createExpenseTransaction(variables.payload),
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.expenseTransactions });
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.expenseTransactions, predicate: isListQuery });
       await queryClient.cancelQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
 
       const previousTransactions = queryClient.getQueriesData<ExpenseTransactionsResponse>({
         queryKey: QUERY_KEYS.expenseTransactions,
-      });
+        predicate: isListQuery,
+      }).filter(([, data]) => data !== undefined);
       const previousRecent = queryClient.getQueryData<RecentTransaction[]>(RECENT_TRANSACTIONS_KEY);
 
       const optimisticTransaction = buildOptimisticExpense(variables.payload, variables.meta);
@@ -205,6 +209,7 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
         {
           queryKey: QUERY_KEYS.expenseTransactions,
           predicate: (query) => {
+            if (!isListQuery(query)) return false;
             const params = query.queryKey[1] as UseExpenseTransactionsOptions | undefined;
             if (!params) return true;
             const isFirstPage = !params.skip || params.skip === 0;
@@ -281,16 +286,17 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
   const deleteExpenseTransactionMutation = useMutation({
     mutationFn: deleteExpenseTransaction,
     onMutate: async (deletedId: string) => {
-      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.expenseTransactions });
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.expenseTransactions, predicate: isListQuery });
       await queryClient.cancelQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
 
       const previousTransactions = queryClient.getQueriesData<ExpenseTransactionsResponse>({
         queryKey: QUERY_KEYS.expenseTransactions,
-      });
+        predicate: isListQuery,
+      }).filter(([, data]) => data !== undefined);
       const previousRecent = queryClient.getQueryData<RecentTransaction[]>(RECENT_TRANSACTIONS_KEY);
 
       queryClient.setQueriesData<ExpenseTransactionsResponse>(
-        { queryKey: QUERY_KEYS.expenseTransactions },
+        { queryKey: QUERY_KEYS.expenseTransactions, predicate: isListQuery },
         (old) => {
           if (!old) return old;
           return {
@@ -363,11 +369,11 @@ const fetchExpenseTransaction = async (id: string): Promise<ExpenseTransaction> 
   return response.json();
 }
 
-export const useExpenseTransactionQuery = (id: string) => {
+export const useExpenseTransactionQuery = (id: string, options?: { enabled?: boolean }) => {
   const { data, isPending, error } = useQuery({
     queryKey: QUERY_KEYS.expenseTransaction(id),
     queryFn: () => fetchExpenseTransaction(id),
-    enabled: !!id,
+    enabled: !!id && (options?.enabled ?? true),
     staleTime: 5 * 60 * 1000,
   });
 

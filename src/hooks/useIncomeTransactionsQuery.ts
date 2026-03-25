@@ -55,6 +55,9 @@ const QUERY_KEYS = {
   incomeTransaction: (id: string) => ['incomeTransactions', id] as const,
 }
 
+const isListQuery = (query: { queryKey: readonly unknown[] }) =>
+  typeof query.queryKey[1] === 'object' && query.queryKey[1] !== null;
+
 const RECENT_TRANSACTIONS_KEY = RECENT_TRANSACTION_QUERY_KEYS.recentTransactions;
 
 function buildOptimisticIncome(
@@ -171,12 +174,13 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
   const createIncomeTransactionMutation = useMutation({
     mutationFn: (variables: CreateIncomeVariables) => createIncomeTransaction(variables.payload),
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.incomeTransactions });
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.incomeTransactions, predicate: isListQuery });
       await queryClient.cancelQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
 
       const previousTransactions = queryClient.getQueriesData<IncomeTransactionsResponse>({
         queryKey: QUERY_KEYS.incomeTransactions,
-      });
+        predicate: isListQuery,
+      }).filter(([, data]) => data !== undefined);
       const previousRecent = queryClient.getQueryData<RecentTransaction[]>(RECENT_TRANSACTIONS_KEY);
 
       const optimisticTransaction = buildOptimisticIncome(variables.payload, variables.meta);
@@ -186,6 +190,7 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
         {
           queryKey: QUERY_KEYS.incomeTransactions,
           predicate: (query) => {
+            if (!isListQuery(query)) return false;
             const params = query.queryKey[1] as UseIncomeTransactionsOptions | undefined;
             if (!params) return true;
             const isFirstPage = !params.skip || params.skip === 0;
@@ -260,16 +265,17 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
   const deleteIncomeTransactionMutation = useMutation({
     mutationFn: deleteIncomeTransaction,
     onMutate: async (deletedId: string) => {
-      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.incomeTransactions });
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.incomeTransactions, predicate: isListQuery });
       await queryClient.cancelQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
 
       const previousTransactions = queryClient.getQueriesData<IncomeTransactionsResponse>({
         queryKey: QUERY_KEYS.incomeTransactions,
-      });
+        predicate: isListQuery,
+      }).filter(([, data]) => data !== undefined);
       const previousRecent = queryClient.getQueryData<RecentTransaction[]>(RECENT_TRANSACTIONS_KEY);
 
       queryClient.setQueriesData<IncomeTransactionsResponse>(
-        { queryKey: QUERY_KEYS.incomeTransactions },
+        { queryKey: QUERY_KEYS.incomeTransactions, predicate: isListQuery },
         (old) => {
           if (!old) return old;
           return {
@@ -341,11 +347,11 @@ const fetchIncomeTransaction = async (id: string): Promise<IncomeTransaction> =>
   return response.json();
 }
 
-export const useIncomeTransactionQuery = (id: string) => {
+export const useIncomeTransactionQuery = (id: string, options?: { enabled?: boolean }) => {
   const { data, isPending, error } = useQuery({
     queryKey: QUERY_KEYS.incomeTransaction(id),
     queryFn: () => fetchIncomeTransaction(id),
-    enabled: !!id,
+    enabled: !!id && (options?.enabled ?? true),
     staleTime: 5 * 60 * 1000,
   });
 

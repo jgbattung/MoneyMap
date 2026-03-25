@@ -36,8 +36,8 @@ interface EditTransferDrawerProps {
 }
 
 const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditTransferDrawerProps) => {
-  const { updateTransfer, isUpdating, deleteTransfer, isDeleting } = useTransfersQuery();
-  const { transactionData, isFetching, error } = useTransferQuery(transferId);
+  const { updateTransfer, isUpdating, deleteTransfer } = useTransfersQuery();
+  const { transactionData, isFetching, error } = useTransferQuery(transferId, { enabled: open });
   const { accounts } = useAccountsQuery({ includeCards: true });
   const { transferTypes } = useTransferTypesQuery();
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -512,7 +512,6 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
         onConfirm={handleDeleteConfirm}
         title="Delete Transfer Transaction"
         itemName={transactionData?.name}
-        isDeleting={isDeleting}
       />
     </>
   )
