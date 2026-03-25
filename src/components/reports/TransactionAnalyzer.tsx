@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { Search, ChevronDownIcon } from "lucide-react";
+import { Search, ChevronDownIcon, X, SearchX } from "lucide-react";
 
 import {
   transactionAnalysisFormSchema,
@@ -62,6 +62,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { TransactionAnalysisResponse } from "@/types/transaction-analysis";
 
 const DEFAULT_FORM_VALUES: TransactionAnalysisFormValues = {
   type: "expense",
@@ -81,6 +84,8 @@ export function TransactionAnalyzer() {
     TransactionAnalysisTransaction[]
   >([]);
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const prevDataRef = useRef<TransactionAnalysisResponse | null>(null);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
@@ -100,6 +105,19 @@ export function TransactionAnalyzer() {
 
   const { data, isFetching, error, refetch } =
     useTransactionAnalysis(analysisParams);
+
+  // Accumulate transactions when data changes (for load more)
+  useEffect(() => {
+    if (data && data !== prevDataRef.current) {
+      prevDataRef.current = data;
+      if (isLoadingMore) {
+        setAccumulatedTransactions((prev) => [...prev, ...data.transactions]);
+        setIsLoadingMore(false);
+      } else {
+        setAccumulatedTransactions(data.transactions);
+      }
+    }
+  }, [data, isLoadingMore]);
 
   const categories = watchType === "expense" ? budgets : incomeTypes;
   const selectedExpenseType = budgets.find((b) => b.id === watchCategoryId);
@@ -146,6 +164,44 @@ export function TransactionAnalyzer() {
     setAccumulatedTransactions([]);
     setHasAnalyzed(false);
   }, [form]);
+
+  const handleLoadMore = useCallback(() => {
+    const newSkip = accumulatedTransactions.length;
+    const newParams = { ...analysisParams, skip: newSkip, take: 10 };
+    setAnalysisParams(newParams);
+    setIsLoadingMore(true);
+    setTimeout(() => refetch(), 0);
+  }, [accumulatedTransactions.length, analysisParams, refetch]);
+
+  const handleRemoveFilter = useCallback(
+    (filterKey: string, tagId?: string) => {
+      if (filterKey === "startDate") form.setValue("startDate", null);
+      else if (filterKey === "endDate") form.setValue("endDate", null);
+      else if (filterKey === "categoryId") {
+        form.setValue("categoryId", "");
+        form.setValue("subcategoryId", "");
+      } else if (filterKey === "subcategoryId")
+        form.setValue("subcategoryId", "");
+      else if (filterKey === "tagId" && tagId) {
+        const current = form.getValues("tagIds") ?? [];
+        form.setValue(
+          "tagIds",
+          current.filter((id) => id !== tagId)
+        );
+      } else if (filterKey === "accountId") form.setValue("accountId", "");
+      else if (filterKey === "search") form.setValue("search", "");
+
+      // Re-trigger analysis with updated filters
+      setTimeout(() => {
+        const values = form.getValues();
+        const params = buildParams(values);
+        setAnalysisParams(params);
+        setAccumulatedTransactions([]);
+        setTimeout(() => refetch(), 0);
+      }, 0);
+    },
+    [form, buildParams, refetch]
+  );
 
   const hasActiveFilters = () => {
     const values = form.getValues();
@@ -539,27 +595,152 @@ export function TransactionAnalyzer() {
           </form>
         </Form>
 
-        {/* Results will be added in the next task */}
-        {hasAnalyzed && data && !isFetching && (
-          <ResultsPanel
-            data={data}
-            accumulatedTransactions={accumulatedTransactions}
-            setAccumulatedTransactions={setAccumulatedTransactions}
-            analysisParams={analysisParams}
-            setAnalysisParams={setAnalysisParams}
-            form={form}
-            buildParams={buildParams}
-            refetch={refetch}
-            isFetching={isFetching}
-            categories={categories}
-            tags={tags}
-            accounts={accounts}
-          />
+        {/* Results Panel */}
+        {hasAnalyzed && data && (
+          <div className="space-y-6">
+            {/* Active Filters Display */}
+            <ActiveFilters
+              form={form}
+              categories={categories}
+              tags={tags}
+              accounts={accounts}
+              onRemove={handleRemoveFilter}
+            />
+
+            {/* Empty State */}
+            {data.transactionCount === 0 ? (
+              <EmptyState
+                variant="widget"
+                icon={SearchX}
+                title="No transactions found"
+                description="Try adjusting your filters to find what you're looking for."
+              />
+            ) : (
+              <>
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 gap-4">
+                  <Card className="p-4 text-center">
+                    <p className="text-xs md:text-sm text-muted-foreground">
+                      Total Amount
+                    </p>
+                    <p className="text-xl md:text-2xl font-bold">
+                      {formatCurrency(data.totalAmount)}
+                    </p>
+                  </Card>
+                  <Card className="p-4 text-center">
+                    <p className="text-xs md:text-sm text-muted-foreground">
+                      Transactions
+                    </p>
+                    <p className="text-xl md:text-2xl font-bold">
+                      {data.transactionCount}
+                    </p>
+                  </Card>
+                </div>
+
+                {/* Breakdown Section */}
+                {data.breakdown.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3">
+                      Breakdown by{" "}
+                      {analysisParams.categoryId
+                        ? "Subcategory"
+                        : "Category"}
+                    </h3>
+                    <div className="space-y-3">
+                      {data.breakdown.map((item, index) => (
+                        <div key={item.id} className="space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-sm font-medium">
+                              {item.name}
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                              {formatCurrency(item.amount)} ({item.percentage}%)
+                            </span>
+                          </div>
+                          <div
+                            className="relative h-2 w-full overflow-hidden rounded-full bg-primary/20"
+                          >
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{
+                                width: `${item.percentage}%`,
+                                backgroundColor: generateColor(
+                                  index,
+                                  data.breakdown.length
+                                ),
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Transaction List */}
+                {accumulatedTransactions.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3">
+                      Matching Transactions
+                    </h3>
+                    <div>
+                      {accumulatedTransactions.map((t) => (
+                        <div
+                          key={t.id}
+                          className="flex items-center justify-between py-3 border-b last:border-b-0"
+                        >
+                          <div>
+                            <p className="text-sm font-medium">{t.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {t.categoryName}
+                              {t.subcategoryName
+                                ? ` > ${t.subcategoryName}`
+                                : ""}{" "}
+                              &mdash; {t.accountName}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium">
+                              {formatCurrency(t.amount)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(t.date), "MMM d, yyyy")}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {data.hasMore && (
+                      <div className="flex justify-center mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleLoadMore}
+                          disabled={isLoadingMore}
+                        >
+                          {isLoadingMore ? (
+                            <>
+                              <Spinner className="mr-2" />
+                              Loading...
+                            </>
+                          ) : (
+                            "Load More"
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         )}
 
+        {/* Loading State */}
         {hasAnalyzed && isFetching && !data && <LoadingSkeleton />}
 
-        {hasAnalyzed && error && !isFetching && (
+        {/* Error State */}
+        {hasAnalyzed && error && !isFetching && !data && (
           <div className="text-center py-6">
             <p className="text-sm text-destructive mb-2">{error}</p>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
@@ -572,29 +753,139 @@ export function TransactionAnalyzer() {
   );
 }
 
-// Placeholder components — will be fully implemented in the next task
-function ResultsPanel(props: {
-  data: NonNullable<ReturnType<typeof useTransactionAnalysis>["data"]>;
-  accumulatedTransactions: TransactionAnalysisTransaction[];
-  setAccumulatedTransactions: React.Dispatch<
-    React.SetStateAction<TransactionAnalysisTransaction[]>
-  >;
-  analysisParams: TransactionAnalysisParams;
-  setAnalysisParams: React.Dispatch<
-    React.SetStateAction<TransactionAnalysisParams>
-  >;
+// --- Helper Components ---
+
+const currencyFormatter = new Intl.NumberFormat("en-PH", {
+  style: "currency",
+  currency: "PHP",
+});
+
+function formatCurrency(amount: number): string {
+  return currencyFormatter.format(amount);
+}
+
+function generateColor(index: number, total: number): string {
+  const hue = (index * 360) / total;
+  return `hsl(${hue}, 65%, 60%)`;
+}
+
+function ActiveFilters({
+  form,
+  categories,
+  tags,
+  accounts,
+  onRemove,
+}: {
   form: ReturnType<typeof useForm<TransactionAnalysisFormValues>>;
-  buildParams: (values: TransactionAnalysisFormValues) => TransactionAnalysisParams;
-  refetch: () => void;
-  isFetching: boolean;
   categories: { id: string; name: string }[];
   tags: { id: string; name: string }[];
   accounts: { id: string; name: string }[];
+  onRemove: (key: string, tagId?: string) => void;
 }) {
-  void props;
-  return null;
+  const values = form.watch();
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {/* Type badge — always shown, not removable */}
+      <Badge variant="secondary">
+        {values.type === "expense" ? "Expense" : "Income"}
+      </Badge>
+
+      {values.startDate && (
+        <Badge variant="secondary" className="gap-1">
+          From: {format(values.startDate, "MMM d, yyyy")}
+          <button onClick={() => onRemove("startDate")}>
+            <X className="h-3 w-3" />
+          </button>
+        </Badge>
+      )}
+
+      {values.endDate && (
+        <Badge variant="secondary" className="gap-1">
+          To: {format(values.endDate, "MMM d, yyyy")}
+          <button onClick={() => onRemove("endDate")}>
+            <X className="h-3 w-3" />
+          </button>
+        </Badge>
+      )}
+
+      {values.categoryId && (
+        <Badge variant="secondary" className="gap-1">
+          Category:{" "}
+          {categories.find((c) => c.id === values.categoryId)?.name ??
+            values.categoryId}
+          <button onClick={() => onRemove("categoryId")}>
+            <X className="h-3 w-3" />
+          </button>
+        </Badge>
+      )}
+
+      {values.subcategoryId && (
+        <Badge variant="secondary" className="gap-1">
+          Subcategory: {values.subcategoryId}
+          <button onClick={() => onRemove("subcategoryId")}>
+            <X className="h-3 w-3" />
+          </button>
+        </Badge>
+      )}
+
+      {values.tagIds?.map((tagId) => {
+        const tag = tags.find((t) => t.id === tagId);
+        return tag ? (
+          <Badge key={tagId} variant="secondary" className="gap-1">
+            Tag: {tag.name}
+            <button onClick={() => onRemove("tagId", tagId)}>
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        ) : null;
+      })}
+
+      {values.accountId && (
+        <Badge variant="secondary" className="gap-1">
+          Account:{" "}
+          {accounts.find((a) => a.id === values.accountId)?.name ??
+            values.accountId}
+          <button onClick={() => onRemove("accountId")}>
+            <X className="h-3 w-3" />
+          </button>
+        </Badge>
+      )}
+
+      {values.search && (
+        <Badge variant="secondary" className="gap-1">
+          Search: {values.search}
+          <button onClick={() => onRemove("search")}>
+            <X className="h-3 w-3" />
+          </button>
+        </Badge>
+      )}
+    </div>
+  );
 }
 
 function LoadingSkeleton() {
-  return null;
+  return (
+    <div className="space-y-6">
+      {/* Summary cards skeleton */}
+      <div className="grid grid-cols-2 gap-4">
+        <Skeleton className="h-20 rounded-lg" />
+        <Skeleton className="h-20 rounded-lg" />
+      </div>
+      {/* Breakdown skeleton */}
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-8" />
+        <Skeleton className="h-8" />
+        <Skeleton className="h-8" />
+      </div>
+      {/* Transaction list skeleton */}
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-12" />
+        <Skeleton className="h-12" />
+        <Skeleton className="h-12" />
+      </div>
+    </div>
+  );
 }
