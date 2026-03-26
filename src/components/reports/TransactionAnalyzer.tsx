@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { Search, ChevronDownIcon, X, SearchX } from "lucide-react";
+import { Search, ChevronDownIcon, ChevronUp, X, SearchX } from "lucide-react";
 
 import {
   transactionAnalysisFormSchema,
@@ -91,6 +91,7 @@ export function TransactionAnalyzer() {
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
 
   const form = useForm<TransactionAnalysisFormValues>({
     resolver: zodResolver(transactionAnalysisFormSchema),
@@ -229,6 +230,12 @@ export function TransactionAnalyzer() {
 
   const selectedTagIds = form.watch("tagIds") ?? [];
 
+  const tier2ActiveCount = [
+    selectedTagIds.length > 0,
+    !!form.watch("accountId"),
+    !!form.watch("search"),
+  ].filter(Boolean).length;
+
   return (
     <Card className="max-w-5xl">
       <CardHeader>
@@ -239,9 +246,9 @@ export function TransactionAnalyzer() {
           Filter and analyze your transactions
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 md:space-y-6">
         <Form {...form}>
-          <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+          <form onSubmit={(e) => e.preventDefault()} className="space-y-3 md:space-y-4">
             {/* Type Toggle */}
             <FormField
               control={form.control}
@@ -274,8 +281,8 @@ export function TransactionAnalyzer() {
               )}
             />
 
-            {/* Filter Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Tier 1 Filters — always visible */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               {/* Start Date */}
               <FormField
                 control={form.control}
@@ -444,134 +451,157 @@ export function TransactionAnalyzer() {
                   />
                 </div>
               </div>
+            </div>
 
-              {/* Tags */}
-              <FormField
-                control={form.control}
-                name="tagIds"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>Tags</FormLabel>
-                    <Popover
-                      open={tagsOpen}
-                      onOpenChange={setTagsOpen}
-                      modal
-                    >
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-between font-normal"
-                          >
-                            {selectedTagIds.length > 0 ? (
-                              `${selectedTagIds.length} tag${selectedTagIds.length > 1 ? "s" : ""} selected`
-                            ) : (
-                              <span className="text-muted-foreground">
-                                Select tags
-                              </span>
-                            )}
-                            <ChevronDownIcon className="h-4 w-4" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[250px] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Search tags..." />
-                          <CommandList>
-                            <CommandEmpty>No tags found.</CommandEmpty>
-                            <CommandGroup>
-                              {tags.map((tag) => (
-                                <CommandItem
+            {/* More Filters trigger — mobile only */}
+            <button
+              type="button"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors md:hidden py-2"
+              onClick={() => setMoreFiltersOpen(!moreFiltersOpen)}
+            >
+              {moreFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDownIcon className="h-4 w-4" />}
+              More Filters
+              {tier2ActiveCount > 0 && (
+                <span className="text-xs font-medium text-foreground">({tier2ActiveCount} active)</span>
+              )}
+            </button>
+
+            {/* Tier 2 Filters — collapsible on mobile, always visible on desktop */}
+            <div
+              className="field-reveal md:!grid-rows-[1fr]"
+              data-visible={moreFiltersOpen || undefined}
+            >
+              <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                  {/* Tags */}
+                  <FormField
+                    control={form.control}
+                    name="tagIds"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel>Tags</FormLabel>
+                        <Popover
+                          open={tagsOpen}
+                          onOpenChange={setTagsOpen}
+                          modal
+                        >
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className="w-full justify-between font-normal"
+                              >
+                                {selectedTagIds.length > 0 ? (
+                                  `${selectedTagIds.length} tag${selectedTagIds.length > 1 ? "s" : ""} selected`
+                                ) : (
+                                  <span className="text-muted-foreground">
+                                    Select tags
+                                  </span>
+                                )}
+                                <ChevronDownIcon className="h-4 w-4" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[250px] p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Search tags..." />
+                              <CommandList>
+                                <CommandEmpty>No tags found.</CommandEmpty>
+                                <CommandGroup>
+                                  {tags.map((tag) => (
+                                    <CommandItem
+                                      key={tag.id}
+                                      value={tag.name}
+                                      onSelect={() => toggleTag(tag.id)}
+                                    >
+                                      <Checkbox
+                                        checked={selectedTagIds.includes(tag.id)}
+                                        className="mr-2"
+                                      />
+                                      {tag.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        {selectedTagIds.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {selectedTagIds.map((tagId) => {
+                              const tag = tags.find((t) => t.id === tagId);
+                              return tag ? (
+                                <Badge
                                   key={tag.id}
-                                  value={tag.name}
-                                  onSelect={() => toggleTag(tag.id)}
+                                  variant="secondary"
+                                  className="text-xs"
                                 >
-                                  <Checkbox
-                                    checked={selectedTagIds.includes(tag.id)}
-                                    className="mr-2"
-                                  />
                                   {tag.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    {selectedTagIds.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {selectedTagIds.map((tagId) => {
-                          const tag = tags.find((t) => t.id === tagId);
-                          return tag ? (
-                            <Badge
-                              key={tag.id}
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              {tag.name}
-                            </Badge>
-                          ) : null;
-                        })}
-                      </div>
+                                </Badge>
+                              ) : null;
+                            })}
+                          </div>
+                        )}
+                        <FormMessage />
+                      </FormItem>
                     )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  />
 
-              {/* Account */}
-              <FormField
-                control={form.control}
-                name="accountId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Account</FormLabel>
-                    <Select
-                      value={field.value || ALL_VALUE}
-                      onValueChange={(value) =>
-                        field.onChange(value === ALL_VALUE ? "" : value)
-                      }
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="All accounts" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={ALL_VALUE}>All accounts</SelectItem>
-                        {accounts.map((acc) => (
-                          <SelectItem key={acc.id} value={acc.id}>
-                            {acc.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  {/* Account */}
+                  <FormField
+                    control={form.control}
+                    name="accountId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account</FormLabel>
+                        <Select
+                          value={field.value || ALL_VALUE}
+                          onValueChange={(value) =>
+                            field.onChange(value === ALL_VALUE ? "" : value)
+                          }
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="All accounts" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={ALL_VALUE}>All accounts</SelectItem>
+                            {accounts.map((acc) => (
+                              <SelectItem key={acc.id} value={acc.id}>
+                                {acc.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              {/* Name Search */}
-              <FormField
-                control={form.control}
-                name="search"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Search by name</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Transaction name..."
-                          className="pl-9"
-                          {...field}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  {/* Name Search */}
+                  <FormField
+                    control={form.control}
+                    name="search"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Search by name</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Transaction name..."
+                              className="pl-9"
+                              {...field}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Action Buttons */}
