@@ -768,6 +768,13 @@ export function TransactionAnalyzer() {
                         </div>
                       ))}
                     </div>
+                    {isLoadingMore && (
+                      <div className="space-y-1">
+                        {[...Array(Math.min(data.transactionCount - accumulatedTransactions.length, 3))].map((_, i) => (
+                          <Skeleton key={i} className="h-[52px] w-full" />
+                        ))}
+                      </div>
+                    )}
                     {data.hasMore && (
                       <div className="flex justify-center mt-3">
                         <Button
@@ -782,7 +789,7 @@ export function TransactionAnalyzer() {
                               Loading...
                             </>
                           ) : (
-                            "Load More"
+                            `Load More (${data.transactionCount - accumulatedTransactions.length} remaining)`
                           )}
                         </Button>
                       </div>
