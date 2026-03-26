@@ -63,6 +63,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { TransactionAnalysisResponse } from "@/types/transaction-analysis";
 
@@ -635,7 +636,9 @@ export function TransactionAnalyzer() {
 
         {/* Results Panel */}
         {hasAnalyzed && data && (
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
+            <Separator className="my-4 md:my-6" />
+            <div className="rounded-lg bg-muted/20 p-3 md:p-4 space-y-4 md:space-y-6">
             {/* Active Filters Display */}
             <ActiveFilters
               form={form}
@@ -695,7 +698,7 @@ export function TransactionAnalyzer() {
                 {/* Breakdown Section */}
                 {data.breakdown.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-semibold mb-3">
+                    <h3 className="text-sm font-semibold mb-3 pl-3 border-l-2 border-primary/40">
                       Breakdown by{" "}
                       {analysisParams.categoryId
                         ? "Subcategory"
@@ -735,7 +738,7 @@ export function TransactionAnalyzer() {
                 {/* Transaction List */}
                 {accumulatedTransactions.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-semibold mb-3">
+                    <h3 className="text-sm font-semibold mb-3 pl-3 border-l-2 border-primary/40">
                       Matching Transactions
                     </h3>
                     <div>
@@ -788,6 +791,7 @@ export function TransactionAnalyzer() {
                 )}
               </>
             )}
+            </div>
           </div>
         )}
 
