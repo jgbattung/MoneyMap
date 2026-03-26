@@ -1,0 +1,598 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <feature>Transaction Analyzer</feature>
+  <spec>docs/transaction-analyzer-spec.md</spec>
+  <branch>feature/transaction-analyzer</branch>
+
+  <!-- Phase 1: Types + Validation -->
+  <phase name="Types and Validation">
+    <task>
+      <name>Create shared types for transaction analysis</name>
+      <action>
+        Create `src/types/transaction-analysis.ts` with the following exports:
+        - `TransactionAnalysisParams` interface: { type: "expense" | "income", startDate?: string, endDate?: string, categoryId?: string, subcategoryId?: string, tagIds?: string[], accountId?: string, search?: string, skip?: number, take?: number }
+        - `TransactionAnalysisBreakdownItem` interface: { id: string, name: string, amount: number, percentage: number }
+        - `TransactionAnalysisTransaction` interface: { id: string, name: string, amount: number, date: string, categoryName: string, subcategoryName?: string, accountName: string }
+        - `TransactionAnalysisResponse` interface: { type: "expense" | "income", totalAmount: number, transactionCount: number, breakdown: TransactionAnalysisBreakdownItem[], transactions: TransactionAnalysisTransaction[], hasMore: boolean }
+      </action>
+      <verify>Run `npx tsc --noEmit` and confirm no type errors in the new file.</verify>
+    </task>
+
+    <task>
+      <name>Create Zod validation schemas for transaction analysis</name>
+      <action>
+        Create `src/lib/validations/transaction-analysis.ts` with two schemas:
+
+        1. `transactionAnalysisQuerySchema` (server-side, for API route):
+           - type: z.enum(["expense", "income"])
+           - startDate: z.string().optional() (validated as ISO date via .pipe(z.coerce.date()) or manual check in route)
+           - endDate: z.string().optional()
+           - categoryId: z.string().min(1).optional()
+           - subcategoryId: z.string().min(1).optional()
+           - tagIds: z.string().optional() (comma-separated string; the route will split and validate)
+           - accountId: z.string().min(1).optional()
+           - search: z.string().max(100).optional()
+           - skip: z.coerce.number().int().min(0).default(0)
+           - take: z.coerce.number().int().min(1).max(50).default(5)
+           Export the schema and its inferred type.
+
+        2. `transactionAnalysisFormSchema` (client-side, for React Hook Form):
+           - type: z.enum(["expense", "income"])
+           - startDate: z.date().optional().nullable()
+           - endDate: z.date().optional().nullable()
+           - categoryId: z.string().optional()
+           - subcategoryId: z.string().optional()
+           - tagIds: z.array(z.string()).optional()
+           - accountId: z.string().optional()
+           - search: z.string().max(100).optional()
+           Export the schema and its inferred type `TransactionAnalysisFormValues`.
+
+        Follow the pattern in `src/lib/validations/expense-transactions.ts`.
+      </action>
+      <verify>Run `npx tsc --noEmit` and confirm no type errors.</verify>
+    </task>
+  </phase>
+
+  <!-- Phase 2: API Endpoint -->
+  <phase name="API Endpoint">
+    <task>
+      <name>Create transaction analysis API route</name>
+      <action>
+        Create `src/app/api/reports/transaction-analysis/route.ts` with a GET handler.
+
+        Follow the auth pattern from `src/app/api/reports/expense-breakdown/route.ts`:
+        - `export const dynamic = 'force-dynamic'`
+        - Import `auth` from `@/lib/auth`, `headers` from `next/headers`, `db` from `@/lib/prisma`
+        - Check session, return 401 if missing
+        - Extract and validate query params using `transactionAnalysisQuerySchema`
+        - Return 400 on validation failure with descriptive error
+
+        Build a dynamic Prisma `where` clause:
+        - Always include `userId` from session
+        - For expenses: always include `isInstallment: false`
+        - Conditionally add: date range (gte/lte with proper end-of-day for endDate), categoryId mapped to `expenseTypeId` or `incomeTypeId`, subcategoryId mapped to `expenseSubcategoryId`, accountId, name search with `contains` + `mode: 'insensitive'`, tags with `tags: { some: { id: { in: tagIdArray } } }`
+
+        Three queries in parallel via `Promise.all`:
+        1. Aggregate: `db.[model].aggregate({ where, _sum: { amount: true }, _count: true })` for totalAmount and transactionCount
+        2. Breakdown: `db.[model].groupBy` by the appropriate field:
+           - No categoryId: group by expenseTypeId/incomeTypeId, then map IDs to names via a separate query for all user's types
+           - categoryId set + type is expense + no subcategoryId: group by expenseSubcategoryId, map IDs to names. Null subcategory groups into "Uncategorized"
+           - Otherwise (subcategoryId set, or income with categoryId): return empty breakdown
+           Calculate percentages: `Math.round((itemAmount / totalAmount) * 10000) / 100`
+           Sort by amount descending
+        3. Transactions: `db.[model].findMany({ where, skip, take: take + 1, orderBy: { date: 'desc' }, include: { account: { select: { name: true } }, [typeRelation]: { select: { name: true } }, ...(expense ? { expenseSubcategory: { select: { name: true } } } : {}) } })`
+           - Slice to `take` items, set `hasMore = fetched.length > take`
+           - Map to response shape with `amount` as positive number (`Math.abs(parseFloat(...))`)
+
+        Return JSON response matching `TransactionAnalysisResponse`.
+
+        Wrap in try/catch, log errors, return 500 on failure.
+      </action>
+      <verify>
+        Run `npm run build` to confirm the route compiles.
+        Manual test: Start dev server, call `GET /api/reports/transaction-analysis?type=expense` in browser/curl (with valid session cookie). Confirm 200 response with correct shape.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 3: Hook -->
+  <phase name="Data Hook">
+    <task>
+      <name>Create useTransactionAnalysis hook</name>
+      <action>
+        Create `src/hooks/useTransactionAnalysis.ts`.
+
+        Import `useQuery` from `@tanstack/react-query`.
+        Import `TransactionAnalysisParams` and `TransactionAnalysisResponse` from `@/types/transaction-analysis`.
+
+        Define a `fetchTransactionAnalysis` function that:
+        - Accepts `TransactionAnalysisParams`
+        - Builds `URLSearchParams` from the params, joining `tagIds` array with commas
+        - Skips undefined/empty params
+        - Fetches `GET /api/reports/transaction-analysis?${params}`
+        - Throws on non-ok response
+        - Returns typed `TransactionAnalysisResponse`
+
+        Export `useTransactionAnalysis(params: TransactionAnalysisParams)`:
+        - `useQuery` with:
+          - queryKey: `['transactionAnalysis', params]`
+          - queryFn: `() => fetchTransactionAnalysis(params)`
+          - enabled: false (manual trigger only)
+          - staleTime: 5 * 60 * 1000
+          - refetchOnWindowFocus: false
+        - Return `{ data: data ?? null, isLoading, isFetching, error: error ? (error as Error).message : null, refetch }`
+
+        Follow the return pattern from `useExpenseBreakdown.ts`.
+      </action>
+      <verify>Run `npx tsc --noEmit` to confirm no type errors.</verify>
+    </task>
+  </phase>
+
+  <!-- Phase 4: Component -->
+  <phase name="Transaction Analyzer Component">
+    <task>
+      <name>Create TransactionAnalyzer filter form UI</name>
+      <action>
+        Create `src/components/reports/TransactionAnalyzer.tsx` as a `"use client"` component.
+
+        This task focuses on the FILTER FORM portion only. The results display will be added in the next task.
+
+        Component structure:
+        1. Set up React Hook Form with `zodResolver(transactionAnalysisFormSchema)` and default values: `{ type: "expense", startDate: null, endDate: null, categoryId: "", subcategoryId: "", tagIds: [], accountId: "", search: "" }`
+        2. Use `useExpenseTypesQuery()`, `useIncomeTypesQuery()`, `useTagsQuery()`, `useAccountsQuery()` for filter dropdown data.
+        3. Use `useTransactionAnalysis` hook with params derived from form values.
+        4. Track `analysisParams` in state -- only updated when user clicks Analyze.
+        5. Track `accumulatedTransactions` in state for load-more pagination.
+
+        Render a Shadcn `Card` with `CardHeader` (title: "Transaction Analyzer", description: "Filter and analyze your transactions") and `CardContent`.
+
+        Inside `CardContent`, render the filter `Form`:
+
+        a. **Type toggle:** `ToggleGroup` with `type="single"`, `variant="outline"`, value from form, two items "Expense"/"Income". On change: update form value, reset categoryId and subcategoryId.
+
+        b. **Filter grid:** `div` with `grid grid-cols-1 md:grid-cols-2 gap-4`:
+           - Start Date: FormField wrapping a Popover+Calendar date picker. Label "From". Display formatted date or "Start date" placeholder.
+           - End Date: Same pattern. Label "To".
+           - Category: FormField wrapping Select. Label "Category". Conditional options based on type toggle. Include "All categories" as first option with value "". When category changes, reset subcategoryId.
+           - Subcategory: FormField wrapping Select. Label "Subcategory". **Only rendered** when type is "expense" AND categoryId is set and non-empty. Options from the selected expense type's `subcategories` array. Include "All subcategories" as first option with value "".
+           - Tags: FormField wrapping Popover+Command combobox. Label "Tags". Inside the Command, render each tag as a CommandItem with a Checkbox. Selected tags shown as Badge pills below the popover trigger. Multi-select behavior via tagIds array in form.
+           - Account: FormField wrapping Select. Label "Account". Include "All accounts" as first option.
+           - Name Search: FormField wrapping Input with Search icon (Lucide). `md:col-span-2`. Label "Search by name". Placeholder "Transaction name...".
+
+        c. **Action buttons:** `div` with `flex justify-end gap-2`:
+           - "Clear Filters" Button (ghost variant). Only visible when at least one non-type filter is active. onClick: reset form to defaults, clear results state, clear accumulatedTransactions.
+           - "Analyze" Button (default variant). onClick: convert form values to `TransactionAnalysisParams`, set `analysisParams` state (which triggers refetch via useEffect or direct refetch call), reset accumulated transactions, set skip to 0. Disabled while isFetching. Show Spinner + "Analyzing..." when isFetching.
+
+        Do NOT render results yet -- just export the component with the filter form. The next task adds results.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+        Temporarily import TransactionAnalyzer in reports page (or just verify it compiles). Confirm filters render correctly on the dev server.
+      </verify>
+    </task>
+
+    <task>
+      <name>Add results display to TransactionAnalyzer</name>
+      <action>
+        Extend `src/components/reports/TransactionAnalyzer.tsx` to add the results panel below the filter form, inside the same `CardContent`.
+
+        The results panel is only shown when `data` from `useTransactionAnalysis` is non-null (i.e., after first successful query).
+
+        Sections (wrapped in `div className="space-y-6"`):
+
+        1. **Active filters display:**
+           - `div` with `flex flex-wrap gap-2`
+           - Render Badge pills for each active filter. Type badge is always shown, not removable.
+           - Other badges have an X button (Lucide X icon, size 14). Clicking X removes that filter from the form, then re-triggers analysis.
+           - Badge format: "Type: Expense", "From: Mar 1, 2026", "To: Mar 25, 2026", "Category: Food", "Subcategory: Restaurants", "Tag: Vacation" (one per tag), "Account: BPI Savings", "Search: coffee".
+
+        2. **Summary cards:**
+           - `div` with `grid grid-cols-2 gap-4`
+           - Two Cards (`p-4 text-center`):
+             - "Total Amount": formatted as PHP currency using `Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' })`, `text-xl md:text-2xl font-bold`
+             - "Transactions": the count number, same text sizing
+           - Label above value: `text-xs md:text-sm text-muted-foreground`
+
+        3. **Breakdown section** (conditional: only shown when breakdown array is non-empty):
+           - Heading: `text-sm font-semibold mb-3`. Text: "Breakdown by Category" (no categoryId) or "Breakdown by Subcategory" (categoryId set).
+           - Each row: `div` with `space-y-1 mb-3`:
+             - Top line: `flex justify-between` with name (left, `text-sm font-medium`) and amount + percentage (right, `text-sm text-muted-foreground`). Format: "PHP 1,234.56 (45.2%)"
+             - Below: Shadcn `Progress` component with `value={item.percentage}`. Style the indicator color with inline style using HSL: `hsl((index * 360) / total, 65%, 60%)`. If Progress doesn't support indicator color via className, use a CSS variable override or a wrapper with a custom style.
+
+        4. **Transaction list** (conditional: only shown when transactions exist):
+           - Heading: `text-sm font-semibold mb-3` "Matching Transactions"
+           - Each transaction row: `div` with `flex items-center justify-between py-3 border-b last:border-b-0`:
+             - Left: name (`text-sm font-medium`) + category info (`text-xs text-muted-foreground`)
+             - Right: formatted amount (`text-sm font-medium`) + formatted date (`text-xs text-muted-foreground`)
+           - "Load More" button at bottom when `hasMore` is true. Button `variant="outline" size="sm"`. On click: increment skip by 10 in the params, call refetch, append new transactions to `accumulatedTransactions` state. Show Spinner while loading.
+
+        5. **Empty state** (when transactionCount === 0):
+           - Use `EmptyState` component with `variant="widget"`, icon `SearchX` from Lucide, title "No transactions found", description "Try adjusting your filters to find what you're looking for."
+
+        6. **Loading state** (when isFetching and no data yet):
+           - Summary area: two Skeleton rectangles in grid
+           - Breakdown: 3 Skeleton bars (h-8 each with gap)
+           - Transactions: 3 Skeleton rows (h-12 each with gap)
+
+        7. **Error state:**
+           - Show error message text + "Retry" button that calls refetch.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+        On dev server: go to /reports, use the Transaction Analyzer. Click Analyze with default filters. Verify summary cards, breakdown, and transaction list all render. Test load more. Test empty state by searching for a gibberish name. Test the active filter badges and their removal.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 5: Page Integration -->
+  <phase name="Page Integration">
+    <task>
+      <name>Integrate TransactionAnalyzer into the reports page</name>
+      <action>
+        Modify `src/app/reports/page.tsx`:
+
+        1. Add import: `import TransactionAnalyzer from '@/components/reports/TransactionAnalyzer'` (or named import if using named export).
+        2. Inside the `div.space-y-6` container, after `&lt;AnnualSummaryTable /&gt;`, add: `&lt;TransactionAnalyzer /&gt;`
+
+        The component is self-contained, so no props are needed.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+        On dev server: navigate to /reports. Scroll past Annual Summary. The Transaction Analyzer card should be visible and functional.
+        Verify the layout matches the rest of the page (max-w-5xl constraint, consistent spacing).
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 6: Final Verification (original feature) -->
+  <phase name="Final Verification">
+    <task>
+      <name>Run full lint and build check</name>
+      <action>
+        Run `npm run lint` and fix any errors.
+        Run `npm run build` and ensure zero errors.
+        Run through the verification plan in the spec (section 6) for manual testing.
+      </action>
+      <verify>
+        Both commands pass with zero errors.
+        All manual verification checks from spec section 6.2 pass.
+      </verify>
+    </task>
+
+    <task>
+      <name>Generate verification document</name>
+      <action>
+        Create `docs/transaction-analyzer-verification.md` documenting:
+        - All files created and modified
+        - Lint and build results
+        - Manual test results for each verification item from spec section 6.2
+        - Any deviations from the spec and rationale
+      </action>
+      <verify>The verification document exists and covers all items.</verify>
+    </task>
+  </phase>
+
+  <!-- ============================================================ -->
+  <!-- Phase 7: UI Improvements (spec section 8)                    -->
+  <!-- ============================================================ -->
+
+  <!-- Phase 7a: CSS Foundation + Animated Reveal -->
+  <phase name="7a: CSS Foundation and Animated Field Reveal">
+    <task>
+      <name>Add .field-reveal CSS class and reduced-motion support</name>
+      <action>
+        In `src/app/globals.css`:
+
+        1. Add a new `.field-reveal` class block in `@layer components` (after `.money-map-card-interactive`):
+           ```css
+           .field-reveal {
+             display: grid;
+             grid-template-rows: 0fr;
+             transition: grid-template-rows 200ms ease-out;
+           }
+           .field-reveal[data-visible="true"] {
+             grid-template-rows: 1fr;
+           }
+           .field-reveal > div {
+             overflow: hidden;
+           }
+           ```
+
+        2. Add `.field-reveal` to the existing `@media (prefers-reduced-motion: reduce)` block:
+           ```css
+           .field-reveal {
+             transition: none !important;
+           }
+           ```
+
+        This mirrors the existing `.nav-group-content` pattern (lines 237-253).
+      </action>
+      <verify>
+        Run `npm run build`. The CSS compiles without errors.
+        On dev server, inspect the `.field-reveal` class in browser DevTools — confirm the `grid-template-rows` transition property exists.
+      </verify>
+    </task>
+
+    <task>
+      <name>Apply animated reveal to subcategory field</name>
+      <action>
+        In `src/components/reports/TransactionAnalyzer.tsx`:
+
+        Replace the conditional `{showSubcategory &amp;&amp; (...)}` render of the Subcategory FormField with an always-rendered wrapper:
+
+        ```tsx
+        {/* Subcategory — animated reveal */}
+        &lt;div className="field-reveal" data-visible={showSubcategory}&gt;
+          &lt;div&gt;
+            &lt;FormField ... /&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+        ```
+
+        The Subcategory FormField content stays exactly the same — only the outer wrapper changes from conditional render to animated reveal.
+
+        Important: The `showSubcategory` boolean already exists. Just use it as the `data-visible` attribute value (convert to string if needed: `data-visible={showSubcategory || undefined}` or use `data-visible={showSubcategory ? "true" : undefined}`).
+      </action>
+      <verify>
+        On dev server: Select an expense category that has subcategories. The subcategory field should smoothly animate into view (height slides open over 200ms). Deselect or pick "All categories" — field slides closed.
+        Test with DevTools → Rendering → "prefers-reduced-motion: reduce" → field should appear/disappear instantly.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 7b: Mobile Density + Collapsible Filters -->
+  <phase name="7b: Mobile Form Density and Collapsible Filters">
+    <task>
+      <name>Reduce mobile form spacing</name>
+      <action>
+        In `src/components/reports/TransactionAnalyzer.tsx`:
+
+        1. Change the form element's `className` from `space-y-4` to `space-y-3 md:space-y-4`.
+        2. Change the filter grid's `gap-4` to `gap-3 md:gap-4`.
+        3. Change the `CardContent` `space-y-6` to `space-y-4 md:space-y-6`.
+      </action>
+      <verify>
+        On dev server at mobile viewport (375px): Confirm tighter spacing between form fields. Labels and inputs remain readable. Touch targets are still ≥ 24px tall.
+        On desktop viewport: Spacing unchanged (gap-4, space-y-4, space-y-6).
+      </verify>
+    </task>
+
+    <task>
+      <name>Add collapsible "More Filters" section for mobile</name>
+      <action>
+        In `src/components/reports/TransactionAnalyzer.tsx`:
+
+        1. Add a `moreFiltersOpen` state: `const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)`.
+
+        2. Compute active Tier 2 filter count:
+           ```tsx
+           const tier2ActiveCount = [
+             selectedTagIds.length > 0,
+             !!form.watch("accountId"),
+             !!form.watch("search"),
+           ].filter(Boolean).length;
+           ```
+
+        3. Split the filter grid into two sections:
+
+           **Tier 1 (always visible):** Date range (From, To), Category, Subcategory (with field-reveal).
+
+           **Tier 2 (collapsible on mobile):** Tags, Account, Search by name.
+
+           Between them, add a trigger button (mobile only):
+           ```tsx
+           &lt;button
+             type="button"
+             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors md:hidden py-2"
+             onClick={() => setMoreFiltersOpen(!moreFiltersOpen)}
+           &gt;
+             {moreFiltersOpen ? &lt;ChevronUp className="h-4 w-4" /&gt; : &lt;ChevronDown className="h-4 w-4" /&gt;}
+             More Filters
+             {tier2ActiveCount > 0 &amp;&amp; (
+               &lt;span className="text-xs font-medium text-foreground"&gt;({tier2ActiveCount} active)&lt;/span&gt;
+             )}
+           &lt;/button&gt;
+           ```
+
+           Note: Import `ChevronUp` from lucide-react (ChevronDown is likely already imported as `ChevronDownIcon`).
+
+        4. Wrap Tier 2 fields in the `.field-reveal` pattern for mobile, always visible on desktop:
+           ```tsx
+           &lt;div
+             className="field-reveal md:!grid-rows-[1fr]"
+             data-visible={moreFiltersOpen || undefined}
+           &gt;
+             &lt;div&gt;
+               &lt;div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4"&gt;
+                 {/* Tags field */}
+                 {/* Account field */}
+                 {/* Search field (md:col-span-2) */}
+               &lt;/div&gt;
+             &lt;/div&gt;
+           &lt;/div&gt;
+           ```
+
+           The `md:!grid-rows-[1fr]` ensures desktop always shows the fields regardless of `data-visible`.
+
+        5. The Tier 1 fields remain in their own `grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4` div above the trigger.
+      </action>
+      <verify>
+        On mobile viewport (375px):
+        - Tier 1 filters (dates, category) visible by default.
+        - "More Filters" trigger visible. Clicking it smoothly reveals Tags, Account, Search.
+        - Active count badge shows when Tier 2 filters have values.
+        On desktop viewport:
+        - "More Filters" trigger is hidden (`md:hidden`).
+        - All fields visible in the 2-column grid as before.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 7c: Results Presentation -->
+  <phase name="7c: Results Summary, Cards, and Visual Breaks">
+    <task>
+      <name>Add summary sentence and replace count card with average</name>
+      <action>
+        In `src/components/reports/TransactionAnalyzer.tsx`:
+
+        1. **Summary sentence:** Add a new element between `ActiveFilters` and the summary cards grid.
+           The sentence structure is: `You [spent/earned] [amount] across [count] [on [category [> subcategory]]] [in [account]] [date clause]`
+
+           Each segment is independently conditional — omitted filters produce no text:
+           - Category uses "on": `on Food &amp; Dining`
+           - Subcategory appends with " > ": `on Food &amp; Dining &gt; Restaurants`
+           - Account uses "in": `in BPI Savings`
+           - Both dates: `from Mar 1, 2026 to Mar 25, 2026`
+           - Only start date: `since Mar 1, 2026`
+           - Only end date: `up to Mar 25, 2026`
+
+           Tags and name search are NOT included in the sentence (visible in filter pills above).
+
+           To resolve category/subcategory/account names from IDs in `analysisParams`, look up the name from the `categories`, `subcategories`, and `accounts` arrays already available in the component.
+
+           Dynamic values use `&lt;span className="font-medium text-foreground"&gt;` for emphasis. Outer `&lt;p&gt;` uses `text-sm md:text-base text-muted-foreground`.
+
+        2. **Replace count card with average:** Change the second summary card from:
+           - Label: "Transactions" → "Avg. per Transaction"
+           - Value: `data.transactionCount` → `formatCurrency(data.totalAmount / data.transactionCount)`
+           - Handle edge case: if `transactionCount === 0`, show `formatCurrency(0)`.
+      </action>
+      <verify>
+        On dev server: Run an analysis.
+        - Summary sentence appears between filter pills and cards: "You spent PHP X across N transactions".
+        - With category selected, sentence includes "on [Category Name]".
+        - With category + subcategory, sentence shows "on [Category] > [Subcategory]".
+        - With account selected, sentence includes "in [Account Name]".
+        - With dates selected, sentence includes "from [date] to [date]".
+        - With only one date, shows "since [date]" or "up to [date]".
+        - With no optional filters, sentence is just "You spent PHP X across N transactions".
+        - Second card shows "Avg. per Transaction" with correct value (total / count).
+      </verify>
+    </task>
+
+    <task>
+      <name>Add visual section breaks and results container</name>
+      <action>
+        In `src/components/reports/TransactionAnalyzer.tsx`:
+
+        1. **Separator between form and results:**
+           Import `Separator` from `@/components/ui/separator`. If the component doesn't exist yet, check with `ls src/components/ui/separator*`. If not present, install via `npx shadcn@latest add separator`.
+
+           Add `&lt;Separator className="my-4 md:my-6" /&gt;` between the `&lt;/Form&gt;` closing tag and the results panel `{hasAnalyzed &amp;&amp; data &amp;&amp; (...)}`— inside the results conditional, as the first element.
+
+        2. **Results background container:** Wrap the entire results content (everything inside `{hasAnalyzed &amp;&amp; data &amp;&amp; (...)}`) in:
+           ```tsx
+           &lt;div className="rounded-lg bg-muted/20 p-3 md:p-4 space-y-4 md:space-y-6"&gt;
+           ```
+
+        3. **Sub-section heading accents:** Update "Breakdown by ..." and "Matching Transactions" headings to include a left border:
+           ```tsx
+           &lt;h3 className="text-sm font-semibold mb-3 pl-3 border-l-2 border-primary/40"&gt;
+           ```
+      </action>
+      <verify>
+        On dev server: Run an analysis.
+        - A horizontal separator line appears between the form and results.
+        - Results section has a subtle muted background with rounded corners.
+        - "Breakdown by Category" and "Matching Transactions" headings have a teal left border accent.
+        - Visual hierarchy is clear: form (input) → separator → results (output).
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 7d: Filter Pills + Load More -->
+  <phase name="7d: Interactive Pills and Load More">
+    <task>
+      <name>Add interaction states to filter pills</name>
+      <action>
+        In the `ActiveFilters` helper component inside `src/components/reports/TransactionAnalyzer.tsx`:
+
+        1. Update the Badge wrapper for removable filters to include hover state:
+           ```tsx
+           &lt;Badge variant="secondary" className="text-xs hover:bg-secondary/80 transition-colors duration-150"&gt;
+           ```
+
+        2. Update the dismiss button (the X icon button) inside each removable badge:
+           ```tsx
+           &lt;button
+             type="button"
+             className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer"
+             onClick={() => onRemove(filterKey)}
+           &gt;
+             &lt;X className="h-3 w-3" /&gt;
+           &lt;/button&gt;
+           ```
+
+        3. Ensure the type badge (non-removable) does NOT have hover:bg change or a dismiss button.
+      </action>
+      <verify>
+        On dev server: Run an analysis with multiple filters active.
+        - Hovering a removable pill shows subtle background change.
+        - Hovering the X button shows a circular highlight.
+        - Clicking X removes the filter with tactile press feedback.
+        - Tabbing through pills shows focus ring on X buttons.
+        - The type pill ("Expense"/"Income") has no hover effect or X button.
+      </verify>
+    </task>
+
+    <task>
+      <name>Improve Load More with remaining count and skeleton rows</name>
+      <action>
+        In the transaction list section of `src/components/reports/TransactionAnalyzer.tsx`:
+
+        1. **Update button text** to show remaining count:
+           ```tsx
+           const remaining = data.transactionCount - accumulatedTransactions.length;
+           ```
+           Button label when not loading: `Load More (${remaining} remaining)`.
+
+        2. **Add skeleton rows while loading:** When `isLoadingMore` is true, render 2-3 skeleton rows below the transaction list (above the Load More button):
+           ```tsx
+           {isLoadingMore &amp;&amp; (
+             &lt;div className="space-y-1"&gt;
+               {[...Array(Math.min(remaining, 3))].map((_, i) =&gt; (
+                 &lt;Skeleton key={i} className="h-[52px] w-full" /&gt;
+               ))}
+             &lt;/div&gt;
+           )}
+           ```
+
+        3. Button remains visible and disabled during loading (already the case), but now the spinner is supplemented by the skeletons above.
+      </action>
+      <verify>
+        On dev server: Run an analysis with enough results to trigger pagination.
+        - Load More button shows "Load More (X remaining)".
+        - Clicking Load More: button disables, 2-3 skeleton rows appear below existing transactions, new transactions append when loaded.
+        - Existing transactions do NOT re-render or flash.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 7e: Final Verification for UI Improvements -->
+  <phase name="7e: UI Improvements Verification">
+    <task>
+      <name>Lint, build, and comprehensive UI verification</name>
+      <action>
+        Run `npm run lint` and fix any errors.
+        Run `npm run build` and ensure zero errors.
+
+        Manual verification checklist:
+        1. Subcategory field animates smoothly on show/hide (200ms ease-out).
+        2. Mobile (375px): tighter spacing, "More Filters" collapsible works, Tier 2 shows active count.
+        3. Desktop: all fields always visible, "More Filters" trigger hidden.
+        4. Summary sentence reads naturally for expense/income, with/without dates.
+        5. Second summary card shows "Avg. per Transaction" with correct math.
+        6. Filter pills have hover states, X button has hover/focus/active states.
+        7. Load More shows remaining count and skeleton rows while loading.
+        8. Separator visible between form and results.
+        9. Results wrapped in muted background container.
+        10. Breakdown and Transaction headings have left border accent.
+        11. prefers-reduced-motion disables field-reveal animations.
+      </action>
+      <verify>
+        Lint and build pass with zero errors.
+        All 11 manual checks pass.
+      </verify>
+    </task>
+  </phase>
+</plan>
