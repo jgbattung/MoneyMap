@@ -50,7 +50,7 @@ const CardGroupPage = () => {
 
   if (isFetching) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col">
+      <div className="max-w-7xl mx-auto px-4 py-6 pb-24 md:pb-6 flex flex-col">
         {/* Header Skeleton */}
         <div className="w-full rounded-xl p-6 md:p-8 bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border border-border/50 shadow-lg mb-6">
           <div className="h-8 w-48 bg-muted animate-pulse rounded mb-4" />
@@ -75,7 +75,7 @@ const CardGroupPage = () => {
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6">
+      <div className="max-w-7xl mx-auto px-4 py-6 pb-24 md:pb-6">
         <div className='flex-1 flex flex-col items-center justify-center py-16'>
           <Icons.error
             className='h-24 w-24 mb-10'
@@ -98,7 +98,7 @@ const CardGroupPage = () => {
 
   if (!cardGroupData || cardGroupData.cards.length === 0) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6">
+      <div className="max-w-7xl mx-auto px-4 py-6 pb-24 md:pb-6">
         <EmptyState
           icon={CreditCard}
           title="No cards in this group"
@@ -111,7 +111,7 @@ const CardGroupPage = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-6 flex flex-col gap-6">
+    <div className="max-w-7xl mx-auto px-4 py-6 pb-24 md:pb-6 flex flex-col gap-6">
       <MobileDetailHeader backHref="/cards" title="Cards" />
       {/* Header Section with Outstanding Balance - Gradient Design */}
       <div className="w-full rounded-lg md:rounded-xl p-4 md:p-8 bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border border-border/50 shadow-sm hover:shadow-md transition-shadow">

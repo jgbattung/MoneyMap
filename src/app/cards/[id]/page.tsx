@@ -45,7 +45,7 @@ const CardDetailPage = () => {
 
   if (isFetching) {
     return (
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-20 md:pb-6 flex flex-col">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-24 md:pb-6 flex flex-col">
         {/* Header Skeleton */}
         <div className="mb-6 md:mb-8">
           <div className="bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border border-border rounded-lg md:rounded-xl p-4 md:p-8 shadow-sm">
@@ -68,7 +68,7 @@ const CardDetailPage = () => {
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-20 md:pb-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-24 md:pb-6">
         <div className='flex-1 flex flex-col items-center justify-center py-16'>
           <Icons.error
             className='h-24 w-24 mb-10'
@@ -91,7 +91,7 @@ const CardDetailPage = () => {
 
   if (!cardData) {
     return (
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-20 md:pb-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-24 md:pb-6">
         <div className='flex-1 flex flex-col items-center justify-center py-16'>
           <Icons.creditCardIcon
             className='h-24 w-24 mb-10'
@@ -113,7 +113,7 @@ const CardDetailPage = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-20 md:pb-6 flex flex-col">
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-24 md:pb-6 flex flex-col">
       <MobileDetailHeader backHref="/cards" title="Cards" />
       {/* Header Section with Outstanding Balance - Gradient Design */}
       <div className="mb-6 md:mb-8">

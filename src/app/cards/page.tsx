@@ -148,7 +148,7 @@ const Cards = () => {
   }, [groupedCards, ungroupedCards]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 pt-0 pb-20 md:pb-6 flex flex-col">
+    <div className="max-w-7xl mx-auto px-4 pt-0 pb-24 md:pb-6 flex flex-col">
       <PageHeader
         title="Cards"
         actions={
