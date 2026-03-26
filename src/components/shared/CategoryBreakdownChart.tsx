@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Pie, PieChart, Cell } from "recharts"
 import {
   ChartConfig,
@@ -38,7 +38,15 @@ const generateColor = (index: number, total: number): string => {
   return `hsl(${hue}, 65%, 60%)`
 }
 
+const INITIAL_DISPLAY_COUNT = 10
+
 const CategoryBreakdownChart = ({ type, month, year }: CategoryBreakdownChartProps) => {
+  const [showAll, setShowAll] = useState(false)
+
+  useEffect(() => {
+    setShowAll(false)
+  }, [type, month, year])
+
   const expenseResult = useExpenseBreakdown(month, year)
   const incomeResult = useIncomeBreakdown(month, year)
 
@@ -215,11 +223,11 @@ const CategoryBreakdownChart = ({ type, month, year }: CategoryBreakdownChartPro
 
       {/* Breakdown list */}
       <div className="flex flex-col">
-        {chartData.map((item, index) => (
+        {(showAll ? chartData : chartData.slice(0, INITIAL_DISPLAY_COUNT)).map((item, index, arr) => (
           <div
             key={`breakdown-${index}`}
             className={`flex items-center justify-between py-3 px-3 ${
-              index < chartData.length - 1 ? 'border-b border-border' : ''
+              index < arr.length - 1 ? 'border-b border-border' : ''
             }`}
           >
             <div className="flex items-center gap-3">
@@ -237,6 +245,17 @@ const CategoryBreakdownChart = ({ type, month, year }: CategoryBreakdownChartPro
           </div>
         ))}
       </div>
+      {chartData.length > INITIAL_DISPLAY_COUNT && (
+        <button
+          type="button"
+          onClick={() => setShowAll((prev) => !prev)}
+          className="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {showAll
+            ? "Show Less"
+            : `Show More (${chartData.length - INITIAL_DISPLAY_COUNT} remaining)`}
+        </button>
+      )}
     </div>
   )
 }

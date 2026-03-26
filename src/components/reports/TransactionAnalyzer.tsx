@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
@@ -10,10 +10,7 @@ import {
   transactionAnalysisFormSchema,
   TransactionAnalysisFormValues,
 } from "@/lib/validations/transaction-analysis";
-import {
-  TransactionAnalysisParams,
-  TransactionAnalysisTransaction,
-} from "@/types/transaction-analysis";
+import { TransactionAnalysisParams } from "@/types/transaction-analysis";
 import { useTransactionAnalysis } from "@/hooks/useTransactionAnalysis";
 import { useExpenseTypesQuery } from "@/hooks/useExpenseTypesQuery";
 import { useIncomeTypesQuery } from "@/hooks/useIncomeTypesQuery";
@@ -65,7 +62,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { TransactionAnalysisResponse } from "@/types/transaction-analysis";
+
 
 const ALL_VALUE = "__all__";
 
@@ -83,12 +80,8 @@ const DEFAULT_FORM_VALUES: TransactionAnalysisFormValues = {
 export function TransactionAnalyzer() {
   const [analysisParams, setAnalysisParams] =
     useState<TransactionAnalysisParams>({ type: "expense" });
-  const [accumulatedTransactions, setAccumulatedTransactions] = useState<
-    TransactionAnalysisTransaction[]
-  >([]);
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const prevDataRef = useRef<TransactionAnalysisResponse | null>(null);
+  const [displayCount, setDisplayCount] = useState(5);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
@@ -107,21 +100,8 @@ export function TransactionAnalyzer() {
   const { tags } = useTagsQuery();
   const { accounts } = useAccountsQuery();
 
-  const { data, isFetching, error, refetch } =
+  const { data, isFetching, isFetchingMore, error, refetch } =
     useTransactionAnalysis(analysisParams);
-
-  // Accumulate transactions when data changes (for load more)
-  useEffect(() => {
-    if (data && data !== prevDataRef.current) {
-      prevDataRef.current = data;
-      if (isLoadingMore) {
-        setAccumulatedTransactions((prev) => [...prev, ...data.transactions]);
-        setIsLoadingMore(false);
-      } else {
-        setAccumulatedTransactions(data.transactions);
-      }
-    }
-  }, [data, isLoadingMore]);
 
   const categories = watchType === "expense" ? budgets : incomeTypes;
   const selectedExpenseType = budgets.find((b) => b.id === watchCategoryId);
@@ -133,11 +113,11 @@ export function TransactionAnalyzer() {
     watchType === "expense" && watchCategoryId && watchCategoryId.length > 0;
 
   const buildParams = useCallback(
-    (values: TransactionAnalysisFormValues): TransactionAnalysisParams => {
+    (values: TransactionAnalysisFormValues, take: number): TransactionAnalysisParams => {
       const params: TransactionAnalysisParams = {
         type: values.type,
         skip: 0,
-        take: 5,
+        take,
       };
       if (values.startDate)
         params.startDate = values.startDate.toISOString();
@@ -155,9 +135,9 @@ export function TransactionAnalyzer() {
 
   const handleAnalyze = useCallback(() => {
     const values = form.getValues();
-    const params = buildParams(values);
+    setDisplayCount(5);
+    const params = buildParams(values, 5);
     setAnalysisParams(params);
-    setAccumulatedTransactions([]);
     setHasAnalyzed(true);
     setTimeout(() => refetch(), 0);
   }, [form, buildParams, refetch]);
@@ -165,17 +145,18 @@ export function TransactionAnalyzer() {
   const handleClearFilters = useCallback(() => {
     form.reset(DEFAULT_FORM_VALUES);
     setAnalysisParams({ type: "expense" });
-    setAccumulatedTransactions([]);
+    setDisplayCount(5);
     setHasAnalyzed(false);
   }, [form]);
 
   const handleLoadMore = useCallback(() => {
-    const newSkip = accumulatedTransactions.length;
-    const newParams = { ...analysisParams, skip: newSkip, take: 10 };
-    setAnalysisParams(newParams);
-    setIsLoadingMore(true);
+    const newCount = displayCount + 10;
+    setDisplayCount(newCount);
+    const values = form.getValues();
+    const params = buildParams(values, newCount);
+    setAnalysisParams(params);
     setTimeout(() => refetch(), 0);
-  }, [accumulatedTransactions.length, analysisParams, refetch]);
+  }, [displayCount, form, buildParams, refetch]);
 
   const handleRemoveFilter = useCallback(
     (filterKey: string, tagId?: string) => {
@@ -198,9 +179,9 @@ export function TransactionAnalyzer() {
       // Re-trigger analysis with updated filters
       setTimeout(() => {
         const values = form.getValues();
-        const params = buildParams(values);
+        setDisplayCount(5);
+        const params = buildParams(values, 5);
         setAnalysisParams(params);
-        setAccumulatedTransactions([]);
         setTimeout(() => refetch(), 0);
       }, 0);
     },
@@ -473,7 +454,7 @@ export function TransactionAnalyzer() {
               data-visible={moreFiltersOpen || undefined}
             >
               <div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 items-start">
                   {/* Tags */}
                   <FormField
                     control={form.control}
@@ -750,18 +731,18 @@ export function TransactionAnalyzer() {
                 )}
 
                 {/* Divider between breakdown and transactions */}
-                {data.breakdown.length > 0 && accumulatedTransactions.length > 0 && (
+                {data.breakdown.length > 0 && data.transactions.length > 0 && (
                   <Separator />
                 )}
 
                 {/* Transaction List */}
-                {accumulatedTransactions.length > 0 && (
+                {data.transactions.length > 0 && (
                   <div>
                     <h3 className="text-sm font-semibold mb-3 mt-2">
                       Matching Transactions
                     </h3>
                     <div>
-                      {accumulatedTransactions.map((t) => (
+                      {data.transactions.map((t) => (
                         <div
                           key={t.id}
                           className="flex items-center justify-between py-3 border-b last:border-b-0"
@@ -787,9 +768,9 @@ export function TransactionAnalyzer() {
                         </div>
                       ))}
                     </div>
-                    {isLoadingMore && (
+                    {isFetchingMore && (
                       <div className="space-y-1">
-                        {[...Array(Math.min(data.transactionCount - accumulatedTransactions.length, 3))].map((_, i) => (
+                        {[...Array(Math.min(data.transactionCount - data.transactions.length, 3))].map((_, i) => (
                           <Skeleton key={i} className="h-[52px] w-full" />
                         ))}
                       </div>
@@ -800,15 +781,15 @@ export function TransactionAnalyzer() {
                           variant="outline"
                           size="sm"
                           onClick={handleLoadMore}
-                          disabled={isLoadingMore}
+                          disabled={isFetchingMore}
                         >
-                          {isLoadingMore ? (
+                          {isFetchingMore ? (
                             <>
                               <Spinner className="mr-2" />
                               Loading...
                             </>
                           ) : (
-                            `Load More (${data.transactionCount - accumulatedTransactions.length} remaining)`
+                            `Load More (${data.transactionCount - data.transactions.length} remaining)`
                           )}
                         </Button>
                       </div>

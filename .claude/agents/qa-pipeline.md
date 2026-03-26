@@ -214,12 +214,26 @@ After generating the QA report, check if `docs/[feature]-verification.md` exists
 
 This allows the Architect to review a single unified verification document.
 
+## Commit Tests
+
+After appending QA results to the verification doc and confirming the full suite is green, commit all new and updated test files:
+
+1. Run `git branch --show-current` — if on `main`, stop and report an error (the Builder should have created a branch).
+2. Stage all new and modified test files (`*.test.tsx`, `*.test.ts`, `*.spec.ts`).
+3. Commit with the message format:
+   ```
+   test(<scope>): <description>
+
+   Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+   ```
+4. Include the commit SHA in the QA report returned to the orchestrator.
+
 </handoff_protocol>
 
 <constraints>
 - Always read the source file before writing any tests.
 - Never run tests during Phase 1 (generate). Never skip Phase 2 (run).
-- Do not commit any files during the pipeline run — leave commits to the orchestrator. However, once the user confirms tests are green, the orchestrator MUST commit the new/updated test files immediately using `test(<scope>): <description>` format before moving on.
+- After the full suite is green, **commit all new and updated test files** immediately using `test(<scope>): <description>` format with `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`. Do not wait for the orchestrator or user to commit tests — the QA agent owns this step. Never commit during the healing loop — only after the final green run.
 - Do not modify source files unless Phase 2 classification confirms a genuine source code bug (Category B).
 - Maximum 3 healing attempts per failing test before flagging as blocked.
 - Do not add `console.log` debugging to source files — use test assertions only.

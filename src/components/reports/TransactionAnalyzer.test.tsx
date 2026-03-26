@@ -362,6 +362,7 @@ function setupDefaultMocks() {
     data: null,
     isLoading: false,
     isFetching: false,
+    isFetchingMore: false,
     error: null,
     refetch: mockRefetch,
   });
@@ -374,53 +375,24 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// Helper: render component after "Analyze" with data already loaded
-//
-// The component only renders the results panel when hasAnalyzed=true AND data
-// is non-null. The transaction list is populated by a useEffect that watches
-// `data` — it only fires when `data !== prevDataRef.current`.
-//
-// Strategy: we return `null` for the first render so that prevDataRef stays
-// null. After we click Analyze the params change causing React Query to call
-// the hook again; on that re-render we return the real data. The useEffect
-// then fires (data !== prevDataRef which is still null) and populates
-// accumulatedTransactions. We wait for the results panel to appear.
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
 // renderAndAnalyze: renders the component and simulates a full Analyze cycle.
 //
-// The component accumulates transactions in a useEffect that watches `data`.
-// The effect only fires when `data !== prevDataRef.current`. To make this work
-// in tests, we:
-//  1. Render with data=null (prevDataRef stays null)
-//  2. Click Analyze (sets hasAnalyzed=true, clears accumulated, changes params)
-//  3. Switch mock to return real data on next renders
-//  4. Manually trigger a re-render via fireEvent.click on a dummy element —
-//     but actually we use `act` to flush the setTimeout and then update the mock
-//
-// Simpler alternative: supply data from start, pre-populate accumulatedTransactions
-// by waiting for the effect, then test the rendered output.
-//
-// Final approach: since the useEffect runs on mount when data is already set
-// (data=mockData on render 1 → prevRef=null → effect fires → accumulated=[txns]),
-// but handleAnalyze clears it with setAccumulatedTransactions([]), and the
-// re-render after state change has data===prevRef (no re-fire)...
-//
-// We work around this by having the mock return DIFFERENT object references
-// on each call so the effect always fires. We use Object.assign({}, data) trick.
+// The component renders the results panel when hasAnalyzed=true AND data is
+// non-null (displayCount pattern). Strategy:
+//  1. Render with data=null (no results panel shown)
+//  2. Click Analyze (sets hasAnalyzed=true, updates params)
+//  3. On next render the mock returns real data → results panel appears
 // ---------------------------------------------------------------------------
 
 async function renderAndAnalyze(analysisData = mockAnalysisData) {
-  // Each call returns a new object reference so useEffect fires every render
   let callCount = 0;
   vi.mocked(useTransactionAnalysis).mockImplementation(() => {
     callCount++;
     return {
-      // Spread into a new object each call so prevDataRef comparison fails
       data: callCount === 1 ? null : { ...analysisData },
       isLoading: false,
       isFetching: false,
+      isFetchingMore: false,
       error: null as string | null,
       refetch: mockRefetch,
     };
@@ -551,6 +523,7 @@ describe('TransactionAnalyzer', () => {
         data: null,
         isLoading: true,
         isFetching: true,
+        isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
       });
@@ -565,6 +538,7 @@ describe('TransactionAnalyzer', () => {
         data: null,
         isLoading: true,
         isFetching: true,
+        isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
       });
@@ -596,6 +570,7 @@ describe('TransactionAnalyzer', () => {
         data: null,
         isLoading: true,
         isFetching: true,
+        isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
       });
@@ -613,6 +588,7 @@ describe('TransactionAnalyzer', () => {
         data: null,
         isLoading: false,
         isFetching: false,
+        isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
       });
@@ -634,6 +610,7 @@ describe('TransactionAnalyzer', () => {
         data: null,
         isLoading: false,
         isFetching: false,
+        isFetchingMore: false,
         error: 'Failed to fetch transaction analysis',
         refetch: mockRefetch,
       });
@@ -651,6 +628,7 @@ describe('TransactionAnalyzer', () => {
         data: null,
         isLoading: false,
         isFetching: false,
+        isFetchingMore: false,
         error: 'Network error',
         refetch: mockRefetch,
       });
@@ -671,6 +649,7 @@ describe('TransactionAnalyzer', () => {
         data: { ...mockAnalysisData, transactionCount: 0, transactions: [], breakdown: [], hasMore: false },
         isLoading: false,
         isFetching: false,
+        isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
       });
@@ -780,6 +759,7 @@ describe('TransactionAnalyzer', () => {
         },
         isLoading: false,
         isFetching: false,
+        isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
       });
@@ -840,12 +820,47 @@ describe('TransactionAnalyzer', () => {
   });
 
   // -------------------------------------------------------------------------
+  describe('isFetchingMore skeleton', () => {
+    it('renders skeleton rows when isFetchingMore is true after analyze', async () => {
+      // First: use renderAndAnalyze to get into the "results visible" state
+      await renderAndAnalyze({ ...mockAnalysisData, hasMore: true, transactionCount: 10 });
+
+      // Now update the mock to simulate isFetchingMore=true (a Load More is in progress)
+      // Data remains present so the results panel stays visible
+      vi.mocked(useTransactionAnalysis).mockReturnValue({
+        data: { ...mockAnalysisData, hasMore: true, transactionCount: 10 },
+        isLoading: false,
+        isFetching: true,
+        isFetchingMore: true,
+        error: null,
+        refetch: mockRefetch,
+      });
+
+      // Click Load More to trigger a re-render with the updated mock
+      const loadMoreBtn = screen.getByText(/Load More/).closest('button')!;
+      fireEvent.click(loadMoreBtn);
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
+      });
+    });
+
+    it('does not render skeleton rows when isFetchingMore is false', async () => {
+      await renderAndAnalyze({ ...mockAnalysisData, hasMore: true, transactionCount: 10 });
+      // isFetchingMore is false in renderAndAnalyze — no inline skeleton rows
+      const skeletons = screen.queryAllByTestId('skeleton');
+      expect(skeletons.length).toBe(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   describe('handleClearFilters', () => {
     it('does not render results panel on a fresh mount', () => {
       vi.mocked(useTransactionAnalysis).mockReturnValue({
         data: null,
         isLoading: false,
         isFetching: false,
+        isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
       });

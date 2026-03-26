@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import {
   TransactionAnalysisParams,
   TransactionAnalysisResponse,
@@ -37,18 +37,20 @@ async function fetchTransactionAnalysis(
 }
 
 export const useTransactionAnalysis = (params: TransactionAnalysisParams) => {
-  const { data, isLoading, isFetching, error, refetch } = useQuery({
+  const { data, isLoading, isFetching, error, refetch, isPlaceholderData } = useQuery({
     queryKey: ["transactionAnalysis", params],
     queryFn: () => fetchTransactionAnalysis(params),
     enabled: false,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
   });
 
   return {
     data: data ?? null,
     isLoading,
     isFetching,
+    isFetchingMore: isFetching && isPlaceholderData,
     error: error ? (error as Error).message : null,
     refetch,
   };
