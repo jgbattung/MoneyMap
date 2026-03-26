@@ -21,7 +21,7 @@ const More = () => {
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 pt-0 flex flex-col">
+    <div className="max-w-7xl mx-auto px-4 pt-0 pb-24 md:pb-6 flex flex-col">
       <div className="mb-6">
         <PageHeader title="More" />
         <p className='text-muted-foreground mt-2 text-sm md:text-base'>Browse more pages and features</p>
