@@ -35,6 +35,10 @@ vi.mock('@/components/shared/AnnualSummaryTable', () => ({
   default: () => React.createElement('div', { 'data-testid': 'annual-summary-table' }),
 }));
 
+vi.mock('@/components/reports/TransactionAnalyzer', () => ({
+  TransactionAnalyzer: () => React.createElement('div', { 'data-testid': 'transaction-analyzer' }),
+}));
+
 // Mock Shadcn Select components
 vi.mock('@/components/ui/select', () => ({
   Select: ({ children, value, onValueChange }: {
