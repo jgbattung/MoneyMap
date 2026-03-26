@@ -655,6 +655,23 @@ export function TransactionAnalyzer() {
               />
             ) : (
               <>
+                {/* Summary Sentence */}
+                <p className="text-sm md:text-base text-muted-foreground">
+                  You {watchType === "expense" ? "spent" : "earned"}{" "}
+                  <span className="font-medium text-foreground">{formatCurrency(data.totalAmount)}</span>
+                  {" "}across{" "}
+                  <span className="font-medium text-foreground">{data.transactionCount} transaction{data.transactionCount !== 1 ? "s" : ""}</span>
+                  {analysisParams.startDate && analysisParams.endDate && (
+                    <>{" "}from <span className="font-medium text-foreground">{format(new Date(analysisParams.startDate), "MMM d, yyyy")}</span> to <span className="font-medium text-foreground">{format(new Date(analysisParams.endDate), "MMM d, yyyy")}</span></>
+                  )}
+                  {analysisParams.startDate && !analysisParams.endDate && (
+                    <>{" "}since <span className="font-medium text-foreground">{format(new Date(analysisParams.startDate), "MMM d, yyyy")}</span></>
+                  )}
+                  {!analysisParams.startDate && analysisParams.endDate && (
+                    <>{" "}up to <span className="font-medium text-foreground">{format(new Date(analysisParams.endDate), "MMM d, yyyy")}</span></>
+                  )}
+                </p>
+
                 {/* Summary Cards */}
                 <div className="grid grid-cols-2 gap-4">
                   <Card className="p-4 text-center">
@@ -667,10 +684,10 @@ export function TransactionAnalyzer() {
                   </Card>
                   <Card className="p-4 text-center">
                     <p className="text-xs md:text-sm text-muted-foreground">
-                      Transactions
+                      Avg. per Transaction
                     </p>
                     <p className="text-xl md:text-2xl font-bold">
-                      {data.transactionCount}
+                      {formatCurrency(data.transactionCount > 0 ? data.totalAmount / data.transactionCount : 0)}
                     </p>
                   </Card>
                 </div>
