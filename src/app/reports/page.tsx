@@ -115,7 +115,6 @@ const Reports = () => {
         <AnnualSummaryTable />
 
         <TransactionAnalyzer />
-
       </div>
     </div>
   )

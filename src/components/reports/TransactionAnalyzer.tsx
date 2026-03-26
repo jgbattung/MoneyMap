@@ -664,6 +664,23 @@ export function TransactionAnalyzer() {
                   <span className="font-medium text-foreground">{formatCurrency(data.totalAmount)}</span>
                   {" "}across{" "}
                   <span className="font-medium text-foreground">{data.transactionCount} transaction{data.transactionCount !== 1 ? "s" : ""}</span>
+                  {analysisParams.categoryId && (
+                    <>{" "}on{" "}
+                      <span className="font-medium text-foreground">
+                        {categories.find(c => c.id === analysisParams.categoryId)?.name}
+                        {analysisParams.subcategoryId && (
+                          <>{" > "}{subcategories.find(s => s.id === analysisParams.subcategoryId)?.name}</>
+                        )}
+                      </span>
+                    </>
+                  )}
+                  {analysisParams.accountId && (
+                    <>{" "}in{" "}
+                      <span className="font-medium text-foreground">
+                        {accounts.find(a => a.id === analysisParams.accountId)?.name}
+                      </span>
+                    </>
+                  )}
                   {analysisParams.startDate && analysisParams.endDate && (
                     <>{" "}from <span className="font-medium text-foreground">{format(new Date(analysisParams.startDate), "MMM d, yyyy")}</span> to <span className="font-medium text-foreground">{format(new Date(analysisParams.endDate), "MMM d, yyyy")}</span></>
                   )}
@@ -675,30 +692,27 @@ export function TransactionAnalyzer() {
                   )}
                 </p>
 
-                {/* Summary Cards */}
-                <div className="grid grid-cols-2 gap-4">
-                  <Card className="p-4 text-center">
-                    <p className="text-xs md:text-sm text-muted-foreground">
-                      Total Amount
-                    </p>
+                {/* Summary Stats */}
+                <div className="flex items-center rounded-lg border p-4">
+                  <div className="flex-1 text-center">
+                    <p className="text-xs md:text-sm text-muted-foreground">Total Amount</p>
                     <p className="text-xl md:text-2xl font-bold">
                       {formatCurrency(data.totalAmount)}
                     </p>
-                  </Card>
-                  <Card className="p-4 text-center">
-                    <p className="text-xs md:text-sm text-muted-foreground">
-                      Avg. per Transaction
-                    </p>
+                  </div>
+                  <Separator orientation="vertical" className="mx-4 h-10" />
+                  <div className="flex-1 text-center">
+                    <p className="text-xs md:text-sm text-muted-foreground">Avg / Transaction</p>
                     <p className="text-xl md:text-2xl font-bold">
                       {formatCurrency(data.transactionCount > 0 ? data.totalAmount / data.transactionCount : 0)}
                     </p>
-                  </Card>
+                  </div>
                 </div>
 
                 {/* Breakdown Section */}
                 {data.breakdown.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-semibold mb-3 pl-3 border-l-2 border-primary/40">
+                    <h3 className="text-sm font-semibold mb-3 mt-2">
                       Breakdown by{" "}
                       {analysisParams.categoryId
                         ? "Subcategory"
@@ -735,10 +749,15 @@ export function TransactionAnalyzer() {
                   </div>
                 )}
 
+                {/* Divider between breakdown and transactions */}
+                {data.breakdown.length > 0 && accumulatedTransactions.length > 0 && (
+                  <Separator />
+                )}
+
                 {/* Transaction List */}
                 {accumulatedTransactions.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-semibold mb-3 pl-3 border-l-2 border-primary/40">
+                    <h3 className="text-sm font-semibold mb-3 mt-2">
                       Matching Transactions
                     </h3>
                     <div>
