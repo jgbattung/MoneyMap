@@ -851,38 +851,38 @@ function ActiveFilters({
       </Badge>
 
       {values.startDate && (
-        <Badge variant="secondary" className="gap-1">
+        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
           From: {format(values.startDate, "MMM d, yyyy")}
-          <button onClick={() => onRemove("startDate")}>
+          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("startDate")}>
             <X className="h-3 w-3" />
           </button>
         </Badge>
       )}
 
       {values.endDate && (
-        <Badge variant="secondary" className="gap-1">
+        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
           To: {format(values.endDate, "MMM d, yyyy")}
-          <button onClick={() => onRemove("endDate")}>
+          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("endDate")}>
             <X className="h-3 w-3" />
           </button>
         </Badge>
       )}
 
       {values.categoryId && (
-        <Badge variant="secondary" className="gap-1">
+        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
           Category:{" "}
           {categories.find((c) => c.id === values.categoryId)?.name ??
             values.categoryId}
-          <button onClick={() => onRemove("categoryId")}>
+          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("categoryId")}>
             <X className="h-3 w-3" />
           </button>
         </Badge>
       )}
 
       {values.subcategoryId && (
-        <Badge variant="secondary" className="gap-1">
+        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
           Subcategory: {values.subcategoryId}
-          <button onClick={() => onRemove("subcategoryId")}>
+          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("subcategoryId")}>
             <X className="h-3 w-3" />
           </button>
         </Badge>
@@ -893,7 +893,7 @@ function ActiveFilters({
         return tag ? (
           <Badge key={tagId} variant="secondary" className="gap-1">
             Tag: {tag.name}
-            <button onClick={() => onRemove("tagId", tagId)}>
+            <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("tagId", tagId)}>
               <X className="h-3 w-3" />
             </button>
           </Badge>
@@ -901,20 +901,20 @@ function ActiveFilters({
       })}
 
       {values.accountId && (
-        <Badge variant="secondary" className="gap-1">
+        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
           Account:{" "}
           {accounts.find((a) => a.id === values.accountId)?.name ??
             values.accountId}
-          <button onClick={() => onRemove("accountId")}>
+          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("accountId")}>
             <X className="h-3 w-3" />
           </button>
         </Badge>
       )}
 
       {values.search && (
-        <Badge variant="secondary" className="gap-1">
+        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
           Search: {values.search}
-          <button onClick={() => onRemove("search")}>
+          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("search")}>
             <X className="h-3 w-3" />
           </button>
         </Badge>
