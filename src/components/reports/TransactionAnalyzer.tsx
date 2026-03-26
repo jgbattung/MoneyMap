@@ -473,7 +473,7 @@ export function TransactionAnalyzer() {
               data-visible={moreFiltersOpen || undefined}
             >
               <div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 items-start">
                   {/* Tags */}
                   <FormField
                     control={form.control}
