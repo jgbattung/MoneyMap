@@ -409,39 +409,41 @@ export function TransactionAnalyzer() {
                 )}
               />
 
-              {/* Subcategory */}
-              {showSubcategory && (
-                <FormField
-                  control={form.control}
-                  name="subcategoryId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Subcategory</FormLabel>
-                      <Select
-                        value={field.value || ALL_VALUE}
-                        onValueChange={(value) =>
-                          field.onChange(value === ALL_VALUE ? "" : value)
-                        }
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="All subcategories" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value={ALL_VALUE}>All subcategories</SelectItem>
-                          {subcategories.map((sub) => (
-                            <SelectItem key={sub.id} value={sub.id}>
-                              {sub.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
+              {/* Subcategory — animated reveal */}
+              <div className="field-reveal" data-visible={showSubcategory ? "true" : undefined}>
+                <div>
+                  <FormField
+                    control={form.control}
+                    name="subcategoryId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subcategory</FormLabel>
+                        <Select
+                          value={field.value || ALL_VALUE}
+                          onValueChange={(value) =>
+                            field.onChange(value === ALL_VALUE ? "" : value)
+                          }
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="All subcategories" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={ALL_VALUE}>All subcategories</SelectItem>
+                            {subcategories.map((sub) => (
+                              <SelectItem key={sub.id} value={sub.id}>
+                                {sub.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
 
               {/* Tags */}
               <FormField
