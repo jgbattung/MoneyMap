@@ -1,0 +1,286 @@
+<plan>
+  <feature>UI Hotfix Batch</feature>
+  <spec>docs/ui-hotfix-batch-spec.md</spec>
+
+  <phase name="1: Tag/Account Alignment Fix">
+    <task>
+      <name>Add items-start to Tier 2 filter grid</name>
+      <action>
+        In `src/components/reports/TransactionAnalyzer.tsx`, find the grid container at line 476:
+        ```
+        className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4"
+        ```
+        Change it to:
+        ```
+        className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 items-start"
+        ```
+        This ensures both columns align to the top when tag pills increase the Tags column height.
+      </action>
+      <verify>
+        Open TransactionAnalyzer in a desktop viewport. Select 1+ tags so pills appear below the Tags field.
+        Verify the Account label and dropdown stay vertically aligned with the Tags label and button (not pushed down).
+        Run `npm run build` to confirm no errors.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="2: BottomBar Overlap Fix (App-Wide)">
+    <task>
+      <name>Update bottom padding on all pages with existing pb-20</name>
+      <action>
+        In every file listed below, find all occurrences of `pb-20 md:pb-6` and replace with `pb-24 md:pb-6`.
+        Some files have multiple render paths — update ALL occurrences in each file.
+
+        Files:
+        - `src/app/dashboard/page.tsx` (1 occurrence)
+        - `src/app/accounts/page.tsx` (1 occurrence)
+        - `src/app/accounts/[id]/page.tsx` (3 occurrences)
+        - `src/app/budgets/page.tsx` (1 occurrence)
+        - `src/app/cards/page.tsx` (1 occurrence)
+        - `src/app/cards/[id]/page.tsx` (4 occurrences)
+        - `src/app/cards/groups/[groupName]/page.tsx` (4 occurrences)
+        - `src/app/expenses/page.tsx` (1 occurrence)
+        - `src/app/income/page.tsx` (1 occurrence)
+        - `src/app/reports/page.tsx` (1 occurrence)
+        - `src/app/settings/page.tsx` (1 occurrence)
+        - `src/app/transactions/page.tsx` (1 occurrence)
+      </action>
+      <verify>
+        Run a global search for `pb-20` in `src/app/**/page.tsx` — there should be zero matches (except auth pages which use `pb-6`).
+        Run `npm run build` to confirm no errors.
+      </verify>
+    </task>
+
+    <task>
+      <name>Add bottom padding to pages missing it</name>
+      <action>
+        In `src/app/transfers/page.tsx`, find the root container div (line 67):
+        ```
+        className="max-w-7xl mx-auto px-4 md:px-8 pt-0 flex flex-col"
+        ```
+        Change to:
+        ```
+        className="max-w-7xl mx-auto px-4 md:px-8 pt-0 pb-24 md:pb-6 flex flex-col"
+        ```
+
+        In `src/app/more/page.tsx`, find the root container div (line 24):
+        ```
+        className="max-w-7xl mx-auto px-4 pt-0 flex flex-col"
+        ```
+        Change to:
+        ```
+        className="max-w-7xl mx-auto px-4 pt-0 pb-24 md:pb-6 flex flex-col"
+        ```
+      </action>
+      <verify>
+        Open both `/transfers` and `/more` pages on a mobile viewport (less than 768px).
+        Scroll to the bottom — content should not be hidden behind the BottomBar.
+        Run `npm run build` to confirm no errors.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="3: CategoryBreakdown Show More">
+    <task>
+      <name>Add client-side truncation to CategoryBreakdownChart</name>
+      <action>
+        In `src/components/shared/CategoryBreakdownChart.tsx`:
+
+        1. Add `useState` and `useEffect` to the React import if not already present.
+
+        2. Add state and constant inside the component, before the early returns:
+        ```ts
+        const INITIAL_DISPLAY_COUNT = 10;
+        const [showAll, setShowAll] = useState(false);
+        ```
+
+        3. Add a useEffect to reset `showAll` when props change:
+        ```ts
+        useEffect(() => {
+          setShowAll(false);
+        }, [type, month, year]);
+        ```
+
+        4. In the breakdown list section (around line 217), replace the direct `chartData.map` with a truncated version:
+        ```tsx
+        const displayedBreakdown = showAll ? chartData : chartData.slice(0, INITIAL_DISPLAY_COUNT);
+        const hasMoreCategories = chartData.length > INITIAL_DISPLAY_COUNT;
+        ```
+        Then use `displayedBreakdown.map(...)` instead of `chartData.map(...)` in the breakdown list only.
+        Keep the pie chart and legend grid using the full `chartData` (they are compact).
+
+        5. After the breakdown list's closing `</div>` (around line 239), add the Show More/Less button:
+        ```tsx
+        {hasMoreCategories && (
+          <button
+            type="button"
+            onClick={() => setShowAll((prev) => !prev)}
+            className="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {showAll
+              ? "Show Less"
+              : `Show More (${chartData.length - INITIAL_DISPLAY_COUNT} remaining)`}
+          </button>
+        )}
+        ```
+      </action>
+      <verify>
+        Open Reports page on Expenses tab for a month with more than 10 expense categories.
+        Verify:
+        - Only 10 items show in the breakdown list initially
+        - Pie chart and legend grid still show all categories
+        - "Show More (N remaining)" button appears below the list
+        - Clicking it reveals all items and button text changes to "Show Less"
+        - Clicking "Show Less" collapses back to 10
+        - Switching months or tabs resets to collapsed state
+        Run `npm run build` to confirm no errors.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="4: TransactionAnalyzer Load More Refactor">
+    <task>
+      <name>Add keepPreviousData to useTransactionAnalysis hook</name>
+      <action>
+        In `src/hooks/useTransactionAnalysis.ts`:
+
+        1. Update the import to include `keepPreviousData`:
+        ```ts
+        import { useQuery, keepPreviousData } from "@tanstack/react-query";
+        ```
+
+        2. Add `placeholderData: keepPreviousData` to the useQuery options (after `refetchOnWindowFocus: false`).
+
+        3. Destructure `isPlaceholderData` from useQuery:
+        ```ts
+        const { data, isLoading, isFetching, error, refetch, isPlaceholderData } = useQuery({...});
+        ```
+
+        4. Add `isFetchingMore` to the return object:
+        ```ts
+        return {
+          data: data ?? null,
+          isLoading,
+          isFetching,
+          isFetchingMore: isFetching && isPlaceholderData,
+          error: error ? (error as Error).message : null,
+          refetch,
+        };
+        ```
+      </action>
+      <verify>
+        Run `npm run build` to confirm no type errors.
+        The hook changes are backward-compatible — existing consumers still work.
+      </verify>
+    </task>
+
+    <task>
+      <name>Refactor TransactionAnalyzer to use displayCount pattern</name>
+      <action>
+        In `src/components/reports/TransactionAnalyzer.tsx`:
+
+        1. **Remove** the following state/refs:
+        - `const [accumulatedTransactions, setAccumulatedTransactions] = useState(...)` (lines 86-88)
+        - `const [isLoadingMore, setIsLoadingMore] = useState(false)` (line 90)
+        - `const prevDataRef = useRef(...)` (line 91)
+
+        2. **Remove** the useEffect that accumulates transactions (lines 114-124).
+
+        3. **Remove** the `useRef` import if no other refs remain in the component.
+
+        4. **Add** a displayCount state:
+        ```ts
+        const [displayCount, setDisplayCount] = useState(5);
+        ```
+
+        5. **Update** the destructuring from `useTransactionAnalysis` to include `isFetchingMore`:
+        ```ts
+        const { data, isFetching, isFetchingMore, error, refetch } = useTransactionAnalysis(analysisParams);
+        ```
+
+        6. **Update `buildParams`**: Remove the hardcoded `skip: 0, take: 5` (lines 139-140). Instead, add `skip` and `take` when constructing `analysisParams`. Modify the function to accept a `take` parameter:
+        ```ts
+        const buildParams = useCallback(
+          (values: TransactionAnalysisFormValues, take: number): TransactionAnalysisParams => {
+            const params: TransactionAnalysisParams = {
+              type: values.type,
+              skip: 0,
+              take,
+            };
+            // ... rest stays the same
+          },
+          []
+        );
+        ```
+
+        7. **Update `handleAnalyze`** to reset displayCount and use it:
+        ```ts
+        const handleAnalyze = useCallback(() => {
+          const values = form.getValues();
+          setDisplayCount(5);
+          const params = buildParams(values, 5);
+          setAnalysisParams(params);
+          setHasAnalyzed(true);
+          setTimeout(() => refetch(), 0);
+        }, [form, buildParams, refetch]);
+        ```
+
+        8. **Update `handleClearFilters`** to reset displayCount:
+        ```ts
+        const handleClearFilters = useCallback(() => {
+          form.reset(DEFAULT_FORM_VALUES);
+          setAnalysisParams({ type: "expense" });
+          setDisplayCount(5);
+          setHasAnalyzed(false);
+        }, [form]);
+        ```
+
+        9. **Replace `handleLoadMore`** with the displayCount pattern:
+        ```ts
+        const handleLoadMore = useCallback(() => {
+          const newCount = displayCount + 10;
+          setDisplayCount(newCount);
+          const values = form.getValues();
+          const params = buildParams(values, newCount);
+          setAnalysisParams(params);
+          setTimeout(() => refetch(), 0);
+        }, [displayCount, form, buildParams, refetch]);
+        ```
+
+        10. **Update the results rendering** (lines 758 onward):
+        - Replace `accumulatedTransactions` with `data.transactions` everywhere:
+          - Line 753: `accumulatedTransactions.length > 0` → `data.transactions.length > 0`
+          - Line 758: `accumulatedTransactions.length > 0` → `data.transactions.length > 0`
+          - Line 764: `accumulatedTransactions.map` → `data.transactions.map`
+        - Replace `isLoadingMore` with `isFetchingMore`:
+          - Line 790: `{isLoadingMore && (` → `{isFetchingMore && (`
+          - Line 792: skeleton count calculation: `data.transactionCount - accumulatedTransactions.length` → `data.transactionCount - data.transactions.length`
+        - Update the Load More button section (line 797):
+          - `{data.hasMore && (` stays the same
+          - Line 803: `disabled={isLoadingMore}` → `disabled={isFetchingMore}`
+          - Line 805-809: Replace the spinner/loading text block with:
+            ```tsx
+            {isFetchingMore ? (
+              <>
+                <Spinner className="mr-2" />
+                Loading...
+              </>
+            ) : (
+              `Load More (${data.transactionCount - data.transactions.length} remaining)`
+            )}
+            ```
+        - Remove `accumulatedTransactions` from `handleClearFilters` (line 168-169): remove `setAccumulatedTransactions([])`.
+        - Remove `accumulatedTransactions` from `handleAnalyze` (line 160): remove `setAccumulatedTransactions([])`.
+      </action>
+      <verify>
+        1. Open TransactionAnalyzer, select filters, click "Analyze".
+        2. Verify results appear correctly (summary, breakdown, transaction list).
+        3. Click "Load More" — existing results must stay visible with skeleton placeholders below them.
+        4. New results append smoothly when loaded.
+        5. Click "Clear Filters" — results clear, analyze again works fresh.
+        6. Run `npm run lint` — zero errors.
+        7. Run `npm run build` — zero errors.
+      </verify>
+    </task>
+  </phase>
+</plan>
