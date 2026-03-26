@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useEarliestTransaction } from '@/hooks/useEarliestTransaction'
 import AnnualSummaryTable from '@/components/shared/AnnualSummaryTable'
+import { TransactionAnalyzer } from '@/components/reports/TransactionAnalyzer'
 import { PageHeader } from '@/components/shared/PageHeader'
 import React, { useState } from 'react'
 
@@ -112,7 +113,8 @@ const Reports = () => {
         </div>
 
         <AnnualSummaryTable />
-      
+
+        <TransactionAnalyzer />
       </div>
     </div>
   )

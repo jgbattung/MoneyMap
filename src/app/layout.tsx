@@ -39,7 +39,7 @@ export default function RootLayout({
           shadow="0 0 10px #2DD4BF,0 0 5px #2DD4BF"
         />
         <Providers>
-          <main className="flex h-screen">
+          <main className="flex h-screen overflow-hidden">
             <ConditionalLayout>
               {children}
             </ConditionalLayout>

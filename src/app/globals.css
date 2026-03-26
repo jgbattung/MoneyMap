@@ -209,7 +209,7 @@
     @apply border-border outline-ring/50 transition-colors duration-200 ease-in-out;
   }
   body {
-    @apply bg-background text-foreground leading-relaxed;
+    @apply bg-background text-foreground leading-relaxed overflow-hidden;
   }
   h1, h2 {
     @apply tracking-tight;
@@ -224,6 +224,17 @@
     @apply bg-card border border-border/50 rounded-xl p-4 md:p-6
       transition-all duration-200 ease-in-out
       hover:bg-card/70 hover:ring-1 hover:ring-border/50;
+  }
+  .field-reveal {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 200ms ease-out;
+  }
+  .field-reveal[data-visible="true"] {
+    grid-template-rows: 1fr;
+  }
+  .field-reveal > div {
+    overflow: hidden;
   }
 }
 
@@ -248,7 +259,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .nav-group-content,
-  .sidebar-animate {
+  .sidebar-animate,
+  .field-reveal {
     transition: none !important;
   }
 }
