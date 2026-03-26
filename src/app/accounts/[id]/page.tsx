@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 const AccountDetailSkeleton = () => {
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-32 md:pb-6 flex flex-col">
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-36 md:pb-6 flex flex-col">
       {/* Header Skeleton */}
       <div className="mb-6 md:mb-8">
         <div className="bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border-border/50 border rounded-lg md:rounded-xl p-4 md:p-8">
@@ -93,7 +93,7 @@ const AccountDetailPage = () => {
 
   if (error || !accountData) {
     return (
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-32 md:pb-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-36 md:pb-6">
         <div className='flex-1 flex flex-col items-center justify-center py-16'>
           <Icons.error
             className='h-24 w-24 mb-10'
@@ -125,7 +125,7 @@ const AccountDetailPage = () => {
   })
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-32 md:pb-6 flex flex-col">
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-36 md:pb-6 flex flex-col">
       <MobileDetailHeader backHref="/accounts" title="Accounts" />
       <div className="mb-6 md:mb-8">
         <div className="bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border-border/50 border rounded-lg md:rounded-xl p-4 md:p-8 shadow-sm hover:shadow-md transition-shadow">
