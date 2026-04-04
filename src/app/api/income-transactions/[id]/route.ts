@@ -268,15 +268,14 @@ export async function DELETE(
 
     const transactionAmount = parseFloat(existingTransaction.amount.toString());
 
-    await db.$transaction(async (tx) => {
-      await tx.incomeTransaction.delete({
+    await db.$transaction([
+      db.incomeTransaction.delete({
         where: {
           id: id,
           userId: session.user.id,
         },
-      });
-
-      await tx.financialAccount.update({
+      }),
+      db.financialAccount.update({
         where: {
           id: existingTransaction.accountId,
           userId: session.user.id,
@@ -286,8 +285,8 @@ export async function DELETE(
             decrement: transactionAmount,
           },
         },
-      });
-    });
+      }),
+    ]);
 
     await onIncomeTransactionChange(
       existingTransaction.accountId,
