@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import { onIncomeTransactionChange } from "@/lib/statement-recalculator";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { PrismaPromise } from "@prisma/client";
 import { z } from "zod";
 
 const ServerPatchIncomeSchema = z.object({
@@ -114,26 +115,27 @@ export async function PATCH(
       );
     }
 
-    const result = await db.$transaction(async (tx) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const updateData: any = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: any = {};
+    const operations: PrismaPromise<unknown>[] = [];
 
-      if (name !== undefined) updateData.name = name;
-      if (tagIds !== undefined) updateData.tags = { set: tagIds.map((id) => ({ id })) };
-      if (incomeTypeId !== undefined) updateData.incomeTypeId = incomeTypeId;
-      if (date !== undefined) updateData.date = new Date(date);
-      if (description !== undefined) updateData.description = description || null;
+    if (name !== undefined) updateData.name = name;
+    if (tagIds !== undefined) updateData.tags = { set: tagIds.map((id) => ({ id })) };
+    if (incomeTypeId !== undefined) updateData.incomeTypeId = incomeTypeId;
+    if (date !== undefined) updateData.date = new Date(date);
+    if (description !== undefined) updateData.description = description || null;
 
-      if (amount !== undefined) {
-        const newAmount = parseFloat(amount);
-        updateData.amount = newAmount;
+    if (amount !== undefined) {
+      const newAmount = parseFloat(amount);
+      updateData.amount = newAmount;
 
-        const oldAmount = parseFloat(existingTransaction.amount.toString());
-        const balanceDifference = newAmount - oldAmount;
+      const oldAmount = parseFloat(existingTransaction.amount.toString());
+      const balanceDifference = newAmount - oldAmount;
 
-        if (accountId !== undefined && accountId !== existingTransaction.accountId) {
-          // Account changed + amount changed: reverse old, apply new
-          await tx.financialAccount.update({
+      if (accountId !== undefined && accountId !== existingTransaction.accountId) {
+        // Account changed + amount changed: reverse old, apply new
+        operations.push(
+          db.financialAccount.update({
             where: {
               id: existingTransaction.accountId,
               userId: session.user.id,
@@ -143,9 +145,11 @@ export async function PATCH(
                 decrement: oldAmount,
               },
             },
-          });
+          })
+        );
 
-          await tx.financialAccount.update({
+        operations.push(
+          db.financialAccount.update({
             where: {
               id: accountId,
               userId: session.user.id,
@@ -155,12 +159,14 @@ export async function PATCH(
                 increment: newAmount,
               },
             },
-          });
+          })
+        );
 
-          updateData.accountId = accountId;
-        } else {
-          // Same account, amount changed
-          await tx.financialAccount.update({
+        updateData.accountId = accountId;
+      } else {
+        // Same account, amount changed
+        operations.push(
+          db.financialAccount.update({
             where: {
               id: existingTransaction.accountId,
               userId: session.user.id,
@@ -170,13 +176,15 @@ export async function PATCH(
                 increment: balanceDifference,
               },
             },
-          });
-        }
-      } else if (accountId !== undefined && accountId !== existingTransaction.accountId) {
-        // Account changed, amount unchanged: move existing amount
-        const amountToMove = parseFloat(existingTransaction.amount.toString());
+          })
+        );
+      }
+    } else if (accountId !== undefined && accountId !== existingTransaction.accountId) {
+      // Account changed, amount unchanged: move existing amount
+      const amountToMove = parseFloat(existingTransaction.amount.toString());
 
-        await tx.financialAccount.update({
+      operations.push(
+        db.financialAccount.update({
           where: {
             id: existingTransaction.accountId,
             userId: session.user.id,
@@ -186,9 +194,11 @@ export async function PATCH(
               decrement: amountToMove,
             },
           },
-        });
+        })
+      );
 
-        await tx.financialAccount.update({
+      operations.push(
+        db.financialAccount.update({
           where: {
             id: accountId,
             userId: session.user.id,
@@ -198,12 +208,14 @@ export async function PATCH(
               increment: amountToMove,
             },
           },
-        });
+        })
+      );
 
-        updateData.accountId = accountId;
-      }
+      updateData.accountId = accountId;
+    }
 
-      const updatedTransaction = await tx.incomeTransaction.update({
+    operations.push(
+      db.incomeTransaction.update({
         where: {
           id,
           userId: session.user.id,
@@ -214,10 +226,11 @@ export async function PATCH(
           incomeType: true,
           tags: true,
         },
-      });
+      })
+    );
 
-      return updatedTransaction;
-    });
+    const results = await db.$transaction(operations);
+    const result = results[results.length - 1];
 
     await onIncomeTransactionChange(existingTransaction.accountId, existingTransaction.date);
     await onIncomeTransactionChange(result.accountId, result.date);
