@@ -3,7 +3,8 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { INSTALLMENT_STATUS } from "./[id]/route";
-import { Prisma } from "@prisma/client";
+import { Prisma, PrismaPromise } from "@prisma/client";
+import { randomUUID } from "crypto";
 import { onExpenseTransactionChange } from "@/lib/statement-recalculator";
 import { z } from "zod";
 
@@ -253,19 +254,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const result = await db.$transaction(async (tx) => {
-      const parsedAmount = parseFloat(amount);
+    const parsedAmount = parseFloat(amount);
+    const expenseTransactionId = randomUUID();
 
-      let monthlyAmount: number | null = null;
-      let remainingInstallments: number | null = null;
+    let monthlyAmount: number | null = null;
+    let remainingInstallments: number | null = null;
 
-      if (isInstallment && installmentDuration) {
-        monthlyAmount = parsedAmount / installmentDuration;
-        remainingInstallments = installmentDuration;
-      }
+    if (isInstallment && installmentDuration) {
+      monthlyAmount = parsedAmount / installmentDuration;
+      remainingInstallments = installmentDuration;
+    }
 
-      const expenseTransaction = await tx.expenseTransaction.create({
+    const operations: PrismaPromise<unknown>[] = [];
+
+    operations.push(
+      db.expenseTransaction.create({
         data: {
+          id: expenseTransactionId,
           userId: session.user.id,
           name,
           amount: parsedAmount,
@@ -287,11 +292,13 @@ export async function POST(request: NextRequest) {
             tags: { connect: tagIds.map((id) => ({ id })) },
           }),
         },
-      });
+      })
+    );
 
-      if (!isSystemGenerated) {
-        if (!isInstallment) {
-          await tx.financialAccount.update({
+    if (!isSystemGenerated) {
+      if (!isInstallment) {
+        operations.push(
+          db.financialAccount.update({
             where: {
               id: accountId,
               userId: session.user.id,
@@ -301,16 +308,18 @@ export async function POST(request: NextRequest) {
                 decrement: parsedAmount,
               },
             },
-          });
-        } else {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
+          })
+        );
+      } else {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-          const startDate = new Date(installmentStartDate!);
-          startDate.setHours(0, 0, 0, 0);
+        const startDate = new Date(installmentStartDate!);
+        startDate.setHours(0, 0, 0, 0);
 
-          if (startDate <= today) {
-            await tx.financialAccount.update({
+        if (startDate <= today) {
+          operations.push(
+            db.financialAccount.update({
               where: {
                 id: accountId,
                 userId: session.user.id,
@@ -320,11 +329,13 @@ export async function POST(request: NextRequest) {
                   decrement: monthlyAmount!,
                 },
               },
-            });
+            })
+          );
 
-            await tx.expenseTransaction.update({
+          operations.push(
+            db.expenseTransaction.update({
               where: {
-                id: expenseTransaction.id,
+                id: expenseTransactionId,
               },
               data: {
                 lastProcessedDate: startDate,
@@ -332,9 +343,11 @@ export async function POST(request: NextRequest) {
                   decrement: 1,
                 }
               },
-            });
+            })
+          );
 
-            await tx.expenseTransaction.create({
+          operations.push(
+            db.expenseTransaction.create({
               data: {
                 userId: session.user.id,
                 accountId,
@@ -346,16 +359,17 @@ export async function POST(request: NextRequest) {
                 description: `Installment payment 1 of ${installmentDuration}`,
                 isInstallment: false,
                 isSystemGenerated: true,
-                parentInstallmentId: expenseTransaction.id,
+                parentInstallmentId: expenseTransactionId,
                 installmentStatus: isInstallment ? INSTALLMENT_STATUS.active : null,
               },
-            });
-          }
+            })
+          );
         }
       }
+    }
 
-      return expenseTransaction;
-    })
+    const results = await db.$transaction(operations);
+    const result = results[0] as { accountId: string; date: Date };
 
     await onExpenseTransactionChange(result.accountId, result.date);
 
