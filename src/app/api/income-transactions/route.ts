@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma, PrismaPromise } from "@prisma/client";
 import { onIncomeTransactionChange } from "@/lib/statement-recalculator";
 import { z } from "zod";
 
@@ -185,8 +185,19 @@ export async function POST(request: NextRequest) {
 
     const { name, amount, accountId, incomeTypeId, date, description, tagIds } = parseResult.data;
 
-    const result = await db.$transaction(async (tx) => {
-      const incomeTransaction = await tx.incomeTransaction.create({
+    const operations: PrismaPromise<unknown>[] = [
+      db.financialAccount.update({
+        where: {
+          id: accountId,
+          userId: session.user.id,
+        },
+        data: {
+          currentBalance: {
+            increment: parseFloat(amount),
+          },
+        },
+      }),
+      db.incomeTransaction.create({
         data: {
           userId: session.user.id,
           name,
@@ -204,22 +215,11 @@ export async function POST(request: NextRequest) {
           incomeType: true,
           tags: true,
         }
-      });
+      }),
+    ];
 
-      await tx.financialAccount.update({
-        where: {
-          id: accountId,
-          userId: session.user.id,
-        },
-        data: {
-          currentBalance: {
-            increment: parseFloat(amount),
-          },
-        },
-      });
-
-      return incomeTransaction;
-    });
+    const results = await db.$transaction(operations);
+    const result = results[results.length - 1];
 
     await onIncomeTransactionChange(accountId, new Date(date));
 
