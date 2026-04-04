@@ -159,48 +159,49 @@ export async function PATCH(
       }
     }
 
-    const result = await db.$transaction(async (tx) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const updateData: any = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: any = {};
+    const operations: PrismaPromise<unknown>[] = [];
 
-      if (name !== undefined) updateData.name = name;
-      if (tagIds !== undefined) updateData.tags = { set: tagIds.map((id) => ({ id })) };
-      if (expenseTypeId !== undefined) updateData.expenseTypeId = expenseTypeId;
-      if (expenseSubcategoryId !== undefined) updateData.expenseSubcategoryId = expenseSubcategoryId;
-      if (date !== undefined) updateData.date = new Date(date);
-      if (description !== undefined) updateData.description = description || null;
-      if (isInstallment !== undefined) updateData.isInstallment = isInstallment;
-      if (installmentStartDate !== undefined) updateData.installmentStartDate = installmentStartDate ? new Date(installmentStartDate) : null;
-      if (remainingInstallments !== undefined) updateData.remainingInstallments = remainingInstallments;
+    if (name !== undefined) updateData.name = name;
+    if (tagIds !== undefined) updateData.tags = { set: tagIds.map((id) => ({ id })) };
+    if (expenseTypeId !== undefined) updateData.expenseTypeId = expenseTypeId;
+    if (expenseSubcategoryId !== undefined) updateData.expenseSubcategoryId = expenseSubcategoryId;
+    if (date !== undefined) updateData.date = new Date(date);
+    if (description !== undefined) updateData.description = description || null;
+    if (isInstallment !== undefined) updateData.isInstallment = isInstallment;
+    if (installmentStartDate !== undefined) updateData.installmentStartDate = installmentStartDate ? new Date(installmentStartDate) : null;
+    if (remainingInstallments !== undefined) updateData.remainingInstallments = remainingInstallments;
 
-      if (amount !== undefined) {
-        const parsedAmount = parseFloat(amount);
-        updateData.amount = parsedAmount;
+    if (amount !== undefined) {
+      const parsedAmount = parseFloat(amount);
+      updateData.amount = parsedAmount;
 
-        let monthlyAmount: number | null = null;
+      let monthlyAmount: number | null = null;
 
-        if (isInstallment && installmentDuration) {
-          monthlyAmount = parsedAmount / installmentDuration;
-          updateData.installmentDuration = installmentDuration;
-          updateData.monthlyAmount = monthlyAmount;
+      if (isInstallment && installmentDuration) {
+        monthlyAmount = parsedAmount / installmentDuration;
+        updateData.installmentDuration = installmentDuration;
+        updateData.monthlyAmount = monthlyAmount;
 
-          if (remainingInstallments === undefined) {
-            updateData.remainingInstallments = installmentDuration;
-          }
+        if (remainingInstallments === undefined) {
+          updateData.remainingInstallments = installmentDuration;
         }
+      }
 
-        const oldAmount = existingExpense.isInstallment && existingExpense.monthlyAmount
-          ? parseFloat(existingExpense.monthlyAmount.toString())
-          : parseFloat(existingExpense.amount.toString());
+      const oldAmount = existingExpense.isInstallment && existingExpense.monthlyAmount
+        ? parseFloat(existingExpense.monthlyAmount.toString())
+        : parseFloat(existingExpense.amount.toString());
 
-        const newAmount = isInstallment && monthlyAmount 
-          ? monthlyAmount 
-          : parsedAmount;
+      const newAmount = isInstallment && monthlyAmount
+        ? monthlyAmount
+        : parsedAmount;
 
-        const balanceDifference = newAmount - oldAmount;
+      const balanceDifference = newAmount - oldAmount;
 
-        if (accountId !== undefined && accountId !== existingExpense.accountId) {
-          await tx.financialAccount.update({
+      if (accountId !== undefined && accountId !== existingExpense.accountId) {
+        operations.push(
+          db.financialAccount.update({
             where: {
               id: existingExpense.accountId,
               userId: session.user.id,
@@ -210,9 +211,11 @@ export async function PATCH(
                 increment: oldAmount,
               },
             },
-          });
+          })
+        );
 
-          await tx.financialAccount.update({
+        operations.push(
+          db.financialAccount.update({
             where: {
               id: accountId,
               userId: session.user.id,
@@ -222,11 +225,13 @@ export async function PATCH(
                 decrement: newAmount,
               },
             },
-          });
+          })
+        );
 
-          updateData.accountId = accountId;
-        } else {
-          await tx.financialAccount.update({
+        updateData.accountId = accountId;
+      } else {
+        operations.push(
+          db.financialAccount.update({
             where: {
               id: existingExpense.accountId,
               userId: session.user.id,
@@ -236,14 +241,16 @@ export async function PATCH(
                 decrement: balanceDifference,
               },
             },
-          });
-        }
-      } else if (accountId !== undefined && accountId !== existingExpense.accountId) {
-        const amountToMove = existingExpense.isInstallment && existingExpense.monthlyAmount
-          ? parseFloat(existingExpense.monthlyAmount.toString())
-          : parseFloat(existingExpense.amount.toString());
+          })
+        );
+      }
+    } else if (accountId !== undefined && accountId !== existingExpense.accountId) {
+      const amountToMove = existingExpense.isInstallment && existingExpense.monthlyAmount
+        ? parseFloat(existingExpense.monthlyAmount.toString())
+        : parseFloat(existingExpense.amount.toString());
 
-        await tx.financialAccount.update({
+      operations.push(
+        db.financialAccount.update({
           where: {
             id: existingExpense.accountId,
             userId: session.user.id,
@@ -253,9 +260,11 @@ export async function PATCH(
               increment: amountToMove,
             },
           },
-        });
+        })
+      );
 
-        await tx.financialAccount.update({
+      operations.push(
+        db.financialAccount.update({
           where: {
             id: accountId,
             userId: session.user.id,
@@ -265,12 +274,14 @@ export async function PATCH(
               decrement: amountToMove,
             },
           },
-        });
+        })
+      );
 
-        updateData.accountId = accountId;
-      }
+      updateData.accountId = accountId;
+    }
 
-      const updatedExpense = await tx.expenseTransaction.update({
+    operations.push(
+      db.expenseTransaction.update({
         where: {
           id,
           userId: session.user.id,
@@ -279,10 +290,11 @@ export async function PATCH(
         include: {
           tags: true,
         },
-      });
+      })
+    );
 
-      return updatedExpense;
-    });
+    const results = await db.$transaction(operations);
+    const result = results[results.length - 1] as { accountId: string; date: Date };
 
     await onExpenseTransactionChange(existingExpense.accountId, existingExpense.date);
     await onExpenseTransactionChange(result.accountId, result.date);
