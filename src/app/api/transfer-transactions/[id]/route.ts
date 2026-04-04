@@ -4,6 +4,7 @@ import { onTransferTransactionChange } from "@/lib/statement-recalculator";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaPromise } from "@prisma/client";
+import { randomUUID } from "crypto";
 import { z } from "zod";
 
 const ServerPatchTransferSchema = z.object({
@@ -136,61 +137,65 @@ export async function PATCH(
       );
     }
 
-    const result = await db.$transaction(async (tx) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const updateData: any = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: any = {};
+    const operations: PrismaPromise<unknown>[] = [];
 
-      if (name !== undefined) updateData.name = name;
-      if (tagIds !== undefined) updateData.tags = { set: tagIds.map((id) => ({ id })) };
-      if (transferTypeId !== undefined) updateData.transferTypeId = transferTypeId;
-      if (date !== undefined) updateData.date = new Date(date);
-      if (notes !== undefined) updateData.notes = notes || null;
+    if (name !== undefined) updateData.name = name;
+    if (tagIds !== undefined) updateData.tags = { set: tagIds.map((id) => ({ id })) };
+    if (transferTypeId !== undefined) updateData.transferTypeId = transferTypeId;
+    if (date !== undefined) updateData.date = new Date(date);
+    if (notes !== undefined) updateData.notes = notes || null;
 
-      const effectiveFromAccountId = fromAccountId ?? existingTransfer.fromAccountId;
-      const effectiveToAccountId = toAccountId ?? existingTransfer.toAccountId;
-      const effectiveName = name ?? existingTransfer.name;
-      const effectiveDate = date ? new Date(date) : existingTransfer.date;
+    const effectiveFromAccountId = fromAccountId ?? existingTransfer.fromAccountId;
+    const effectiveToAccountId = toAccountId ?? existingTransfer.toAccountId;
+    const effectiveName = name ?? existingTransfer.name;
+    const effectiveDate = date ? new Date(date) : existingTransfer.date;
 
-      const oldAmount = parseFloat(existingTransfer.amount.toString());
-      const newAmount = amount !== undefined ? parseFloat(amount) : oldAmount;
-      const amountDifference = newAmount - oldAmount;
+    const oldAmount = parseFloat(existingTransfer.amount.toString());
+    const newAmount = amount !== undefined ? parseFloat(amount) : oldAmount;
+    const amountDifference = newAmount - oldAmount;
 
-      if (amount !== undefined) updateData.amount = newAmount;
-      if (fromAccountId !== undefined) updateData.fromAccountId = fromAccountId;
-      if (toAccountId !== undefined) updateData.toAccountId = toAccountId;
+    if (amount !== undefined) updateData.amount = newAmount;
+    if (fromAccountId !== undefined) updateData.fromAccountId = fromAccountId;
+    if (toAccountId !== undefined) updateData.toAccountId = toAccountId;
 
-      const oldFeeAmount = existingTransfer.feeAmount ? parseFloat(existingTransfer.feeAmount.toString()) : null;
-      const newFeeAmount = feeAmount !== undefined
-        ? (feeAmount && parseFloat(feeAmount) > 0 ? parseFloat(feeAmount) : null)
-        : oldFeeAmount;
+    const oldFeeAmount = existingTransfer.feeAmount ? parseFloat(existingTransfer.feeAmount.toString()) : null;
+    const newFeeAmount = feeAmount !== undefined
+      ? (feeAmount && parseFloat(feeAmount) > 0 ? parseFloat(feeAmount) : null)
+      : oldFeeAmount;
 
-      let newFeeExpenseId = existingTransfer.feeExpenseId;
+    let newFeeExpenseId = existingTransfer.feeExpenseId;
 
-      if (feeAmount !== undefined) {
-        if (oldFeeAmount === null && newFeeAmount !== null) {
-          // Fee added: create fee expense
-          let transferFeeType = await tx.expenseType.findFirst({
-            where: { userId: session.user.id, name: "Transfer fee" },
-          });
+    if (feeAmount !== undefined) {
+      if (oldFeeAmount === null && newFeeAmount !== null) {
+        // Fee added: move lookups before the transaction
+        let transferFeeType = await db.expenseType.findFirst({
+          where: { userId: session.user.id, name: "Transfer fee" },
+        });
 
-          if (!transferFeeType) {
-            transferFeeType = await tx.expenseType.create({
-              data: {
-                userId: session.user.id,
-                name: "Transfer fee",
-                isSystem: true,
-                monthlyBudget: null,
-              },
-            });
-          }
-
-          const fromAccount = await tx.financialAccount.findUnique({
-            where: { id: effectiveFromAccountId },
-            select: { name: true },
-          });
-
-          const feeExpense = await tx.expenseTransaction.create({
+        if (!transferFeeType) {
+          transferFeeType = await db.expenseType.create({
             data: {
+              userId: session.user.id,
+              name: "Transfer fee",
+              isSystem: true,
+              monthlyBudget: null,
+            },
+          });
+        }
+
+        const fromAccount = await db.financialAccount.findUnique({
+          where: { id: effectiveFromAccountId },
+          select: { name: true },
+        });
+
+        newFeeExpenseId = randomUUID();
+
+        operations.push(
+          db.expenseTransaction.create({
+            data: {
+              id: newFeeExpenseId,
               userId: session.user.id,
               accountId: effectiveFromAccountId,
               expenseTypeId: transferFeeType.id,
@@ -199,40 +204,46 @@ export async function PATCH(
               date: effectiveDate,
               description: `Deducted from ${fromAccount?.name}`,
             },
-          });
+          })
+        );
 
-          newFeeExpenseId = feeExpense.id;
-
-          await tx.financialAccount.update({
+        operations.push(
+          db.financialAccount.update({
             where: { id: effectiveFromAccountId },
             data: { currentBalance: { decrement: newFeeAmount } },
-          });
-        } else if (oldFeeAmount !== null && newFeeAmount === null) {
-          // Fee removed: delete fee expense
-          if (existingTransfer.feeExpenseId) {
-            await tx.expenseTransaction.delete({
+          })
+        );
+      } else if (oldFeeAmount !== null && newFeeAmount === null) {
+        // Fee removed: delete fee expense
+        if (existingTransfer.feeExpenseId) {
+          operations.push(
+            db.expenseTransaction.delete({
               where: { id: existingTransfer.feeExpenseId },
-            });
-          }
+            })
+          );
+        }
 
-          newFeeExpenseId = null;
+        newFeeExpenseId = null;
 
-          await tx.financialAccount.update({
+        operations.push(
+          db.financialAccount.update({
             where: { id: existingTransfer.fromAccountId },
             data: { currentBalance: { increment: oldFeeAmount } },
+          })
+        );
+      } else if (oldFeeAmount !== null && newFeeAmount !== null) {
+        // Fee updated
+        const feeDifference = newFeeAmount - oldFeeAmount;
+        const feeAccountChanged = existingTransfer.fromAccountId !== effectiveFromAccountId;
+
+        if (existingTransfer.feeExpenseId) {
+          const fromAccount = await db.financialAccount.findUnique({
+            where: { id: effectiveFromAccountId },
+            select: { name: true },
           });
-        } else if (oldFeeAmount !== null && newFeeAmount !== null) {
-          // Fee updated
-          const feeDifference = newFeeAmount - oldFeeAmount;
-          const feeAccountChanged = existingTransfer.fromAccountId !== effectiveFromAccountId;
 
-          if (existingTransfer.feeExpenseId) {
-            const fromAccount = await tx.financialAccount.findUnique({
-              where: { id: effectiveFromAccountId },
-              select: { name: true },
-            });
-
-            await tx.expenseTransaction.update({
+          operations.push(
+            db.expenseTransaction.update({
               where: { id: existingTransfer.feeExpenseId },
               data: {
                 accountId: effectiveFromAccountId,
@@ -241,71 +252,91 @@ export async function PATCH(
                 date: effectiveDate,
                 description: `Deducted from ${fromAccount?.name}`,
               },
-            });
+            })
+          );
 
-            if (feeAccountChanged) {
-              await tx.financialAccount.update({
+          if (feeAccountChanged) {
+            operations.push(
+              db.financialAccount.update({
                 where: { id: existingTransfer.fromAccountId },
                 data: { currentBalance: { increment: oldFeeAmount } },
-              });
+              })
+            );
 
-              await tx.financialAccount.update({
+            operations.push(
+              db.financialAccount.update({
                 where: { id: effectiveFromAccountId },
                 data: { currentBalance: { decrement: newFeeAmount } },
-              });
-            } else if (feeDifference !== 0) {
-              await tx.financialAccount.update({
+              })
+            );
+          } else if (feeDifference !== 0) {
+            operations.push(
+              db.financialAccount.update({
                 where: { id: effectiveFromAccountId },
                 data: { currentBalance: { decrement: feeDifference } },
-              });
-            }
+              })
+            );
           }
         }
-
-        updateData.feeAmount = newFeeAmount;
-        updateData.feeExpenseId = newFeeExpenseId;
       }
 
-      const accountsChanged =
-        existingTransfer.fromAccountId !== effectiveFromAccountId ||
-        existingTransfer.toAccountId !== effectiveToAccountId;
+      updateData.feeAmount = newFeeAmount;
+      updateData.feeExpenseId = newFeeExpenseId;
+    }
 
-      if (accountsChanged) {
-        // Reverse the old transfer
-        await tx.financialAccount.update({
+    const accountsChanged =
+      existingTransfer.fromAccountId !== effectiveFromAccountId ||
+      existingTransfer.toAccountId !== effectiveToAccountId;
+
+    if (accountsChanged) {
+      // Reverse the old transfer
+      operations.push(
+        db.financialAccount.update({
           where: { id: existingTransfer.fromAccountId },
           data: { currentBalance: { increment: oldAmount } },
-        });
+        })
+      );
 
-        await tx.financialAccount.update({
+      operations.push(
+        db.financialAccount.update({
           where: { id: existingTransfer.toAccountId },
           data: { currentBalance: { decrement: oldAmount } },
-        });
+        })
+      );
 
-        // Apply the new transfer
-        await tx.financialAccount.update({
+      // Apply the new transfer
+      operations.push(
+        db.financialAccount.update({
           where: { id: effectiveFromAccountId },
           data: { currentBalance: { decrement: newAmount } },
-        });
+        })
+      );
 
-        await tx.financialAccount.update({
+      operations.push(
+        db.financialAccount.update({
           where: { id: effectiveToAccountId },
           data: { currentBalance: { increment: newAmount } },
-        });
-      } else if (amountDifference !== 0) {
-        // Same accounts, amount changed
-        await tx.financialAccount.update({
+        })
+      );
+    } else if (amountDifference !== 0) {
+      // Same accounts, amount changed
+      operations.push(
+        db.financialAccount.update({
           where: { id: effectiveFromAccountId },
           data: { currentBalance: { decrement: amountDifference } },
-        });
+        })
+      );
 
-        await tx.financialAccount.update({
+      operations.push(
+        db.financialAccount.update({
           where: { id: effectiveToAccountId },
           data: { currentBalance: { increment: amountDifference } },
-        });
-      }
+        })
+      );
+    }
 
-      const updatedTransfer = await tx.transferTransaction.update({
+    operations.push(
+      db.transferTransaction.update({
         where: {
           id: id,
           userId: session.user.id,
@@ -318,17 +349,16 @@ export async function PATCH(
           feeExpense: true,
           tags: true,
         },
-      });
+      })
+    );
 
-      return updatedTransfer;
-    }, {
-      timeout: 10000,
-    });
+    const results = await db.$transaction(operations);
+    const result = results[results.length - 1] as { fromAccountId: string; toAccountId: string; transferTypeId: string; date: Date };
 
     await onTransferTransactionChange(existingTransfer.fromAccountId, existingTransfer.toAccountId, existingTransfer.transferTypeId, existingTransfer.date);
     await onTransferTransactionChange(result.fromAccountId, result.toAccountId, result.transferTypeId, result.date);
 
-    return NextResponse.json(result, { status: 200 });
+    return NextResponse.json(results[results.length - 1], { status: 200 });
   } catch (error) {
     console.error('Error updating transfer transaction: ', error);
 
