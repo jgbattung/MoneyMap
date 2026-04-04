@@ -147,54 +147,46 @@ export async function DELETE(
       );
     }
 
-    const result = await db.$transaction(async (tx) => {
-      let uncategorizedType = await tx.transferType.findFirst({
-        where: {
+    // Find or create "Uncategorized" before the transaction (idempotent)
+    let uncategorizedType = await db.transferType.findFirst({
+      where: {
+        userId: session.user.id,
+        name: 'Uncategorized',
+      }
+    });
+
+    if (!uncategorizedType) {
+      uncategorizedType = await db.transferType.create({
+        data: {
           userId: session.user.id,
-          name: 'Uncategorized',
+          name: "Uncategorized",
         }
       });
+    }
 
-      if (!uncategorizedType) {
-        uncategorizedType = await tx.transferType.create({
-          data: {
-            userId: session.user.id,
-            name: "Uncategorized",
-          }
-        });
-      }
-
-      const transactionCount = await tx.transferTransaction.count({
+    const results = await db.$transaction([
+      db.transferTransaction.updateMany({
         where: {
           transferTypeId: id,
+        },
+        data: {
+          transferTypeId: uncategorizedType.id,
         }
-      });
-
-      if (transactionCount > 0) {
-        await tx.transferTransaction.updateMany({
-          where: {
-            transferTypeId: id,
-          },
-          data: {
-            transferTypeId: uncategorizedType.id,
-          }
-        });
-      }
-
-      await tx.transferType.delete({
+      }),
+      db.transferType.delete({
         where: {
           id: id,
           userId: session.user.id,
         }
-      });
+      }),
+    ]);
 
-      return { transactionCount }
-    });
+    const reassignedCount = (results[0] as { count: number }).count;
 
     return NextResponse.json(
       {
         message: 'Transfer type deleted successfully',
-        reassignedCount: result.transactionCount,
+        reassignedCount,
       },
       { status: 200 }
     );
