@@ -61,9 +61,11 @@ export async function POST(request: NextRequest) {
           continue;
         }
         
-        await db.$transaction(async (tx) => {
+        const paidCount = installment.installmentDuration! - (installment.remainingInstallments! - 1);
+
+        await db.$transaction([
           // Deduct monthly amount from credit card
-          await tx.financialAccount.update({
+          db.financialAccount.update({
             where: {
               id: installment.accountId,
             },
@@ -72,10 +74,9 @@ export async function POST(request: NextRequest) {
                 decrement: installment.monthlyAmount!,
               },
             },
-          });
-
+          }),
           // Update master installment record
-          await tx.expenseTransaction.update({
+          db.expenseTransaction.update({
             where: {
               id: installment.id,
             },
@@ -84,16 +85,13 @@ export async function POST(request: NextRequest) {
                 decrement: 1
               },
               lastProcessedDate: today,
-              installmentStatus: installment.remainingInstallments === 1 
+              installmentStatus: installment.remainingInstallments === 1
                 ? INSTALLMENT_STATUS.completed
                 : INSTALLMENT_STATUS.active,
             },
-          });
-
+          }),
           // Create payment record (new expense transaction)
-          const paidCount = installment.installmentDuration! - (installment.remainingInstallments! - 1);
-          
-          await tx.expenseTransaction.create({
+          db.expenseTransaction.create({
             data: {
               userId: installment.userId,
               accountId: installment.accountId,
@@ -107,8 +105,8 @@ export async function POST(request: NextRequest) {
               isSystemGenerated: true,
               parentInstallmentId: installment.id,
             },
-          });
-        });
+          }),
+        ]);
 
         results.push({ 
           id: installment.id, 
