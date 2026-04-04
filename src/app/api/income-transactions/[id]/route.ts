@@ -230,7 +230,7 @@ export async function PATCH(
     );
 
     const results = await db.$transaction(operations);
-    const result = results[results.length - 1];
+    const result = results[results.length - 1] as { accountId: string; date: Date };
 
     await onIncomeTransactionChange(existingTransaction.accountId, existingTransaction.date);
     await onIncomeTransactionChange(result.accountId, result.date);
