@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { ExpenseTypeValidation } from "@/lib/validations/expense";
+import { PrismaPromise } from "@prisma/client";
+import { randomUUID } from "crypto";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -90,37 +92,44 @@ export async function POST(request: NextRequest) {
     const { name, monthlyBudget } = parseResult.data;
     const { subcategories } = body;
 
-    const result = await db.$transaction(async (tx) => {
-      const expenseType = await tx.expenseType.create({
+    const expenseTypeId = randomUUID();
+    const operations: PrismaPromise<unknown>[] = [];
+
+    operations.push(
+      db.expenseType.create({
         data: {
+          id: expenseTypeId,
           userId: session.user.id,
           name,
           monthlyBudget: monthlyBudget ? parseFloat(monthlyBudget) : null,
         }
-      });
+      })
+    );
 
-      if (subcategories && Array.isArray(subcategories) && subcategories.length > 0) {
-        await tx.expenseSubcategory.createMany({
+    if (subcategories && Array.isArray(subcategories) && subcategories.length > 0) {
+      operations.push(
+        db.expenseSubcategory.createMany({
           data: subcategories.map((sub: { name: string }) => ({
             userId: session.user.id,
-            expenseTypeId: expenseType.id,
+            expenseTypeId,
             name: sub.name,
           }))
-        });
-      }
+        })
+      );
+    }
 
-      const expenseTypeWithSubcategories = await tx.expenseType.findUnique({
-        where: { id: expenseType.id },
-        include: {
-          subcategories: {
-            orderBy: {
-              name: 'asc'
-            }
+    await db.$transaction(operations);
+
+    // Re-read outside the transaction
+    const result = await db.expenseType.findUnique({
+      where: { id: expenseTypeId },
+      include: {
+        subcategories: {
+          orderBy: {
+            name: 'asc'
           }
         }
-      });
-
-      return expenseTypeWithSubcategories;
+      }
     });
 
     return NextResponse.json(result, { status: 201 });
