@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import { onExpenseTransactionChange } from "@/lib/statement-recalculator";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { PrismaPromise } from "@prisma/client";
 import { z } from "zod";
 
 const ServerPatchExpenseSchema = z.object({
@@ -354,12 +355,14 @@ export async function DELETE(
     }
 
     // Regular expense or payment record: Hard delete
-    await db.$transaction(async (tx) => {
-      // Reverse the balance deduction
-      if (!existingExpense.isSystemGenerated) {
-        const amountToReverse = parseFloat(existingExpense.amount.toString());
-        
-        await tx.financialAccount.update({
+    const operations: PrismaPromise<unknown>[] = [];
+
+    // Reverse the balance deduction
+    if (!existingExpense.isSystemGenerated) {
+      const amountToReverse = parseFloat(existingExpense.amount.toString());
+
+      operations.push(
+        db.financialAccount.update({
           where: {
             id: existingExpense.accountId,
             userId: session.user.id,
@@ -369,17 +372,21 @@ export async function DELETE(
               increment: amountToReverse,
             },
           },
-        });
-      }
+        })
+      );
+    }
 
-      // Delete the expense record
-      await tx.expenseTransaction.delete({
+    // Delete the expense record
+    operations.push(
+      db.expenseTransaction.delete({
         where: {
           id: id,
           userId: session.user.id,
         },
-      });
-    });
+      })
+    );
+
+    await db.$transaction(operations);
 
     await onExpenseTransactionChange(existingExpense.accountId, existingExpense.date);
 
