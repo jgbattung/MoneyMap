@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import { onTransferTransactionChange } from "@/lib/statement-recalculator";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { PrismaPromise } from "@prisma/client";
 import { z } from "zod";
 
 const ServerPatchTransferSchema = z.object({
@@ -370,39 +371,51 @@ export async function DELETE(
       );
     }
 
-    await db.$transaction(async (tx) => {
-      // Reverse the transfer
-      await tx.financialAccount.update({
+    const operations: PrismaPromise<unknown>[] = [];
+
+    // Reverse the transfer
+    operations.push(
+      db.financialAccount.update({
         where: { id: existingTransfer.fromAccountId },
-        data: { currentBalance: { increment: existingTransfer.amount } }
-      });
+        data: { currentBalance: { increment: existingTransfer.amount } },
+      })
+    );
 
-      await tx.financialAccount.update({
+    operations.push(
+      db.financialAccount.update({
         where: { id: existingTransfer.toAccountId },
-        data: { currentBalance: { decrement: existingTransfer.amount } }
-      });
+        data: { currentBalance: { decrement: existingTransfer.amount } },
+      })
+    );
 
-      if (existingTransfer.feeAmount && existingTransfer.feeExpenseId) {
-        const feeAmount = parseFloat(existingTransfer.feeAmount.toString());
+    if (existingTransfer.feeAmount && existingTransfer.feeExpenseId) {
+      const feeAmount = parseFloat(existingTransfer.feeAmount.toString());
 
-        await tx.financialAccount.update({
+      operations.push(
+        db.financialAccount.update({
           where: { id: existingTransfer.fromAccountId },
           data: { currentBalance: { increment: feeAmount } },
-        });
+        })
+      );
 
-        await tx.expenseTransaction.delete({
+      operations.push(
+        db.expenseTransaction.delete({
           where: { id: existingTransfer.feeExpenseId },
-        });
-      }
+        })
+      );
+    }
 
-      // Delete the transfer transaction
-      await tx.transferTransaction.delete({
+    // Delete the transfer transaction
+    operations.push(
+      db.transferTransaction.delete({
         where: {
           id: id,
           userId: session.user.id,
         },
-      });
-    });
+      })
+    );
+
+    await db.$transaction(operations);
 
     await onTransferTransactionChange(existingTransfer.fromAccountId, existingTransfer.toAccountId, existingTransfer.transferTypeId, existingTransfer.date);
 
