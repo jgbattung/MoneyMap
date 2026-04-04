@@ -222,55 +222,47 @@ export async function DELETE(
       );
     }
 
-    const result = await db.$transaction(async (tx) => {
-      let uncategorizedType = await tx.expenseType.findFirst({
-        where: {
+    // Find or create "Uncategorized" before the transaction (idempotent)
+    let uncategorizedType = await db.expenseType.findFirst({
+      where: {
+        userId: session.user.id,
+        name: 'Uncategorized',
+      }
+    });
+
+    if (!uncategorizedType) {
+      uncategorizedType = await db.expenseType.create({
+        data: {
           userId: session.user.id,
-          name: 'Uncategorized',
+          name: "Uncategorized",
+          monthlyBudget: null,
         }
       });
+    }
 
-      if (!uncategorizedType) {
-        uncategorizedType = await tx.expenseType.create({
-          data: {
-            userId: session.user.id,
-            name: "Uncategorized",
-            monthlyBudget: null,
-          }
-        });
-      }
-
-      const transactionCount = await tx.expenseTransaction.count({
+    const results = await db.$transaction([
+      db.expenseTransaction.updateMany({
         where: {
           expenseTypeId: id,
+        },
+        data: {
+          expenseTypeId: uncategorizedType.id,
         }
-      });
-
-      if (transactionCount > 0) {
-        await tx.expenseTransaction.updateMany({
-          where: {
-            expenseTypeId: id,
-          },
-          data: {
-            expenseTypeId: uncategorizedType.id,
-          }
-        });
-      }
-
-      await tx.expenseType.delete({
+      }),
+      db.expenseType.delete({
         where: {
           id: id,
           userId: session.user.id,
         }
-      });
+      }),
+    ]);
 
-      return { transactionCount };
-    })
+    const reassignedCount = (results[0] as { count: number }).count;
 
     return NextResponse.json(
       {
         message: 'Budget deleted successfully',
-        reassignedCount: result.transactionCount,
+        reassignedCount,
       },
       { status: 200 }
     );
