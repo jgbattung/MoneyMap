@@ -2,7 +2,8 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma, PrismaPromise } from "@prisma/client";
+import { randomUUID } from "crypto";
 import { onTransferTransactionChange } from "@/lib/statement-recalculator";
 import { z } from "zod";
 
@@ -206,35 +207,41 @@ export async function POST(request: NextRequest) {
 
     const { name, amount, fromAccountId, toAccountId, transferTypeId, date, notes, feeAmount, tagIds } = parseResult.data;
 
-    const result = await db.$transaction(async (tx) => {
-      let feeExpenseId = null;
+    const operations: PrismaPromise<unknown>[] = [];
+    let feeExpenseId: string | null = null;
+    let transferIndex = 0;
 
-      if (feeAmount && parseFloat(feeAmount) > 0) {
-        let transferFeeType = await tx.expenseType.findFirst({
-          where: {
+    if (feeAmount && parseFloat(feeAmount) > 0) {
+      // Move lookups before the transaction
+      let transferFeeType = await db.expenseType.findFirst({
+        where: {
+          userId: session.user.id,
+          name: "Transfer fee",
+        },
+      });
+
+      if (!transferFeeType) {
+        transferFeeType = await db.expenseType.create({
+          data: {
             userId: session.user.id,
             name: "Transfer fee",
+            isSystem: true,
+            monthlyBudget: null,
           },
         });
+      }
 
-        if (!transferFeeType) {
-          transferFeeType = await tx.expenseType.create({
-            data: {
-              userId: session.user.id,
-              name: "Transfer fee",
-              isSystem: true,
-              monthlyBudget: null,
-            },
-          });
-        }
+      const fromAccount = await db.financialAccount.findUnique({
+        where: { id: fromAccountId },
+        select: { name: true },
+      });
 
-        const fromAccount = await tx.financialAccount.findUnique({
-          where: { id: fromAccountId },
-          select: { name: true },
-        });
+      feeExpenseId = randomUUID();
 
-        const feeExpense = await tx.expenseTransaction.create({
+      operations.push(
+        db.expenseTransaction.create({
           data: {
+            id: feeExpenseId,
             userId: session.user.id,
             accountId: fromAccountId,
             expenseTypeId: transferFeeType.id,
@@ -243,19 +250,22 @@ export async function POST(request: NextRequest) {
             date: new Date(date),
             description: `Deducted from ${fromAccount?.name}`,
           },
-        });
-
-        feeExpenseId = feeExpense.id;
-
-        await tx.financialAccount.update({
-          where: { id: fromAccountId },
-          data: { currentBalance: { decrement: parseFloat(feeAmount) } }
         })
+      );
 
-      }
+      operations.push(
+        db.financialAccount.update({
+          where: { id: fromAccountId },
+          data: { currentBalance: { decrement: parseFloat(feeAmount) } },
+        })
+      );
 
-      // Create the transfer transaction
-      const transfer = await tx.transferTransaction.create({
+      transferIndex = 2;
+    }
+
+    // Create the transfer transaction
+    operations.push(
+      db.transferTransaction.create({
         data: {
           userId: session.user.id,
           name: name,
@@ -278,26 +288,29 @@ export async function POST(request: NextRequest) {
           feeExpense: true,
           tags: true,
         }
-      });
+      })
+    );
 
-      await tx.financialAccount.update({
+    operations.push(
+      db.financialAccount.update({
         where: { id: fromAccountId },
-        data: { currentBalance: { decrement: parseFloat(amount) } }
-      });
+        data: { currentBalance: { decrement: parseFloat(amount) } },
+      })
+    );
 
-      await tx.financialAccount.update({
+    operations.push(
+      db.financialAccount.update({
         where: { id: toAccountId },
-        data: { currentBalance: { increment: parseFloat(amount) } }
-      });
+        data: { currentBalance: { increment: parseFloat(amount) } },
+      })
+    );
 
-      return transfer;
-    }, {
-      timeout: 10000,
-    });
+    const results = await db.$transaction(operations);
+    const result = results[transferIndex] as { fromAccountId: string; toAccountId: string; transferTypeId: string; date: Date };
 
     await onTransferTransactionChange(result.fromAccountId, result.toAccountId, result.transferTypeId, result.date);
 
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json(results[transferIndex], { status: 201 });
 
   } catch (error) {
     console.error('Error creating transfer transaction: ', error);
