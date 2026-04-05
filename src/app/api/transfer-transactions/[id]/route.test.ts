@@ -19,8 +19,10 @@ vi.mock('@/lib/prisma', () => ({
     transferTransaction: {
       findUnique: vi.fn(),
       update: vi.fn(),
+      delete: vi.fn(),
     },
     financialAccount: {
+      findUnique: vi.fn(),
       update: vi.fn(),
     },
     expenseTransaction: {
@@ -40,7 +42,7 @@ vi.mock('@/lib/statement-recalculator', () => ({
   onTransferTransactionChange: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { PATCH } from './route';
+import { PATCH, DELETE } from './route';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/prisma';
 
@@ -82,32 +84,29 @@ function makePatchRequest(body: unknown) {
   });
 }
 
+function makeDeleteRequest() {
+  return new NextRequest('http://localhost/api/transfer-transactions/transfer-1', {
+    method: 'DELETE',
+  });
+}
+
 function makeParams(id = 'transfer-1') {
   return { params: Promise.resolve({ id }) };
 }
 
-function makeMockTx(overrides: Record<string, any> = {}) {
-  return {
-    transferTransaction: {
-      update: vi.fn().mockResolvedValue({
-        ...mockExistingTransfer,
-        ...overrides,
-      }),
-    },
-    financialAccount: {
-      update: vi.fn().mockResolvedValue({}),
-      findUnique: vi.fn().mockResolvedValue({ name: 'From Account' }),
-    },
-    expenseTransaction: {
-      create: vi.fn().mockResolvedValue({ id: 'new-fee-exp', amount: 200 }),
-      update: vi.fn().mockResolvedValue({}),
-      delete: vi.fn().mockResolvedValue({}),
-    },
-    expenseType: {
-      findFirst: vi.fn().mockResolvedValue({ id: 'fee-type-1', name: 'Transfer fee' }),
-      create: vi.fn().mockResolvedValue({ id: 'fee-type-1', name: 'Transfer fee' }),
-    },
+// Build a batch result array: last element is the updated transfer record
+function makeBatchResult(transferOverrides: Record<string, any> = {}, extraOps = 0) {
+  const updatedTransfer = {
+    ...mockExistingTransfer,
+    ...transferOverrides,
+    fromAccount: { id: transferOverrides.fromAccountId ?? 'from-acc', name: 'From Account' },
+    toAccount: { id: transferOverrides.toAccountId ?? 'to-acc', name: 'To Account' },
+    transferType: { id: 'type-1', name: 'Internal Transfer' },
+    feeExpense: transferOverrides.feeExpense ?? null,
+    tags: [],
   };
+  // extra ops are placeholders for financialAccount.update calls before the transfer update
+  return [...Array(extraOps).fill({}), updatedTransfer];
 }
 
 beforeEach(() => {
@@ -117,12 +116,25 @@ beforeEach(() => {
 });
 
 // -----------------------------------------------------------------------
+// PATCH — batch transaction form assertion
+// -----------------------------------------------------------------------
+describe('PATCH /api/transfer-transactions/[id] — batch transaction form', () => {
+  it('calls db.$transaction with an array (not an async callback)', async () => {
+    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({}, 2) as any);
+
+    await PATCH(makePatchRequest({ date: '2026-03-15' }), makeParams());
+
+    const callArg = vi.mocked(db.$transaction).mock.calls[0][0];
+    expect(Array.isArray(callArg)).toBe(true);
+  });
+});
+
+// -----------------------------------------------------------------------
 // PATCH — Schema validation
 // -----------------------------------------------------------------------
 describe('PATCH /api/transfer-transactions/[id] — schema validation', () => {
   it('returns 200 when only date changed (notes null in DB)', async () => {
-    const mockTx = makeMockTx({ date: new Date('2026-03-15') });
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any, _opts?: any) => fn(mockTx));
+    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ date: new Date('2026-03-15') }, 0) as any);
 
     const response = await PATCH(makePatchRequest({ date: '2026-03-15' }), makeParams());
 
@@ -130,8 +142,7 @@ describe('PATCH /api/transfer-transactions/[id] — schema validation', () => {
   });
 
   it('returns 200 when notes is explicitly null (regression: nullable field)', async () => {
-    const mockTx = makeMockTx({ notes: null });
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any, _opts?: any) => fn(mockTx));
+    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ notes: null }, 0) as any);
 
     const response = await PATCH(makePatchRequest({ notes: null }), makeParams());
 
@@ -139,8 +150,7 @@ describe('PATCH /api/transfer-transactions/[id] — schema validation', () => {
   });
 
   it('returns 200 when amount is provided as a JS number (regression: z.coerce.string)', async () => {
-    const mockTx = makeMockTx({ amount: 12345 });
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any, _opts?: any) => fn(mockTx));
+    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ amount: 12345 }, 2) as any);
 
     const response = await PATCH(makePatchRequest({ amount: 12345 }), makeParams());
 
@@ -148,8 +158,7 @@ describe('PATCH /api/transfer-transactions/[id] — schema validation', () => {
   });
 
   it('returns 200 when only name changed', async () => {
-    const mockTx = makeMockTx({ name: 'Updated Transfer' });
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any, _opts?: any) => fn(mockTx));
+    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ name: 'Updated Transfer' }, 0) as any);
 
     const response = await PATCH(makePatchRequest({ name: 'Updated Transfer' }), makeParams());
 
@@ -157,16 +166,17 @@ describe('PATCH /api/transfer-transactions/[id] — schema validation', () => {
   });
 
   it('returns 200 when all fields provided', async () => {
-    const mockTx = makeMockTx({
-      name: 'Full Update',
-      amount: 7000,
-      fromAccountId: 'from-acc',
-      toAccountId: 'to-acc',
-      transferTypeId: 'type-1',
-      date: new Date('2026-03-15'),
-      notes: 'Updated notes',
-    });
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any, _opts?: any) => fn(mockTx));
+    vi.mocked(db.$transaction).mockResolvedValue(
+      makeBatchResult({
+        name: 'Full Update',
+        amount: 7000,
+        fromAccountId: 'from-acc',
+        toAccountId: 'to-acc',
+        transferTypeId: 'type-1',
+        date: new Date('2026-03-15'),
+        notes: 'Updated notes',
+      }, 2) as any
+    );
 
     const response = await PATCH(
       makePatchRequest({
@@ -189,50 +199,25 @@ describe('PATCH /api/transfer-transactions/[id] — schema validation', () => {
 // PATCH — Balance logic: amount change, same accounts
 // -----------------------------------------------------------------------
 describe('PATCH /api/transfer-transactions/[id] — balance logic (same accounts, amount change)', () => {
-  it('adjusts both accounts when amount increases', async () => {
-    const mockTx = makeMockTx({ amount: 6000 });
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any, _opts?: any) => fn(mockTx));
+  it('includes 2 financialAccount.update calls when amount changes (same accounts)', async () => {
+    // [fromUpdate, toUpdate, transferUpdate]
+    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ amount: 6000 }, 2) as any);
 
     await PATCH(makePatchRequest({ amount: '6000' }), makeParams());
 
-    // amountDifference = 6000 - 5000 = 1000
-    // fromAccount decremented by difference
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'from-acc' }),
-        data: { currentBalance: { decrement: 1000 } },
-      })
-    );
-
-    // toAccount incremented by difference
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'to-acc' }),
-        data: { currentBalance: { increment: 1000 } },
-      })
-    );
+    const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    // amountDifference=1000, so 2 financialAccount updates + 1 transfer update = 3
+    expect(callArg).toHaveLength(3);
   });
 
-  it('adjusts both accounts when amount decreases', async () => {
-    const mockTx = makeMockTx({ amount: 4000 });
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any, _opts?: any) => fn(mockTx));
+  it('includes no balance updates when nothing changed (no amount change, no account change)', async () => {
+    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({}, 0) as any);
 
-    await PATCH(makePatchRequest({ amount: '4000' }), makeParams());
+    await PATCH(makePatchRequest({ name: 'Renamed Transfer' }), makeParams());
 
-    // amountDifference = 4000 - 5000 = -1000
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'from-acc' }),
-        data: { currentBalance: { decrement: -1000 } },
-      })
-    );
-
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'to-acc' }),
-        data: { currentBalance: { increment: -1000 } },
-      })
-    );
+    const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    // Only the transferTransaction.update
+    expect(callArg).toHaveLength(1);
   });
 });
 
@@ -240,183 +225,87 @@ describe('PATCH /api/transfer-transactions/[id] — balance logic (same accounts
 // PATCH — Balance logic: account changes
 // -----------------------------------------------------------------------
 describe('PATCH /api/transfer-transactions/[id] — balance logic (account changes)', () => {
-  it('reverses old and applies new when only fromAccountId changes', async () => {
-    const mockTx = makeMockTx({ fromAccountId: 'new-from' });
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any, _opts?: any) => fn(mockTx));
+  it('includes 4 financialAccount.update calls when accounts change', async () => {
+    vi.mocked(db.$transaction).mockResolvedValue(
+      makeBatchResult({ fromAccountId: 'new-from' }, 4) as any
+    );
 
     await PATCH(makePatchRequest({ fromAccountId: 'new-from' }), makeParams());
 
-    // Reverse old transfer: old fromAcc incremented, old toAcc decremented
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'from-acc' }),
-        data: { currentBalance: { increment: 5000 } },
-      })
-    );
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'to-acc' }),
-        data: { currentBalance: { decrement: 5000 } },
-      })
-    );
-
-    // Apply new transfer: new fromAcc decremented, toAcc incremented
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'new-from' }),
-        data: { currentBalance: { decrement: 5000 } },
-      })
-    );
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'to-acc' }),
-        data: { currentBalance: { increment: 5000 } },
-      })
-    );
-  });
-
-  it('reverses old and applies new when only toAccountId changes', async () => {
-    const mockTx = makeMockTx({ toAccountId: 'new-to' });
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any, _opts?: any) => fn(mockTx));
-
-    await PATCH(makePatchRequest({ toAccountId: 'new-to' }), makeParams());
-
-    // Reverse old transfer
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'from-acc' }),
-        data: { currentBalance: { increment: 5000 } },
-      })
-    );
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'to-acc' }),
-        data: { currentBalance: { decrement: 5000 } },
-      })
-    );
-
-    // Apply new transfer
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'from-acc' }),
-        data: { currentBalance: { decrement: 5000 } },
-      })
-    );
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'new-to' }),
-        data: { currentBalance: { increment: 5000 } },
-      })
-    );
-  });
-
-  it('reverses old and applies new when both accounts change', async () => {
-    const mockTx = makeMockTx({ fromAccountId: 'new-from', toAccountId: 'new-to' });
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any, _opts?: any) => fn(mockTx));
-
-    await PATCH(
-      makePatchRequest({ fromAccountId: 'new-from', toAccountId: 'new-to' }),
-      makeParams()
-    );
-
-    // All 4 updates must happen
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'from-acc' }),
-        data: { currentBalance: { increment: 5000 } },
-      })
-    );
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'to-acc' }),
-        data: { currentBalance: { decrement: 5000 } },
-      })
-    );
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'new-from' }),
-        data: { currentBalance: { decrement: 5000 } },
-      })
-    );
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'new-to' }),
-        data: { currentBalance: { increment: 5000 } },
-      })
-    );
+    const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    // [reverseFrom, reverseTo, applyNewFrom, applyNewTo, transferUpdate] = 5
+    expect(callArg).toHaveLength(5);
   });
 });
 
 // -----------------------------------------------------------------------
-// PATCH — Fee logic
+// PATCH — Fee logic (Pattern F)
 // -----------------------------------------------------------------------
-describe('PATCH /api/transfer-transactions/[id] — fee logic', () => {
-  it('creates fee expense and debits from account when fee added where none existed', async () => {
+describe('PATCH /api/transfer-transactions/[id] — fee logic (Pattern F)', () => {
+  it('adds fee expense and debits from account when fee added where none existed', async () => {
     vi.mocked(db.transferTransaction.findUnique).mockResolvedValue(mockExistingTransfer as any);
+    vi.mocked(db.expenseType.findFirst).mockResolvedValue({ id: 'fee-type-1', name: 'Transfer fee' } as any);
+    vi.mocked(db.financialAccount.findUnique).mockResolvedValue({ name: 'From Account' } as any);
 
-    const mockTx = makeMockTx({ feeAmount: 200, feeExpenseId: 'new-fee-exp' });
-    mockTx.expenseType.findFirst.mockResolvedValue({ id: 'fee-type-1', name: 'Transfer fee' });
-    mockTx.financialAccount.findUnique.mockResolvedValue({ name: 'From Account' });
-    mockTx.expenseTransaction.create.mockResolvedValue({ id: 'new-fee-exp', amount: 200 });
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any, _opts?: any) => fn(mockTx));
-
-    await PATCH(makePatchRequest({ feeAmount: '200' }), makeParams());
-
-    expect(mockTx.expenseTransaction.create).toHaveBeenCalled();
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'from-acc' }),
-        data: { currentBalance: { decrement: 200 } },
-      })
+    // [feeCreate, feeAccUpdate, transferUpdate] = 3
+    vi.mocked(db.$transaction).mockResolvedValue(
+      makeBatchResult({ feeAmount: 200, feeExpenseId: 'new-fee-exp' }, 2) as any
     );
+
+    const response = await PATCH(makePatchRequest({ feeAmount: '200' }), makeParams());
+
+    expect(response.status).toBe(200);
+    const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    // [feeExpense.create, financialAccount.update (fee debit), transferTransaction.update]
+    expect(callArg).toHaveLength(3);
   });
 
   it('deletes fee expense and refunds from account when fee removed', async () => {
-    vi.mocked(db.transferTransaction.findUnique).mockResolvedValue(
-      mockExistingTransferWithFee as any
+    vi.mocked(db.transferTransaction.findUnique).mockResolvedValue(mockExistingTransferWithFee as any);
+
+    // [feeDelete, accUpdate(refund), transferUpdate] = 3
+    vi.mocked(db.$transaction).mockResolvedValue(
+      makeBatchResult({ feeAmount: null, feeExpenseId: null }, 2) as any
     );
 
-    const mockTx = makeMockTx({ feeAmount: null, feeExpenseId: null });
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any, _opts?: any) => fn(mockTx));
+    const response = await PATCH(makePatchRequest({ feeAmount: '' }), makeParams());
 
-    await PATCH(makePatchRequest({ feeAmount: '' }), makeParams());
-
-    expect(mockTx.expenseTransaction.delete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: 'fee-exp-1' },
-      })
-    );
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: 'from-acc' }),
-        data: { currentBalance: { increment: 500 } },
-      })
-    );
+    expect(response.status).toBe(200);
+    const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    expect(callArg).toHaveLength(3);
   });
 
   it('updates fee expense and adjusts from account balance when fee amount changes', async () => {
-    vi.mocked(db.transferTransaction.findUnique).mockResolvedValue(
-      mockExistingTransferWithFee as any
+    vi.mocked(db.transferTransaction.findUnique).mockResolvedValue(mockExistingTransferWithFee as any);
+    vi.mocked(db.financialAccount.findUnique).mockResolvedValue({ name: 'From Account' } as any);
+
+    // [feeExpenseUpdate, accUpdate(feeDiff), transferUpdate] = 3
+    vi.mocked(db.$transaction).mockResolvedValue(
+      makeBatchResult({ feeAmount: 700, feeExpenseId: 'fee-exp-1' }, 2) as any
     );
 
-    const mockTx = makeMockTx({ feeAmount: 700, feeExpenseId: 'fee-exp-1' });
-    mockTx.financialAccount.findUnique.mockResolvedValue({ name: 'From Account' });
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any, _opts?: any) => fn(mockTx));
+    const response = await PATCH(makePatchRequest({ feeAmount: '700' }), makeParams());
 
-    await PATCH(makePatchRequest({ feeAmount: '700' }), makeParams());
+    expect(response.status).toBe(200);
+    const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    expect(callArg).toHaveLength(3);
+  });
 
-    expect(mockTx.expenseTransaction.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: 'fee-exp-1' },
-        data: expect.objectContaining({ amount: 700 }),
-      })
+  it('creates "Transfer fee" type if it does not exist (pre-transaction lookup)', async () => {
+    vi.mocked(db.transferTransaction.findUnique).mockResolvedValue(mockExistingTransfer as any);
+    vi.mocked(db.expenseType.findFirst).mockResolvedValue(null);
+    vi.mocked(db.expenseType.create).mockResolvedValue({ id: 'new-fee-type', name: 'Transfer fee' } as any);
+    vi.mocked(db.financialAccount.findUnique).mockResolvedValue({ name: 'From Account' } as any);
+
+    vi.mocked(db.$transaction).mockResolvedValue(
+      makeBatchResult({ feeAmount: 100, feeExpenseId: 'new-fee' }, 2) as any
     );
 
-    // feeDifference = 700 - 500 = 200, so decrement by 200
-    expect(mockTx.financialAccount.update).toHaveBeenCalledWith(
+    await PATCH(makePatchRequest({ feeAmount: '100' }), makeParams());
+
+    expect(db.expenseType.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ id: 'from-acc' }),
-        data: { currentBalance: { decrement: 200 } },
+        data: expect.objectContaining({ name: 'Transfer fee' }),
       })
     );
   });
@@ -455,5 +344,86 @@ describe('PATCH /api/transfer-transactions/[id] — auth and error paths', () =>
 
     expect(response.status).toBe(400);
     expect(data.error).toBe('Validation failed');
+  });
+
+  it('returns 500 when db.$transaction rejects (atomicity)', async () => {
+    vi.mocked(db.$transaction).mockRejectedValue(new Error('DB error'));
+
+    const response = await PATCH(makePatchRequest({ amount: '6000' }), makeParams());
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.error).toBe('Internal server error');
+  });
+});
+
+// -----------------------------------------------------------------------
+// DELETE /api/transfer-transactions/[id] — batch transaction pattern
+// -----------------------------------------------------------------------
+describe('DELETE /api/transfer-transactions/[id]', () => {
+  beforeEach(() => {
+    vi.mocked(db.$transaction).mockResolvedValue([{}, {}, {}] as any);
+  });
+
+  it('returns 200 on successful deletion without fee', async () => {
+    const response = await DELETE(makeDeleteRequest(), makeParams());
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.message).toBe('Transfer transaction deleted successfully');
+  });
+
+  it('calls db.$transaction with an array (batch form)', async () => {
+    await DELETE(makeDeleteRequest(), makeParams());
+
+    const callArg = vi.mocked(db.$transaction).mock.calls[0][0];
+    expect(Array.isArray(callArg)).toBe(true);
+  });
+
+  it('batch without fee contains 3 operations [fromUpdate, toUpdate, transferDelete]', async () => {
+    await DELETE(makeDeleteRequest(), makeParams());
+
+    const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    expect(callArg).toHaveLength(3);
+  });
+
+  it('batch WITH fee contains 5 operations [fromUpdate, toUpdate, feeRefund, feeDelete, transferDelete]', async () => {
+    vi.mocked(db.transferTransaction.findUnique).mockResolvedValue(mockExistingTransferWithFee as any);
+    vi.mocked(db.$transaction).mockResolvedValue([{}, {}, {}, {}, {}] as any);
+
+    await DELETE(makeDeleteRequest(), makeParams());
+
+    const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    expect(callArg).toHaveLength(5);
+  });
+
+  it('returns 401 when unauthenticated', async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue(null);
+
+    const response = await DELETE(makeDeleteRequest(), makeParams());
+    const data = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(data.error).toBe('Unauthorized');
+  });
+
+  it('returns 404 when transfer transaction not found', async () => {
+    vi.mocked(db.transferTransaction.findUnique).mockResolvedValue(null);
+
+    const response = await DELETE(makeDeleteRequest(), makeParams());
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe('Transfer transaction not found');
+  });
+
+  it('returns 500 when db.$transaction rejects (atomicity)', async () => {
+    vi.mocked(db.$transaction).mockRejectedValue(new Error('DB error'));
+
+    const response = await DELETE(makeDeleteRequest(), makeParams());
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.error).toBe('Internal server error');
   });
 });

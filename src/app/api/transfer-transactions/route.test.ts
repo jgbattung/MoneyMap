@@ -164,34 +164,24 @@ describe('GET /api/transfer-transactions', () => {
 });
 
 // -----------------------------------------------------------------------
-// POST /api/transfer-transactions
+// POST /api/transfer-transactions — batch transaction (Pattern C: pre-generated UUID for fee)
 // -----------------------------------------------------------------------
 describe('POST /api/transfer-transactions', () => {
   beforeEach(() => {
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any) => {
-      return fn({
-        expenseType: {
-          findFirst: vi.fn().mockResolvedValue(null),
-          create: vi.fn().mockResolvedValue({ id: 'fee-type-1' }),
-        },
-        expenseTransaction: {
-          create: vi.fn().mockResolvedValue({ id: 'fee-txn-1' }),
-        },
-        financialAccount: {
-          findUnique: vi.fn().mockResolvedValue({ name: 'Checking' }),
-          update: vi.fn().mockResolvedValue({}),
-        },
-        transferTransaction: {
-          create: vi.fn().mockResolvedValue({
-            ...mockTransfer,
-            fromAccount: {},
-            toAccount: {},
-            transferType: {},
-            feeExpense: null,
-          }),
-        },
-      });
-    });
+    // Without fee: batch is [transferTransaction.create, financialAccount.update x2]
+    // Results index 0 = transferTransaction
+    vi.mocked(db.$transaction).mockResolvedValue([
+      {
+        ...mockTransfer,
+        fromAccount: {},
+        toAccount: {},
+        transferType: {},
+        feeExpense: null,
+        tags: [],
+      },
+      {},
+      {},
+    ] as any);
   });
 
   it('returns 401 when no session exists', async () => {
@@ -202,6 +192,74 @@ describe('POST /api/transfer-transactions', () => {
 
     expect(response.status).toBe(401);
     expect(data.error).toBe('Unauthorized');
+  });
+
+  it('returns 201 on success without fee', async () => {
+    const response = await POST(makePostRequest(validPostBody));
+
+    expect(response.status).toBe(201);
+  });
+
+  it('calls db.$transaction with an array (batch form, not async callback)', async () => {
+    await POST(makePostRequest(validPostBody));
+
+    const callArg = vi.mocked(db.$transaction).mock.calls[0][0];
+    expect(Array.isArray(callArg)).toBe(true);
+  });
+
+  it('batch without fee contains 3 operations [create, fromUpdate, toUpdate]', async () => {
+    await POST(makePostRequest(validPostBody));
+
+    const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    expect(callArg).toHaveLength(3);
+  });
+
+  it('batch WITH fee contains 5 operations [feeCreate, feeAccUpdate, transferCreate, fromUpdate, toUpdate]', async () => {
+    vi.mocked(db.expenseType.findFirst).mockResolvedValue({ id: 'fee-type-1', name: 'Transfer fee' } as any);
+    vi.mocked(db.financialAccount.findUnique).mockResolvedValue({ name: 'Checking' } as any);
+
+    const feeTransfer = {
+      ...mockTransfer,
+      feeAmount: 25,
+      feeExpenseId: 'fee-exp-1',
+      fromAccount: {},
+      toAccount: {},
+      transferType: {},
+      feeExpense: { id: 'fee-exp-1', amount: 25 },
+      tags: [],
+    };
+    vi.mocked(db.$transaction).mockResolvedValue([{}, {}, feeTransfer, {}, {}] as any);
+
+    await POST(makePostRequest({ ...validPostBody, feeAmount: '25' }));
+
+    const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    expect(callArg).toHaveLength(5);
+  });
+
+  it('creates "Transfer fee" expense type when it does not exist (Pattern D pre-lookup)', async () => {
+    vi.mocked(db.expenseType.findFirst).mockResolvedValue(null);
+    vi.mocked(db.expenseType.create).mockResolvedValue({ id: 'new-fee-type', name: 'Transfer fee' } as any);
+    vi.mocked(db.financialAccount.findUnique).mockResolvedValue({ name: 'Checking' } as any);
+
+    const feeTransfer = {
+      ...mockTransfer,
+      feeAmount: 10,
+      feeExpenseId: 'fee-exp-1',
+      fromAccount: {},
+      toAccount: {},
+      transferType: {},
+      feeExpense: {},
+      tags: [],
+    };
+    vi.mocked(db.$transaction).mockResolvedValue([{}, {}, feeTransfer, {}, {}] as any);
+
+    await POST(makePostRequest({ ...validPostBody, feeAmount: '10' }));
+
+    expect(db.expenseType.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ name: 'Transfer fee' }),
+      })
+    );
   });
 
   it('returns 400 when name is empty', async () => {
@@ -313,7 +371,7 @@ describe('POST /api/transfer-transactions', () => {
     expect(data.error).toBe('Validation failed');
   });
 
-  it('returns 500 when database $transaction throws', async () => {
+  it('returns 500 when db.$transaction rejects (atomicity)', async () => {
     vi.mocked(db.$transaction).mockRejectedValue(new Error('DB error'));
 
     const response = await POST(makePostRequest(validPostBody));

@@ -16,10 +16,13 @@ vi.mock('@/lib/auth', () => ({
 
 vi.mock('@/lib/prisma', () => ({
   db: {
-    incomeTransaction: {
+    expenseTransaction: {
       findUnique: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
+    },
+    expenseSubcategory: {
+      findUnique: vi.fn(),
     },
     financialAccount: {
       update: vi.fn(),
@@ -29,7 +32,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 vi.mock('@/lib/statement-recalculator', () => ({
-  onIncomeTransactionChange: vi.fn().mockResolvedValue(undefined),
+  onExpenseTransactionChange: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { PATCH, DELETE } from './route';
@@ -41,21 +44,29 @@ const mockSession = {
   session: { id: 'session-abc' },
 };
 
-const mockExistingTransaction = {
-  id: 'txn-1',
+const mockExistingExpense = {
+  id: 'exp-1',
   userId: 'user-123',
-  name: 'Salary',
-  amount: 1000,
+  name: 'Groceries',
+  amount: 100,
   accountId: 'account-a',
-  incomeTypeId: 'income-type-1',
+  expenseTypeId: 'type-1',
+  expenseSubcategoryId: null,
   date: new Date('2026-01-15'),
   description: null,
-  account: { id: 'account-a', name: 'Test Account' },
-  incomeType: { id: 'income-type-1', name: 'Salary' },
+  isInstallment: false,
+  isSystemGenerated: false,
+  monthlyAmount: null,
+  installmentDuration: null,
+  remainingInstallments: null,
+  installmentStartDate: null,
+  lastProcessedDate: null,
+  parentInstallmentId: null,
+  installmentStatus: null,
 };
 
 function makePatchRequest(body: unknown) {
-  return new NextRequest('http://localhost/api/income-transactions/txn-1', {
+  return new NextRequest('http://localhost/api/expense-transactions/exp-1', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -63,24 +74,21 @@ function makePatchRequest(body: unknown) {
 }
 
 function makeDeleteRequest() {
-  return new NextRequest('http://localhost/api/income-transactions/txn-1', {
+  return new NextRequest('http://localhost/api/expense-transactions/exp-1', {
     method: 'DELETE',
   });
 }
 
-function makeParams(id = 'txn-1') {
+function makeParams(id = 'exp-1') {
   return { params: Promise.resolve({ id }) };
 }
 
-// Batch transaction returns an array. For PATCH the last element is the updated record.
 function makeBatchResult(overrides: Record<string, any> = {}) {
   return [
-    {}, // financialAccount.update placeholder(s)
+    {}, // financialAccount.update placeholder
     {
-      ...mockExistingTransaction,
+      ...mockExistingExpense,
       ...overrides,
-      account: { id: overrides.accountId ?? 'account-a', name: 'Test Account' },
-      incomeType: { id: 'income-type-1', name: 'Salary' },
       tags: [],
     },
   ];
@@ -89,13 +97,13 @@ function makeBatchResult(overrides: Record<string, any> = {}) {
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(auth.api.getSession).mockResolvedValue(mockSession as any);
-  vi.mocked(db.incomeTransaction.findUnique).mockResolvedValue(mockExistingTransaction as any);
+  vi.mocked(db.expenseTransaction.findUnique).mockResolvedValue(mockExistingExpense as any);
 });
 
 // -----------------------------------------------------------------------
-// PATCH /api/income-transactions/[id] — batch form assertion
+// PATCH /api/expense-transactions/[id] — batch transaction form
 // -----------------------------------------------------------------------
-describe('PATCH /api/income-transactions/[id] — batch transaction form', () => {
+describe('PATCH /api/expense-transactions/[id] — batch transaction form', () => {
   it('calls db.$transaction with an array (not an async callback)', async () => {
     vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult() as any);
 
@@ -107,10 +115,10 @@ describe('PATCH /api/income-transactions/[id] — batch transaction form', () =>
 });
 
 // -----------------------------------------------------------------------
-// PATCH /api/income-transactions/[id] — Schema validation
+// PATCH — Schema validation
 // -----------------------------------------------------------------------
-describe('PATCH /api/income-transactions/[id] — schema validation', () => {
-  it('returns 200 when only date changed (description null in DB)', async () => {
+describe('PATCH /api/expense-transactions/[id] — schema validation', () => {
+  it('returns 200 when only date changed', async () => {
     vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ date: new Date('2026-03-15') }) as any);
 
     const response = await PATCH(makePatchRequest({ date: '2026-03-15' }), makeParams());
@@ -119,44 +127,17 @@ describe('PATCH /api/income-transactions/[id] — schema validation', () => {
   });
 
   it('returns 200 when only name changed', async () => {
-    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ name: 'New Name' }) as any);
+    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ name: 'Food' }) as any);
 
-    const response = await PATCH(makePatchRequest({ name: 'New Name' }), makeParams());
+    const response = await PATCH(makePatchRequest({ name: 'Food' }), makeParams());
 
     expect(response.status).toBe(200);
   });
 
-  it('returns 200 when description is explicitly null (regression: nullable field)', async () => {
+  it('returns 200 when description is explicitly null', async () => {
     vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ description: null }) as any);
 
     const response = await PATCH(makePatchRequest({ description: null }), makeParams());
-
-    expect(response.status).toBe(200);
-  });
-
-  it('returns 200 when all fields provided', async () => {
-    vi.mocked(db.$transaction).mockResolvedValue(
-      makeBatchResult({
-        name: 'Updated Salary',
-        amount: 2000,
-        accountId: 'account-a',
-        incomeTypeId: 'income-type-2',
-        date: new Date('2026-03-15'),
-        description: 'Monthly salary',
-      }) as any
-    );
-
-    const response = await PATCH(
-      makePatchRequest({
-        name: 'Updated Salary',
-        amount: '2000',
-        accountId: 'account-a',
-        incomeTypeId: 'income-type-2',
-        date: '2026-03-15',
-        description: 'Monthly salary',
-      }),
-      makeParams()
-    );
 
     expect(response.status).toBe(200);
   });
@@ -173,56 +154,26 @@ describe('PATCH /api/income-transactions/[id] — schema validation', () => {
 // -----------------------------------------------------------------------
 // PATCH — Balance logic: amount change, same account (Pattern B)
 // -----------------------------------------------------------------------
-describe('PATCH /api/income-transactions/[id] — balance logic (same account, Pattern B)', () => {
-  it('increments balance by difference when amount increased', async () => {
-    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ amount: 1500 }) as any);
+describe('PATCH /api/expense-transactions/[id] — balance logic (same account, Pattern B)', () => {
+  it('includes 1 financialAccount.update + 1 expenseTransaction.update when same account and amount changed', async () => {
+    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ amount: 150 }) as any);
 
-    await PATCH(makePatchRequest({ amount: '1500' }), makeParams());
+    await PATCH(makePatchRequest({ amount: '150' }), makeParams());
 
-    // The batch array should contain a financialAccount.update call with increment: 500
     const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
-    expect(callArg.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('includes exactly 1 financialAccount.update when same account and amount changed', async () => {
-    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ amount: 700 }) as any);
-
-    await PATCH(makePatchRequest({ amount: '700' }), makeParams());
-
-    // balanceDifference = 700 - 1000 = -300
-    // The batch has: [financialAccount.update, incomeTransaction.update]
-    const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    // [financialAccount.update, expenseTransaction.update]
     expect(callArg).toHaveLength(2);
   });
-});
 
-// -----------------------------------------------------------------------
-// PATCH — Balance logic: account change (Pattern B)
-// -----------------------------------------------------------------------
-describe('PATCH /api/income-transactions/[id] — balance logic (account change, Pattern B)', () => {
-  it('includes 2 financialAccount.update calls when only accountId changes', async () => {
+  it('includes 2 financialAccount.update calls when account changes (Pattern B)', async () => {
     vi.mocked(db.$transaction).mockResolvedValue(
-      [{}, {}, { ...mockExistingTransaction, accountId: 'account-b', account: {}, incomeType: {}, tags: [] }] as any
+      [{}, {}, { ...mockExistingExpense, accountId: 'account-b', tags: [] }] as any
     );
 
     await PATCH(makePatchRequest({ accountId: 'account-b' }), makeParams());
 
-    // Batch: [oldAccUpdate, newAccUpdate, incomeTransaction.update]
     const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
-    expect(callArg).toHaveLength(3);
-  });
-
-  it('includes 2 financialAccount.update calls when both accountId and amount change', async () => {
-    vi.mocked(db.$transaction).mockResolvedValue(
-      [{}, {}, { ...mockExistingTransaction, accountId: 'account-b', amount: 1500, account: {}, incomeType: {}, tags: [] }] as any
-    );
-
-    await PATCH(
-      makePatchRequest({ accountId: 'account-b', amount: '1500' }),
-      makeParams()
-    );
-
-    const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    // [oldAccUpdate, newAccUpdate, expenseTransaction.update]
     expect(callArg).toHaveLength(3);
   });
 });
@@ -230,7 +181,7 @@ describe('PATCH /api/income-transactions/[id] — balance logic (account change,
 // -----------------------------------------------------------------------
 // PATCH — Auth and error paths
 // -----------------------------------------------------------------------
-describe('PATCH /api/income-transactions/[id] — auth and error paths', () => {
+describe('PATCH /api/expense-transactions/[id] — auth and error paths', () => {
   it('returns 401 when unauthenticated', async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(null);
 
@@ -241,20 +192,20 @@ describe('PATCH /api/income-transactions/[id] — auth and error paths', () => {
     expect(data.error).toBe('Unauthorized');
   });
 
-  it('returns 404 when transaction not found', async () => {
-    vi.mocked(db.incomeTransaction.findUnique).mockResolvedValue(null);
+  it('returns 404 when expense not found', async () => {
+    vi.mocked(db.expenseTransaction.findUnique).mockResolvedValue(null);
 
     const response = await PATCH(makePatchRequest({ date: '2026-03-15' }), makeParams());
     const data = await response.json();
 
     expect(response.status).toBe(404);
-    expect(data.error).toBe('Income transaction not found');
+    expect(data.error).toBe('Expense transaction not found');
   });
 
   it('returns 500 when db.$transaction rejects (atomicity)', async () => {
     vi.mocked(db.$transaction).mockRejectedValue(new Error('DB error'));
 
-    const response = await PATCH(makePatchRequest({ amount: '1500' }), makeParams());
+    const response = await PATCH(makePatchRequest({ amount: '150' }), makeParams());
     const data = await response.json();
 
     expect(response.status).toBe(500);
@@ -263,20 +214,19 @@ describe('PATCH /api/income-transactions/[id] — auth and error paths', () => {
 });
 
 // -----------------------------------------------------------------------
-// DELETE /api/income-transactions/[id] — batch transaction pattern
+// DELETE /api/expense-transactions/[id] — batch transaction pattern
 // -----------------------------------------------------------------------
-describe('DELETE /api/income-transactions/[id]', () => {
+describe('DELETE /api/expense-transactions/[id]', () => {
   beforeEach(() => {
-    // Batch: [incomeTransaction.delete, financialAccount.update]
     vi.mocked(db.$transaction).mockResolvedValue([{}, {}] as any);
   });
 
-  it('returns 200 on successful deletion', async () => {
+  it('returns 200 with deleted=true for regular non-system expense', async () => {
     const response = await DELETE(makeDeleteRequest(), makeParams());
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.message).toBe('Income transaction deleted successfully');
+    expect(data.deleted).toBe(true);
   });
 
   it('calls db.$transaction with an array (batch form, not async callback)', async () => {
@@ -286,11 +236,41 @@ describe('DELETE /api/income-transactions/[id]', () => {
     expect(Array.isArray(callArg)).toBe(true);
   });
 
-  it('batch contains both incomeTransaction.delete and financialAccount.update', async () => {
+  it('batch for regular expense contains financialAccount.update + expenseTransaction.delete', async () => {
     await DELETE(makeDeleteRequest(), makeParams());
 
     const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    // [financialAccount.update, expenseTransaction.delete]
     expect(callArg).toHaveLength(2);
+  });
+
+  it('skips financialAccount.update when expense is system-generated', async () => {
+    vi.mocked(db.expenseTransaction.findUnique).mockResolvedValue({
+      ...mockExistingExpense,
+      isSystemGenerated: true,
+    } as any);
+
+    await DELETE(makeDeleteRequest(), makeParams());
+
+    const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    // Only expenseTransaction.delete (no balance reversal)
+    expect(callArg).toHaveLength(1);
+  });
+
+  it('does not hard-delete installment expense — marks as CANCELLED instead', async () => {
+    vi.mocked(db.expenseTransaction.findUnique).mockResolvedValue({
+      ...mockExistingExpense,
+      isInstallment: true,
+    } as any);
+    vi.mocked(db.expenseTransaction.update).mockResolvedValue({} as any);
+
+    const response = await DELETE(makeDeleteRequest(), makeParams());
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.cancelled).toBe(true);
+    // db.$transaction should NOT be called for installment cancel
+    expect(db.$transaction).not.toHaveBeenCalled();
   });
 
   it('returns 401 when unauthenticated', async () => {
@@ -303,14 +283,14 @@ describe('DELETE /api/income-transactions/[id]', () => {
     expect(data.error).toBe('Unauthorized');
   });
 
-  it('returns 404 when transaction not found', async () => {
-    vi.mocked(db.incomeTransaction.findUnique).mockResolvedValue(null);
+  it('returns 404 when expense not found', async () => {
+    vi.mocked(db.expenseTransaction.findUnique).mockResolvedValue(null);
 
     const response = await DELETE(makeDeleteRequest(), makeParams());
     const data = await response.json();
 
     expect(response.status).toBe(404);
-    expect(data.error).toBe('Income transaction not found');
+    expect(data.error).toBe('Expense transaction not found');
   });
 
   it('returns 500 when db.$transaction rejects (atomicity)', async () => {

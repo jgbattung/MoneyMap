@@ -165,21 +165,12 @@ describe('GET /api/expense-transactions', () => {
 });
 
 // -----------------------------------------------------------------------
-// POST /api/expense-transactions
+// POST /api/expense-transactions — batch transaction (Pattern C: pre-generated UUID)
 // -----------------------------------------------------------------------
 describe('POST /api/expense-transactions', () => {
   beforeEach(() => {
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any) => {
-      return fn({
-        expenseTransaction: {
-          create: vi.fn().mockResolvedValue(mockTransaction),
-          update: vi.fn().mockResolvedValue(mockTransaction),
-        },
-        financialAccount: {
-          update: vi.fn().mockResolvedValue({}),
-        },
-      });
-    });
+    // Batch transaction returns an array. results[0] is the created expense transaction.
+    vi.mocked(db.$transaction).mockResolvedValue([mockTransaction] as any);
   });
 
   it('returns 401 when no session exists', async () => {
@@ -190,6 +181,37 @@ describe('POST /api/expense-transactions', () => {
 
     expect(response.status).toBe(401);
     expect(data.error).toBe('Unauthorized');
+  });
+
+  it('returns 201 on success', async () => {
+    const response = await POST(makePostRequest(validPostBody));
+
+    expect(response.status).toBe(201);
+  });
+
+  it('calls db.$transaction with an array (batch form, not async callback)', async () => {
+    await POST(makePostRequest(validPostBody));
+
+    const callArg = vi.mocked(db.$transaction).mock.calls[0][0];
+    expect(Array.isArray(callArg)).toBe(true);
+  });
+
+  it('batch contains expenseTransaction.create + financialAccount.update for regular expense', async () => {
+    await POST(makePostRequest(validPostBody));
+
+    const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    // [expenseTransaction.create, financialAccount.update]
+    expect(callArg).toHaveLength(2);
+  });
+
+  it('batch contains only expenseTransaction.create when isSystemGenerated=true (no balance change)', async () => {
+    const body = { ...validPostBody, isSystemGenerated: true };
+    vi.mocked(db.$transaction).mockResolvedValue([mockTransaction] as any);
+
+    await POST(makePostRequest(body));
+
+    const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    expect(callArg).toHaveLength(1);
   });
 
   it('returns 400 when name is missing', async () => {
@@ -299,7 +321,7 @@ describe('POST /api/expense-transactions', () => {
     expect(data.error).toBe('Validation failed');
   });
 
-  it('returns 500 when database $transaction throws', async () => {
+  it('returns 500 when db.$transaction rejects (atomicity)', async () => {
     vi.mocked(db.$transaction).mockRejectedValue(new Error('DB error'));
 
     const response = await POST(makePostRequest(validPostBody));
