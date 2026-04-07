@@ -162,20 +162,16 @@ describe('GET /api/income-transactions', () => {
 });
 
 // -----------------------------------------------------------------------
-// POST /api/income-transactions
+// POST /api/income-transactions — batch transaction pattern
 // -----------------------------------------------------------------------
 describe('POST /api/income-transactions', () => {
   beforeEach(() => {
-    vi.mocked(db.$transaction).mockImplementation(async (fn: any) => {
-      return fn({
-        incomeTransaction: {
-          create: vi.fn().mockResolvedValue({ ...mockTransaction, account: {}, incomeType: {} }),
-        },
-        financialAccount: {
-          update: vi.fn().mockResolvedValue({}),
-        },
-      });
-    });
+    // Batch transaction: resolves with an array of results.
+    // Index 0 = financialAccount.update, index 1 = incomeTransaction.create
+    vi.mocked(db.$transaction).mockResolvedValue([
+      {},
+      { ...mockTransaction, account: {}, incomeType: {}, tags: [] },
+    ] as any);
   });
 
   it('returns 401 when no session exists', async () => {
@@ -186,6 +182,20 @@ describe('POST /api/income-transactions', () => {
 
     expect(response.status).toBe(401);
     expect(data.error).toBe('Unauthorized');
+  });
+
+  it('returns 201 with created transaction on success', async () => {
+    const response = await POST(makePostRequest(validPostBody));
+
+    expect(response.status).toBe(201);
+    expect(db.$transaction).toHaveBeenCalledWith(expect.any(Array));
+  });
+
+  it('calls db.$transaction with an array (batch form, not async callback)', async () => {
+    await POST(makePostRequest(validPostBody));
+
+    const callArg = vi.mocked(db.$transaction).mock.calls[0][0];
+    expect(Array.isArray(callArg)).toBe(true);
   });
 
   it('returns 400 when name is empty', async () => {
@@ -287,7 +297,7 @@ describe('POST /api/income-transactions', () => {
     expect(data.error).toBe('Validation failed');
   });
 
-  it('returns 500 when database $transaction throws', async () => {
+  it('returns 500 when db.$transaction rejects (atomicity: batch fails as a unit)', async () => {
     vi.mocked(db.$transaction).mockRejectedValue(new Error('DB error'));
 
     const response = await POST(makePostRequest(validPostBody));

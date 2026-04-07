@@ -147,56 +147,47 @@ export async function DELETE(
       );
     }
 
-    const result = await db.$transaction(async (tx) => {
-      // Find or created "Uncategorized type"
-      let uncategorizedType = await tx.incomeType.findFirst({
-        where: {
+    // Find or create "Uncategorized" before the transaction (idempotent)
+    let uncategorizedType = await db.incomeType.findFirst({
+      where: {
+        userId: session.user.id,
+        name: 'Uncategorized',
+      }
+    });
+
+    if (!uncategorizedType) {
+      uncategorizedType = await db.incomeType.create({
+        data: {
           userId: session.user.id,
-          name: 'Uncategorized',
+          name: "Uncategorized",
+          monthlyTarget: null,
         }
       });
+    }
 
-      if (!uncategorizedType) {
-        uncategorizedType = await tx.incomeType.create({
-          data: {
-            userId: session.user.id,
-            name: "Uncategorized",
-            monthlyTarget: null,
-          }
-        });
-      }
-
-      const transactionCount = await tx.incomeTransaction.count({
+    const results = await db.$transaction([
+      db.incomeTransaction.updateMany({
         where: {
           incomeTypeId: id,
+        },
+        data: {
+          incomeTypeId: uncategorizedType.id,
         }
-      });
-
-      if (transactionCount > 0) {
-        await tx.incomeTransaction.updateMany({
-          where: {
-            incomeTypeId: id,
-          },
-          data: {
-            incomeTypeId: uncategorizedType.id,
-          }
-        });
-      }
-
-      await tx.incomeType.delete({
+      }),
+      db.incomeType.delete({
         where: {
           id: id,
           userId: session.user.id,
         }
-      });
+      }),
+    ]);
 
-      return { transactionCount };
-    });
+    const reassignedCount = (results[0] as { count: number }).count;
 
     return NextResponse.json(
       {
         message: 'Income type deleted successfully',
-        reassignedCount: result.transactionCount,
+        reassignedCount,
       },
       { status: 200 }
     );

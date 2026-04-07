@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { ExpenseTypeValidation } from "@/lib/validations/expense";
+import { PrismaPromise } from "@prisma/client";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -87,9 +88,11 @@ export async function PATCH(
     const { name, monthlyBudget } = parseResult.data;
     const { subcategoryChanges } = body;
 
-    const result = await db.$transaction(async (tx) => {
-      // Update the expense type
-      await tx.expenseType.update({
+    const operations: PrismaPromise<unknown>[] = [];
+
+    // Update the expense type
+    operations.push(
+      db.expenseType.update({
         where: {
           id: id,
           userId: session.user.id,
@@ -98,27 +101,31 @@ export async function PATCH(
           name,
           monthlyBudget: monthlyBudget ? parseFloat(monthlyBudget) : null,
         }
-      });
+      })
+    );
 
-      // Handle subcategory changes if provided
-      if (subcategoryChanges) {
-        const { toCreate, toUpdate, toDelete } = subcategoryChanges;
+    // Handle subcategory changes if provided
+    if (subcategoryChanges) {
+      const { toCreate, toUpdate, toDelete } = subcategoryChanges;
 
-        // Create new subcategories
-        if (toCreate && Array.isArray(toCreate) && toCreate.length > 0) {
-          await tx.expenseSubcategory.createMany({
+      // Create new subcategories
+      if (toCreate && Array.isArray(toCreate) && toCreate.length > 0) {
+        operations.push(
+          db.expenseSubcategory.createMany({
             data: toCreate.map((sub: { name: string }) => ({
               userId: session.user.id,
               expenseTypeId: id,
               name: sub.name,
             }))
-          });
-        }
+          })
+        );
+      }
 
-        // Update existing subcategories
-        if (toUpdate && Array.isArray(toUpdate) && toUpdate.length > 0) {
-          for (const sub of toUpdate) {
-            await tx.expenseSubcategory.update({
+      // Update existing subcategories
+      if (toUpdate && Array.isArray(toUpdate) && toUpdate.length > 0) {
+        for (const sub of toUpdate) {
+          operations.push(
+            db.expenseSubcategory.update({
               where: {
                 id: sub.id,
                 userId: session.user.id,
@@ -126,32 +133,35 @@ export async function PATCH(
               data: {
                 name: sub.name,
               }
-            });
-          }
+            })
+          );
         }
+      }
 
-        if (toDelete && Array.isArray(toDelete) && toDelete.length > 0) {
-          await tx.expenseSubcategory.deleteMany({
+      if (toDelete && Array.isArray(toDelete) && toDelete.length > 0) {
+        operations.push(
+          db.expenseSubcategory.deleteMany({
             where: {
               id: { in: toDelete },
               userId: session.user.id,
             }
-          });
-        }
+          })
+        );
       }
+    }
 
-      const expenseTypeWithSubcategories = await tx.expenseType.findUnique({
-        where: { id: id },
-        include: {
-          subcategories: {
-            orderBy: {
-              name: 'asc'
-            }
+    await db.$transaction(operations);
+
+    // Re-read outside the transaction
+    const result = await db.expenseType.findUnique({
+      where: { id: id },
+      include: {
+        subcategories: {
+          orderBy: {
+            name: 'asc'
           }
         }
-      });
-
-      return expenseTypeWithSubcategories;
+      }
     });
 
     return NextResponse.json(result, { status: 200 });
@@ -212,55 +222,47 @@ export async function DELETE(
       );
     }
 
-    const result = await db.$transaction(async (tx) => {
-      let uncategorizedType = await tx.expenseType.findFirst({
-        where: {
+    // Find or create "Uncategorized" before the transaction (idempotent)
+    let uncategorizedType = await db.expenseType.findFirst({
+      where: {
+        userId: session.user.id,
+        name: 'Uncategorized',
+      }
+    });
+
+    if (!uncategorizedType) {
+      uncategorizedType = await db.expenseType.create({
+        data: {
           userId: session.user.id,
-          name: 'Uncategorized',
+          name: "Uncategorized",
+          monthlyBudget: null,
         }
       });
+    }
 
-      if (!uncategorizedType) {
-        uncategorizedType = await tx.expenseType.create({
-          data: {
-            userId: session.user.id,
-            name: "Uncategorized",
-            monthlyBudget: null,
-          }
-        });
-      }
-
-      const transactionCount = await tx.expenseTransaction.count({
+    const results = await db.$transaction([
+      db.expenseTransaction.updateMany({
         where: {
           expenseTypeId: id,
+        },
+        data: {
+          expenseTypeId: uncategorizedType.id,
         }
-      });
-
-      if (transactionCount > 0) {
-        await tx.expenseTransaction.updateMany({
-          where: {
-            expenseTypeId: id,
-          },
-          data: {
-            expenseTypeId: uncategorizedType.id,
-          }
-        });
-      }
-
-      await tx.expenseType.delete({
+      }),
+      db.expenseType.delete({
         where: {
           id: id,
           userId: session.user.id,
         }
-      });
+      }),
+    ]);
 
-      return { transactionCount };
-    })
+    const reassignedCount = (results[0] as { count: number }).count;
 
     return NextResponse.json(
       {
         message: 'Budget deleted successfully',
-        reassignedCount: result.transactionCount,
+        reassignedCount,
       },
       { status: 200 }
     );
