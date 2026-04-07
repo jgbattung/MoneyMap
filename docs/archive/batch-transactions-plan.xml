@@ -1,0 +1,299 @@
+<plan>
+  <feature>Batch Transactions Refactor</feature>
+  <spec>docs/batch-transactions-spec.md</spec>
+  <description>
+    Convert all 15 Prisma interactive transactions to batch transactions
+    for PgBouncer compatibility on Vercel + Supabase.
+  </description>
+
+  <!-- Phase 1: Simple sequential transactions (Pattern A) -->
+  <phase>
+    <name>Simple Sequential Transactions</name>
+
+    <task>
+      <name>Convert income POST to batch transaction</name>
+      <action>
+        In `src/app/api/income-transactions/route.ts`, refactor the POST handler (line 188).
+        - Import `PrismaPromise` from `@prisma/client`.
+        - Replace `db.$transaction(async (tx) => {...})` with `db.$transaction([...])`.
+        - The transaction creates an income transaction and increments account balance.
+        - Since the income transaction create includes `include: { account, incomeType, tags }` for the response, and batch results are indexed by position: put the create as the last operation, extract it from results via `results[results.length - 1]`.
+        - All `tx.` references become `db.`.
+      </action>
+      <verify>Run `npm run lint` and `npm run build`. Confirm no `async (tx)` pattern remains in this file's POST handler.</verify>
+    </task>
+
+    <task>
+      <name>Convert income DELETE to batch transaction</name>
+      <action>
+        In `src/app/api/income-transactions/[id]/route.ts`, refactor the DELETE handler (line 271).
+        - Import `PrismaPromise` from `@prisma/client` if not already imported.
+        - Replace the interactive transaction with a batch: `db.$transaction([db.incomeTransaction.delete(...), db.financialAccount.update(...)])`.
+        - All `tx.` references become `db.`.
+        - The delete result is not used (response is a success message), so no need to extract from results.
+      </action>
+      <verify>Run `npm run lint` and `npm run build`. Confirm no `async (tx)` pattern remains in this file's DELETE handler.</verify>
+    </task>
+
+    <task>
+      <name>Convert expense DELETE to batch transaction</name>
+      <action>
+        In `src/app/api/expense-transactions/[id]/route.ts`, refactor the DELETE handler (line 357).
+        - Import `PrismaPromise` from `@prisma/client` if not already imported.
+        - Build the operations array conditionally BEFORE calling `$transaction`:
+          - If `!existingExpense.isSystemGenerated`, push the balance increment operation.
+          - Always push the delete operation.
+        - Replace with `db.$transaction(operations)`.
+        - All `tx.` references become `db.`.
+      </action>
+      <verify>Run `npm run lint` and `npm run build`. Confirm no `async (tx)` pattern remains in this file's DELETE handler.</verify>
+    </task>
+
+    <task>
+      <name>Convert transfer DELETE to batch transaction</name>
+      <action>
+        In `src/app/api/transfer-transactions/[id]/route.ts`, refactor the DELETE handler (line 373).
+        - Import `PrismaPromise` from `@prisma/client` if not already imported.
+        - Build the operations array conditionally BEFORE calling `$transaction`:
+          - Always push: fromAccount increment (reverse), toAccount decrement (reverse).
+          - If `existingTransfer.feeAmount` and `existingTransfer.feeExpenseId`: push fromAccount fee increment and feeExpense delete.
+          - Always push: transfer delete.
+        - Replace with `db.$transaction(operations)`.
+        - All `tx.` references become `db.`.
+      </action>
+      <verify>Run `npm run lint` and `npm run build`. Confirm no `async (tx)` pattern remains in this file's DELETE handler.</verify>
+    </task>
+
+    <task>
+      <name>Convert cron process-installments to batch transaction</name>
+      <action>
+        In `src/app/api/cron/process-installments/route.ts`, refactor the transaction inside the for loop (line 64).
+        - Import `PrismaPromise` from `@prisma/client`.
+        - Replace `db.$transaction(async (tx) => {...})` with a batch of 3 operations:
+          1. `db.financialAccount.update(...)` -- decrement monthly amount
+          2. `db.expenseTransaction.update(...)` -- update master installment record
+          3. `db.expenseTransaction.create(...)` -- create payment record
+        - All `tx.` references become `db.`.
+        - The `paidCount` calculation stays outside (it uses data from the `installment` variable, not from within the transaction).
+      </action>
+      <verify>Run `npm run lint` and `npm run build`. Confirm no `async (tx)` pattern remains in this file.</verify>
+    </task>
+  </phase>
+
+  <!-- Phase 2: Conditional branching transactions (Pattern B) -->
+  <phase>
+    <name>Conditional Branching Transactions</name>
+
+    <task>
+      <name>Convert income PATCH to batch transaction</name>
+      <action>
+        In `src/app/api/income-transactions/[id]/route.ts`, refactor the PATCH handler (line 117).
+        - Move ALL the `updateData` building and conditional balance logic OUTSIDE the `$transaction` callback.
+        - Build a `PrismaPromise[]` operations array based on the resolved conditions:
+          - If amount changed + account changed: push 2 balance updates (reverse old, apply new).
+          - If amount changed + same account: push 1 balance update (apply diff).
+          - If account changed + amount unchanged: push 2 balance updates (move amount).
+        - Push the `incomeTransaction.update` as the last operation (with `include` for the response).
+        - Call `db.$transaction(operations)` and extract the last result as `updatedTransaction`.
+        - All `tx.` references become `db.`.
+      </action>
+      <verify>Run `npm run lint` and `npm run build`. Confirm no `async (tx)` pattern remains in this file's PATCH handler.</verify>
+    </task>
+
+    <task>
+      <name>Convert expense PATCH to batch transaction</name>
+      <action>
+        In `src/app/api/expense-transactions/[id]/route.ts`, refactor the PATCH handler (line 161).
+        - Same approach as income PATCH but with installment-aware amount logic.
+        - Move ALL the `updateData` building and conditional balance logic OUTSIDE the `$transaction` callback.
+        - Build a `PrismaPromise[]` operations array based on resolved conditions.
+        - The installment amount calculations (`monthlyAmount`, `balanceDifference`) use only input data and `existingExpense` -- they do not depend on transaction results, so they can stay outside.
+        - Push the `expenseTransaction.update` (with `include: { tags: true }`) as the last operation.
+        - Call `db.$transaction(operations)` and extract the last result.
+        - All `tx.` references become `db.`.
+      </action>
+      <verify>Run `npm run lint` and `npm run build`. Confirm no `async (tx)` pattern remains in this file's PATCH handler.</verify>
+    </task>
+  </phase>
+
+  <!-- Phase 3: Inter-create dependency transactions (Pattern C) -->
+  <phase>
+    <name>Inter-Create Dependency Transactions</name>
+
+    <task>
+      <name>Convert expense POST to batch transaction</name>
+      <action>
+        In `src/app/api/expense-transactions/route.ts`, refactor the POST handler (line 256).
+        - Import `randomUUID` from `crypto` and `PrismaPromise` from `@prisma/client`.
+        - Pre-generate the expense transaction ID: `const expenseTransactionId = randomUUID()`.
+        - Move all amount calculations outside.
+        - Build the operations array:
+          1. `db.expenseTransaction.create({ data: { id: expenseTransactionId, ... } })` -- main record.
+          2. Conditionally (if not system-generated):
+             - If NOT installment: push `db.financialAccount.update(...)` to decrement.
+             - If installment AND startDate <= today: push balance decrement, push `db.expenseTransaction.update({ where: { id: expenseTransactionId }, ... })` to update remaining installments, push `db.expenseTransaction.create(...)` for the payment record (using `parentInstallmentId: expenseTransactionId`).
+        - Call `db.$transaction(operations)`.
+        - Extract the first result (the created expense transaction) for the response.
+        - All `tx.` references become `db.`.
+      </action>
+      <verify>Run `npm run lint` and `npm run build`. Confirm no `async (tx)` pattern remains in this file's POST handler.</verify>
+    </task>
+
+    <task>
+      <name>Convert transfer POST to batch transaction</name>
+      <action>
+        In `src/app/api/transfer-transactions/route.ts`, refactor the POST handler (line 209).
+        - Import `randomUUID` from `crypto` and `PrismaPromise` from `@prisma/client`.
+        - Move the fee type lookup (`findFirst` for "Transfer fee") and account name lookup BEFORE the transaction.
+        - If a fee is needed and no "Transfer fee" type exists, create it BEFORE the transaction (it is idempotent/system-level).
+        - Pre-generate IDs if needed: `const feeExpenseId = randomUUID()` (only if fee is present).
+        - Build the operations array:
+          1. If fee: push `db.expenseTransaction.create({ data: { id: feeExpenseId, ... } })` and `db.financialAccount.update(...)` for fee deduction.
+          2. Push `db.transferTransaction.create(...)` with `feeExpenseId` (or null).
+          3. Push `db.financialAccount.update(...)` for from-account decrement.
+          4. Push `db.financialAccount.update(...)` for to-account increment.
+        - Call `db.$transaction(operations)`.
+        - Remove `{ timeout: 10000 }` option (not applicable to batch).
+        - Extract the transfer create result (track its index in the array) for the response.
+        - All `tx.` references become `db.`.
+      </action>
+      <verify>Run `npm run lint` and `npm run build`. Confirm no `async (tx)` pattern remains in this file's POST handler.</verify>
+    </task>
+
+    <task>
+      <name>Convert expense types POST to batch transaction</name>
+      <action>
+        In `src/app/api/expense-types/route.ts`, refactor the POST handler (line 93).
+        - Import `randomUUID` from `crypto` and `PrismaPromise` from `@prisma/client`.
+        - Pre-generate the expense type ID: `const expenseTypeId = randomUUID()`.
+        - Build the operations array:
+          1. Push `db.expenseType.create({ data: { id: expenseTypeId, ... } })`.
+          2. If subcategories exist: push `db.expenseSubcategory.createMany({ data: subcategories.map(sub => ({ userId, expenseTypeId, name: sub.name })) })`.
+        - Call `db.$transaction(operations)`.
+        - After the transaction, re-read the expense type with subcategories: `const result = await db.expenseType.findUnique({ where: { id: expenseTypeId }, include: { subcategories: { orderBy: { name: 'asc' } } } })`.
+        - All `tx.` references become `db.`.
+      </action>
+      <verify>Run `npm run lint` and `npm run build`. Confirm no `async (tx)` pattern remains in this file's POST handler.</verify>
+    </task>
+  </phase>
+
+  <!-- Phase 4: Find-or-create and complex CRUD transactions (Patterns D, E) -->
+  <phase>
+    <name>Find-or-Create and Complex CRUD Transactions</name>
+
+    <task>
+      <name>Convert expense types PATCH to batch transaction</name>
+      <action>
+        In `src/app/api/expense-types/[id]/route.ts`, refactor the PATCH handler (line 90).
+        - Import `PrismaPromise` from `@prisma/client`.
+        - Build the operations array dynamically:
+          1. Push `db.expenseType.update(...)` for the type itself.
+          2. If `subcategoryChanges.toCreate` has items: push `db.expenseSubcategory.createMany(...)`.
+          3. If `subcategoryChanges.toUpdate` has items: push one `db.expenseSubcategory.update(...)` per item.
+          4. If `subcategoryChanges.toDelete` has items: push `db.expenseSubcategory.deleteMany(...)`.
+        - Call `db.$transaction(operations)`.
+        - After the transaction, re-read: `const result = await db.expenseType.findUnique({ where: { id }, include: { subcategories: { orderBy: { name: 'asc' } } } })`.
+        - All `tx.` references become `db.`.
+      </action>
+      <verify>Run `npm run lint` and `npm run build`. Confirm no `async (tx)` pattern remains in this file's PATCH handler.</verify>
+    </task>
+
+    <task>
+      <name>Convert expense types DELETE to batch transaction</name>
+      <action>
+        In `src/app/api/expense-types/[id]/route.ts`, refactor the DELETE handler (line 215).
+        - Move the find-or-create "Uncategorized" logic BEFORE the transaction:
+          ```
+          let uncategorizedType = await db.expenseType.findFirst({ where: { userId, name: 'Uncategorized' } });
+          if (!uncategorizedType) {
+            uncategorizedType = await db.expenseType.create({ data: { userId, name: 'Uncategorized', monthlyBudget: null } });
+          }
+          ```
+        - Remove the unnecessary `count` check -- `updateMany` on zero rows is a no-op.
+        - Build the batch: `db.$transaction([db.expenseTransaction.updateMany(...), db.expenseType.delete(...)])`.
+        - All `tx.` references become `db.`.
+        - The response still returns `reassignedCount`. To get this, either: (a) do a count query before the transaction (outside), or (b) extract the `updateMany` result from the batch results (it returns `{ count: number }`). Option (b) is preferred.
+      </action>
+      <verify>Run `npm run lint` and `npm run build`. Confirm no `async (tx)` pattern remains in this file's DELETE handler.</verify>
+    </task>
+
+    <task>
+      <name>Convert transfer types DELETE to batch transaction</name>
+      <action>
+        In `src/app/api/transfer-types/[id]/route.ts`, refactor the DELETE handler (line 150).
+        - Import `PrismaPromise` from `@prisma/client`.
+        - Same pattern as expense types DELETE:
+          - Move find-or-create "Uncategorized" transfer type BEFORE the transaction.
+          - Remove the unnecessary `count` check.
+          - Build batch: `db.$transaction([db.transferTransaction.updateMany(...), db.transferType.delete(...)])`.
+        - Extract `updateMany` result from batch results for `reassignedCount`.
+        - All `tx.` references become `db.`.
+      </action>
+      <verify>Run `npm run lint` and `npm run build`. Confirm no `async (tx)` pattern remains in this file's DELETE handler.</verify>
+    </task>
+
+    <task>
+      <name>Convert income types DELETE to batch transaction</name>
+      <action>
+        In `src/app/api/income-types/[id]/route.ts`, refactor the DELETE handler (line 150).
+        - Import `PrismaPromise` from `@prisma/client`.
+        - Same pattern as expense types DELETE and transfer types DELETE:
+          - Move find-or-create "Uncategorized" income type BEFORE the transaction.
+          - Remove the unnecessary `count` check.
+          - Build batch: `db.$transaction([db.incomeTransaction.updateMany(...), db.incomeType.delete(...)])`.
+        - Extract `updateMany` result from batch results for `reassignedCount`.
+        - All `tx.` references become `db.`.
+      </action>
+      <verify>Run `npm run lint` and `npm run build`. Confirm no `async (tx)` pattern remains in this file's DELETE handler.</verify>
+    </task>
+  </phase>
+
+  <!-- Phase 5: Most complex transaction -->
+  <phase>
+    <name>Complex Transfer PATCH Transaction</name>
+
+    <task>
+      <name>Convert transfer PATCH to batch transaction</name>
+      <action>
+        In `src/app/api/transfer-transactions/[id]/route.ts`, refactor the PATCH handler (line 138).
+        This is the most complex transaction with fee management and account balance adjustments.
+
+        - Import `randomUUID` from `crypto` and `PrismaPromise` from `@prisma/client`.
+        - Move ALL lookups that were inside the transaction to BEFORE it:
+          - The `findFirst` for "Transfer fee" expense type.
+          - The `findUnique` for account name (used in fee expense description).
+          - If no "Transfer fee" type exists and one is needed, create it before the transaction.
+        - Resolve ALL conditions before building the operations array:
+          - Determine `effectiveFromAccountId`, `effectiveToAccountId`, amounts, fee changes.
+          - Determine which fee scenario applies: fee added, fee removed, fee updated, or no fee change.
+          - Determine whether accounts changed or just amount changed.
+        - Build the `PrismaPromise[]` operations array based on resolved conditions:
+          - Fee operations (create/delete/update fee expense + related balance adjustments).
+          - Account balance operations (reverse old + apply new, or apply diff).
+          - The transfer update itself (last operation, with `include` for the response).
+        - For "fee added" scenario: pre-generate fee expense ID with `randomUUID()` so the transfer update can reference `feeExpenseId`.
+        - Call `db.$transaction(operations)`.
+        - Remove `{ timeout: 10000 }` option (not applicable to batch).
+        - Extract the last result (the transfer update) for the response.
+        - All `tx.` references become `db.`.
+      </action>
+      <verify>Run `npm run lint` and `npm run build`. Confirm no `async (tx)` pattern remains in this file's PATCH handler. Grep the entire `src/app/api/` directory for `async (tx)` to confirm zero interactive transactions remain in the codebase.</verify>
+    </task>
+  </phase>
+
+  <!-- Phase 6: Final verification -->
+  <phase>
+    <name>Final Verification</name>
+
+    <task>
+      <name>Codebase-wide verification</name>
+      <action>
+        - Run a grep across `src/app/api/` for `$transaction(async` to confirm zero interactive transactions remain.
+        - Run `npm run lint` for the full project.
+        - Run `npm run build` for the full project.
+        - Generate `docs/batch-transactions-verification.md` documenting all conversions and test results.
+      </action>
+      <verify>Grep returns zero results. Lint passes. Build passes.</verify>
+    </task>
+  </phase>
+</plan>
