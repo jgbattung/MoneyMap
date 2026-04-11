@@ -14,8 +14,8 @@ export async function middleware(request: NextRequest) {
 
 	const { pathname } = request.nextUrl;
 
-	// If user has session and tries to access auth pages, redirect to dashboard
-	if (session && (pathname === '/sign-in' || pathname === '/sign-up')) {
+	// If user has session and is on root or auth pages, redirect to dashboard
+	if (session && (pathname === '/' || pathname === '/sign-in' || pathname === '/sign-up')) {
 		return NextResponse.redirect(new URL("/dashboard", request.url));
 	}
  
