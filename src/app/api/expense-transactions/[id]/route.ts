@@ -349,20 +349,9 @@ export async function DELETE(
     }
 
     if (existingExpense.isInstallment) {
-      // Mark as CANCELLED for master installment expense transaction
-      await db.expenseTransaction.update({
-        where: {
-          id: id,
-          userId: session.user.id,
-        },
-        data: {
-          installmentStatus: INSTALLMENT_STATUS.cancelled,
-        },
-      });
-
       return NextResponse.json(
-        { message: 'Installment cancelled successfully', cancelled: true },
-        { status: 200 }
+        { error: 'Use DELETE /api/installments/[id] to delete an installment' },
+        { status: 400 }
       );
     }
 
