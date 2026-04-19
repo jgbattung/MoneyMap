@@ -257,19 +257,17 @@ describe('DELETE /api/expense-transactions/[id]', () => {
     expect(callArg).toHaveLength(1);
   });
 
-  it('does not hard-delete installment expense — marks as CANCELLED instead', async () => {
+  it('rejects parent installment delete with 400', async () => {
     vi.mocked(db.expenseTransaction.findUnique).mockResolvedValue({
       ...mockExistingExpense,
       isInstallment: true,
     } as any);
-    vi.mocked(db.expenseTransaction.update).mockResolvedValue({} as any);
 
     const response = await DELETE(makeDeleteRequest(), makeParams());
     const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data.cancelled).toBe(true);
-    // db.$transaction should NOT be called for installment cancel
+    expect(response.status).toBe(400);
+    expect(data.error).toMatch(/Use DELETE \/api\/installments/);
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
