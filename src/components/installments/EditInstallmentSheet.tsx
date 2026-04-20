@@ -10,7 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from '../ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { toast } from 'sonner'
-import SkeletonEditAccountSheetForm from '../shared/SkeletonEditAccountSheetForm'
+import SkeletonEditInstallmentSheetForm from '../shared/SkeletonEditInstallmentSheetForm'
 import { Separator } from '../ui/separator'
 import DeleteDialog from '../shared/DeleteDialog'
 import { useInstallmentQuery, useInstallmentsQuery } from '@/hooks/useInstallmentsQuery'
@@ -117,7 +117,7 @@ const EditInstallmentSheet = ({ open, onOpenChange, className, installmentId }: 
           className={`${className ?? ''} w-[600px] sm:max-w-[600px] py-3 px-2`}
         >
           {isFetching ? (
-            <SkeletonEditAccountSheetForm />
+            <SkeletonEditInstallmentSheetForm />
           ) : error ? (
             <>
               <SheetHeader className="text-center">

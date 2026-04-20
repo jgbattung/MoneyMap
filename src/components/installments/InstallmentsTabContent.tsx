@@ -18,15 +18,21 @@ import InstallmentTable from '@/components/installments/InstallmentTable';
 const InstallmentsTabContent = () => {
   const [showCompleted, setShowCompleted] = useState(false);
   const [selectedInstallmentId, setSelectedInstallmentId] = useState('');
-  const [editOpen, setEditOpen] = useState(false);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
 
   const { installments, isLoading, error } = useInstallmentsQuery({
     status: showCompleted ? 'ALL' : 'ACTIVE',
   });
 
-  const handleEdit = (id: string) => {
+  const handleEditSheet = (id: string) => {
     setSelectedInstallmentId(id);
-    setEditOpen(true);
+    setEditSheetOpen(true);
+  };
+
+  const handleEditDrawer = (id: string) => {
+    setSelectedInstallmentId(id);
+    setEditDrawerOpen(true);
   };
 
   return (
@@ -78,33 +84,29 @@ const InstallmentsTabContent = () => {
               <InstallmentCard
                 key={installment.id}
                 installment={installment}
-                onClick={() => handleEdit(installment.id)}
+                onClick={() => handleEditDrawer(installment.id)}
               />
             ))}
           </div>
           <div className="hidden md:block">
             <InstallmentTable
               installments={installments}
-              onEdit={handleEdit}
+              onEdit={handleEditSheet}
             />
           </div>
         </>
       )}
 
-      <div className="md:hidden">
-        <EditInstallmentDrawer
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          installmentId={selectedInstallmentId}
-        />
-      </div>
-      <div className="hidden md:block">
-        <EditInstallmentSheet
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          installmentId={selectedInstallmentId}
-        />
-      </div>
+      <EditInstallmentDrawer
+        open={editDrawerOpen}
+        onOpenChange={setEditDrawerOpen}
+        installmentId={selectedInstallmentId}
+      />
+      <EditInstallmentSheet
+        open={editSheetOpen}
+        onOpenChange={setEditSheetOpen}
+        installmentId={selectedInstallmentId}
+      />
     </div>
   );
 };
