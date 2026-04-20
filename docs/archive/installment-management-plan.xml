@@ -1,0 +1,290 @@
+<plan feature="installment-management">
+
+  <phase name="Phase 1 — API layer">
+
+    <task>
+      <name>Add GET /api/installments route</name>
+      <action>
+Create `src/app/api/installments/route.ts`. Export `dynamic = 'force-dynamic'` and a `GET` handler. Require a Better Auth session (401 otherwise). Parse `status` query param — default `"ACTIVE"`, allowed `"ACTIVE"` or `"ALL"`, otherwise 400. Build a Zod schema or manual check for the param. Query `db.expenseTransaction.findMany` filtering by `userId: session.user.id`, `isInstallment: true`, and `installmentStatus: status === 'ALL' ? { in: ['ACTIVE', 'COMPLETED'] } : 'ACTIVE'`. Include `account`, `expenseType`, `expenseSubcategory`. Order `installmentStartDate: 'desc'`. Return `NextResponse.json({ installments }, { status: 200 })`. Handle 500 in a try/catch with `console.error`.
+      </action>
+      <verify>
+Run `npx vitest run src/app/api/installments/route.test.ts` after task 10 adds tests. For now, `npm run lint` and `npm run build` must pass, and the file must compile with the existing tsconfig.
+      </verify>
+    </task>
+
+    <task>
+      <name>Add PATCH /api/installments/[id] route</name>
+      <action>
+Create `src/app/api/installments/[id]/route.ts`. Export `dynamic = 'force-dynamic'` and a `PATCH` handler.
+
+Define `ServerPatchInstallmentSchema` as a Zod object with only these optional keys: `name` (string 1..100), `amount` (string positive number), `installmentStartDate` (string), `expenseTypeId` (string), `expenseSubcategoryId` (string nullable). Use `.strict()` so unknown keys are rejected. If the parse fails, return 400 with flattened details.
+
+Also explicitly reject body keys `installmentDuration`, `accountId`, `tagIds`, `isInstallment`, `remainingInstallments`, `monthlyAmount`, `lastProcessedDate`, `installmentStatus`, `parentInstallmentId`, `isSystemGenerated` with `400 { error: "Field not editable: <name>" }` before the Zod parse (since `.strict()` will catch them too, but we want a cleaner error).
+
+Auth check (401). Fetch `existing = db.expenseTransaction.findUnique({ where: { id, userId: session.user.id } })`. 404 if missing. If `!existing.isInstallment` → 400 `{ error: "Not an installment" }`. If `existing.installmentStatus === "CANCELLED"` → 404.
+
+If `expenseSubcategoryId` is provided and non-null, verify it belongs to the user and to the target expense type (mirror the logic in `src/app/api/expense-transactions/[id]/route.ts` PATCH).
+
+Build `updateData: Record<string, unknown> = {}`. If `name !== undefined` → set. If `expenseTypeId !== undefined` → set. If `expenseSubcategoryId !== undefined` → set (null allowed). If `amount !== undefined`: `const newAmount = parseFloat(amount); updateData.amount = newAmount; updateData.monthlyAmount = newAmount / existing.installmentDuration!;`.
+
+If `installmentStartDate !== undefined`:
+  - `const oldStart = existing.installmentStartDate!; const newStart = new Date(installmentStartDate);`
+  - Normalize both to `setHours(0, 0, 0, 0)`.
+  - `updateData.installmentStartDate = newStart; updateData.date = newStart;`
+  - If `newStart.getTime() > oldStart.getTime()`:
+    - `const children = await db.expenseTransaction.findMany({ where: { parentInstallmentId: id, userId: session.user.id } });`
+    - `const childrenToDelete = children.filter(c => c.date < newStart);`
+    - Build `operations` array. For each child: push `db.financialAccount.update({ where: { id: child.accountId, userId: session.user.id }, data: { currentBalance: { increment: parseFloat(child.amount.toString()) } } })` then push `db.expenseTransaction.delete({ where: { id: child.id } })`.
+    - `updateData.remainingInstallments = existing.installmentDuration;`
+    - `updateData.lastProcessedDate = null;`
+  - Else (newStart ≤ oldStart): no child operations.
+
+Push `db.expenseTransaction.update({ where: { id, userId: session.user.id }, data: updateData, include: { account: true, expenseType: true, expenseSubcategory: true } })` as the last operation.
+
+`const results = await db.$transaction(operations);` — the parent update is the last element; extract via `results[results.length - 1]`.
+
+After the transaction: `await onExpenseTransactionChange(existing.accountId, existing.date);` and if the start date changed, also `await onExpenseTransactionChange(existing.accountId, new Date(installmentStartDate));`.
+
+Return the updated row with 200.
+      </action>
+      <verify>
+Run `npm run lint` and `npm run build`. File compiles. Full test suite is deferred to task 10.
+      </verify>
+    </task>
+
+    <task>
+      <name>Add DELETE /api/installments/[id] route</name>
+      <action>
+In the same `src/app/api/installments/[id]/route.ts`, add a `DELETE` handler.
+
+Auth check (401). Fetch `existing` same as PATCH. 404 if missing. If `!existing.isInstallment` → 400 `{ error: "Not an installment" }`. If `existing.installmentStatus === "CANCELLED"` → 404.
+
+Fetch `const children = await db.expenseTransaction.findMany({ where: { parentInstallmentId: id, userId: session.user.id } });`.
+
+Build `operations: PrismaPromise<unknown>[] = []`. For each child, push `db.financialAccount.update({ where: { id: child.accountId, userId: session.user.id }, data: { currentBalance: { increment: parseFloat(child.amount.toString()) } } })`.
+
+Push `db.expenseTransaction.deleteMany({ where: { parentInstallmentId: id, userId: session.user.id } })`.
+Push `db.expenseTransaction.delete({ where: { id, userId: session.user.id } })`.
+
+`await db.$transaction(operations);`
+`await onExpenseTransactionChange(existing.accountId, existing.date);`
+
+Return `200 { message: "Installment deleted successfully", deleted: true }`.
+      </action>
+      <verify>
+Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Reject parent-installment delete on legacy route</name>
+      <action>
+In `src/app/api/expense-transactions/[id]/route.ts`, replace the block
+
+```
+if (existingExpense.isInstallment) {
+  // Mark as CANCELLED for master installment expense transaction
+  await db.expenseTransaction.update({ ... installmentStatus: INSTALLMENT_STATUS.cancelled });
+  return NextResponse.json({ message: 'Installment cancelled successfully', cancelled: true }, { status: 200 });
+}
+```
+
+with
+
+```
+if (existingExpense.isInstallment) {
+  return NextResponse.json(
+    { error: 'Use DELETE /api/installments/[id] to delete an installment' },
+    { status: 400 }
+  );
+}
+```
+
+Do not remove the `INSTALLMENT_STATUS` constant — it is imported elsewhere. Do not touch the regular-expense or system-generated-child branches below.
+      </action>
+      <verify>
+Run `npm run lint`. The existing test `'does not hard-delete installment expense — marks as CANCELLED instead'` will now fail — this is expected and will be fixed in Task 10. Do NOT run the full test suite yet.
+      </verify>
+    </task>
+
+  </phase>
+
+  <phase name="Phase 2 — Client data layer">
+
+    <task>
+      <name>Add useInstallmentsQuery hook</name>
+      <action>
+Create `src/hooks/useInstallmentsQuery.ts`. Follow the structure of `src/hooks/useExpenseTransactionsQuery.ts` but simpler (no optimistic updates).
+
+Export:
+- `Installment` type mirroring the API response (reuse most fields from `ExpenseTransaction` type).
+- `useInstallmentsQuery(options?: { status?: 'ACTIVE' | 'ALL' })`:
+  - `useQuery` with key `['installments', { status: options?.status ?? 'ACTIVE' }]` and fetch `/api/installments?status=ACTIVE|ALL`.
+  - `useMutation` for update: fetch `PATCH /api/installments/[id]`. On success invalidate `['installments']`, `['expenseTransactions']`, `RECENT_TRANSACTION_QUERY_KEYS.recentTransactions`, `['accounts']`, `['cards']`, `['netWorth']`, `['netWorthHistory']`, `['monthlySummary']`, `['budgetStatus']`, `['annualSummary']`, `['expenseBreakdown']`.
+  - `useMutation` for delete: fetch `DELETE /api/installments/[id]`. On error show toast `toast.error("Failed to delete installment", { description: errorMessage, duration: 6000 })`. On settled invalidate the same set above.
+  - Return `{ installments, isLoading, error, updateInstallment, deleteInstallment, deleteInstallmentAsync, isUpdating, isDeleting }`.
+- `useInstallmentQuery(id: string, opts?: { enabled?: boolean })`:
+  - `useQuery` with key `['installments', id]` and fetch `GET /api/installments/{id}` — but we do NOT have a GET-by-id endpoint. Instead, derive from the list: look up in cached list first, and if not found, fall back to `fetch('/api/installments')` (simpler) OR add a new `GET /api/installments/[id]` route.
+
+**Decision:** Since the edit drawer needs full data quickly, add a lightweight `GET /api/installments/[id]` handler inside `src/app/api/installments/[id]/route.ts` that fetches the single row (auth + `isInstallment: true` + `installmentStatus !== "CANCELLED"`, else 404). Then `useInstallmentQuery` calls it directly. This keeps the hook consistent with `useExpenseTransactionQuery`.
+      </action>
+      <verify>
+Run `npm run lint` and `npm run build`. File compiles.
+      </verify>
+    </task>
+
+  </phase>
+
+  <phase name="Phase 3 — UI components">
+
+    <task>
+      <name>Add EditInstallmentDrawer component</name>
+      <action>
+Create `src/lib/validations/installments.ts` with the `updateInstallmentSchema` defined in spec §4.3.
+
+Create `src/components/installments/EditInstallmentDrawer.tsx`. Mirror the structure of `src/components/forms/EditExpenseDrawer.tsx`:
+- Props: `{ open, onOpenChange, installmentId }`.
+- Use `useInstallmentQuery(installmentId, { enabled: open })` and `useInstallmentsQuery()` (for `updateInstallment` + `deleteInstallment` + `isUpdating` + `isDeleting`).
+- React Hook Form with `zodResolver(updateInstallmentSchema)`, `mode: "onTouched"`.
+- While `isFetching` → render `SkeletonEditExpenseDrawerForm`.
+- On error → same error state as EditExpenseDrawer.
+- Fields (see spec §4.3):
+  - `name` → `Input`.
+  - `amount` → `Input type="number"`, with a live-computed `FormDescription` under it showing `Monthly: ₱{watchedAmount / duration}` formatted.
+  - **Account** → plain `<p>` with `{installmentData.account.name}` plus a label. Non-editable.
+  - **Duration** → plain `<p>` with `{installmentData.installmentDuration} months`. Non-editable.
+  - `installmentStartDate` → Popover + Calendar (same as existing drawer's installmentStartDate field, no `disabled` on Calendar).
+  - `expenseTypeId` → `Select`.
+  - `expenseSubcategoryId` → `Select` conditional on `selectedExpenseType.subcategories?.length`.
+- Footer: `Update installment` button, `Cancel` DrawerClose, `Separator`, `Delete installment` destructive outline button.
+- `DeleteDialog`: title `"Delete installment"`, description `"This will permanently delete this installment and all {paidCount} payment records. This cannot be undone."` where `paidCount = installmentData.installmentDuration! - installmentData.remainingInstallments!`. `onConfirm`: call `deleteInstallment(installmentId)`, close drawer, show success toast.
+- `onSubmit`: build payload `{ id, name, amount, installmentStartDate: formatDateForAPI(values.installmentStartDate), expenseTypeId, expenseSubcategoryId: values.expenseSubcategoryId === "none" ? null : values.expenseSubcategoryId }`. Call `updateInstallment(payload)`.
+      </action>
+      <verify>
+Run `npm run lint` and `npm run build`. Component compiles.
+      </verify>
+    </task>
+
+    <task>
+      <name>Add InstallmentTable (desktop)</name>
+      <action>
+Create `src/components/installments/InstallmentTable.tsx`.
+
+Props: `{ installments, onEdit, onDelete }` per spec §4.4.
+
+Use `Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell` from `@/components/ui/table`. Plain `.map()` — no TanStack Table needed.
+
+Columns as specified in spec §4.4. Helpers inside the file:
+- `formatCurrency(v: string | number) => string` using `toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })`.
+- `computeNextPayment(row) => Date | null` — per spec rule.
+- `paid = installmentDuration - remainingInstallments`.
+- Progress bar: `<div role="progressbar" aria-valuenow={paid} aria-valuemin={0} aria-valuemax={duration} aria-label={"${paid} of ${duration} payments made"} className="h-1 w-full rounded bg-muted"><div className="h-full rounded bg-primary" style={{ width: `${(paid/duration)*100}%` }} /></div>`.
+
+Status badge: `ACTIVE` → `<Badge variant="secondary">Active</Badge>`, `COMPLETED` → `<Badge variant="outline">Completed</Badge>`.
+
+Actions column: `<Button variant="ghost" size="icon" aria-label="Edit installment" onClick={() => onEdit(row.id)}><IconEdit /></Button>` and `<Button variant="ghost" size="icon" aria-label="Delete installment" onClick={() => onDelete(row.id, row.name)}><Trash2 /></Button>`.
+
+Assume non-empty array — empty state handled by parent.
+      </action>
+      <verify>
+Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+    <task>
+      <name>Add InstallmentCard (mobile)</name>
+      <action>
+Create `src/components/installments/InstallmentCard.tsx`.
+
+Props: `{ installment, onEdit, onDelete }` per spec §4.5.
+
+Root: `<div className="money-map-card-interactive flex flex-col gap-3 cursor-pointer" onClick={() => onEdit(installment.id)}>`.
+
+Inside:
+- Row 1: icon (`Icons.addExpense size={20} text-primary`) + name (bold) + status badge on the right.
+- Row 2: `<p className="text-muted-foreground text-xs font-bold">{expenseType.name}{subcategory ? ` > ${subcategory.name}` : ""}</p>`.
+- Info grid (`grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm`):
+  - "Monthly" / `₱{formattedMonthly}`
+  - "Duration" / `{duration} months`
+  - "Progress" / `{paid} of {duration}` + progress bar (same markup as table).
+  - "Next payment" / `{formattedNextPayment}` or `"—"` if COMPLETED.
+- Actions row at bottom: `<div className="flex justify-end gap-1 pt-2">` containing edit and delete icon buttons. Both buttons' `onClick` must call `e.stopPropagation()` before invoking the callback.
+      </action>
+      <verify>
+Run `npm run lint` and `npm run build`.
+      </verify>
+    </task>
+
+  </phase>
+
+  <phase name="Phase 4 — Page integration">
+
+    <task>
+      <name>Wire Tabs + Installments tab into the Expenses page</name>
+      <action>
+Modify `src/app/expenses/page.tsx`:
+
+1. Import `Tabs, TabsList, TabsTrigger, TabsContent` from `@/components/ui/tabs`.
+2. Introduce a new component `InstallmentsTabContent` at the bottom of the file (or in a new file `src/components/installments/InstallmentsTabContent.tsx` — prefer the file). It contains:
+   - `showCompleted` state (boolean, default false).
+   - `selectedInstallmentId` state.
+   - `editDrawerOpen` state.
+   - `deleteDialogOpen` + `installmentToDelete` state.
+   - `const { installments, isLoading, error, deleteInstallment, isDeleting } = useInstallmentsQuery({ status: showCompleted ? 'ALL' : 'ACTIVE' });`
+   - A `Switch` with label "Show completed" controlling `showCompleted`.
+   - Mobile section (`md:hidden`): skeleton list / empty state / `InstallmentCard.map()`.
+   - Desktop section (`hidden md:block`): skeleton table / empty state / `InstallmentTable`.
+   - Error block matches Expenses page.
+   - `EditInstallmentDrawer` bound to `selectedInstallmentId` + `editDrawerOpen`.
+   - `DeleteDialog` bound to the installment-to-delete state; confirm calls `deleteInstallment(installmentToDelete.id)` with description `"This will permanently delete this installment and all {paidCount} payment records. This cannot be undone."`.
+3. In `Expenses`, wrap the existing body (everything under `<PageHeader />` except the `CreateExpenseTransaction*`/`EditExpenseDrawer` mounts) in:
+   ```tsx
+   <Tabs defaultValue="transactions" className="mt-2">
+     <TabsList variant="line">
+       <TabsTrigger value="transactions">Transactions</TabsTrigger>
+       <TabsTrigger value="installments">Installments</TabsTrigger>
+     </TabsList>
+     <TabsContent value="transactions"> {/* existing content */} </TabsContent>
+     <TabsContent value="installments"> <InstallmentsTabContent /> </TabsContent>
+   </Tabs>
+   ```
+4. Keep `CreateExpenseTransactionSheet`, `CreateExpenseTransactionDrawer`, and `EditExpenseDrawer` mounted above the Tabs (unchanged).
+5. The top-level error state (when `error` from `useExpenseTransactionsQuery`) and the initial "no expenses yet" EmptyState must remain scoped only to the Transactions tab — do not hide the Installments tab when the user has no regular expenses.
+
+**Empty-state refactor:** The current page shows the "No expenses yet" empty state at the top level before rendering anything else. Move that check inside the `<TabsContent value="transactions">` block so the Installments tab still renders even when the user has no regular transactions.
+      </action>
+      <verify>
+Run `npm run lint` and `npm run build`. Run `npm run dev` locally and manually verify both tabs render, switching works, and the existing Transactions tab behavior is unchanged. Confirm the Installments tab shows active installments and the toggle reveals completed ones.
+      </verify>
+    </task>
+
+  </phase>
+
+  <phase name="Phase 5 — Tests">
+
+    <task>
+      <name>Update existing tests for rejected parent-installment delete and add new test coverage</name>
+      <action>
+**Modify** `src/app/api/expense-transactions/[id]/route.test.ts`:
+- Delete the test `'does not hard-delete installment expense — marks as CANCELLED instead'`.
+- Add a new test `'rejects parent installment delete with 400'` that:
+  - Mocks `db.expenseTransaction.findUnique` to return `{ ...mockExistingExpense, isInstallment: true }`.
+  - Calls `DELETE` and asserts `response.status === 400`, `data.error` matches `/Use DELETE \/api\/installments/`, and `db.$transaction` was not called.
+
+**Create** the test files listed in spec §8.1–§8.3 (use the `generate-tests` skill via the `qa-pipeline` agent as part of the post-execution checklist — this task covers setting up the test expectations and running the suite to green).
+
+After all tests are authored, run:
+- `npx vitest run` — full suite must pass.
+- `npm run lint`.
+- `npm run build`.
+
+Then create `docs/installment-management-verification.md` documenting the test results and manual verification steps.
+      </action>
+      <verify>
+`npx vitest run` returns all green. `npm run lint` and `npm run build` both exit 0. A verification document is created at `docs/installment-management-verification.md` summarizing results.
+      </verify>
+    </task>
+
+  </phase>
+
+</plan>
