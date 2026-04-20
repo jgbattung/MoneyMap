@@ -358,24 +358,24 @@ export async function DELETE(
     // Regular expense or payment record: Hard delete
     const operations: PrismaPromise<unknown>[] = [];
 
-    // Reverse the balance deduction
-    if (!existingExpense.isSystemGenerated) {
-      const amountToReverse = parseFloat(existingExpense.amount.toString());
+    // Reverse the balance deduction (applies to all expense transactions
+    // reaching this path — regular expenses AND system-generated child
+    // installment payments, both of which decremented the balance on create).
+    const amountToReverse = parseFloat(existingExpense.amount.toString());
 
-      operations.push(
-        db.financialAccount.update({
-          where: {
-            id: existingExpense.accountId,
-            userId: session.user.id,
+    operations.push(
+      db.financialAccount.update({
+        where: {
+          id: existingExpense.accountId,
+          userId: session.user.id,
+        },
+        data: {
+          currentBalance: {
+            increment: amountToReverse,
           },
-          data: {
-            currentBalance: {
-              increment: amountToReverse,
-            },
-          },
-        })
-      );
-    }
+        },
+      })
+    );
 
     // Delete the expense record
     operations.push(

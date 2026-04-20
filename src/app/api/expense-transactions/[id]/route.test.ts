@@ -244,17 +244,24 @@ describe('DELETE /api/expense-transactions/[id]', () => {
     expect(callArg).toHaveLength(2);
   });
 
-  it('skips financialAccount.update when expense is system-generated', async () => {
+  it('reverses account balance when deleting a system-generated child payment', async () => {
     vi.mocked(db.expenseTransaction.findUnique).mockResolvedValue({
       ...mockExistingExpense,
       isSystemGenerated: true,
+      isInstallment: false,
+      parentInstallmentId: 'parent-123',
     } as any);
 
     await DELETE(makeDeleteRequest(), makeParams());
 
     const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
-    // Only expenseTransaction.delete (no balance reversal)
-    expect(callArg).toHaveLength(1);
+    // [financialAccount.update, expenseTransaction.delete]
+    expect(callArg).toHaveLength(2);
+    expect(db.financialAccount.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { currentBalance: { increment: Number(mockExistingExpense.amount) } },
+      })
+    );
   });
 
   it('rejects parent installment delete with 400', async () => {
