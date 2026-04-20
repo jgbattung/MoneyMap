@@ -2,17 +2,13 @@
 
 import React from 'react'
 import { addDays, format } from 'date-fns';
-import { Trash2 } from 'lucide-react';
-import { IconEdit } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { type Installment } from '@/hooks/useInstallmentsQuery';
 
 interface InstallmentCardProps {
   installment: Installment;
-  onEdit: (id: string) => void;
-  onDelete: (id: string, name: string) => void;
+  onClick?: () => void;
 }
 
 function formatCurrency(value: string | number): string {
@@ -30,7 +26,7 @@ function computeNextPayment(installment: Installment): Date | null {
   return null;
 }
 
-const InstallmentCard = ({ installment, onEdit, onDelete }: InstallmentCardProps) => {
+const InstallmentCard = ({ installment, onClick }: InstallmentCardProps) => {
   const duration = installment.installmentDuration ?? 0;
   const remaining = installment.remainingInstallments ?? 0;
   const paid = duration - remaining;
@@ -41,7 +37,7 @@ const InstallmentCard = ({ installment, onEdit, onDelete }: InstallmentCardProps
   return (
     <div
       className="money-map-card-interactive flex flex-col gap-3 cursor-pointer"
-      onClick={() => onEdit(installment.id)}
+      onClick={onClick}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -93,31 +89,6 @@ const InstallmentCard = ({ installment, onEdit, onDelete }: InstallmentCardProps
               ? format(nextPayment, "MMM d, yyyy")
               : '—'}
         </span>
-      </div>
-
-      <div className="flex justify-end gap-1 pt-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Edit installment"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(installment.id);
-          }}
-        >
-          <IconEdit className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Delete installment"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(installment.id, installment.name);
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
       </div>
     </div>
   );
