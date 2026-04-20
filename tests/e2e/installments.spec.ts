@@ -44,7 +44,7 @@ test.describe("Installments", () => {
     await page.getByRole("option", { name: "Test Credit Card" }).click();
 
     // Toggle installment mode on
-    await page.getByLabel("Installment").click();
+    await page.getByRole("switch", { name: "Installment" }).click();
 
     // Fill in installment duration
     await page.getByLabel("Installment duration (months)").fill("6");
