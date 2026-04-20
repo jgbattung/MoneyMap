@@ -33,7 +33,7 @@ vi.mock('@/lib/utils', () => ({
 }));
 
 // Skeleton mock
-vi.mock('@/components/shared/SkeletonEditAccountSheetForm', () => ({
+vi.mock('@/components/shared/SkeletonEditInstallmentSheetForm', () => ({
   default: () => React.createElement('div', { 'data-testid': 'skeleton-form' }, 'Loading...'),
 }));
 
@@ -289,7 +289,7 @@ describe('EditInstallmentSheet', () => {
     it('does not show the form when isFetching is true', () => {
       setupMocks({ isFetching: true, installmentData: undefined });
       render(React.createElement(EditInstallmentSheet, defaultProps), { wrapper: createWrapper() });
-      expect(screen.queryByText('Edit installment')).toBeNull();
+      expect(screen.queryByRole('button', { name: /update installment/i })).toBeNull();
     });
   });
 
