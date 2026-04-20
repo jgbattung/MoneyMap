@@ -10,42 +10,23 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
-import DeleteDialog from '@/components/shared/DeleteDialog';
 import EditInstallmentDrawer from '@/components/installments/EditInstallmentDrawer';
+import EditInstallmentSheet from '@/components/installments/EditInstallmentSheet';
 import InstallmentCard from '@/components/installments/InstallmentCard';
 import InstallmentTable from '@/components/installments/InstallmentTable';
 
 const InstallmentsTabContent = () => {
   const [showCompleted, setShowCompleted] = useState(false);
   const [selectedInstallmentId, setSelectedInstallmentId] = useState('');
-  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [installmentToDelete, setInstallmentToDelete] = useState<{ id: string; name: string; paidCount: number } | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
-  const { installments, isLoading, error, deleteInstallment, isDeleting } = useInstallmentsQuery({
+  const { installments, isLoading, error } = useInstallmentsQuery({
     status: showCompleted ? 'ALL' : 'ACTIVE',
   });
 
   const handleEdit = (id: string) => {
     setSelectedInstallmentId(id);
-    setEditDrawerOpen(true);
-  };
-
-  const handleDeleteRequest = (id: string, name: string) => {
-    const installment = installments.find((i) => i.id === id);
-    const duration = installment?.installmentDuration ?? 0;
-    const remaining = installment?.remainingInstallments ?? 0;
-    const paidCount = duration - remaining;
-    setInstallmentToDelete({ id, name, paidCount });
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    if (installmentToDelete) {
-      deleteInstallment(installmentToDelete.id);
-    }
-    setDeleteDialogOpen(false);
-    setInstallmentToDelete(null);
+    setEditOpen(true);
   };
 
   return (
@@ -97,8 +78,7 @@ const InstallmentsTabContent = () => {
               <InstallmentCard
                 key={installment.id}
                 installment={installment}
-                onEdit={handleEdit}
-                onDelete={handleDeleteRequest}
+                onClick={() => handleEdit(installment.id)}
               />
             ))}
           </div>
@@ -106,30 +86,25 @@ const InstallmentsTabContent = () => {
             <InstallmentTable
               installments={installments}
               onEdit={handleEdit}
-              onDelete={handleDeleteRequest}
             />
           </div>
         </>
       )}
 
-      <EditInstallmentDrawer
-        open={editDrawerOpen}
-        onOpenChange={setEditDrawerOpen}
-        installmentId={selectedInstallmentId}
-      />
-
-      <DeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleDeleteConfirm}
-        title="Delete installment"
-        description={
-          installmentToDelete
-            ? `This will permanently delete this installment and all ${installmentToDelete.paidCount} payment records. This cannot be undone.`
-            : undefined
-        }
-        isDeleting={isDeleting}
-      />
+      <div className="md:hidden">
+        <EditInstallmentDrawer
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          installmentId={selectedInstallmentId}
+        />
+      </div>
+      <div className="hidden md:block">
+        <EditInstallmentSheet
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          installmentId={selectedInstallmentId}
+        />
+      </div>
     </div>
   );
 };
