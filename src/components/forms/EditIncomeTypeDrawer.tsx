@@ -8,6 +8,7 @@ import { z } from "zod"
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { Button } from '../ui/button';
+import { CurrencyInput } from '../ui/currency-input';
 import { Input } from '../ui/input';
 import { toast } from 'sonner';
 import { useIncomeTypeQuery, useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery';
@@ -165,11 +166,13 @@ const EditIncomeTypeDrawer = ({ open, onOpenChange, className, incomeTypeId }: E
                           Set a monthly income goal for this category (optional).
                         </FormDescription>
                         <FormControl>
-                          <Input
-                            type="number"
+                          <CurrencyInput
                             placeholder="0"
-                            className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                            {...field}
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                             disabled={isUpdating}
                           />
                         </FormControl>

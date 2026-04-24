@@ -8,6 +8,7 @@ import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "../ui/drawer";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
+import { CurrencyInput } from "../ui/currency-input";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
@@ -311,11 +312,13 @@ const EditExpenseTypeDrawer = ({ open, onOpenChange, budgetId, className }: Edit
                           Set a monthly spending limit for this category (optional).
                         </FormDescription>
                         <FormControl>
-                          <Input
-                            type="number"
+                          <CurrencyInput
                             placeholder="0"
-                            className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                            {...field}
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                             disabled={isUpdating}
                           />
                         </FormControl>

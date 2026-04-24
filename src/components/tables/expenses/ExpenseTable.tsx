@@ -8,6 +8,7 @@ import { TagInput } from '@/components/shared/TagInput';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -26,7 +27,7 @@ import { IconCheck, IconEdit, IconX } from '@tabler/icons-react';
 import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { ChevronDownIcon, ChevronLeft, ChevronRight, SearchIcon, SearchX, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 const columnHelper = createColumnHelper<ExpenseTransaction>();
@@ -41,9 +42,11 @@ const CellContent = ({ getValue, row, column, table }: any) => {
   const tableMeta = table.options.meta;
   const [value, setValue] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const amountRef = useRef<number>(Number(initialValue) || 0);
 
   useEffect(() => {
-    setValue(initialValue ?? "")
+    setValue(initialValue ?? "");
+    amountRef.current = Number(initialValue) || 0;
   }, [initialValue]);
 
   const onBlur = () => {
@@ -197,6 +200,23 @@ const CellContent = ({ getValue, row, column, table }: any) => {
           ))}
         </SelectContent>
       </Select>
+    );
+  }
+
+  if (columnMeta?.type === "number") {
+    return (
+      <CurrencyInput
+        className="w-full"
+        value={Number(value) || 0}
+        autoFocus
+        onValueChange={(num) => {
+          amountRef.current = num;
+          setValue(String(num));
+        }}
+        onBlur={() => {
+          tableMeta?.updateData(row.original.id, column.id, String(amountRef.current));
+        }}
+      />
     );
   }
 

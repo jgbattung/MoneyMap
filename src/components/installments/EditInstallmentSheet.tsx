@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form'
+import { CurrencyInput } from '../ui/currency-input'
 import { Input } from '../ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { toast } from 'sonner'
@@ -164,12 +165,14 @@ const EditInstallmentSheet = ({ open, onOpenChange, className, installmentId }: 
                     <FormItem className="p-4">
                       <FormLabel>Total amount</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
+                        <CurrencyInput
                           placeholder="0"
-                          className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                           disabled={isUpdating}
-                          {...field}
                         />
                       </FormControl>
                       <FormDescription>

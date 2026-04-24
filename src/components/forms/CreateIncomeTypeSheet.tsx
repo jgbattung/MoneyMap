@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
+import { CurrencyInput } from "../ui/currency-input";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useShakeOnError } from '@/hooks/useShakeOnError';
@@ -95,11 +96,13 @@ const CreateIncomeTypeSheet = ({ open, onOpenChange, className }: CreateIncomeTy
                     Set a monthly income goal for this category (optional).
                   </FormDescription>
                   <FormControl>
-                    <Input
-                      type="number"
+                    <CurrencyInput
                       placeholder="0"
-                      className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                      {...field}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
                       disabled={isCreating}
                     />
                   </FormControl>
