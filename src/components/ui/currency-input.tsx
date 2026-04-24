@@ -28,7 +28,7 @@ function formatForDisplay(rawStr: string): string {
 interface CurrencyInputProps
   extends Omit<React.ComponentProps<"input">, "value" | "onChange" | "type"> {
   value: number | string | undefined
-  onValueChange: (value: number) => void
+  onValueChange: (value: string) => void
 }
 
 function toNumber(v: number | string | undefined): number {
@@ -69,7 +69,7 @@ const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
       const newCursor = cursorPos + (commasAfter - commasBefore)
 
       setDisplayValue(newDisplay)
-      onValueChange(parseNumber(cleaned))
+      onValueChange(cleaned)
 
       const el = inputRef.current
       if (el) {

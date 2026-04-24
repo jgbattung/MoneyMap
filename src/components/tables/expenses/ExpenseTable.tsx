@@ -42,11 +42,11 @@ const CellContent = ({ getValue, row, column, table }: any) => {
   const tableMeta = table.options.meta;
   const [value, setValue] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const amountRef = useRef<number>(Number(initialValue) || 0);
+  const amountRef = useRef<string>(String(initialValue ?? "0"));
 
   useEffect(() => {
     setValue(initialValue ?? "");
-    amountRef.current = Number(initialValue) || 0;
+    amountRef.current = String(initialValue ?? "0");
   }, [initialValue]);
 
   const onBlur = () => {
@@ -209,12 +209,12 @@ const CellContent = ({ getValue, row, column, table }: any) => {
         className="w-full"
         value={Number(value) || 0}
         autoFocus
-        onValueChange={(num) => {
-          amountRef.current = num;
-          setValue(String(num));
+        onValueChange={(val) => {
+          amountRef.current = val;
+          setValue(val);
         }}
         onBlur={() => {
-          tableMeta?.updateData(row.original.id, column.id, String(amountRef.current));
+          tableMeta?.updateData(row.original.id, column.id, amountRef.current);
         }}
       />
     );

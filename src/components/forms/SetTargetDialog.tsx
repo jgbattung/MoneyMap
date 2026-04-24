@@ -22,14 +22,14 @@ interface SetTargetDialogProps {
 const SetTargetDialog = ({ open, onOpenChange, currentTarget, currentTargetDate }: SetTargetDialogProps) => {
   const { updateTarget, isUpdating } = useNetWorthTarget();
   
-  const [targetAmount, setTargetAmount] = useState<number>(0);
+  const [targetAmount, setTargetAmount] = useState<string>('');
   const [targetDate, setTargetDate] = useState<Date | undefined>(undefined);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
 
   // Initialize form values when dialog opens or current values change
   useEffect(() => {
     if (open) {
-      setTargetAmount(currentTarget ?? 0);
+      setTargetAmount(currentTarget ? currentTarget.toString() : '');
       setTargetDate(currentTargetDate ? new Date(currentTargetDate) : undefined);
     }
   }, [open, currentTarget, currentTargetDate]);
@@ -38,8 +38,8 @@ const SetTargetDialog = ({ open, onOpenChange, currentTarget, currentTargetDate 
     e.preventDefault();
 
     // Validate target amount
-    const amount = targetAmount || null;
-    if (amount !== null && amount < 0) {
+    const parsed = targetAmount ? parseFloat(targetAmount) : null;
+    if (parsed !== null && (isNaN(parsed) || parsed < 0)) {
       toast.error('Invalid target amount', {
         description: 'Please enter a valid positive number',
       });
@@ -48,13 +48,13 @@ const SetTargetDialog = ({ open, onOpenChange, currentTarget, currentTargetDate 
 
     try {
       await updateTarget({
-        target: amount,
+        target: parsed,
         targetDate: targetDate ? targetDate.toISOString() : null,
       });
 
       toast.success('Net worth target updated', {
-        description: amount 
-          ? `Target set to ₱${amount.toLocaleString('en-PH')}` 
+        description: parsed
+          ? `Target set to ₱${parsed.toLocaleString('en-PH')}`
           : 'Target cleared',
       });
 
