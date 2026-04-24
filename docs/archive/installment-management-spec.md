@@ -1,586 +1,595 @@
-# Installment Management — Specification
+# Installment Management — QA Fix Pass Specification
 
-> **Feature:** Add an Installments tab to the Expenses page for viewing, editing, and deleting installment parent transactions.
+> **Feature:** Post-QA fixes for the Installment Management feature.
 > **Status:** Ready for Builder
 > **Handoff protocol:** `.claude/conventions/handoff-protocol.md`
+> **Scope:** This spec covers ONLY the five (5) fixes identified during QA review of the shipped Installment Management feature. It does not re-specify the original feature. For the original feature context, see `docs/archive/installment-management-spec.md`.
 
 ---
 
-## 1. Objectives & Scope
+## 1. Context
+
+The Installment Management feature (Installments tab on the Expenses page) has shipped. QA review uncovered **five (5) issues** that must be addressed before the feature can be considered production-ready:
+
+1. `InstallmentTable` is a bare `<Table>` with none of the shell structure (wrapper, search, date filters, pagination, empty state, skeleton) that the rest of the app uses on every desktop table.
+2. Desktop editing currently opens a `Drawer`. The rest of the app uses `Sheet` on desktop and `Drawer` on mobile. Desktop must get its own `EditInstallmentSheet`.
+3. `InstallmentCard` (mobile) exposes explicit Edit and Delete buttons. The codebase pattern (`ExpenseCard`) is button-less: the whole card is clickable and the drawer owns delete.
+4. Deleting an installment from `InstallmentsTabContent` does not show a success toast.
+5. **Pre-existing bug** exposed by this feature: `DELETE /api/expense-transactions/[id]` skips the account balance reversal when the transaction is `isSystemGenerated: true`. Installment child payments are always `isSystemGenerated: true` but they *did* decrement the account balance when created, so skipping the reversal leaves a stale balance when a child is deleted individually.
+
+All five fixes are behind a single branch and a single verification pass.
+
+---
+
+## 2. Objectives & Scope
 
 ### In scope
 
-- Surface parent installment records (`isInstallment: true`, excluding `CANCELLED`) in a dedicated Installments tab on the Expenses page.
-- Provide full management (view, edit, delete) of parent installments.
-- Add three new API routes under `/api/installments` for list / update / delete.
-- Replace the existing soft-cancel behavior in `DELETE /api/expense-transactions/[id]` with a 400 rejection for parent installments.
-- Add a new hook `useInstallmentsQuery` with TanStack React Query.
-- Add responsive UI: desktop table + mobile card list.
-- Provide an `EditInstallmentDrawer` shared across mobile and desktop.
+- Rewrite `InstallmentTable` to match `ExpenseTable`'s structural shell 1:1 (wrapper, search, date filter toggles, pagination, empty state, skeleton). Columns remain installment-specific.
+- Create a new `EditInstallmentSheet` for desktop editing, modeled after `EditAccountSheet`.
+- Keep `EditInstallmentDrawer` — it remains the mobile-only editor.
+- Refactor `InstallmentCard` to match `ExpenseCard`: no buttons, whole card is a click target, `onClick` prop only.
+- Add the missing `toast.success()` on installment delete in `InstallmentsTabContent`.
+- Fix the `DELETE /api/expense-transactions/[id]` balance reversal so it runs for **all** non-transfer expense deletes regardless of `isSystemGenerated`.
+- Wire `InstallmentsTabContent` to: desktop row edit → Sheet, mobile card click → Drawer. Delete lives inside the Sheet / Drawer; the tab-level `DeleteDialog` is removed.
 
 ### Out of scope
 
-- Modifying how the Transactions tab renders (no changes to existing behavior).
-- Modifying the installment creation flow.
-- Modifying the cron that generates child payments (`src/app/api/cron/process-installments/route.ts`).
-- Adding a filter for `CANCELLED` installments (they are always hidden in this feature).
-- URL-persisted tab state.
-- Editing the `installmentDuration`, `accountId`, or `tagIds` fields on a parent installment.
+- Changes to the `DELETE /api/installments/[id]` handler (already iterates children and calls `increment` — correct).
+- Changes to the installment creation flow, cron, or `GET`/`PATCH /api/installments/[id]`.
+- Changes to the Transactions tab.
+- Any migration or schema change (none required).
+- Sorting / column reordering in the Installments table.
+- URL-persisted tab state, page size, or filter state.
 
 ---
 
-## 2. Context Pointers
+## 3. Reference Patterns
 
-### Existing patterns to follow
-
-| Concern | Reference file |
-|---|---|
-| Tabs usage (line variant) | `src/app/reports/page.tsx` |
-| Desktop table layout | `src/components/tables/expenses/ExpenseTable.tsx` |
-| Mobile card layout | `src/components/shared/ExpenseCard.tsx` |
-| Edit drawer w/ skeleton + delete | `src/components/forms/EditExpenseDrawer.tsx` |
-| Delete confirmation dialog | `src/components/shared/DeleteDialog.tsx` |
-| Query hook structure | `src/hooks/useExpenseTransactionsQuery.ts` |
-| API PATCH / DELETE pattern | `src/app/api/expense-transactions/[id]/route.ts` |
-| API GET list pattern | `src/app/api/expense-transactions/route.ts` |
-| Statement recalculator hook | `onExpenseTransactionChange` from `@/lib/statement-recalculator` |
-| Tabs primitive | `src/components/ui/tabs.tsx` |
-| Installment status constants | `INSTALLMENT_STATUS` in `src/app/api/expense-transactions/[id]/route.ts` |
-
-### Database (existing columns — no migration required)
-
-Parent installment rows in `ExpenseTransaction` already have:
-
-- `isInstallment: true`
-- `installmentDuration` — total number of payments
-- `remainingInstallments` — remaining count
-- `installmentStartDate` — first payment date
-- `monthlyAmount` — derived (`amount / installmentDuration`)
-- `lastProcessedDate` — updated by the cron after each monthly payment
-- `installmentStatus` — `"ACTIVE"` | `"COMPLETED"` | `"CANCELLED"` (default `"ACTIVE"`)
-- `date` — set to `installmentStartDate` at creation
-
-Child payments have `parentInstallmentId = <parent id>`, `isInstallment: false`, `isSystemGenerated: true`.
-
-**No Prisma schema changes needed.** No migration will be run.
+| Concern | Reference file | Notes |
+|---|---|---|
+| Full desktop table shell (wrapper + search + ToggleGroup + pagination + EmptyState) | `src/components/tables/expenses/ExpenseTable.tsx` | Source of truth for the structural shell. |
+| Sheet-based desktop editor | `src/components/forms/EditAccountSheet.tsx` | Delete button at the bottom of the Sheet, separator above it, `DeleteDialog` portal below the Sheet. |
+| Button-less mobile card with click-to-edit | `src/components/shared/ExpenseCard.tsx` | Root div has `onClick`, no Edit/Delete buttons. |
+| Drawer-based mobile editor | `src/components/installments/EditInstallmentDrawer.tsx` | Existing — stays as-is for mobile (minor touch-ups only). |
+| Delete confirmation dialog | `src/components/shared/DeleteDialog.tsx` | Reused. |
+| Toast on delete pattern | `ExpenseTable.handleDeleteConfirm` | `toast.success("Expense transaction deleted successfully", { duration: 5000 })` then call the mutation. |
 
 ---
 
-## 3. API Design
+## 4. Fix 1 — `InstallmentTable` structural parity with `ExpenseTable`
 
-### 3.1 `GET /api/installments`
+**File:** `src/components/installments/InstallmentTable.tsx` (rewrite).
 
-**Auth:** Better Auth session required. 401 if missing.
+### 4.1 Shell requirements (must match `ExpenseTable` 1:1)
 
-**Query params:**
-
-| Name | Type | Default | Notes |
-|---|---|---|---|
-| `status` | `"ACTIVE"` \| `"ALL"` | `"ACTIVE"` | `ALL` returns `ACTIVE` + `COMPLETED` (never `CANCELLED`). |
-
-**Behavior:**
-
-1. Parse the `status` param. If absent or `"ACTIVE"`, filter `installmentStatus = "ACTIVE"`. If `"ALL"`, filter `installmentStatus IN ("ACTIVE", "COMPLETED")`. Any other value → 400.
-2. Query `db.expenseTransaction.findMany` where:
-   - `userId: session.user.id`
-   - `isInstallment: true`
-   - `installmentStatus` per rule above (explicitly excludes `CANCELLED`)
-3. Include relations: `account`, `expenseType`, `expenseSubcategory`.
-4. Order by `installmentStartDate DESC` (newest installments first).
-5. Return `{ installments: [...] }` (array wrapped in an object for consistency with the existing expense-transactions list endpoint).
-
-**Response shape (per row):**
-
-Same as the Prisma `ExpenseTransaction` row plus included relations. The client derives `paidCount = installmentDuration - remainingInstallments` and `nextPaymentDate` locally — no extra API surface.
-
-**Errors:** 400 for bad `status`, 401 unauthenticated, 500 for unexpected.
-
----
-
-### 3.2 `PATCH /api/installments/[id]`
-
-**Auth:** Better Auth session required. 401 if missing.
-
-**Request body (Zod-validated):**
-
-```ts
-z.object({
-  name: z.string().min(1).max(100).optional(),
-  amount: z.string().refine(val => !isNaN(Number(val)) && Number(val) > 0).optional(),
-  installmentStartDate: z.string().optional(), // ISO date string
-  expenseTypeId: z.string().optional(),
-  expenseSubcategoryId: z.string().nullable().optional(),
-})
-```
-
-**Locked fields (must reject with 400 if present in body):**
-
-- `installmentDuration`
-- `accountId`
-- `tagIds`
-- `isInstallment`, `remainingInstallments`, `monthlyAmount`, `lastProcessedDate`, `installmentStatus`, `parentInstallmentId`, `isSystemGenerated` (any attempt to mutate internal state)
-
-The Zod schema should use `.strict()` or explicitly check for disallowed keys and return `400 { error: "Field not editable: <name>" }`.
-
-**Preconditions:**
-
-1. Fetch `existing = db.expenseTransaction.findUnique({ where: { id, userId } })`. 404 if missing.
-2. Require `existing.isInstallment === true`. Otherwise 400 with `{ error: "Not an installment" }`.
-3. Require `existing.installmentStatus !== "CANCELLED"`. Otherwise 404 (cancelled installments are hidden and not editable).
-
-**Subcategory validation:** Same as existing PATCH route — if `expenseSubcategoryId` is non-null, verify it exists and belongs to `expenseTypeId` (or to `existing.expenseTypeId` if `expenseTypeId` not being changed). Return 404 or 400 appropriately.
-
-**Amount change logic:**
-
-```
-newAmount (total)      = parseFloat(amount)
-newMonthlyAmount       = newAmount / existing.installmentDuration
-updateData.amount          = newAmount
-updateData.monthlyAmount   = newMonthlyAmount
-```
-
-- Past children are **not** updated (historical record).
-- No account balance adjustment here. The next cron tick uses the new `monthlyAmount`.
-
-**Start-date change logic (critical):**
-
-Let `oldStart = existing.installmentStartDate`, `newStart = new Date(installmentStartDate)`. Normalize both to `00:00:00` local time before comparing.
-
-**Case A — `newStart > oldStart` (moved forward):**
-
-Inside a `db.$transaction(operations)` where `operations` is a `PrismaPromise[]`:
-
-1. Fetch children: `const children = await db.expenseTransaction.findMany({ where: { parentInstallmentId: id, userId } })` **(outside the transaction, pre-read is fine — we just need the list)**.
-2. Filter `childrenToDelete = children.filter(c => c.date < newStart)`.
-3. For each child in `childrenToDelete`:
-   - Push `db.financialAccount.update({ where: { id: child.accountId, userId }, data: { currentBalance: { increment: Number(child.amount) } } })`.
-   - Push `db.expenseTransaction.delete({ where: { id: child.id } })`.
-4. Push the parent update:
-   ```
-   db.expenseTransaction.update({
-     where: { id, userId },
-     data: {
-       name?, amount?, monthlyAmount?, expenseTypeId?, expenseSubcategoryId?,
-       installmentStartDate: newStart,
-       date: newStart,
-       remainingInstallments: existing.installmentDuration,  // full reset
-       lastProcessedDate: null,
-     },
-   })
-   ```
-5. `await db.$transaction(operations)`.
-6. `await onExpenseTransactionChange(existing.accountId, oldStart)` and `await onExpenseTransactionChange(existing.accountId, newStart)` — recalculate statement balance for both cycles affected.
-
-**Case B — `newStart <= oldStart` (moved backward or unchanged):**
-
-1. Push only the parent update (with the fields that changed). Do **not** touch children, `remainingInstallments`, or `lastProcessedDate`.
-2. Still set `date = newStart`.
-3. `await db.$transaction(operations)`.
-4. `await onExpenseTransactionChange(existing.accountId, oldStart)` and `await onExpenseTransactionChange(existing.accountId, newStart)` (same as A — the cycles may differ).
-
-**If `installmentStartDate` is not provided in the body:**
-
-- Just update the other fields inside a `db.$transaction`.
-- Call `onExpenseTransactionChange(existing.accountId, existing.date)` once.
-
-**Response:** `200` with the updated parent row (including `account`, `expenseType`, `expenseSubcategory`).
-
-**Errors:** 400 (bad input / locked field / not an installment / bad subcategory), 401, 404, 500.
-
----
-
-### 3.3 `DELETE /api/installments/[id]`
-
-**Auth:** Better Auth session required. 401 if missing.
-
-**Preconditions:**
-
-1. Fetch `existing = db.expenseTransaction.findUnique({ where: { id, userId } })`. 404 if missing.
-2. Require `existing.isInstallment === true`. Otherwise 400 `{ error: "Not an installment" }`.
-3. `installmentStatus === "CANCELLED"` → 404 (not visible).
-
-**Behavior (atomic):**
-
-1. Fetch all children: `const children = await db.expenseTransaction.findMany({ where: { parentInstallmentId: id, userId } })`.
-2. Build `operations: PrismaPromise<unknown>[] = []`.
-3. For each child where `child.isSystemGenerated` (or simply always — all children are system-generated payments):
-   - Push `db.financialAccount.update({ where: { id: child.accountId, userId }, data: { currentBalance: { increment: Number(child.amount) } } })`.
-4. Push `db.expenseTransaction.deleteMany({ where: { parentInstallmentId: id, userId } })`.
-5. Push `db.expenseTransaction.delete({ where: { id, userId } })`.
-6. `await db.$transaction(operations)`.
-7. `await onExpenseTransactionChange(existing.accountId, existing.date)`.
-
-**Response:** `200 { message: "Installment deleted successfully", deleted: true }`.
-
-**Errors:** 400, 401, 404, 500.
-
----
-
-### 3.4 Change to existing `DELETE /api/expense-transactions/[id]`
-
-Replace the current soft-cancel block for `existingExpense.isInstallment` with a rejection:
-
-```ts
-if (existingExpense.isInstallment) {
-  return NextResponse.json(
-    { error: "Use DELETE /api/installments/[id] to delete an installment" },
-    { status: 400 }
-  );
-}
-```
-
-Leave the rest of the DELETE handler (regular expenses, system-generated children) untouched.
-
-The exported `INSTALLMENT_STATUS` constant must remain exported — it is imported in `src/app/api/expense-transactions/route.ts` and `src/app/api/cron/process-installments/route.ts`.
-
----
-
-## 4. Client Layer
-
-### 4.1 Hook: `src/hooks/useInstallmentsQuery.ts`
-
-**Exports:**
-
-```ts
-export type Installment = { /* mirrors API row */ }
-export const useInstallmentsQuery: (options?: { status?: 'ACTIVE' | 'ALL' }) => {
-  installments: Installment[];
-  isLoading: boolean;
-  error: string | null;
-  updateInstallment: (payload: { id: string; [k: string]: unknown }) => Promise<Installment>;
-  deleteInstallment: (id: string) => void;
-  deleteInstallmentAsync: (id: string) => Promise<void>;
-  isUpdating: boolean;
-  isDeleting: boolean;
-}
-export const useInstallmentQuery: (id: string, opts?: { enabled?: boolean }) => {
-  installmentData: Installment | undefined;
-  isFetching: boolean;
-  error: string | null;
-}
-```
-
-**Query keys:**
-
-- `['installments']` — list, optionally suffixed with `[{ status }]`.
-- `['installments', id]` — single row.
-
-**Mutations invalidate:**
-
-- `['installments']` (all variants)
-- `['expenseTransactions']` (used by the Transactions tab — deleting a parent removes children)
-- `RECENT_TRANSACTION_QUERY_KEYS.recentTransactions` (from `src/hooks/useRecentTransactions.ts`)
-- `['accounts']`, `['cards']` (balance changes)
-- `['netWorth']`, `['netWorthHistory']`, `['monthlySummary']`, `['budgetStatus']`, `['annualSummary']`, `['expenseBreakdown']` (all derived totals that read from expense transactions)
-
-On `deleteInstallment` error, surface a toast:
-`toast.error("Failed to delete installment", { description: errorMessage, duration: 6000 })`.
-
-No optimistic updates are required for this feature (keeps complexity low — the list is short and mutations are fast).
-
----
-
-### 4.2 Page: `src/app/expenses/page.tsx`
-
-Wrap the existing page body in a `Tabs` component. Structure:
+The JSX tree below must wrap the existing installment columns:
 
 ```tsx
-<Tabs defaultValue="transactions" onValueChange={setActiveTab}>
-  <TabsList variant="line">
-    <TabsTrigger value="transactions">Transactions</TabsTrigger>
-    <TabsTrigger value="installments">Installments</TabsTrigger>
-  </TabsList>
+<>
+  <div className="space-y-4">
+    {/* Top bar: filter on the left, search on the right */}
+    <div className="flex items-center justify-between">
+      <div>
+        <ToggleGroup type="single" variant="outline" size="sm" ...>
+          <ToggleGroupItem value="view-all"   className="...">View all</ToggleGroupItem>
+          <ToggleGroupItem value="this-month" className="...">This month</ToggleGroupItem>
+          <ToggleGroupItem value="this-year"  className="...">This year</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+      <div className="flex items-start gap-2 justify-end">
+        <div className="w-full max-w-xs">
+          <InputGroup>
+            <InputGroupInput placeholder="Search installments..." value={searchTerm} onChange={...} />
+            <InputGroupAddon><SearchIcon /></InputGroupAddon>
+          </InputGroup>
+        </div>
+      </div>
+    </div>
 
-  <TabsContent value="transactions">
-    {/* Existing Expenses page body — unchanged */}
-  </TabsContent>
+    {/* Table */}
+    <div className="overflow-hidden rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="p-4">Name</TableHead>
+            <TableHead className="p-4 text-right">Total</TableHead>
+            <TableHead className="p-4 text-right">Monthly</TableHead>
+            <TableHead className="p-4">Progress</TableHead>
+            <TableHead className="p-4">Start date</TableHead>
+            <TableHead className="p-4">Next payment</TableHead>
+            <TableHead className="p-4">Status</TableHead>
+            <TableHead className="p-4 text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pageRows.length ? pageRows.map((row) => (
+            <TableRow key={row.id}>
+              <TableCell className="pl-4">...</TableCell>
+              ...
+            </TableRow>
+          )) : (
+            <TableRow>
+              <TableCell colSpan={8}>
+                <EmptyState
+                  icon={SearchX}
+                  title="No installments found"
+                  description="Try adjusting your search or filters."
+                  variant="table"
+                />
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
 
-  <TabsContent value="installments">
-    <InstallmentsTabContent />
-  </TabsContent>
-</Tabs>
+      {/* Pagination — identical JSX to ExpenseTable */}
+      <div className="flex items-center justify-between space-x-2 py-4 px-4 border border-border border-t-2">
+        <div>
+          <p className="text-sm text-muted-foreground">
+            {`Showing ${pageRows.length} out of ${filteredRows.length}`}
+            {debouncedSearchTerm && <span className="text-primary-600"> (filtered)</span>}
+          </p>
+        </div>
+        <div className="flex items-center gap-1">{/* prev / numbers / next */}</div>
+        <div className="flex items-center justify-center gap-2">
+          <p className="text-sm text-muted-foreground">Rows per page</p>
+          <Select value={pageSize.toString()} onValueChange={...}>...</Select>
+        </div>
+      </div>
+    </div>
+  </div>
+</>
 ```
 
-Tab state is local (`useState`), no URL sync. `defaultValue="transactions"`.
+### 4.2 Date filter options
 
-**`InstallmentsTabContent`** is either a new private component inside the same file or a separate file under `src/components/installments/InstallmentsTabContent.tsx` (prefer the separate file for testability). It:
-
-- Maintains local state `showCompleted: boolean` (default `false`).
-- Calls `useInstallmentsQuery({ status: showCompleted ? 'ALL' : 'ACTIVE' })`.
-- Renders:
-  - A toggle button / switch labeled **"Show completed"**. Use a `Switch` with label, or a `Toggle` styled as a ghost button. Pick the `Switch` pattern consistent with EditExpenseDrawer's `Switch` usage.
-  - Desktop: `<InstallmentTable installments={installments} onEdit={...} onDelete={...} />`.
-  - Mobile: list of `<InstallmentCard key={i.id} ... />`.
-  - Skeleton while `isLoading` (reuse `SkeletonTable tableType="expense"` on desktop and `SkeletonExpenseCard` on mobile — or create lightweight local skeletons if columns differ too much).
-  - `EmptyState` when `installments.length === 0 && !isLoading`. Icon: `CalendarClock` (from lucide-react). Title: `"No installments yet"`. Description: `"Installment purchases you create will appear here."` — no action button (creation is done via the existing expense form).
-- Controls `EditInstallmentDrawer` with `selectedInstallmentId` state, same pattern as the existing Expenses page controls `EditExpenseDrawer`.
-
----
-
-### 4.3 Component: `src/components/installments/EditInstallmentDrawer.tsx`
-
-**Props:**
+The mobile page has 3 options: **View all**, **This month**, **This year**. The Installments table uses these same 3 options (NOT 4 like `ExpenseTable`). The filter field is `installmentStartDate`.
 
 ```ts
-interface EditInstallmentDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  installmentId: string;
+const DATE_FILTER_OPTIONS = {
+  viewAll:   'view-all',
+  thisMonth: 'this-month',
+  thisYear:  'this-year',
+} as const;
+
+// Filter logic:
+if (dateFilter === 'this-month') {
+  const d = new Date(row.installmentStartDate);
+  if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
+} else if (dateFilter === 'this-year') {
+  const d = new Date(row.installmentStartDate);
+  if (d.getFullYear() !== now.getFullYear()) return false;
 }
 ```
 
-**Structure (mirrors `EditExpenseDrawer`):**
+### 4.3 Search
 
-1. Uses `Drawer` primitive (same usage — mobile bottom drawer / desktop works via Drawer too for consistency with EditExpenseDrawer).
-2. Fetches installment via `useInstallmentQuery(installmentId, { enabled: open })`.
-3. While `isFetching` → render `SkeletonEditExpenseDrawerForm` (reuse; fields are similar enough).
-4. On error → render the same error state used in `EditExpenseDrawer`.
-5. Form (React Hook Form + Zod resolver), fields:
-   - **Name** — `Input`, required.
-   - **Total amount** — `Input` `type="number"`. FormDescription below: `"Total: ₱{total} • Monthly: ₱{monthlyAmount derived}"` that updates live as the user types. Monthly derivation: `watchedAmount / installmentDuration`, formatted to 2 decimals in `PHP`.
-   - **Account** — read-only text `<p>{installmentData.account.name}</p>` with a subtle disabled-field appearance (gray background, lock icon optional).
-   - **Duration** — read-only text `<p>{installmentData.installmentDuration} months</p>`.
-   - **Installment start date** — Popover + `Calendar`, same as the existing drawer's `installmentStartDate` field. No `disabled` prop on Calendar (future dates are allowed).
-   - **Expense type** — `Select`, same as existing drawer.
-   - **Subcategory (optional)** — `Select`, conditional on the selected expense type having subcategories.
-6. Footer:
-   - Primary button: **Update installment** (`isUpdating` → spinner + "Updating installment").
-   - `DrawerClose` variant outline: **Cancel**.
-   - `Separator`.
-   - Destructive outline button: **Delete installment** → opens `DeleteDialog`.
-7. `DeleteDialog`:
-   - `title`: `"Delete installment"`.
-   - `description`: `"This will permanently delete this installment and all {paidCount} payment records. This cannot be undone."` where `paidCount = installmentDuration - remainingInstallments`.
-   - `onConfirm`: call `deleteInstallment(installmentId)`, close drawer, show success toast.
+Debounced 300ms (same pattern as `ExpenseTable`). Search matches, case-insensitively:
 
-**Validation schema:**
+- `row.name`
+- `row.expenseType?.name`
+- `row.expenseSubcategory?.name`
+- `row.account?.name`
 
-New file `src/lib/validations/installments.ts`:
+### 4.4 Pagination
 
-```ts
-export const updateInstallmentSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100, "Name is too long"),
-  amount: z.string().refine(val => !isNaN(Number(val)) && Number(val) > 0, {
-    message: "Amount must be a positive number",
-  }),
-  installmentStartDate: z.date(),
-  expenseTypeId: z.string().min(1, "Expense type is required"),
-  expenseSubcategoryId: z.string().optional(),
-});
+Use `useReactTable` with `getCoreRowModel`, `getPaginationRowModel`, `autoResetPageIndex: false`, initial `pageSize: 10`. `PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50]`. Copy the `getPageNumbers()` helper and the empty-page-safety `useEffect` verbatim from `ExpenseTable`.
+
+Alternatively, implement the same pagination shape manually (the data set is small and we don't need TanStack Table's editing machinery). **Preferred approach:** use TanStack Table for parity — less drift with `ExpenseTable` over time.
+
+### 4.5 Columns
+
+Keep the existing 8 columns from the current `InstallmentTable` (Name, Total, Monthly, Progress, Start date, Next payment, Status, Actions). Re-use the existing `formatCurrency`, `computeNextPayment`, and progress-bar JSX. **No inline editing.** The Actions column is a single pencil icon button that calls `onEdit(row.id)`. Delete is not on the row — it moves into the Sheet.
+
+```tsx
+// Actions cell
+<div className="flex justify-end gap-1">
+  <Button
+    variant="ghost"
+    size="icon"
+    aria-label="Edit installment"
+    onClick={() => onEdit(row.id)}
+  >
+    <IconEdit className="h-4 w-4" />
+  </Button>
+</div>
 ```
 
-**Submit handler:** Build payload matching the server schema (convert Date → ISO string via `formatDateForAPI`; map `"none"` subcategory → `null`). Call `updateInstallment(payload)`. On success toast + close drawer.
-
----
-
-### 4.4 Component: `src/components/installments/InstallmentTable.tsx` (desktop)
-
-**Props:**
+### 4.6 Props
 
 ```ts
 interface InstallmentTableProps {
   installments: Installment[];
-  onEdit: (id: string) => void;
-  onDelete: (id: string, name: string) => void;
+  onEdit: (id: string) => void; // row pencil button
 }
 ```
 
-**Columns:**
+The `onDelete` prop is **removed** — delete is no longer a row-level concern.
 
-| # | Header | Content | Notes |
-|---|---|---|---|
-| 1 | Name | `row.name` | bold, single line w/ truncate (`max-w-[200px]`) |
-| 2 | Total | `₱{row.amount}` | right-aligned, formatted `en-PH` 2-decimal |
-| 3 | Monthly | `₱{row.monthlyAmount}` | right-aligned, formatted |
-| 4 | Progress | `{paid} / {duration}` + thin progress bar | 2-line stacked cell: top line text, bottom line a `h-1 rounded bg-muted` with `bg-primary` filled to `paid/duration` percentage |
-| 5 | Start date | `format(row.installmentStartDate, "MMM d, yyyy")` | |
-| 6 | Next payment | See rule below | |
-| 7 | Status | `Badge` — `ACTIVE` (variant `secondary`) or `COMPLETED` (variant `outline`, muted) | |
-| 8 | Actions | pencil `IconEdit` + trash `Trash2` | ghost icon buttons |
+### 4.7 Empty state (within table)
 
-**Next payment rule:**
+- When `installments.length === 0` (no data at all) → **parent handles this** (`InstallmentsTabContent` renders the "No installments yet" page-level empty state). The table is not mounted in that case.
+- When `filteredRows.length === 0` (filtered/searched to nothing) → render `EmptyState` with `icon={SearchX}`, title `"No installments found"`, description `"Try adjusting your search or filters."`, `variant="table"` inside a full-colspan `<TableCell>` (match `ExpenseTable`).
 
-```
-nextPaymentDate =
-  row.lastProcessedDate
-    ? addDays(new Date(row.lastProcessedDate), 30)
-    : new Date(row.installmentStartDate)
-```
+### 4.8 Skeleton / loading state
 
-If `row.installmentStatus === "COMPLETED"` → render `"—"` instead.
-
-**Empty state (within table):** If `installments.length === 0`, render the `EmptyState` block instead (handled by parent, so the table can assume a non-empty array).
-
-**Sorting:** None for v1 (default order from API).
-
-**Search:** None for v1. The list is expected to be short (usually <20 active installments).
-
-**Table primitives:** Use `Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell` from `@/components/ui/table` for consistency with the existing `ExpenseTable` markup (it uses TanStack Table under the hood — we can skip TanStack Table here since this is a simple read-only list; plain mapping is fine).
+`InstallmentTable` itself does not render a skeleton — the parent (`InstallmentsTabContent`) renders `SkeletonTable tableType="expense"` while `isLoading`. This is unchanged from the current setup. `InstallmentTable` is only mounted once data is loaded.
 
 ---
 
-### 4.5 Component: `src/components/installments/InstallmentCard.tsx` (mobile)
+## 5. Fix 2 — `EditInstallmentSheet` (new, desktop)
 
-**Props:**
+**New file:** `src/components/installments/EditInstallmentSheet.tsx`
+
+Modeled exactly after `src/components/forms/EditAccountSheet.tsx`. Desktop-only (≥ `md`).
+
+### 5.1 Props
+
+```ts
+interface EditInstallmentSheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  className?: string;
+  installmentId: string;
+}
+```
+
+### 5.2 Form fields
+
+Same fields as the existing `EditInstallmentDrawer`. Validation schema reused from `src/lib/validations/installments.ts` (`updateInstallmentSchema`).
+
+| Field | Type | Read-only? |
+|---|---|---|
+| `name` | `Input` (text) | editable |
+| `amount` (total) | `Input type="number"` with `FormDescription` showing `Monthly: ₱{watchedAmount / installmentDuration}` live | editable |
+| Account | plain read-only display (`{installmentData.account.name}` in a disabled-styled field) | read-only |
+| Duration | plain read-only display (`{installmentData.installmentDuration} months`) | read-only |
+| `installmentStartDate` | Popover + `Calendar` (no `disabled` prop — future dates allowed) | editable |
+| `expenseTypeId` | `Select` populated from `useExpenseTypesQuery` | editable |
+| `expenseSubcategoryId` | `Select` conditional on the selected expense type having subcategories; uses `"none"` sentinel for null | editable |
+
+No tags field. Field layout copies the Sheet field spacing from `EditAccountSheet` (`FormItem className="p-4"`).
+
+### 5.3 Footer & delete
+
+Identical pattern to `EditAccountSheet`:
+
+1. `SheetFooter` with the primary `Update installment` submit button (shows "Updating installment..." while `isUpdating`) and a `SheetClose` Cancel outline button.
+2. `<Separator className="mt-2 mb-6" />` below the footer.
+3. A full-width destructive outline button labeled `Delete installment` (styled with the error-color classes copied from `EditAccountSheet`'s delete button) that opens `DeleteDialog`.
+4. `DeleteDialog` rendered as a sibling of `Sheet` inside the component's fragment:
+   - `title`: `"Delete installment"`
+   - `description`: `"This will permanently delete this installment and all {paidCount} payment records. This cannot be undone."` where `paidCount = installmentDuration - remainingInstallments`.
+   - `onConfirm`: call `deleteInstallment(installmentId)`, close dialog, close Sheet, `toast.success("Installment deleted successfully", { duration: 5000 })`.
+
+### 5.4 Data flow
+
+- `useInstallmentQuery(installmentId, { enabled: open })` to fetch single row.
+- `useInstallmentsQuery()` for `updateInstallment`, `deleteInstallment`, `isUpdating`, `isDeleting`.
+- While `isFetching` → render `SkeletonEditAccountSheetForm` (reuse — field count is close enough; if visual drift is significant, a new `SkeletonEditInstallmentSheetForm` may be created, but prefer reuse for v1).
+- On `error` → render the same error block `EditAccountSheet` renders (title "Unable to load installment", description from `error`, Try again / Close buttons).
+
+### 5.5 Submit handler
+
+```ts
+const onSubmit = async (values) => {
+  try {
+    const payload = {
+      id: installmentId,
+      name: values.name,
+      amount: values.amount,
+      installmentStartDate: formatDateForAPI(values.installmentStartDate),
+      expenseTypeId: values.expenseTypeId,
+      expenseSubcategoryId: values.expenseSubcategoryId === 'none' ? null : values.expenseSubcategoryId,
+    };
+    await updateInstallment(payload);
+    toast.success("Installment updated successfully", { duration: 5000 });
+    form.reset();
+    onOpenChange(false);
+  } catch (error) {
+    toast.error("Failed to update installment", {
+      description: error instanceof Error ? error.message : "Please check your information and try again.",
+      duration: 6000,
+    });
+  }
+};
+```
+
+---
+
+## 6. Fix 3 — `InstallmentCard` button removal
+
+**File:** `src/components/installments/InstallmentCard.tsx` (edit in place).
+
+### 6.1 Props (new shape)
 
 ```ts
 interface InstallmentCardProps {
   installment: Installment;
-  onEdit: (id: string) => void;
-  onDelete: (id: string, name: string) => void;
+  onClick?: () => void;
 }
 ```
 
-**Layout (money-map-card, no accordion):**
+- Remove `onEdit` and `onDelete` from props.
+- Add `onClick?: () => void`.
 
-```
-┌──────────────────────────────────────────┐
-│  [icon] Name                   [ACTIVE]  │
-│  Expense type > Subcategory              │
-│                                          │
-│  Monthly        ₱ 1,234.56               │
-│  Duration       6 months                 │
-│  Progress       2 of 6   [▓▓░░░░]        │
-│  Next payment   May 15, 2026             │
-│                                          │
-│  ┌─────────────────────────────────────┐ │
-│  │                        [✎]    [🗑]   │ │
-│  └─────────────────────────────────────┘ │
-└──────────────────────────────────────────┘
-```
+### 6.2 JSX changes
 
-- Use existing `money-map-card-interactive` class. Click anywhere except action buttons triggers `onEdit`.
-- Icon: reuse `Icons.addExpense` with `text-primary` like the existing `ExpenseCard`.
-- Status badge: `ACTIVE` → `Badge variant="secondary"`, `COMPLETED` → `Badge variant="outline"`.
-- Info is a `grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm` with label on left, value on right.
-- Progress row shows `{paid} of {duration}` text and a 1px-ish thin `<div className="h-1 rounded bg-muted"><div className="h-full rounded bg-primary" style={{ width: `${percent}%` }} /></div>`.
-- Icon buttons (pencil + trash) live in a flex row at the bottom, aligned right. `onClick` handlers must `e.stopPropagation()` so they don't trigger the card's edit.
+- The root `<div className="money-map-card-interactive ...">` already has `onClick`. Change it to call `onClick?.()` (the prop) instead of `onEdit(installment.id)`.
+- Delete the entire bottom `<div className="flex justify-end gap-1 pt-2">` containing the Edit and Delete icon buttons.
+- Remove the `Button`, `IconEdit`, and `Trash2` imports — they are no longer used.
+
+No other visual changes. The card is now purely display + clickable, matching `ExpenseCard`.
 
 ---
 
-## 5. Responsive Behavior
+## 7. Fix 4 — Success toast on delete in `InstallmentsTabContent`
 
-Same split as the existing Expenses page:
+**File:** `src/components/installments/InstallmentsTabContent.tsx`.
 
-- `md:hidden` → card list.
-- `hidden md:block` → table.
+### 7.1 Tab-level delete removal
 
-The Tabs component itself is always visible (both breakpoints).
+With Fixes 2 and 3, delete no longer originates from the tab body — it originates from `EditInstallmentSheet` (desktop) or `EditInstallmentDrawer` (mobile), both of which own their own `DeleteDialog`. Therefore:
+
+- Remove `deleteDialogOpen`, `installmentToDelete`, `handleDeleteRequest`, `handleDeleteConfirm` state and handlers from `InstallmentsTabContent`.
+- Remove the `<DeleteDialog />` element from the tab body.
+- Remove the `deleteInstallment`, `isDeleting` destructures from `useInstallmentsQuery` here (the editor components pull these directly).
+
+**Important:** The `toast.success("Installment deleted successfully", { duration: 5000 })` call moves **into the editor components** (Sheet and Drawer) — specifically inside `handleDeleteConfirm` right after `deleteInstallment(installmentId)` resolves / is called, matching the pattern in `ExpenseTable.handleDeleteConfirm` where `toast.success` is called before the mutation (the mutation is fire-and-forget).
+
+### 7.2 Desktop Sheet wiring
+
+Replace the current wiring where desktop opens `EditInstallmentDrawer` with branching:
+
+```tsx
+<div className="md:hidden space-y-4">
+  {installments.map((installment) => (
+    <InstallmentCard
+      key={installment.id}
+      installment={installment}
+      onClick={() => handleEdit(installment.id)}
+    />
+  ))}
+</div>
+<div className="hidden md:block">
+  <InstallmentTable
+    installments={installments}
+    onEdit={handleEdit}
+  />
+</div>
+
+{/* Editors */}
+<div className="md:hidden">
+  <EditInstallmentDrawer
+    open={editOpen}
+    onOpenChange={setEditOpen}
+    installmentId={selectedInstallmentId}
+  />
+</div>
+<div className="hidden md:block">
+  <EditInstallmentSheet
+    open={editOpen}
+    onOpenChange={setEditOpen}
+    installmentId={selectedInstallmentId}
+  />
+</div>
+```
+
+- `handleEdit(id)` just does `setSelectedInstallmentId(id); setEditOpen(true);` — same as the current implementation (minus the rename from `editDrawerOpen` to `editOpen`).
+- `InstallmentCard.onClick` now passes a `() => void` function (no id argument). `handleEdit(installment.id)` is invoked in the arrow closure.
+- `InstallmentTable.onEdit(id)` still takes an id — the pencil button in the Actions column passes `row.id`.
+
+### 7.3 Drawer update
+
+`EditInstallmentDrawer` must also carry the `toast.success("Installment deleted successfully", { duration: 5000 })` call inside its own `handleDeleteConfirm`. Verify the existing implementation — if it already shows a success toast on delete, leave it; if not, add it.
 
 ---
 
-## 6. States (all components)
+## 8. Fix 5 — Balance reversal bug in `DELETE /api/expense-transactions/[id]`
+
+**File:** `src/app/api/expense-transactions/[id]/route.ts`.
+
+### 8.1 The bug
+
+At ~line 362:
+
+```ts
+if (!existingExpense.isSystemGenerated) {
+  const amountToReverse = parseFloat(existingExpense.amount.toString());
+  operations.push(
+    db.financialAccount.update({
+      where: { id: existingExpense.accountId, userId: session.user.id },
+      data: { currentBalance: { increment: amountToReverse } },
+    })
+  );
+}
+```
+
+The guard `!existingExpense.isSystemGenerated` is incorrect. Installment child payments satisfy **both** of the following:
+
+- `isSystemGenerated: true` (set by `POST /api/expense-transactions` during initial-day creation and by the installments cron).
+- The creation of the child row **decremented** the account balance (see `src/app/api/expense-transactions/route.ts` lines 298–347 and the cron at `src/app/api/cron/process-installments/route.ts`).
+
+Therefore, deleting a child must **increment** (reverse). The guard causes the balance reversal to be silently skipped. There is no offsetting code path that compensates — account balances drift whenever a child is deleted directly.
+
+### 8.2 The fix
+
+Remove the `isSystemGenerated` check. Always reverse.
+
+```ts
+// Regular expense or payment record: Hard delete
+const operations: PrismaPromise<unknown>[] = [];
+
+const amountToReverse = parseFloat(existingExpense.amount.toString());
+
+operations.push(
+  db.financialAccount.update({
+    where: {
+      id: existingExpense.accountId,
+      userId: session.user.id,
+    },
+    data: {
+      currentBalance: {
+        increment: amountToReverse,
+      },
+    },
+  })
+);
+
+// Delete the expense record
+operations.push(
+  db.expenseTransaction.delete({
+    where: {
+      id: id,
+      userId: session.user.id,
+    },
+  })
+);
+
+await db.$transaction(operations);
+```
+
+### 8.3 Why this is safe
+
+The only other creators of `ExpenseTransaction` rows in the codebase are:
+
+1. `POST /api/expense-transactions` — always decrements either `parsedAmount` (regular) or `monthlyAmount` (installment initial payment). The parent-installment row itself is created with `isSystemGenerated: false` (default), so it doesn't reach this DELETE path for installments (the `isInstallment` early-return at ~line 349 hands those off to `/api/installments/[id]`).
+2. `src/app/api/cron/process-installments/route.ts` — creates each child payment with `isSystemGenerated: true` **and** decrements the account balance in the same transaction. Reversal on delete is required.
+3. (None other.)
+
+Transfer-related rows: a search for `linkedTransfer`, `transferId`, `isTransferFee` in this route returns no matches. Transfer fees (if any exist in the codebase) do not flow through this DELETE handler — they are handled by the transfer-specific routes. No special-case guard is needed.
+
+### 8.4 Test impact
+
+The existing test `'deletes a non-installment expense and reverses balance'` (already uses `isSystemGenerated: false`) still passes. A new test must be added:
+
+- `'deletes a system-generated child payment and reverses account balance'` — mocks `existingExpense` with `isSystemGenerated: true`, `isInstallment: false`, `parentInstallmentId: 'parent-123'`; asserts that the DELETE operation includes a `financialAccount.update` with `increment: <amount>`.
+
+The existing test `'does not reverse balance for system-generated transactions'` (if it exists) must be **deleted or repurposed** — the behavior it asserts is the bug. Check lines ~240–260 in `src/app/api/expense-transactions/[id]/route.test.ts` for this case.
+
+### 8.5 `DELETE /api/installments/[id]` — no change needed
+
+Confirm (do not modify) that `src/app/api/installments/[id]/route.ts` DELETE iterates children and pushes `financialAccount.update({ ... increment: parseFloat(child.amount) })` for each. This path is correct and independent of the `isSystemGenerated` guard above (it never calls the expense-transactions route).
+
+---
+
+## 9. Responsive & UX
+
+- `<md` (mobile): cards only, tap anywhere on card opens `EditInstallmentDrawer`, delete inside the Drawer footer.
+- `≥md` (desktop): full `InstallmentTable` shell; row pencil button opens `EditInstallmentSheet`, delete inside the Sheet footer.
+- The "Show completed" toggle at the top of the tab body is unchanged.
+- Page-level `EmptyState` ("No installments yet") is unchanged — still rendered by `InstallmentsTabContent` when `installments.length === 0 && !isLoading`.
+
+---
+
+## 10. States
 
 | State | Desktop | Mobile |
 |---|---|---|
-| Loading | `SkeletonTable tableType="expense"` | 4× `SkeletonExpenseCard` |
-| Error (fetch failed) | inline error block with "Try again" button (match Expenses page error) | same |
-| Empty (active, no data) | `EmptyState` with `CalendarClock` icon | same |
-| Empty (after toggle shows only completed? not possible since ALL includes ACTIVE) | n/a | n/a |
-| Populated | table rows | cards |
-
-The Edit drawer's skeleton is already `SkeletonEditExpenseDrawerForm` — reuse.
+| Loading | `SkeletonTable tableType="expense"` (parent) | 4× `SkeletonExpenseCard` (parent) |
+| Error (fetch failed) | Tab-level error block (unchanged) | Tab-level error block (unchanged) |
+| Empty (no installments) | Page `EmptyState` (`CalendarClock`) from parent | same |
+| Empty (filtered) | Table-level `EmptyState` (`SearchX`, "No installments found") inside the table shell | n/a (mobile has no search/filter) |
+| Populated | `InstallmentTable` | `InstallmentCard` list |
 
 ---
 
-## 7. Accessibility
+## 11. Accessibility
 
-- Tabs inherit full keyboard support from Radix.
-- Icon-only action buttons require `aria-label`:
-  - Edit: `aria-label="Edit installment"`
-  - Delete: `aria-label="Delete installment"`
-- Progress bar: add `role="progressbar"`, `aria-valuenow={paid}`, `aria-valuemin={0}`, `aria-valuemax={duration}`, `aria-label="{paid} of {duration} payments made"`.
-- Status badge: include screen-reader text if badge color alone conveys status (use the text label directly).
+- Row action button: `aria-label="Edit installment"` on the pencil `Button`.
+- Card: whole card is a `div` with `role="button"` is **not** required — `ExpenseCard` uses a plain clickable `div` and relies on `cursor-pointer`; match that pattern. (Keyboard users can still tab into action buttons inside the editor components.)
+- Search: `InputGroupInput` `placeholder="Search installments..."`.
+- ToggleGroup: inherits Radix keyboard behavior; no extra work.
 
 ---
 
-## 8. Verification / Test Plan
+## 12. Verification / Test Plan
 
-Each task's `<verify>` block in `-plan.xml` gives the concrete commands. Summary:
+### 12.1 Test suite updates
 
-### 8.1 API tests (Vitest)
+**Modify `src/app/api/expense-transactions/[id]/route.test.ts`:**
 
-- `src/app/api/installments/route.test.ts` — new file, covers:
-  - 401 when unauthenticated
-  - 400 for invalid `status` param
-  - Returns only ACTIVE when `status` omitted
-  - Returns ACTIVE+COMPLETED when `status=ALL`, never CANCELLED
-  - Filters by `userId` and `isInstallment: true`
-- `src/app/api/installments/[id]/route.test.ts` — new file, covers:
-  - PATCH 401 unauthenticated
-  - PATCH 404 when not found
-  - PATCH 400 when target is not an installment
-  - PATCH 400 when a locked field (`installmentDuration`, `accountId`, `tagIds`) is present
-  - PATCH correctly recomputes `monthlyAmount` when `amount` changes
-  - PATCH moved-forward start date: deletes children before the new date and reverses their balances, resets `remainingInstallments` to `installmentDuration`, nulls `lastProcessedDate`
-  - PATCH moved-backward start date: only updates `installmentStartDate` and `date`
-  - PATCH calls `onExpenseTransactionChange`
-  - DELETE 401 unauthenticated
-  - DELETE 404 when not found
-  - DELETE 400 when target is not an installment
-  - DELETE reverses balance for every child and deletes parent + children
-  - DELETE calls `onExpenseTransactionChange`
-- `src/app/api/expense-transactions/[id]/route.test.ts` — **modify existing test**:
-  - Delete the existing `'does not hard-delete installment expense — marks as CANCELLED instead'` test.
-  - Add a new test: `'rejects parent installment delete with 400'` — asserts status 400, the right error message, and that `db.$transaction` is not called.
+- Find and delete (or rewrite) any test that asserts `isSystemGenerated: true` transactions are deleted **without** balance reversal. That behavior is the bug being fixed.
+- Add a test: `'reverses account balance when deleting a system-generated child payment'`. Mock `existingExpense` with `{ isSystemGenerated: true, isInstallment: false, parentInstallmentId: 'p1', amount: '1000', accountId: 'a1' }`. Assert DELETE calls `db.financialAccount.update` with `{ increment: 1000 }`.
+- Keep the existing `'reverses account balance when deleting a regular expense'` test.
+- Keep the `'rejects parent installment delete with 400'` test.
 
-### 8.2 Hook tests
+**Modify `src/components/installments/InstallmentTable.test.tsx`:**
 
-- `src/hooks/useInstallmentsQuery.test.ts` — new file, covers:
-  - `useInstallmentsQuery` fetches with default status
-  - `useInstallmentsQuery({ status: 'ALL' })` passes `?status=ALL`
-  - `updateInstallment` PATCH success invalidates the right keys
-  - `deleteInstallment` error shows toast
-  - `useInstallmentQuery(id)` fetches single row
+- Replace assertions that probed the old bare-`<Table>` markup (if any tests inspect the wrapper) with assertions on the new shell: search input present, ToggleGroup options present, pagination controls rendered.
+- Add a test: `'filters rows by search term'`.
+- Add a test: `'filters rows by This month toggle'`.
+- Add a test: `'renders table-level empty state when filtered to zero rows'`.
+- Assert the pencil button calls `onEdit(id)`. Confirm the trash / `onDelete` prop is gone (test should not reference it).
 
-### 8.3 Component tests
+**Modify `src/components/installments/InstallmentCard.test.tsx`:**
 
-- `src/components/installments/EditInstallmentDrawer.test.tsx` — renders skeleton while fetching, renders form when data arrives, submit calls `updateInstallment`, delete flow calls `deleteInstallment`, account and duration are rendered as read-only text.
-- `src/components/installments/InstallmentTable.test.tsx` — renders all columns correctly, computes `paid` and `nextPaymentDate` properly, fires `onEdit` and `onDelete`.
-- `src/components/installments/InstallmentCard.test.tsx` — mobile card renders all info, action buttons `stopPropagation`, click on card calls `onEdit`.
+- Delete assertions on Edit and Delete buttons.
+- Add: `'calls onClick when the card is clicked'`.
+- Remove `onEdit` / `onDelete` props from the mock setup.
 
-### 8.4 Manual verification
+**Modify `src/components/installments/EditInstallmentDrawer.test.tsx` (light touch):**
 
-- Navigate to `/expenses`, confirm the Tabs (Transactions | Installments) appear.
-- Transactions tab looks and behaves identically to before.
-- Installments tab shows all active parent installments (no child payments).
-- Toggle "Show completed" — COMPLETED ones appear.
-- CANCELLED ones never appear.
-- Edit an installment: change the name and amount, save. Monthly recalculates. The Transactions tab reflects the new `monthlyAmount` on the next cron-created child (can't be tested manually in-session; note in verification doc).
-- Edit an installment and move the start date forward past the last child: children should disappear from Transactions tab, account balance should reflect reversal, `remainingInstallments` should reset.
-- Delete an installment: all children disappear from Transactions tab, account balance is restored.
+- If the existing tests assert that delete does NOT show a success toast, flip the assertion so it does.
+- Otherwise no changes required.
 
----
+**Create `src/components/installments/EditInstallmentSheet.test.tsx`:**
 
-## 9. Risks & Edge Cases
+- Mirrors `EditInstallmentDrawer.test.tsx`: renders skeleton while fetching, renders form when data arrives, Account and Duration shown as read-only, submit calls `updateInstallment`, Delete button opens `DeleteDialog`, confirm calls `deleteInstallment` and shows success toast.
 
-- **Concurrent cron run during edit:** If the installments cron runs while a PATCH moves the start date forward, we could race. Acceptable — the cron runs daily, the user can retry. No lock needed for v1.
-- **Decimal precision:** Use `Number()` or `parseFloat()` on Prisma Decimal fields when incrementing balance (existing routes do the same). Document this with the conversion pattern `parseFloat(child.amount.toString())` to match prior code.
-- **Empty children list when moving start date forward:** If there are no children yet, the filter yields an empty array — no child operations, just update the parent. This is fine.
-- **Status filter on a completed-but-moved-backward installment:** A COMPLETED installment with `remainingInstallments = 0` that gets its start date edited backward — out of scope; spec disallows editing completed installments in the UI by simply not surfacing the Edit button. (Server still allows it if called directly.) Document this limitation.
+### 12.2 Automated verification commands
 
-**Server-side guard on COMPLETED:** For safety, the PATCH and DELETE routes should additionally allow operating on COMPLETED installments (user can clean up history), so do **not** add a `status === COMPLETED → 403` block. The only server gate is `CANCELLED → 404`.
+```
+npm run lint
+npm run build
+npx vitest run
+```
+
+All must exit 0 / all green before a task is considered done.
+
+### 12.3 Manual smoke test
+
+1. Navigate to `/expenses`, click the Installments tab.
+2. Desktop: confirm the table shell matches `ExpenseTable` (rounded border wrapper, search bar top-right, filter toggles top-left, pagination strip at bottom).
+3. Type a query in the search — results filter in ~300ms.
+4. Click "This month" — rows filter to installments whose `installmentStartDate` is in the current month. Click "View all" — all rows return.
+5. Click the pencil on a row → a **Sheet** opens from the right (desktop Sheet, not a Drawer).
+6. Edit the name, click Update — Sheet closes, success toast fires, row reflects the new name.
+7. Open another row in the Sheet, click **Delete installment** → DeleteDialog → Confirm. Sheet closes, success toast fires, row is gone from the table, child payments are gone from the Transactions tab, and the source account balance reflects the reversal.
+8. Resize to mobile: click a card → a **Drawer** opens from the bottom (no row-level buttons visible). Delete inside the Drawer works the same.
+9. Regression: on the Transactions tab, find a child installment payment (grayed / installment badge), open its edit drawer, delete it. Account balance must now reverse (previously it did not — this validates Fix 5).
 
 ---
 
-## 10. Handoff Note (for the Builder)
+## 13. Risks & Edge Cases
+
+- **Fix 5 side effect:** If a transfer fee ever flows through the expense-transactions DELETE route (currently it should not), removing the `isSystemGenerated` guard would now reverse its balance too. Grep confirms no transfer-related conditions exist in this route. If a transfer fee path is discovered during implementation, pause and re-evaluate — do not ship blind.
+- **Pagination state on filter change:** When the user applies a filter and the resulting dataset has fewer pages than the current `pageIndex`, the `useEffect` clamp (copied from `ExpenseTable`) resets to the last valid page.
+- **Sheet + Drawer both mounted:** Both editor components are mounted in the DOM at all breakpoints but hidden via `md:hidden` / `hidden md:block` wrappers. This matches how `CreateExpenseTransactionSheet` and `CreateExpenseTransactionDrawer` coexist on the Expenses page. Each component calls `useInstallmentQuery(id, { enabled: open })`, so only the visible one fetches.
+- **Toast duplication:** Only the editor's `handleDeleteConfirm` fires the success toast. Do not add a parallel toast in `useInstallmentsQuery`'s mutation `onSuccess` — that would cause double-toasting.
+
+---
+
+## 14. Handoff Note (for the Builder)
 
 > **Builder, read this before you start.**
 >
-> - No database migration is required. Do not run any Prisma migration commands.
-> - There are **10 atomic tasks** in the plan. Commit once per task, with a descriptive conventional-commit message.
-> - Task 4 (updating the existing expense-transactions DELETE to reject parent installments) **breaks** one existing test. You must update that test in Task 10. Do not run the full test suite between tasks 4 and 10 — expect that one test to fail. Run the targeted tests listed in each `<verify>` block instead.
-> - The QA pipeline post-execution should handle creating new unit tests for the new files. If the generated tests do not cover the matrix in §8 above, ask the QA agent to extend them.
-> - When in doubt about UI polish (badge variants, spacing, icon sizes), mirror `ExpenseCard` and `ExpenseTable` exactly.
-> - After all tasks pass lint + build and the test matrix in §8 is green, write `docs/installment-management-verification.md`.
+> 1. **No migrations.** No Prisma schema changes.
+> 2. **Five atomic tasks**, one commit each. Order matters: Fix 5 first (API, no UI impact, unblocks QA confidence), then Sheet creation, then the table rewrite (which wires to the Sheet), then the card cleanup, then the tab container cleanup.
+> 3. Re-read `src/components/tables/expenses/ExpenseTable.tsx` and `src/components/forms/EditAccountSheet.tsx` before touching any installment file. The structural shell must be a near-1:1 mirror.
+> 4. Do **not** keep a `trash` icon anywhere in `InstallmentTable` or `InstallmentCard`. Delete moves entirely into the editors.
+> 5. After all five tasks pass lint + build + vitest, update `docs/installment-management-verification.md` (append a new section for this fix pass — do not delete the original verification).
+> 6. Existing tests will require light edits (documented in §12.1). Run targeted test files per task; only run the full `npx vitest run` at the end of the last task.
+> 7. If the tab-level `DeleteDialog` removal causes a test in `InstallmentsTabContent` (if such a test exists — check first) to fail, update the test to assert the editor-level dialog instead.
 
 ---
 
-## 11. Definition of Done
+## 15. Definition of Done
 
-- [ ] All 10 tasks committed atomically.
+- [ ] All five (5) tasks committed atomically on the current feature branch (`feature/installment-management`).
 - [ ] `npm run lint` passes.
 - [ ] `npm run build` passes.
-- [ ] All new and modified tests pass.
-- [ ] Manual verification checklist (§8.4) complete.
-- [ ] `docs/installment-management-verification.md` written.
+- [ ] `npx vitest run` passes with zero failures.
+- [ ] Manual smoke test (§12.3) complete — specifically, step 9 (child delete balance reversal) has been observed.
+- [ ] `docs/installment-management-verification.md` updated with a new "QA Fix Pass" section documenting each fix and its verification.
