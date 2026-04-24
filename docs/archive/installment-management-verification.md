@@ -1,123 +1,89 @@
-# Installment Management — Verification
+# Installment Management — QA Fix Pass Verification
 
 ## Status
-All 10 tasks completed and committed. Lint: PASS. Build: PASS. Tests: 1356/1356 (80 test files).
+All 5 tasks completed and committed on `feature/installment-management`.
 
 ## Tasks Executed
 
 | # | Task Name | Commit | Status |
 |---|-----------|--------|--------|
-| 1 | Add GET /api/installments route | a2f60ca | ✓ Done |
-| 2 | Add PATCH /api/installments/[id] route | 36f0f03 | ✓ Done |
-| 3 | Add DELETE /api/installments/[id] route | 36f0f03 (same file) | ✓ Done |
-| 4 | Reject parent-installment delete on legacy route | 0f785e1 | ✓ Done |
-| 5 | Add useInstallmentsQuery hook | 30613c9 | ✓ Done |
-| 6 | Add EditInstallmentDrawer component | 778f32f | ✓ Done |
-| 7 | Add InstallmentTable (desktop) | 885ab49 | ✓ Done |
-| 8 | Add InstallmentCard (mobile) | 4ad1ad4 | ✓ Done |
-| 9 | Wire Tabs + Installments tab into Expenses page | 4beb811 | ✓ Done |
-| 10 | Update existing tests + add new test coverage | 9b0e3e1 | ✓ Done |
+| 1 | Fix balance reversal in DELETE /api/expense-transactions/[id] | `aed8656` | ✓ Done |
+| 2 | Create EditInstallmentSheet component | `bed46f2` | ✓ Done |
+| 3 | Rewrite InstallmentTable with full ExpenseTable shell | `6e0b426` | ✓ Done |
+| 4 | Strip action buttons from InstallmentCard and switch to onClick prop | `94c18a0` | ✓ Done |
+| 5 | Wire Sheet + Drawer split in InstallmentsTabContent and remove tab-level delete | `a2b43c3` | ✓ Done |
 
 ## Verification Steps
 
-### Lint
+### Fix 5 — Balance reversal bug (Task 1, commit `aed8656`)
+- **File changed:** `src/app/api/expense-transactions/[id]/route.ts`
+- **Change:** Removed `if (!existingExpense.isSystemGenerated)` guard — balance reversal now runs unconditionally for all transactions reaching the hard-delete path.
+- **Test changed:** `src/app/api/expense-transactions/[id]/route.test.ts`
+  - Deleted: `'skips financialAccount.update when expense is system-generated'` (encoded the bug)
+  - Added: `'reverses account balance when deleting a system-generated child payment'`
+- **Verification:** `npx vitest run src/app/api/expense-transactions/[id]/route.test.ts` → 18/18 passed
+
+### Fix 2 — EditInstallmentSheet (Task 2, commit `bed46f2`)
+- **New file:** `src/components/installments/EditInstallmentSheet.tsx`
+- Mirrors `EditAccountSheet` structure: Sheet + SkeletonEditAccountSheetForm / error block / full form, SheetFooter, Separator, destructive delete button, DeleteDialog sibling.
+- Fields: name, total amount (with live monthly display), read-only Account, read-only Duration, installmentStartDate calendar, expenseTypeId select, conditional expenseSubcategoryId select.
+- `handleDeleteConfirm` fires `toast.success("Installment deleted successfully")` before calling `deleteInstallment`.
+- **New test:** `src/components/installments/EditInstallmentSheet.test.tsx` — 25 tests covering loading/error/form states, disabled read-only inputs, update submit, delete flow + success toast.
+- **Verification:** `npx vitest run src/components/installments/EditInstallmentSheet.test.tsx` → 25/25 passed. `npm run build` ✓
+
+### Fix 1 — InstallmentTable shell (Task 3, commit `6e0b426`)
+- **File rewritten:** `src/components/installments/InstallmentTable.tsx`
+- Shell matches `ExpenseTable` 1:1: ToggleGroup (View all / This month / This year), debounced search InputGroup, `overflow-hidden rounded-md border` table wrapper, TanStack Table pagination strip.
+- Props simplified to `{ installments, onEdit }` — `onDelete` removed entirely. No trash icon anywhere in the component.
+- Date filter operates on `installmentStartDate`.
+- Table-level empty state: `EmptyState` with `SearchX` icon inside full-colspan `TableCell`.
+- **Test rewritten:** `src/components/installments/InstallmentTable.test.tsx` — 21 tests asserting shell presence, search filtering, ToggleGroup items, edit button calls `onEdit(id)`, no delete button.
+- **Verification:** `npx vitest run src/components/installments/InstallmentTable.test.tsx` → 21/21 passed. `npm run lint && npm run build` ✓
+
+### Fix 3 — InstallmentCard button removal (Task 4, commit `94c18a0`)
+- **File changed:** `src/components/installments/InstallmentCard.tsx`
+- Props: replaced `onEdit`/`onDelete` with `onClick?: () => void`.
+- Root div `onClick` now calls `onClick?.()`.
+- Deleted the entire bottom `<div>` with Edit and Delete `<Button>` elements.
+- Removed `Button`, `IconEdit`, `Trash2` imports (no longer used).
+- **Test rewritten:** `src/components/installments/InstallmentCard.test.tsx` — 18 tests. No assertions on Edit/Delete buttons. Added: `'calls onClick when the card root is clicked'`, `'does NOT render Edit or Delete buttons'`, `'does not throw when onClick is not provided'`.
+- **Verification:** `npx vitest run src/components/installments/InstallmentCard.test.tsx` → 18/18 passed
+
+### Fix 3 wiring + Fix 4 — InstallmentsTabContent rewire (Task 5, commit `a2b43c3`)
+- **File changed:** `src/components/installments/InstallmentsTabContent.tsx`
+- Removed: `deleteDialogOpen`, `installmentToDelete`, `handleDeleteRequest`, `handleDeleteConfirm`, `DeleteDialog` import, `deleteInstallment`/`isDeleting` from hook destructure.
+- Renamed `editDrawerOpen` → `editOpen`.
+- `InstallmentCard` now receives `onClick={() => handleEdit(installment.id)}`.
+- `InstallmentTable` now receives only `onEdit={handleEdit}` (no `onDelete`).
+- Editors split: `md:hidden` wraps `EditInstallmentDrawer`, `hidden md:block` wraps `EditInstallmentSheet`.
+- `EditInstallmentDrawer.handleDeleteConfirm` already had `toast.success("Installment deleted successfully")` from prior implementation — confirmed present, no change needed.
+- **Verification:** `npx vitest run` (full suite) → 84 files, 1448 tests, all passed. `npm run lint && npm run build` ✓
+
+## Automated Verification Commands
+
 ```
-npm run lint -- --quiet
-✔ No ESLint warnings or errors
+npm run lint       → ✓ No ESLint warnings or errors
+npm run build      → ✓ Build successful (all routes compiled)
+npx vitest run     → ✓ 84 test files, 1448 tests, 0 failures
 ```
 
-### Build
-```
-npm run build
-✓ Compiled successfully
-Linting and checking validity of types — PASS
-```
+## Manual Smoke Test (§12.3)
 
-### Tests
-```
-npx vitest run
-Test Files  80 passed (80)
-Tests       1356 passed (1356)
-```
+Steps 1–9 should be verified manually before merging:
 
-New test files added:
-- `src/app/api/installments/route.test.ts` — 6 tests covering GET endpoint (auth, status param validation, filter logic)
-- `src/app/api/installments/[id]/route.test.ts` — 15 tests covering PATCH (locked fields, amount recompute, start-date forward/backward) and DELETE (balance reversal, child deletion, recalculator call)
-- `src/hooks/useInstallmentsQuery.test.ts` — 6 tests covering list fetch, status param, invalidation keys, error toast, and single-row fetch
-
-Modified test file:
-- `src/app/api/expense-transactions/[id]/route.test.ts` — Removed `'does not hard-delete installment expense — marks as CANCELLED instead'`, added `'rejects parent installment delete with 400'`
-
-## Files Introduced
-
-### API
-- `src/app/api/installments/route.ts` — GET list (ACTIVE or ALL, never CANCELLED)
-- `src/app/api/installments/[id]/route.ts` — GET single, PATCH (with start-date forward logic), DELETE (with child cleanup and balance reversal)
-
-### Modified API
-- `src/app/api/expense-transactions/[id]/route.ts` — DELETE now returns 400 for parent installments instead of soft-cancelling
-
-### Client
-- `src/hooks/useInstallmentsQuery.ts` — `useInstallmentsQuery` (list + mutations) and `useInstallmentQuery` (single row)
-- `src/lib/validations/installments.ts` — `updateInstallmentSchema`
-- `src/components/installments/EditInstallmentDrawer.tsx` — Drawer form for editing installments (read-only account/duration, editable name/amount/start-date/type/subcategory, delete confirmation)
-- `src/components/installments/InstallmentTable.tsx` — Desktop table with progress bar, next-payment calculation, status badge, action buttons
-- `src/components/installments/InstallmentCard.tsx` — Mobile card with same columns, stopPropagation on action buttons
-- `src/components/installments/InstallmentsTabContent.tsx` — Container: show-completed toggle, loading/error/empty states, EditInstallmentDrawer and DeleteDialog wiring
-- `src/app/expenses/page.tsx` — Wrapped in Tabs; existing content moved to `value="transactions"`, new `value="installments"` renders InstallmentsTabContent
+1. Navigate to `/expenses`, click Installments tab.
+2. Desktop: confirm table shell has rounded border wrapper, search bar top-right, filter toggles top-left, pagination strip at bottom.
+3. Type a query in the search — results filter in ~300ms.
+4. Click "This month" — rows filter by `installmentStartDate`. Click "View all" — all rows return.
+5. Click pencil on a row → **Sheet** opens from the right (not a Drawer).
+6. Edit the name, click Update → Sheet closes, success toast fires, row reflects new name.
+7. Open a row in the Sheet, click **Delete installment** → DeleteDialog → Confirm → Sheet closes, success toast, row gone from table.
+8. Resize to mobile: tap a card → **Drawer** opens from bottom (no row-level buttons visible on card).
+9. *(Critical Fix 5 validation)* On Transactions tab, find a child installment payment, open its edit drawer, delete it. Account balance must now reverse.
 
 ## Notes
 
-- Tasks 2 and 3 (PATCH and DELETE) are in the same file `[id]/route.ts` and share one commit — they were created together to avoid creating an incomplete partial file.
-- The GET /api/installments/[id] single-row endpoint was added alongside PATCH/DELETE per the spec's decision note in Task 5 (hook needs a direct fetch rather than deriving from list cache).
-- `monthlyAmount` recalculation on PATCH amount change: uses `newAmount / existing.installmentDuration`. Past child payments are not modified (historical record).
-- Start-date moved forward: children with `date < newStart` are deleted, their balance reversals are pushed to the same `$transaction`. `remainingInstallments` resets to `installmentDuration`, `lastProcessedDate` is nulled.
-- Start-date moved backward: only parent fields updated, no child operations. `date` field is set to `newStart`.
-- `INSTALLMENT_STATUS` constant remains exported from the expense-transactions route — still imported by `route.ts` (list) and the cron.
-- Component tests for `EditInstallmentDrawer`, `InstallmentTable`, `InstallmentCard` are not included in the unit test files committed here — the QA pipeline agent should generate those as part of its post-execution sweep.
-
-## QA Results
-
-**QA Pipeline run:** 2026-04-19
-**Status:** PASS
-
-### Test Files Generated
-
-| File | Tests |
-|------|-------|
-| `src/components/installments/InstallmentTable.test.tsx` | 21 |
-| `src/components/installments/InstallmentCard.test.tsx` | 22 |
-| `src/components/installments/EditInstallmentDrawer.test.tsx` | 28 |
-
-`src/hooks/useInstallmentsQuery.test.ts` — pre-existing, 6 tests (already passing, no changes made)
-
-### Vitest Results
-
-**Full suite after QA:** 83 test files, 1427 tests, 0 failures
-
-### Fixes Applied
-
-- `InstallmentTable.test.tsx` — Fixed `renders "—" when monthlyAmount is null` to account for `₱—` rendered as split text nodes; fixed `renders the formatted start date` to use a unique date (via `lastProcessedDate`) avoiding collision with next-payment cell; fixed `shows startDate as next payment when lastProcessedDate is null` to use `getAllByText` since both cells render the same date.
-- `InstallmentCard.test.tsx` — Fixed `renders "—" for monthly when monthlyAmount is null` to use `container.textContent` to detect `₱—` split across text nodes.
-- `EditInstallmentDrawer.test.tsx` — Added `/* eslint-disable react/display-name */` to suppress lint error from inline arrow component in FormField mock.
-
-### Source Fixes
-
-None — all issues were test code errors (Category A).
-
-### Commit
-
-`f8a6618` — test(installments): add component and hook tests for installment management feature
-
----
-
-## Manual Verification Checklist (§8.4)
-
-- [ ] Navigate to `/expenses` — Transactions and Installments tabs appear
-- [ ] Transactions tab: existing behavior unchanged
-- [ ] Installments tab: shows ACTIVE parent installments (no child payments appear)
-- [ ] Toggle "Show completed" — COMPLETED installments appear alongside ACTIVE ones
-- [ ] CANCELLED installments never appear in either toggle state
-- [ ] Edit installment — change name and amount; Monthly amount live-updates in description; save succeeds
-- [ ] Edit installment — move start date forward; children before new date disappear from Transactions tab; account balance is restored
-- [ ] Delete installment — all children disappear from Transactions tab; account balance is restored
+- Fix 5 was applied before any UI work to unblock QA confidence on the API layer independently.
+- Phases 3, 4, and 5 were implemented atomically in sequence — the tab container (Phase 5) was applied together with the table rewrite (Phase 3) because the build required consistent prop signatures across all three components simultaneously.
+- No schema migrations were required for any of the 5 fixes.
+- `EditInstallmentDrawer` was confirmed to already have the success toast on delete from a prior implementation pass — no modification was needed.
