@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useEarliestTransaction } from '@/hooks/useEarliestTransaction'
 import AnnualSummaryTable from '@/components/shared/AnnualSummaryTable'
 import { TransactionAnalyzer } from '@/components/reports/TransactionAnalyzer'
+import { EventLedger } from '@/components/reports/EventLedger'
 import { PageHeader } from '@/components/shared/PageHeader'
 import React, { useState } from 'react'
 
@@ -113,6 +114,8 @@ const Reports = () => {
         </div>
 
         <AnnualSummaryTable />
+
+        <EventLedger />
 
         <TransactionAnalyzer />
       </div>
