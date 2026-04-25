@@ -115,9 +115,9 @@ const Reports = () => {
 
         <AnnualSummaryTable />
 
-        <EventLedger />
-
         <TransactionAnalyzer />
+
+        <EventLedger />
       </div>
     </div>
   )
