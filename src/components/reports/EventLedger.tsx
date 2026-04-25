@@ -605,6 +605,7 @@ export function EventLedger() {
                       data.transactions.map((t) => t.id)
                     }
                     onClose={() => setAddPanelOpen(false)}
+                    onTagAdded={() => refetch()}
                   />
                 )}
               </div>
@@ -622,10 +623,12 @@ function AddTransactionsPanel({
   selectedTagIds,
   ledgerTransactionIds,
   onClose,
+  onTagAdded,
 }: {
   selectedTagIds: string[];
   ledgerTransactionIds: string[];
   onClose: () => void;
+  onTagAdded: () => void;
 }) {
   const [searchType, setSearchType] = useState<"expense" | "income">("expense");
   const [searchStartDate, setSearchStartDate] = useState<Date | null>(null);
@@ -681,6 +684,7 @@ function AddTransactionsPanel({
       {
         onSuccess: () => {
           setTaggedIds((prev) => new Set(prev).add(transactionId));
+          onTagAdded();
         },
       }
     );
