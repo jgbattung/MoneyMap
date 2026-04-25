@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog'
 import { Button } from '../ui/button'
-import { Input } from '../ui/input'
+import { CurrencyInput } from '../ui/currency-input'
 import { Label } from '../ui/label'
 import { useNetWorthTarget } from '@/hooks/useNetWorthTarget'
 import { toast } from 'sonner'
@@ -38,8 +38,8 @@ const SetTargetDialog = ({ open, onOpenChange, currentTarget, currentTargetDate 
     e.preventDefault();
 
     // Validate target amount
-    const amount = targetAmount ? parseFloat(targetAmount) : null;
-    if (amount !== null && (isNaN(amount) || amount < 0)) {
+    const parsed = targetAmount ? parseFloat(targetAmount) : null;
+    if (parsed !== null && (isNaN(parsed) || parsed < 0)) {
       toast.error('Invalid target amount', {
         description: 'Please enter a valid positive number',
       });
@@ -48,13 +48,13 @@ const SetTargetDialog = ({ open, onOpenChange, currentTarget, currentTargetDate 
 
     try {
       await updateTarget({
-        target: amount,
+        target: parsed,
         targetDate: targetDate ? targetDate.toISOString() : null,
       });
 
       toast.success('Net worth target updated', {
-        description: amount 
-          ? `Target set to ₱${amount.toLocaleString('en-PH')}` 
+        description: parsed
+          ? `Target set to ₱${parsed.toLocaleString('en-PH')}`
           : 'Target cleared',
       });
 
@@ -97,14 +97,12 @@ const SetTargetDialog = ({ open, onOpenChange, currentTarget, currentTargetDate 
             {/* Target Amount */}
             <div className="grid gap-2">
               <Label htmlFor="target-amount">Target amount</Label>
-              <Input
+              <CurrencyInput
                 id="target-amount"
-                type="number"
-                placeholder="e.g., 1000000"
+                placeholder="e.g., 1,000,000"
                 value={targetAmount}
-                onChange={(e) => setTargetAmount(e.target.value)}
+                onValueChange={setTargetAmount}
                 disabled={isUpdating}
-                className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
               />
             </div>
 

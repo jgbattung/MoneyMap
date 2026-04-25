@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
+import { CurrencyInput } from "../ui/currency-input";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useIncomeTransactionsQuery } from "@/hooks/useIncomeTransactionsQuery";
@@ -110,11 +111,13 @@ const CreateIncomeTransactionSheet = ({ open, onOpenChange, className }: CreateI
                 <FormItem className="p-4">
                   <FormLabel>Amount</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
+                    <CurrencyInput
                       placeholder="0"
-                      className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                      {...field}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
                       disabled={isCreating}
                     />
                   </FormControl>

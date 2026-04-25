@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "../ui/drawer";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
+import { CurrencyInput } from "../ui/currency-input";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useTransfersQuery, useTransferQuery } from "@/hooks/useTransferTransactionsQuery";
@@ -234,11 +235,13 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                         <FormItem className="p-4">
                           <FormLabel>Amount</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
+                            <CurrencyInput
                               placeholder="0"
-                              className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                              {...field}
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
                               disabled={isUpdating}
                             />
                           </FormControl>
@@ -249,8 +252,8 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
 
                     <div className="px-4 pb-4">
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="hasFee" 
+                        <Checkbox
+                          id="hasFee"
                           checked={hasFee}
                           onCheckedChange={handleFeeCheckboxChange}
                           disabled={isUpdating}
@@ -271,11 +274,13 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                             <FormItem className="mt-4">
                               <FormLabel>Fee Amount</FormLabel>
                               <FormControl>
-                                <Input
-                                  type="number"
+                                <CurrencyInput
                                   placeholder="0"
-                                  className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                                  {...field}
+                                  value={field.value}
+                                  onValueChange={field.onChange}
+                                  onBlur={field.onBlur}
+                                  name={field.name}
+                                  ref={field.ref}
                                   disabled={isUpdating}
                                 />
                               </FormControl>

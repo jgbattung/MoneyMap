@@ -6,6 +6,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { z } from "zod"
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import { CurrencyInput } from '../ui/currency-input';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { toast } from 'sonner';
@@ -184,11 +185,13 @@ const CreateExpenseTransactionDrawer = ({ open, onOpenChange,  className}: Creat
                     <FormItem className="p-4">
                       <FormLabel>Amount</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
+                        <CurrencyInput
                           placeholder="0"
-                          className='[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
-                          {...field}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                           disabled={isCreating}
                         />
                       </FormControl>
