@@ -39,6 +39,10 @@ vi.mock('@/components/reports/TransactionAnalyzer', () => ({
   TransactionAnalyzer: () => React.createElement('div', { 'data-testid': 'transaction-analyzer' }),
 }));
 
+vi.mock('@/components/reports/EventLedger', () => ({
+  EventLedger: () => React.createElement('div', { 'data-testid': 'event-ledger' }),
+}));
+
 // Mock Shadcn Select components
 vi.mock('@/components/ui/select', () => ({
   Select: ({ children, value, onValueChange }: {
@@ -141,6 +145,11 @@ describe('Reports page', () => {
     it('renders CategoryBreakdownChart for income tab', () => {
       render(React.createElement(Reports), { wrapper: createWrapper() });
       expect(screen.getByTestId('category-breakdown-chart-income')).toBeTruthy();
+    });
+
+    it('renders the EventLedger component', () => {
+      render(React.createElement(Reports), { wrapper: createWrapper() });
+      expect(screen.getByTestId('event-ledger')).toBeTruthy();
     });
   });
 
