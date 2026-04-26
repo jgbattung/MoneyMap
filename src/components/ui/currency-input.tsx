@@ -43,8 +43,13 @@ const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
       formatNumber(toNumber(value))
     )
     const inputRef = React.useRef<HTMLInputElement | null>(null)
+    const isInternalChange = React.useRef(false)
 
     React.useEffect(() => {
+      if (isInternalChange.current) {
+        isInternalChange.current = false
+        return
+      }
       setDisplayValue(formatNumber(toNumber(value)))
     }, [value])
 
@@ -69,6 +74,7 @@ const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
       const newCursor = cursorPos + (commasAfter - commasBefore)
 
       setDisplayValue(newDisplay)
+      isInternalChange.current = true
       onValueChange(cleaned)
 
       const el = inputRef.current
