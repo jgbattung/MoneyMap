@@ -29,6 +29,7 @@ import { format } from 'date-fns';
 import { ChevronDownIcon, ChevronLeft, ChevronRight, SearchIcon, SearchX, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import SkeletonTable from '@/components/shared/SkeletonTable';
 
 const columnHelper = createColumnHelper<ExpenseTransaction>();
 
@@ -379,9 +380,9 @@ const EditCell = ({ row, table }: any) => {
 
 const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
   const { expenseTransactions, updateExpenseTransaction, isUpdating, deleteExpenseTransaction, isDeleting } = useExpenseTransactionsQuery({ accountId });
-  const { accounts } = useAccountsQuery();
-  const { cards } = useCardsQuery();
-  const { budgets } = useExpenseTypesQuery();
+  const { accounts, isLoading: accountsLoading } = useAccountsQuery();
+  const { cards, isLoading: cardsLoading } = useCardsQuery();
+  const { budgets, isLoading: expenseTypesLoading } = useExpenseTypesQuery();
 
   const { tags } = useTagsQuery();
   const { mergedData, editedRows, setEditedRows, updateData, revertData, clearPendingEdits } = useEditableTable({
@@ -581,6 +582,16 @@ const ExpenseTable = ({ accountId }: ExpenseTableProps = {}) => {
       table.setPageIndex(pageCount - 1);
     }
   }, [filteredData.length, table]);
+
+  const isLoadingData = accountsLoading || cardsLoading || expenseTypesLoading;
+
+  if (isLoadingData) {
+    return (
+      <div className="md:block mt-10">
+        <SkeletonTable tableType="expense" />
+      </div>
+    );
+  }
 
   const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50] as const;
 
