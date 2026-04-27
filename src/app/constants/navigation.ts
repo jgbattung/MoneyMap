@@ -2,21 +2,20 @@ import {
   Icon,
   IconHome,
   IconHomeFilled,
-  IconCashBanknote,
-  IconCashBanknoteFilled,
+  IconBuildingBank,
   IconCreditCard,
   IconCreditCardFilled,
-  IconSwitchHorizontal,
+  IconReceipt,
   IconReceiptFilled,
   IconPig,
   IconPigFilled,
-  IconWallet,
+  IconCoin,
   IconCoinFilled,
-  IconTrendingUp,
+  IconGraph,
   IconGraphFilled,
-  IconArrowsExchange,
+  IconExchange,
   IconExchangeFilled,
-  IconChartBar,
+  IconReportAnalytics,
   IconReportAnalyticsFilled,
   IconDots,
 } from "@tabler/icons-react";
@@ -46,7 +45,7 @@ export const navGroups: NavGroup[] = [
     label: "Accounts",
     key: "accounts",
     routes: [
-      { name: "Accounts", path: "/accounts", icon: IconCashBanknote, activeIcon: IconCashBanknoteFilled },
+      { name: "Accounts", path: "/accounts", icon: IconBuildingBank, activeIcon: IconBuildingBank },
       { name: "Cards", path: "/cards", icon: IconCreditCard, activeIcon: IconCreditCardFilled },
     ],
   },
@@ -54,10 +53,10 @@ export const navGroups: NavGroup[] = [
     label: "Activity",
     key: "activity",
     routes: [
-      { name: "Transactions", path: "/transactions", icon: IconSwitchHorizontal, activeIcon: IconReceiptFilled },
-      { name: "Expenses", path: "/expenses", icon: IconWallet, activeIcon: IconCoinFilled },
-      { name: "Income", path: "/income", icon: IconTrendingUp, activeIcon: IconGraphFilled },
-      { name: "Transfers", path: "/transfers", icon: IconArrowsExchange, activeIcon: IconExchangeFilled },
+      { name: "Transactions", path: "/transactions", icon: IconReceipt, activeIcon: IconReceiptFilled },
+      { name: "Expenses", path: "/expenses", icon: IconCoin, activeIcon: IconCoinFilled },
+      { name: "Income", path: "/income", icon: IconGraph, activeIcon: IconGraphFilled },
+      { name: "Transfers", path: "/transfers", icon: IconExchange, activeIcon: IconExchangeFilled },
     ],
   },
   {
@@ -65,7 +64,7 @@ export const navGroups: NavGroup[] = [
     key: "planning",
     routes: [
       { name: "Budgets", path: "/budgets", icon: IconPig, activeIcon: IconPigFilled },
-      { name: "Reports", path: "/reports", icon: IconChartBar, activeIcon: IconReportAnalyticsFilled },
+      { name: "Reports", path: "/reports", icon: IconReportAnalytics, activeIcon: IconReportAnalyticsFilled },
     ],
   },
 ];
@@ -78,7 +77,7 @@ export const navRoutes: NavRoute[] = [
 
 export const mobileNavRoutes: NavRoute[] = [
   { name: "Dashboard", path: "/dashboard", icon: IconHome, activeIcon: IconHomeFilled },
-  { name: "Accounts", path: "/accounts", icon: IconCashBanknote, activeIcon: IconCashBanknoteFilled },
-  { name: "Transactions", path: "/transactions", icon: IconSwitchHorizontal, activeIcon: IconReceiptFilled },
+  { name: "Accounts", path: "/accounts", icon: IconBuildingBank, activeIcon: IconBuildingBank },
+  { name: "Transactions", path: "/transactions", icon: IconReceipt, activeIcon: IconReceiptFilled },
   { name: "More", path: "/more", icon: IconDots, activeIcon: IconDots },
 ];

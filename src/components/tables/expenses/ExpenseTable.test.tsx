@@ -76,6 +76,11 @@ vi.mock('@/components/shared/DeleteDialog', () => ({
       : null,
 }));
 
+vi.mock('@/components/shared/SkeletonTable', () => ({
+  default: ({ tableType }: { tableType?: string }) =>
+    React.createElement('div', { 'data-testid': `skeleton-table-${tableType ?? 'default'}` }),
+}));
+
 vi.mock('@/components/shared/TagInput', () => ({
   TagInput: ({
     onChange,
@@ -361,6 +366,68 @@ describe('ExpenseTable', () => {
       renderExpenseTable();
       expect(screen.getByText('Solo Expense')).toBeTruthy();
       expect(screen.getByText(/Showing 1 out of 1/)).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('loading state', () => {
+    it('renders skeleton table when accounts are loading', () => {
+      setupAllMocks();
+      vi.mocked(useAccountsQuery).mockReturnValue({
+        accounts: [] as any,
+        isLoading: true,
+        error: null,
+        refetch: vi.fn(),
+        createAccount: vi.fn(),
+        updateAccount: vi.fn(),
+        deleteAccount: vi.fn(),
+        isCreating: false,
+        isUpdating: false,
+        isDeleting: false,
+      });
+      renderExpenseTable();
+      expect(screen.getByTestId('skeleton-table-expense')).toBeTruthy();
+    });
+
+    it('renders skeleton table when cards are loading', () => {
+      setupAllMocks();
+      vi.mocked(useCardsQuery).mockReturnValue({
+        cards: [] as any,
+        isLoading: true,
+        error: null,
+        refetch: vi.fn(),
+        createCard: vi.fn(),
+        updateCard: vi.fn(),
+        deleteCard: vi.fn(),
+        isCreating: false,
+        isUpdating: false,
+        isDeleting: false,
+      });
+      renderExpenseTable();
+      expect(screen.getByTestId('skeleton-table-expense')).toBeTruthy();
+    });
+
+    it('renders skeleton table when expense types are loading', () => {
+      setupAllMocks();
+      vi.mocked(useExpenseTypesQuery).mockReturnValue({
+        budgets: [],
+        isLoading: true,
+        error: null,
+        createBudget: vi.fn(),
+        updateBudget: vi.fn(),
+        deleteBudget: vi.fn(),
+        isCreating: false,
+        isUpdating: false,
+        isDeleting: false,
+      });
+      renderExpenseTable();
+      expect(screen.getByTestId('skeleton-table-expense')).toBeTruthy();
+    });
+
+    it('does not render skeleton when all data is loaded', () => {
+      setupAllMocks();
+      renderExpenseTable();
+      expect(screen.queryByTestId('skeleton-table-expense')).toBeNull();
     });
   });
 

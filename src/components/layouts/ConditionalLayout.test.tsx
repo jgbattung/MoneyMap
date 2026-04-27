@@ -109,6 +109,29 @@ describe('ConditionalLayout', () => {
       renderLayout()
       expect(screen.getByTestId('page-content')).toBeTruthy()
     })
+
+    it('renders a sidebar placeholder with w-56 to prevent layout shift', () => {
+      const { container } = renderLayout()
+      const placeholder = container.querySelector('.w-56')
+      expect(placeholder).toBeTruthy()
+      expect(placeholder?.className).toContain('hidden')
+      expect(placeholder?.className).toContain('md:flex')
+    })
+
+    it('renders a bottombar placeholder with h-14 to prevent layout shift', () => {
+      const { container } = renderLayout()
+      const placeholder = container.querySelector('.h-14')
+      expect(placeholder).toBeTruthy()
+      expect(placeholder?.className).toContain('md:hidden')
+      expect(placeholder?.className).toContain('fixed')
+    })
+
+    it('wraps children in flex-1 overflow-auto during pending state', () => {
+      renderLayout()
+      const contentWrapper = screen.getByTestId('page-content').parentElement
+      expect(contentWrapper?.className).toContain('flex-1')
+      expect(contentWrapper?.className).toContain('overflow-auto')
+    })
   })
 
   // -------------------------------------------------------------------------

@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <feature>Event Ledger</feature>
+  <spec>docs/event-ledger-spec.md</spec>
+  <branch>feature/event-ledger</branch>
+
+  <!-- Phase 1: Types + Validation -->
+  <phase name="Types and Validation">
+    <task>
+      <name>Create shared types for event ledger</name>
+      <action>
+        Create `src/types/event-ledger.ts` with the following exports:
+
+        - `EventLedgerParams` interface: { tagIds: string[], startDate?: string, endDate?: string, accountId?: string, skip?: number, take?: number }
+        - `EventLedgerTransaction` interface: { id: string, name: string, amount: number, type: "expense" | "income", date: string, categoryName: string, subcategoryName?: string, accountName: string, tags: { id: string, name: string, color: string }[] }
+        - `EventLedgerResponse` interface: { totalExpenses: number, totalIncome: number, netAmount: number, expenseCount: number, incomeCount: number, transactions: EventLedgerTransaction[], hasMore: boolean }
+        - `EventLedgerTagParams` interface: { transactionId: string, transactionType: "expense" | "income", tagId: string }
+      </action>
+      <verify>Run `npx tsc --noEmit` and confirm no type errors.</verify>
+    </task>
+
+    <task>
+      <name>Create Zod validation schemas for event ledger</name>
+      <action>
+        Create `src/lib/validations/event-ledger.ts` with three schemas:
+
+        1. `eventLedgerQuerySchema` (server-side, for GET API route):
+           - tagIds: z.string().min(1, "At least one tag is required")
+           - startDate: z.string().optional()
+           - endDate: z.string().optional()
+           - accountId: z.string().min(1).optional()
+           - skip: z.coerce.number().int().min(0).default(0)
+           - take: z.coerce.number().int().min(1).max(50).default(10)
+
+        2. `eventLedgerTagSchema` (server-side, for PATCH tag route):
+           - transactionId: z.string().min(1)
+           - transactionType: z.enum(["expense", "income"])
+           - tagId: z.string().min(1)
+
+        3. `eventLedgerFormSchema` (client-side, for React Hook Form):
+           - tagIds: z.array(z.string()).min(1, "Select at least one tag")
+           - startDate: z.date().optional().nullable()
+           - endDate: z.date().optional().nullable()
+           - accountId: z.string().optional()
+
+        Export all schemas and their inferred types.
+        Follow the pattern in `src/lib/validations/transaction-analysis.ts`.
+      </action>
+      <verify>Run `npx tsc --noEmit` and confirm no type errors.</verify>
+    </task>
+  </phase>
+
+  <!-- Phase 2: API Endpoints -->
+  <phase name="API Endpoints">
+    <task>
+      <name>Create event ledger query API route</name>
+      <action>
+        Create `src/app/api/reports/event-ledger/route.ts` with a GET handler.
+
+        Follow the auth pattern from `src/app/api/reports/transaction-analysis/route.ts`:
+        - `export const dynamic = 'force-dynamic'`
+        - Import `auth` from `@/lib/auth`, `headers` from `next/headers`, `db` from `@/lib/prisma`
+        - Check session, return 401 if missing
+        - Extract and validate query params using `eventLedgerQuerySchema`
+        - Return 400 on validation failure
+
+        Parse `tagIds` by splitting the comma-separated string into an array.
+
+        Build shared filter conditions:
+        - `tags: { some: { id: { in: tagIdArray } } }`
+        - Conditionally add: date range (gte/lte), accountId
+        - Always include `userId` from session
+
+        Execute in parallel via `Promise.all`:
+
+        1. `db.expenseTransaction.aggregate` with `{ where: { userId, isInstallment: false, ...sharedFilters }, _sum: { amount: true }, _count: true }`
+        2. `db.incomeTransaction.aggregate` with `{ where: { userId, ...sharedFilters }, _sum: { amount: true }, _count: true }`
+        3. `db.expenseTransaction.findMany` with `{ where: same, orderBy: { date: 'desc' }, take: skip + take + 1, include: { account: { select: { name: true } }, expenseType: { select: { name: true } }, expenseSubcategory: { select: { name: true } }, tags: { select: { id: true, name: true, color: true } } } }`
+        4. `db.incomeTransaction.findMany` with `{ where: same, orderBy: { date: 'desc' }, take: skip + take + 1, include: { account: { select: { name: true } }, incomeType: { select: { name: true } }, tags: { select: { id: true, name: true, color: true } } } }`
+
+        Merge expense and income transaction lists:
+        - Map expenses to `EventLedgerTransaction` with `type: "expense"`, `categoryName` from `expenseType.name`, `subcategoryName` from `expenseSubcategory?.name`
+        - Map income to `EventLedgerTransaction` with `type: "income"`, `categoryName` from `incomeType.name`, no subcategory
+        - Concatenate, sort by `date` descending
+        - Slice from `skip` to `skip + take`, set `hasMore = merged.length > skip + take`
+
+        Calculate:
+        - `totalExpenses` = expense aggregate sum (rounded to 2 decimals, default 0)
+        - `totalIncome` = income aggregate sum (rounded to 2 decimals, default 0)
+        - `netAmount` = totalExpenses - totalIncome
+
+        Return JSON response. Wrap in try/catch, return 500 on failure.
+      </action>
+      <verify>
+        Run `npm run build` to confirm the route compiles.
+        Manual test: Start dev server, call `GET /api/reports/event-ledger?tagIds=some-tag-id` with a valid session cookie. Confirm 200 response with correct shape. Confirm 400 when tagIds is empty.
+      </verify>
+    </task>
+
+    <task>
+      <name>Create quick-tag API route</name>
+      <action>
+        Create `src/app/api/reports/event-ledger/tag/route.ts` with a PATCH handler.
+
+        Auth: same pattern as above.
+
+        Parse and validate request body using `eventLedgerTagSchema`.
+
+        Based on `transactionType`:
+        - "expense": `db.expenseTransaction.update({ where: { id: transactionId, userId }, data: { tags: { connect: { id: tagId } } } })`
+        - "income": `db.incomeTransaction.update({ where: { id: transactionId, userId }, data: { tags: { connect: { id: tagId } } } })`
+
+        Use `tags: { connect: { id: tagId } }` (NOT `set`) to append without removing existing tags.
+
+        Return 200 with `{ success: true }`.
+
+        Handle Prisma errors:
+        - Record not found → 404
+        - Tag already connected (unique constraint on implicit join) → return 200 no-op (Prisma `connect` is idempotent, so this should just work)
+        - Other errors → 500
+      </action>
+      <verify>
+        Run `npm run build` to confirm the route compiles.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 3: Hooks -->
+  <phase name="Data Hooks">
+    <task>
+      <name>Create useEventLedger query and mutation hooks</name>
+      <action>
+        Create `src/hooks/useEventLedger.ts`.
+
+        Import `useQuery`, `useMutation`, `useQueryClient` from `@tanstack/react-query`.
+        Import types from `@/types/event-ledger`.
+
+        1. `fetchEventLedger(params: EventLedgerParams)`:
+           - Build `URLSearchParams`, joining `tagIds` with commas
+           - Fetch `GET /api/reports/event-ledger?${params}`
+           - Throw on non-ok response
+           - Return typed `EventLedgerResponse`
+
+        2. Export `useEventLedger(params: EventLedgerParams)`:
+           - `useQuery` with queryKey `['eventLedger', params]`, enabled: false, staleTime: 5 min, refetchOnWindowFocus: false
+           - Return `{ data: data ?? null, isFetching, error, refetch }`
+
+        3. `addTagToTransaction(params: EventLedgerTagParams)`:
+           - Fetch `PATCH /api/reports/event-ledger/tag` with JSON body
+           - Throw on non-ok response
+
+        4. Export `useEventLedgerTag()`:
+           - `useMutation` calling `addTagToTransaction`
+           - `onSuccess`: invalidate `['eventLedger']` queries via `queryClient.invalidateQueries`
+           - Return `{ addTag: mutate, isAdding: isPending }`
+
+        Follow the return pattern from `src/hooks/useTransactionAnalysis.ts`.
+      </action>
+      <verify>Run `npx tsc --noEmit` to confirm no type errors.</verify>
+    </task>
+  </phase>
+
+  <!-- Phase 4: Component — Filter Form -->
+  <phase name="Event Ledger Component — Filters">
+    <task>
+      <name>Create EventLedger filter form UI</name>
+      <action>
+        Create `src/components/reports/EventLedger.tsx` as a `"use client"` component.
+
+        This task creates the FILTER FORM only. Results display is added in the next task.
+
+        Component structure:
+        1. React Hook Form with `zodResolver(eventLedgerFormSchema)`, defaults: `{ tagIds: [], startDate: null, endDate: null, accountId: "" }`
+        2. Use `useTagsQuery()`, `useAccountsQuery()` for filter data.
+        3. Use `useEventLedger` hook.
+        4. Track `hasAnalyzed` state.
+
+        Render a Shadcn `Card` with:
+        - `CardHeader`: title "Event Ledger", description "See the real cost of an event by combining expenses and income under the same tags"
+        - `CardContent`
+
+        Inside `CardContent`:
+
+        a. **Tag selection (primary filter):**
+           - Reuse the Popover + Command + Checkbox multi-select pattern from TransactionAnalyzer's tag filter.
+           - Selected tags shown as colored Badge pills below the trigger.
+           - Label: "Select Tags"
+
+        b. **Optional filters row:** `grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4`:
+           - Start Date: Popover + Calendar. Label: "From"
+           - End Date: Popover + Calendar. Label: "To"
+           - Account: Select dropdown. Label: "Account". "All accounts" default.
+
+        c. **Action buttons:** `flex justify-end gap-2`:
+           - "Clear" Button (ghost variant). Only visible when any filter is active.
+           - "View Ledger" Button (default variant). Disabled when `tagIds` is empty or while fetching. Show Spinner + "Analyzing..." when fetching.
+
+        `handleAnalyze()`: build params from form, call refetch, set hasAnalyzed = true.
+        `handleClear()`: reset form, clear results state.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+        Temporarily import in reports page to verify it renders correctly.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 5: Component — Results Display -->
+  <phase name="Event Ledger Component — Results">
+    <task>
+      <name>Add results display to EventLedger</name>
+      <action>
+        Extend `src/components/reports/EventLedger.tsx` to add the results panel below the filter form.
+
+        Only shown when `hasAnalyzed === true` AND `data` is non-null.
+
+        Wrapped in `rounded-lg bg-muted/20 p-3 md:p-4 space-y-4 md:space-y-6`.
+
+        Sections:
+
+        1. **Summary cards:** `grid grid-cols-3 gap-3`:
+           - "Expenses" card: total expenses formatted as PHP, `text-red-500` accent
+           - "Income" card: total income formatted as PHP, `text-green-500` accent
+           - "Net Cost"/"Net Gain" card: net amount, red if positive (cost), green if negative (gain)
+           - Each card: `p-3 md:p-4 text-center`, label `text-xs text-muted-foreground`, value `text-lg md:text-xl font-bold`
+
+        2. **Summary sentence:** `text-sm text-muted-foreground`:
+           - Format: "You spent **₱X** and received **₱Y** across **N transactions** — net cost of **₱Z**"
+           - Dynamic values use `font-medium text-foreground`
+           - If net is negative: "net gain of ₱Z"
+
+        3. **Transaction list:**
+           - Each row: flex layout with type indicator (− red / + green), name, category info, amount (color-coded), date
+           - Sorted by date descending
+           - "Load More" button with remaining count when `hasMore`
+
+        4. **Empty state:** EmptyState widget with SearchX icon when no transactions found.
+
+        5. **Loading state:** Skeleton cards (3) + skeleton rows (3) while fetching.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+        On dev server: select a tag that has both expense and income transactions. Click "View Ledger". Verify:
+        - Summary cards show correct totals
+        - Net amount is correct (expenses - income)
+        - Transactions are color-coded and sorted by date
+        - Load More works
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 6: Component — Add Transactions Panel -->
+  <phase name="Event Ledger Component — Add Transactions">
+    <task>
+      <name>Add inline transaction search and quick-tag panel</name>
+      <action>
+        Extend `src/components/reports/EventLedger.tsx` to add the "Add Transactions" panel.
+
+        Below the transaction list (inside the results panel), add:
+        - An "Add Transactions" button (outline variant, Plus icon)
+        - Clicking it reveals a search panel (use `useState` for open/close)
+
+        **Search panel contents:**
+
+        1. **Search filters row:**
+           - Type toggle: ToggleGroup "Expense" / "Income" (defaults to "Expense")
+           - Date range: two calendar pickers (From / To)
+           - Category: Select dropdown (dynamic based on type — use `useExpenseTypesQuery` or `useIncomeTypesQuery`)
+           - Account: Select dropdown
+           - Name search: Input with search icon
+           - "Search" button to trigger query
+
+        2. **Search results:**
+           Reuse `useTransactionAnalysis` hook to query the existing transaction-analysis endpoint.
+
+           Display results in a compact list. Each row:
+           - Transaction name, category, account, amount, date
+           - "Add Tag" button (small, outline variant) on the right
+
+           Filter out transactions that already have ANY of the currently selected Event Ledger tags. Do this client-side by comparing the transaction IDs against the ledger results.
+
+        3. **"Add Tag" action:**
+           - Call `useEventLedgerTag().addTag()` with transactionId, transactionType, and the FIRST tag from the selected Event Ledger tags
+           - On success: the `['eventLedger']` query is invalidated (handled by the mutation hook), so results refresh automatically
+           - Remove the tagged transaction from search results (client-side filter)
+
+        4. **Close panel:** "Done" button or X icon to collapse.
+
+        Important implementation notes:
+        - The search panel has its OWN form state separate from the main Event Ledger form
+        - Use a separate `useTransactionAnalysis` instance for search results
+        - The TransactionAnalyzer's existing endpoint returns individual transactions — reuse it directly
+      </action>
+      <verify>
+        On dev server:
+        1. View ledger for a tag. Click "Add Transactions".
+        2. Search for a transaction not yet tagged. Verify it appears in results.
+        3. Click "Add Tag". Verify the tag is added and the transaction moves to the ledger.
+        4. Verify ledger totals update after adding.
+        5. Verify the added transaction no longer appears in search results.
+        6. Click "Done" to close the panel.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 7: Page Integration -->
+  <phase name="Page Integration">
+    <task>
+      <name>Integrate EventLedger into the reports page</name>
+      <action>
+        Modify `src/app/reports/page.tsx`:
+
+        1. Add import: `import EventLedger from '@/components/reports/EventLedger'` (or named import).
+        2. Inside the page's container, add `&lt;EventLedger /&gt;` ABOVE `&lt;TransactionAnalyzer /&gt;` (but below `&lt;AnnualSummaryTable /&gt;`).
+
+        The component is self-contained, so no props are needed.
+      </action>
+      <verify>
+        Run `npm run lint` and `npm run build`.
+        On dev server: navigate to /reports. Event Ledger card should appear between Annual Summary and Transaction Analyzer.
+      </verify>
+    </task>
+  </phase>
+
+  <!-- Phase 8: Final Verification -->
+  <phase name="Final Verification">
+    <task>
+      <name>Run full lint, build, and manual verification</name>
+      <action>
+        Run `npm run lint` and fix any errors.
+        Run `npm run build` and ensure zero errors.
+
+        Manual verification checklist (from spec section 6.2):
+        1. Event Ledger visible on reports page above Transaction Analyzer.
+        2. "View Ledger" disabled without tags selected.
+        3. Single tag selection shows correct results.
+        4. Multi-tag selection uses OR logic.
+        5. Date range and account filters work.
+        6. Summary cards show correct totals with proper color coding.
+        7. Net Amount shows "Net Cost" (red) or "Net Gain" (green) correctly.
+        8. Transactions are color-coded and sorted by date.
+        9. "Add Transactions" panel opens, search works.
+        10. Quick-tag adds tag and refreshes ledger.
+        11. Tagged transaction removed from search results.
+        12. Load More pagination works.
+        13. Empty state renders correctly.
+        14. Clear filters resets everything.
+        15. Mobile responsive layout works.
+      </action>
+      <verify>
+        Lint and build pass with zero errors.
+        All 15 manual checks pass.
+      </verify>
+    </task>
+
+    <task>
+      <name>Generate verification document</name>
+      <action>
+        Create `docs/event-ledger-verification.md` documenting:
+        - All files created and modified
+        - Lint and build results
+        - Manual test results for each verification item
+        - Any deviations from the spec and rationale
+      </action>
+      <verify>The verification document exists and covers all items.</verify>
+    </task>
+  </phase>
+</plan>

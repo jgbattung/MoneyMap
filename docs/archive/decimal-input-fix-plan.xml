@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <meta>
+    <title>Fix Decimal Input Bug in CurrencyInput</title>
+    <spec>docs/decimal-input-fix-spec.md</spec>
+    <branch>fix/decimal-input-currency</branch>
+  </meta>
+
+  <task id="1" file="src/components/ui/currency-input.tsx">
+    <title>Guard useEffect from overwriting user input</title>
+    <description>
+      Add an `isInternalChange` ref that is set to true inside `handleChange` before calling `onValueChange`.
+      In the useEffect that syncs `value` → `displayValue`, check the ref: if true, reset it and return early.
+      Otherwise, sync from the external value as before.
+    </description>
+  </task>
+
+  <task id="2" file="src/components/ui/currency-input.tsx">
+    <title>Verify existing behaviors are preserved</title>
+    <description>
+      Confirm that external updates still work:
+      - Form reset clears the input
+      - Initial load populates the value
+      - Programmatic value changes (e.g. EditAccountDrawer loading account balance) reflect in the input
+    </description>
+  </task>
+</plan>
