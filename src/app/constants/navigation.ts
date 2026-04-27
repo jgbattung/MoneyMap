@@ -2,8 +2,7 @@ import {
   Icon,
   IconHome,
   IconHomeFilled,
-  IconCashBanknote,
-  IconCashBanknoteFilled,
+  IconBuildingBank,
   IconCreditCard,
   IconCreditCardFilled,
   IconReceipt,
@@ -46,7 +45,7 @@ export const navGroups: NavGroup[] = [
     label: "Accounts",
     key: "accounts",
     routes: [
-      { name: "Accounts", path: "/accounts", icon: IconCashBanknote, activeIcon: IconCashBanknoteFilled },
+      { name: "Accounts", path: "/accounts", icon: IconBuildingBank, activeIcon: IconBuildingBank },
       { name: "Cards", path: "/cards", icon: IconCreditCard, activeIcon: IconCreditCardFilled },
     ],
   },
@@ -78,7 +77,7 @@ export const navRoutes: NavRoute[] = [
 
 export const mobileNavRoutes: NavRoute[] = [
   { name: "Dashboard", path: "/dashboard", icon: IconHome, activeIcon: IconHomeFilled },
-  { name: "Accounts", path: "/accounts", icon: IconCashBanknote, activeIcon: IconCashBanknoteFilled },
+  { name: "Accounts", path: "/accounts", icon: IconBuildingBank, activeIcon: IconBuildingBank },
   { name: "Transactions", path: "/transactions", icon: IconReceipt, activeIcon: IconReceiptFilled },
   { name: "More", path: "/more", icon: IconDots, activeIcon: IconDots },
 ];
