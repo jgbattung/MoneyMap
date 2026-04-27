@@ -9,7 +9,15 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
   const { data: session, isPending } = useSession()
 
   if (isPending || !session) {
-    return <>{children}</>
+    return (
+      <>
+        <div className="hidden md:flex flex-col bg-background border-r border-secondary-700 w-56" />
+        <div className="flex-1 overflow-auto">
+          {children}
+        </div>
+        <div className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-background border-t-2 border-secondary-700" />
+      </>
+    )
   }
 
   return (
