@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+  <phase name="1: Component Creation">
+    <task>
+      <name>Create CurrencyInput component</name>
+      <action>
+Create `src/components/ui/currency-input.tsx`.
+
+The component must:
+- Use `React.forwardRef` matching the Shadcn Input pattern from `src/components/ui/input.tsx`.
+- Accept props: `value: number`, `onValueChange: (value: number) => void`, plus all standard input HTML attributes except `value`, `onChange`, and `type`.
+- Render the Shadcn `Input` from `@/components/ui/input` with `type="text"` and `inputMode="decimal"`.
+- Maintain internal `displayValue` state as a comma-formatted string.
+- On change: strip all chars except digits and `.`, prevent multiple decimal points, parse to number, call `onValueChange`, reformat display string with commas, and manage cursor position.
+- Sync display when `value` prop changes externally (form reset, edit mode init) via `useEffect`.
+- Empty field = value of `0`, display of `""`.
+- Support decimals.
+
+Formatting helpers (inside the file):
+- `formatNumber(num: number): string` — converts number to comma-formatted string. Returns "" for 0.
+- `parseNumber(str: string): number` — strips commas, parses to number. Returns 0 for invalid/empty.
+- `formatForDisplay(rawStr: string): string` — formats the raw input string (preserving trailing decimal during typing).
+
+Cursor management: count commas in old display before cursor, count in new display, adjust position via `requestAnimationFrame`.
+      </action>
+      <verify>
+1. File exists and compiles: `npx tsc --noEmit src/components/ui/currency-input.tsx` (or full `npm run build`).
+2. `npm run lint` — no errors.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="2: Transaction Form Integration">
+    <task>
+      <name>Integrate CurrencyInput into transaction forms</name>
+      <action>
+Modify 5 files. In each, add `import { CurrencyInput } from "@/components/ui/currency-input"` and replace the amount `Input` with `CurrencyInput`.
+
+**Files and fields:**
+1. `src/components/forms/CreateIncomeTransactionSheet.tsx` — `amount` field
+2. `src/components/forms/CreateIncomeTransactionDrawer.tsx` — `amount` field
+3. `src/components/forms/CreateExpenseTransactionSheet.tsx` — `amount` field (NOT `installmentDuration` — that stays as `Input type="number"`)
+4. `src/components/forms/CreateExpenseTransactionDrawer.tsx` — `amount` field (NOT `installmentDuration`)
+5. `src/components/forms/EditIncomeDrawer.tsx` — `amount` field
+
+**Pattern — BEFORE (same in all files):**
+```tsx
+&lt;Input
+  type="number"
+  placeholder="0"
+  className='[&amp;::-webkit-outer-spin-button]:appearance-none [&amp;::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+  {...field}
+  disabled={isCreating}
+/&gt;
+```
+
+**Pattern — AFTER:**
+```tsx
+&lt;CurrencyInput
+  placeholder="0"
+  value={field.value}
+  onValueChange={field.onChange}
+  onBlur={field.onBlur}
+  name={field.name}
+  ref={field.ref}
+  disabled={isCreating}
+/&gt;
+```
+
+Note: The `disabled` prop name may vary (`isCreating`, `isUpdating`, etc.) — preserve whatever exists.
+Note: Remove `Input` from imports only if it is no longer used in that file (expense transaction forms still use `Input` for `installmentDuration`).
+      </action>
+      <verify>
+1. `npm run lint` — no errors.
+2. `npm run build` — succeeds.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="3: Transfer and Expense Edit Form Integration">
+    <task>
+      <name>Integrate CurrencyInput into transfer forms and EditExpenseDrawer</name>
+      <action>
+Modify 4 files. These have multiple currency fields (amount + feeAmount for transfers, amount + installmentDuration for expense edit).
+
+**Files and fields:**
+1. `src/components/forms/CreateTransferSheet.tsx` — `amount` AND `feeAmount` (both get CurrencyInput)
+2. `src/components/forms/CreateTransferDrawer.tsx` — `amount` AND `feeAmount`
+3. `src/components/forms/EditTransferDrawer.tsx` — `amount` AND `feeAmount`
+4. `src/components/forms/EditExpenseDrawer.tsx` — `amount` only (NOT `installmentDuration` — that stays as `Input type="number"`)
+
+Same BEFORE/AFTER pattern as Phase 2.
+
+Note: Transfer forms have a fee checkbox that conditionally renders the `feeAmount` field — preserve that conditional rendering, just swap the `Input` inside it.
+      </action>
+      <verify>
+1. `npm run lint` — no errors.
+2. `npm run build` — succeeds.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="4: Installment Form Integration">
+    <task>
+      <name>Integrate CurrencyInput into installment forms</name>
+      <action>
+Modify 2 files. Each has an `amount` field (labeled "Total amount") that is currency.
+
+**Files:**
+1. `src/components/installments/EditInstallmentSheet.tsx` — `amount` field
+2. `src/components/installments/EditInstallmentDrawer.tsx` — `amount` field
+
+Same BEFORE/AFTER pattern. The `disabled` prop is `isUpdating` in these files.
+
+Note: These files may have a `FormDescription` showing monthly amount below the input — preserve it.
+      </action>
+      <verify>
+1. `npm run lint` — no errors.
+2. `npm run build` — succeeds.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="5: Budget/Type Form Integration">
+    <task>
+      <name>Integrate CurrencyInput into income/expense type forms (budget limits and income goals)</name>
+      <action>
+Modify 8 files. Each has a single currency field for budget limit or income goal.
+
+**Files:**
+1. `src/components/forms/CreateExpenseTypeSheet.tsx` — budget limit field
+2. `src/components/forms/CreateExpenseTypeDrawer.tsx` — budget limit field
+3. `src/components/forms/EditExpenseTypeSheet.tsx` — budget limit field
+4. `src/components/forms/EditExpenseTypeDrawer.tsx` — budget limit field
+5. `src/components/forms/CreateIncomeTypeSheet.tsx` — income goal field
+6. `src/components/forms/CreateIncomeTypeDrawer.tsx` — income goal field
+7. `src/components/forms/EditIncomeTypeSheet.tsx` — income goal field
+8. `src/components/forms/EditIncomeTypeDrawer.tsx` — income goal field
+
+Same BEFORE/AFTER pattern as other form integrations.
+      </action>
+      <verify>
+1. `npm run lint` — no errors.
+2. `npm run build` — succeeds.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="6: SetTargetDialog Integration">
+    <task>
+      <name>Integrate CurrencyInput into SetTargetDialog</name>
+      <action>
+Modify `src/components/forms/SetTargetDialog.tsx`.
+
+This file does NOT use React Hook Form — it uses plain `useState`. The integration is different:
+
+1. Change state from `string` to `number`:
+```tsx
+// BEFORE
+const [targetAmount, setTargetAmount] = useState&lt;string&gt;('');
+
+// AFTER
+const [targetAmount, setTargetAmount] = useState&lt;number&gt;(0);
+```
+
+2. Update the initialization in `useEffect`:
+```tsx
+// BEFORE
+setTargetAmount(currentTarget ? currentTarget.toString() : '');
+
+// AFTER
+setTargetAmount(currentTarget ?? 0);
+```
+
+3. Update the submit handler:
+```tsx
+// BEFORE
+const amount = targetAmount ? parseFloat(targetAmount) : null;
+
+// AFTER
+const amount = targetAmount || null;
+```
+
+4. Replace the Input:
+```tsx
+// BEFORE
+&lt;Input
+  id="target-amount"
+  type="number"
+  placeholder="e.g., 1000000"
+  value={targetAmount}
+  onChange={(e) =&gt; setTargetAmount(e.target.value)}
+  disabled={isUpdating}
+  className='[&amp;::-webkit-outer-spin-button]:appearance-none [&amp;::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+/&gt;
+
+// AFTER
+&lt;CurrencyInput
+  id="target-amount"
+  placeholder="e.g., 1,000,000"
+  value={targetAmount}
+  onValueChange={setTargetAmount}
+  disabled={isUpdating}
+/&gt;
+```
+
+5. Add import: `import { CurrencyInput } from "@/components/ui/currency-input"`
+6. Remove `Input` from imports if no longer used.
+      </action>
+      <verify>
+1. `npm run lint` — no errors.
+2. `npm run build` — succeeds.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="7: Table Inline Editing Integration">
+    <task>
+      <name>Integrate CurrencyInput into IncomeTable, ExpenseTable, and TransferTable inline editing</name>
+      <action>
+Modify 3 files. Each has a `CellContent` component with inline editing. Add a `columnMeta?.type === "number"` branch in edit mode.
+
+**Files:**
+1. `src/components/tables/income/IncomeTable.tsx`
+2. `src/components/tables/expenses/ExpenseTable.tsx`
+3. `src/components/tables/transfers/TransferTable.tsx`
+
+**In each file:**
+
+1. Add imports:
+```tsx
+import { CurrencyInput } from "@/components/ui/currency-input"
+import { useRef } from "react"  // add to existing React import if needed
+```
+
+2. Inside `CellContent`, add a ref at the component level (after existing state declarations):
+```tsx
+const amountRef = useRef&lt;number&gt;(Number(initialValue) || 0);
+```
+
+3. Also sync the ref when initialValue changes, inside the existing useEffect:
+```tsx
+useEffect(() =&gt; {
+  setValue(initialValue ?? "");
+  amountRef.current = Number(initialValue) || 0;  // ADD THIS LINE
+}, [initialValue]);
+```
+
+4. In the edit mode section (after `if (!tableMeta?.editedRows[row.id])` block), add a branch for `columnMeta?.type === "number"` BEFORE the generic `&lt;Input&gt;` fallback at the bottom:
+
+```tsx
+if (columnMeta?.type === "number") {
+  return (
+    &lt;CurrencyInput
+      className="w-full"
+      value={Number(value) || 0}
+      autoFocus
+      onValueChange={(num) =&gt; {
+        amountRef.current = num;
+        setValue(String(num));
+      }}
+      onBlur={() =&gt; {
+        tableMeta?.updateData(row.original.id, column.id, String(amountRef.current));
+      }}
+    /&gt;
+  );
+}
+```
+
+This goes right before:
+```tsx
+return (
+  &lt;Input
+    value={value}
+    onChange={e =&gt; setValue(e.target.value)}
+    onBlur={onBlur}
+    ...
+  /&gt;
+);
+```
+      </action>
+      <verify>
+1. `npm run lint` — no errors.
+2. `npm run build` — succeeds.
+      </verify>
+    </task>
+  </phase>
+
+  <phase name="8: Cleanup">
+    <task>
+      <name>Delete unused EditableNumberCell component</name>
+      <action>
+1. Search for any imports: `grep -r "EditableNumberCell" src/`
+2. If zero results (besides the file itself), delete `src/components/tables/cells/EditableNumberCell.tsx`.
+3. Check if the `src/components/tables/cells/` directory is now empty. If so, delete it too.
+      </action>
+      <verify>
+1. `grep -r "EditableNumberCell" src/` — zero results.
+2. `npm run lint` — no errors.
+3. `npm run build` — succeeds.
+      </verify>
+    </task>
+  </phase>
+</plan>
