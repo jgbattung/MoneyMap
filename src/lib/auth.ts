@@ -11,7 +11,15 @@ export const auth = betterAuth({
   database: prismaAdapter(db, {
       provider: "postgresql",
   }),
-  emailAndPassword: {  
+  session: {
+    cookieCache: {
+      enabled: true,
+      // Cache for 5 minutes. Trade-off: a revoked/signed-out session can
+      // remain valid on other devices for up to 5 minutes.
+      maxAge: 300,
+    },
+  },
+  emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,
     maxPasswordLength: 128,
@@ -23,10 +31,10 @@ export const auth = betterAuth({
     }
   },
   socialProviders: {
-    google: { 
-        prompt: "select_account", 
-        clientId: process.env.GOOGLE_CLIENT_ID as string, 
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET as string, 
+    google: {
+        prompt: "select_account",
+        clientId: process.env.GOOGLE_CLIENT_ID as string,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     },
   },
 })
