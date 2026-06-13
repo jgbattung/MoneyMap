@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { onExpenseTransactionChange } from "@/lib/statement-recalculator";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaPromise } from "@prisma/client";
 import { z } from "zod";
@@ -209,10 +210,20 @@ export async function PATCH(
     const results = await db.$transaction(operations);
     const updated = results[results.length - 1];
 
-    await onExpenseTransactionChange(existing.accountId, oldStartForRecalc);
-    if (startDateChanged && newStartForRecalc) {
-      await onExpenseTransactionChange(existing.accountId, newStartForRecalc);
-    }
+    const installmentAccountId = existing.accountId;
+    const recalcOldDate = oldStartForRecalc;
+    const recalcNewDate = startDateChanged ? newStartForRecalc : undefined;
+
+    after(async () => {
+      try {
+        await onExpenseTransactionChange(installmentAccountId, recalcOldDate);
+        if (recalcNewDate) {
+          await onExpenseTransactionChange(installmentAccountId, recalcNewDate);
+        }
+      } catch (err) {
+        console.error('Error in deferred onExpenseTransactionChange (PATCH installment):', err);
+      }
+    });
 
     return NextResponse.json(updated, { status: 200 });
   } catch (error) {
@@ -281,7 +292,16 @@ export async function DELETE(
 
     await db.$transaction(operations);
 
-    await onExpenseTransactionChange(existing.accountId, existing.date);
+    const installmentAccountId = existing.accountId;
+    const installmentDate = existing.date;
+
+    after(async () => {
+      try {
+        await onExpenseTransactionChange(installmentAccountId, installmentDate);
+      } catch (err) {
+        console.error('Error in deferred onExpenseTransactionChange (DELETE installment):', err);
+      }
+    });
 
     return NextResponse.json(
       { message: 'Installment deleted successfully', deleted: true },

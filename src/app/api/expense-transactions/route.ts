@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { INSTALLMENT_STATUS } from "./[id]/route";
@@ -134,30 +135,30 @@ export async function GET(request: NextRequest) {
       whereClause.accountId = accountId;
     }
 
-    const total = await db.expenseTransaction.count({
-      where: whereClause,
-    });
-
     let effectiveTake = takeNumber;
     if (search && search.trim().length > 0) {
       effectiveTake = 100;
     }
 
-    // Get transactions with optional pagination
-    const expenseTransactions = await db.expenseTransaction.findMany({
-      where: whereClause,
-      include: {
-        account: true,
-        expenseType: true,
-        expenseSubcategory: true,
-        tags: true,
-      },
-      orderBy: {
-        date: 'desc',
-      },
-      ...(skipNumber !== undefined && { skip: skipNumber }),
-      ...(effectiveTake !== undefined && { take: effectiveTake }),
-    });
+    const [total, expenseTransactions] = await Promise.all([
+      db.expenseTransaction.count({
+        where: whereClause,
+      }),
+      db.expenseTransaction.findMany({
+        where: whereClause,
+        include: {
+          account: true,
+          expenseType: true,
+          expenseSubcategory: true,
+          tags: true,
+        },
+        orderBy: {
+          date: 'desc',
+        },
+        ...(skipNumber !== undefined && { skip: skipNumber }),
+        ...(effectiveTake !== undefined && { take: effectiveTake }),
+      }),
+    ]);
 
     // Calculate hasMore
     const currentCount = (skipNumber || 0) + expenseTransactions.length;
@@ -370,8 +371,17 @@ export async function POST(request: NextRequest) {
 
     const results = await db.$transaction(operations);
     const result = results[0] as { accountId: string; date: Date };
+    // The financialAccount.update result (when present) carries accountType
+    const accountResult = results[1] as { accountType?: string } | undefined;
+    const accountType = accountResult?.accountType;
 
-    await onExpenseTransactionChange(result.accountId, result.date);
+    after(async () => {
+      try {
+        await onExpenseTransactionChange(result.accountId, result.date, undefined, accountType);
+      } catch (err) {
+        console.error('Error in deferred onExpenseTransactionChange (POST expense):', err);
+      }
+    });
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

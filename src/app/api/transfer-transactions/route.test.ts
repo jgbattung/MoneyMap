@@ -6,6 +6,14 @@ vi.mock('next/headers', () => ({
   headers: vi.fn(() => Promise.resolve(new Headers())),
 }));
 
+vi.mock('next/server', async (importActual) => {
+  const mod = await importActual<typeof import('next/server')>();
+  return {
+    ...mod,
+    after: (cb: () => unknown) => { void cb(); },
+  };
+});
+
 vi.mock('@/lib/auth', () => ({
   auth: {
     api: {
