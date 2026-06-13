@@ -255,8 +255,10 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
       });
     },
     onSuccess: (serverTransaction: ExpenseTransaction) => {
-      // Replace the optimistic row with the server response so the row gets
-      // its real id and server-computed fields without waiting for a list refetch.
+      // Give the optimistic row its real server id. We merge the id onto the
+      // existing optimistic row instead of replacing it wholesale, because the
+      // POST response is a bare create() result without the account/expenseType
+      // relations the table renders. onSettled refetches the fully-shaped row shortly after.
       queryClient.setQueriesData<ExpenseTransactionsResponse>(
         { queryKey: QUERY_KEYS.expenseTransactions, predicate: isListQuery },
         (old) => {
@@ -264,7 +266,7 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
           return {
             ...old,
             transactions: old.transactions.map((t) =>
-              t.id.startsWith('optimistic-') ? serverTransaction : t
+              t.id.startsWith('optimistic-') ? { ...t, id: serverTransaction.id } : t
             ),
           };
         }

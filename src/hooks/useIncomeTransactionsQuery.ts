@@ -236,7 +236,10 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
       });
     },
     onSuccess: (serverTransaction: IncomeTransaction) => {
-      // Replace the optimistic row with the server response.
+      // Give the optimistic row its real server id. We merge the id onto the
+      // existing optimistic row instead of replacing it wholesale, because the
+      // POST response is a bare create() result without the account relation
+      // the table renders. onSettled refetches the fully-shaped row shortly after.
       queryClient.setQueriesData<IncomeTransactionsResponse>(
         { queryKey: QUERY_KEYS.incomeTransactions, predicate: isListQuery },
         (old) => {
@@ -244,7 +247,7 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
           return {
             ...old,
             transactions: old.transactions.map((t) =>
-              t.id.startsWith('optimistic-') ? serverTransaction : t
+              t.id.startsWith('optimistic-') ? { ...t, id: serverTransaction.id } : t
             ),
           };
         }
