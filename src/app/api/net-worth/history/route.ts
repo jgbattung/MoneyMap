@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/prisma";
+import { computeCumulativeNetWorth } from "@/lib/net-worth-history";
 
 export const dynamic = 'force-dynamic';
+
+interface MonthlyAggregate {
+  year: number;
+  month: number;
+  total: number;
+}
 
 export async function GET(_req: NextRequest) {
   try {
@@ -44,64 +51,49 @@ export async function GET(_req: NextRequest) {
       0
     );
 
-    // Bulk fetch ALL transactions
-    const [incomeTransactions, expenseTransactions] = await Promise.all([
-      db.incomeTransaction.findMany({
-        where: {
-          userId,
-          accountId: { in: accountIds }
-        },
-        select: {
-          amount: true,
-          date: true,
-        }
-      }),
-      db.expenseTransaction.findMany({
-        where: {
-          userId,
-          accountId: { in: accountIds },
-          isInstallment: false,
-        },
-        select: {
-          amount: true,
-          date: true,
-        }
-      }),
+    // Aggregate monthly income and expenses via SQL GROUP BY (no unbounded row scan in JS)
+    const [incomeRows, expenseRows] = await Promise.all([
+      db.$queryRaw<MonthlyAggregate[]>`
+        SELECT
+          EXTRACT(YEAR FROM date)::int  AS year,
+          EXTRACT(MONTH FROM date)::int AS month,
+          SUM(amount)::float            AS total
+        FROM income_transactions
+        WHERE user_id = ${userId}
+          AND account_id = ANY(${accountIds}::uuid[])
+        GROUP BY year, month
+        ORDER BY year ASC, month ASC
+      `,
+      db.$queryRaw<MonthlyAggregate[]>`
+        SELECT
+          EXTRACT(YEAR FROM date)::int  AS year,
+          EXTRACT(MONTH FROM date)::int AS month,
+          SUM(amount)::float            AS total
+        FROM expense_transactions
+        WHERE user_id = ${userId}
+          AND account_id = ANY(${accountIds}::uuid[])
+          AND is_installment = false
+        GROUP BY year, month
+        ORDER BY year ASC, month ASC
+      `,
     ]);
 
-    const months: { month: string; netWorth: number }[] = [];
+    // Build the trailing-12-months window (oldest first)
     const now = new Date();
-
-    // Calculate net worth for each of the last 12 months
+    const windowMonths: { year: number; month: number }[] = [];
     for (let i = 11; i >= 0; i--) {
-      const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999);
-      
-      // Filter and sum income up to end of this month
-      const totalIncome = incomeTransactions
-        .filter(t => new Date(t.date) <= endOfMonth)
-        .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
-
-      // Filter and sum expenses up to end of this month
-      const totalExpenses = expenseTransactions
-        .filter(t => new Date(t.date) <= endOfMonth)
-        .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
-
-      // Net worth = initial balance + income - expenses
-      const netWorth = totalInitialBalance + totalIncome - totalExpenses;
-
-      const monthLabel = targetDate.toLocaleDateString('en-US', { 
-        month: 'short', 
-        year: 'numeric' 
-      });
-
-      months.push({
-        month: monthLabel,
-        netWorth: Math.round(netWorth * 100) / 100
-      });
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      windowMonths.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
     }
 
-    return NextResponse.json({ history: months });
+    const history = computeCumulativeNetWorth(
+      totalInitialBalance,
+      incomeRows,
+      expenseRows,
+      windowMonths
+    );
+
+    return NextResponse.json({ history });
 
   } catch (error) {
     console.error("Error fetching net worth history:", error);
