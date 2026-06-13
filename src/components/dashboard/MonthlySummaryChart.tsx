@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown, Minus, BarChart3 } from 'lucide-react'
 import { useMonthlySummary } from '@/hooks/useMonthlySummary'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
 
 const MonthlySummaryChart = () => {
   const { summary, isLoading, error } = useMonthlySummary();
@@ -117,7 +118,7 @@ const MonthlySummaryChart = () => {
           <span className='text-muted-foreground text-xs'>Income</span>
           <div className='flex items-end gap-1'>
             <span className='text-foreground text-lg font-semibold'>
-              {formatCurrency(summary.currentMonth.income)}
+              ₱<AnimatedNumber value={summary.currentMonth.income} format={(n) => n.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} />
             </span>
           </div>
           <div className={`flex items-center gap-1 text-xs ${getChangeColor(incomeChange)}`}>
@@ -131,7 +132,7 @@ const MonthlySummaryChart = () => {
           <span className='text-muted-foreground text-xs'>Expenses</span>
           <div className='flex items-end gap-1'>
             <span className='text-foreground text-lg font-semibold'>
-              {formatCurrency(summary.currentMonth.expenses)}
+              ₱<AnimatedNumber value={summary.currentMonth.expenses} format={(n) => n.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} />
             </span>
           </div>
           <div className={`flex items-center gap-1 text-xs ${getChangeColor(expenseChange, true)}`}>
@@ -145,7 +146,7 @@ const MonthlySummaryChart = () => {
       <div className='flex items-center justify-between p-3 rounded-md bg-secondary-950/50 border border-border'>
         <span className='text-muted-foreground text-sm'>Net savings this month</span>
         <span className={`text-xl font-bold ${summary.currentMonth.savings >= 0 ? 'text-text-success' : 'text-text-error'}`}>
-          {formatCurrency(summary.currentMonth.savings)}
+          ₱<AnimatedNumber value={summary.currentMonth.savings} format={(n) => n.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} />
         </span>
       </div>
     </div>
