@@ -74,9 +74,12 @@ const Income = () => {
   const [selectedIncomeTransactionId, setSelectedIncomeTransactionId] = useState<string>('');
   const [editIncomeTransactionDrawerOpen, setEditIncomeTransactionDrawerOpen] = useState(false);
 
+  // Debounce effect — 500ms delay, min 2 chars before firing (clears on empty)
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
+      if (searchTerm.length === 0 || searchTerm.length >= 2) {
+        setDebouncedSearchTerm(searchTerm);
+      }
     }, 500);
     return () => clearTimeout(timer);
   }, [searchTerm]);

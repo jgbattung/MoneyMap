@@ -45,8 +45,6 @@ async function recalculateForCard(cardId: string, transactionDate: Date): Promis
     return;
   }
 
-  console.log(`Recalculating statement balance for card "${card.name}" (${card.id}), cycle: ${cycleStart.toISOString()} → ${cycleEnd.toISOString()}`);
-
   const previousBalance = Number(card.previousStatementBalance ?? 0);
   const newBalance = await calculateStatementBalance(card.id, cycleStart, cycleEnd, previousBalance);
 
@@ -54,8 +52,6 @@ async function recalculateForCard(cardId: string, transactionDate: Date): Promis
     where: { id: card.id },
     data: { statementBalance: newBalance },
   });
-
-  console.log(`Statement balance updated to ${newBalance} for card "${card.name}" (${card.id})`);
 }
 
 /**
