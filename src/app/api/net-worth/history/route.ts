@@ -60,7 +60,7 @@ export async function GET(_req: NextRequest) {
           SUM(amount)::float            AS total
         FROM income_transactions
         WHERE user_id = ${userId}
-          AND account_id = ANY(${accountIds}::uuid[])
+          AND account_id = ANY(${accountIds}::text[])
         GROUP BY year, month
         ORDER BY year ASC, month ASC
       `,
@@ -71,7 +71,7 @@ export async function GET(_req: NextRequest) {
           SUM(amount)::float            AS total
         FROM expense_transactions
         WHERE user_id = ${userId}
-          AND account_id = ANY(${accountIds}::uuid[])
+          AND account_id = ANY(${accountIds}::text[])
           AND is_installment = false
         GROUP BY year, month
         ORDER BY year ASC, month ASC
