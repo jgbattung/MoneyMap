@@ -49,10 +49,12 @@ const Expenses = () => {
   const [editExpenseDrawerOpen, setEditExpenseDrawerOpen] = useState(false);
   const [selectedExpenseId, setSelectedExpenseId] = useState<string>('');
 
-  // Debounce effect - increased to 500ms to prevent triggering on slow backspace
+  // Debounce effect — 500ms delay, min 2 chars before firing (clears on empty)
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
+      if (searchTerm.length === 0 || searchTerm.length >= 2) {
+        setDebouncedSearchTerm(searchTerm);
+      }
     }, 500);
     return () => clearTimeout(timer);
   }, [searchTerm]);

@@ -42,9 +42,6 @@ const CreateAccountDrawer = ({ open, onOpenChange, className }: CreateAccountDra
     const checkScroll = () => {
       const scrollElement = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
       
-      console.log('🔍 [CreateCardDrawer] checkScroll called');
-      console.log('  - scrollElement exists:', !!scrollElement);
-      
       if (scrollElement) {
         const { scrollTop, scrollHeight, clientHeight } = scrollElement;
         const isScrollable = scrollHeight > clientHeight;
@@ -61,7 +58,6 @@ const CreateAccountDrawer = ({ open, onOpenChange, className }: CreateAccountDra
       
       if (scrollElement) {
         scrollElement.addEventListener('scroll', checkScroll);
-        console.log('✅ [CreateCardDrawer] Scroll listener added');
         checkScroll();
       }
     }, 100);
