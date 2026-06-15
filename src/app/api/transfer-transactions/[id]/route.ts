@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { onTransferTransactionChange } from "@/lib/statement-recalculator";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaPromise } from "@prisma/client";
 import { randomUUID } from "crypto";
@@ -355,8 +356,23 @@ export async function PATCH(
     const results = await db.$transaction(operations);
     const result = results[results.length - 1] as { fromAccountId: string; toAccountId: string; transferTypeId: string; date: Date };
 
-    await onTransferTransactionChange(existingTransfer.fromAccountId, existingTransfer.toAccountId, existingTransfer.transferTypeId, existingTransfer.date);
-    await onTransferTransactionChange(result.fromAccountId, result.toAccountId, result.transferTypeId, result.date);
+    const oldFromAccountId = existingTransfer.fromAccountId;
+    const oldToAccountId = existingTransfer.toAccountId;
+    const oldTransferTypeId = existingTransfer.transferTypeId;
+    const oldDate = existingTransfer.date;
+    const newFromAccountId = result.fromAccountId;
+    const newToAccountId = result.toAccountId;
+    const newTransferTypeId = result.transferTypeId;
+    const newDate = result.date;
+
+    after(async () => {
+      try {
+        await onTransferTransactionChange(oldFromAccountId, oldToAccountId, oldTransferTypeId, oldDate);
+        await onTransferTransactionChange(newFromAccountId, newToAccountId, newTransferTypeId, newDate);
+      } catch (err) {
+        console.error('Error in deferred onTransferTransactionChange (PATCH transfer):', err);
+      }
+    });
 
     return NextResponse.json(results[results.length - 1], { status: 200 });
   } catch (error) {
@@ -447,7 +463,15 @@ export async function DELETE(
 
     await db.$transaction(operations);
 
-    await onTransferTransactionChange(existingTransfer.fromAccountId, existingTransfer.toAccountId, existingTransfer.transferTypeId, existingTransfer.date);
+    const { fromAccountId: delFromId, toAccountId: delToId, transferTypeId: delTypeId, date: delDate } = existingTransfer;
+
+    after(async () => {
+      try {
+        await onTransferTransactionChange(delFromId, delToId, delTypeId, delDate);
+      } catch (err) {
+        console.error('Error in deferred onTransferTransactionChange (DELETE transfer):', err);
+      }
+    });
 
     return NextResponse.json(
       { message: 'Transfer transaction deleted successfully' },

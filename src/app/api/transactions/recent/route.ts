@@ -34,39 +34,39 @@ export async function GET() {
 
     const userId = session.user.id;
 
-    const expenses = await db.expenseTransaction.findMany({
-      where: { 
-        userId,
-        isInstallment: false,
-      },
-      include: {
-        account: true,
-        expenseType: true,
-      },
-      orderBy: { date: 'desc' },
-      take: 6,
-    });
-
-    const incomes = await db.incomeTransaction.findMany({
-      where: { userId },
-      include: {
-        account: true,
-        incomeType: true,
-      },
-      orderBy: { date: 'desc' },
-      take: 6,
-    });
-
-    const transfers = await db.transferTransaction.findMany({
-      where: { userId },
-      include: {
-        fromAccount: true,
-        toAccount: true,
-        transferType: true,
-      },
-      orderBy: { date: 'desc' },
-      take: 6,
-    });
+    const [expenses, incomes, transfers] = await Promise.all([
+      db.expenseTransaction.findMany({
+        where: {
+          userId,
+          isInstallment: false,
+        },
+        include: {
+          account: true,
+          expenseType: true,
+        },
+        orderBy: { date: 'desc' },
+        take: 6,
+      }),
+      db.incomeTransaction.findMany({
+        where: { userId },
+        include: {
+          account: true,
+          incomeType: true,
+        },
+        orderBy: { date: 'desc' },
+        take: 6,
+      }),
+      db.transferTransaction.findMany({
+        where: { userId },
+        include: {
+          fromAccount: true,
+          toAccount: true,
+          transferType: true,
+        },
+        orderBy: { date: 'desc' },
+        take: 6,
+      }),
+    ]);
 
     const expenseTransactions: RecentTransaction[] = expenses.map((exp) => ({
       id: exp.id,

@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { Prisma, PrismaPromise } from "@prisma/client";
@@ -139,30 +140,30 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const total = await db.transferTransaction.count({
-      where: whereClause,
-    });
-
     let effectiveTake = takeNumber;
     if (search && search.trim().length > 0) {
       effectiveTake = 100;
     }
 
-    // Get transactions with optional pagination
-    const transferTransactions = await db.transferTransaction.findMany({
-      where: whereClause,
-      include: {
-        fromAccount: true,
-        toAccount: true,
-        transferType: true,
-        tags: true,
-      },
-      orderBy: {
-        date: 'desc'
-      },
-      ...(skipNumber !== undefined && { skip: skipNumber }),
-      ...(effectiveTake !== undefined && { take: effectiveTake }),
-    });
+    const [total, transferTransactions] = await Promise.all([
+      db.transferTransaction.count({
+        where: whereClause,
+      }),
+      db.transferTransaction.findMany({
+        where: whereClause,
+        include: {
+          fromAccount: true,
+          toAccount: true,
+          transferType: true,
+          tags: true,
+        },
+        orderBy: {
+          date: 'desc'
+        },
+        ...(skipNumber !== undefined && { skip: skipNumber }),
+        ...(effectiveTake !== undefined && { take: effectiveTake }),
+      }),
+    ]);
 
     // Calculate hasMore
     const currentCount = (skipNumber || 0) + transferTransactions.length;
@@ -307,8 +308,23 @@ export async function POST(request: NextRequest) {
 
     const results = await db.$transaction(operations);
     const result = results[transferIndex] as { fromAccountId: string; toAccountId: string; transferTypeId: string; date: Date };
+    const fromAccountResult = results[transferIndex + 1] as { accountType?: string } | undefined;
+    const toAccountResult = results[transferIndex + 2] as { accountType?: string } | undefined;
 
-    await onTransferTransactionChange(result.fromAccountId, result.toAccountId, result.transferTypeId, result.date);
+    const txFromAccountId = result.fromAccountId;
+    const txToAccountId = result.toAccountId;
+    const txTransferTypeId = result.transferTypeId;
+    const txDate = result.date;
+    const fromAccountType = fromAccountResult?.accountType;
+    const toAccountType = toAccountResult?.accountType;
+
+    after(async () => {
+      try {
+        await onTransferTransactionChange(txFromAccountId, txToAccountId, txTransferTypeId, txDate, undefined, fromAccountType, toAccountType);
+      } catch (err) {
+        console.error('Error in deferred onTransferTransactionChange (POST transfer):', err);
+      }
+    });
 
     return NextResponse.json(results[transferIndex], { status: 201 });
 

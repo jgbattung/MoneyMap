@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { onIncomeTransactionChange } from "@/lib/statement-recalculator";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaPromise } from "@prisma/client";
 import { z } from "zod";
@@ -232,8 +233,19 @@ export async function PATCH(
     const results = await db.$transaction(operations);
     const result = results[results.length - 1] as { accountId: string; date: Date };
 
-    await onIncomeTransactionChange(existingTransaction.accountId, existingTransaction.date);
-    await onIncomeTransactionChange(result.accountId, result.date);
+    const oldAccountId = existingTransaction.accountId;
+    const oldDate = existingTransaction.date;
+    const newAccountId = result.accountId;
+    const newDate = result.date;
+
+    after(async () => {
+      try {
+        await onIncomeTransactionChange(oldAccountId, oldDate);
+        await onIncomeTransactionChange(newAccountId, newDate);
+      } catch (err) {
+        console.error('Error in deferred onIncomeTransactionChange (PATCH income):', err);
+      }
+    });
 
     return NextResponse.json(result, { status: 200 });
 
@@ -301,10 +313,16 @@ export async function DELETE(
       }),
     ]);
 
-    await onIncomeTransactionChange(
-      existingTransaction.accountId,
-      existingTransaction.date
-    );
+    const deletedAccountId = existingTransaction.accountId;
+    const deletedDate = existingTransaction.date;
+
+    after(async () => {
+      try {
+        await onIncomeTransactionChange(deletedAccountId, deletedDate);
+      } catch (err) {
+        console.error('Error in deferred onIncomeTransactionChange (DELETE income):', err);
+      }
+    });
 
     return NextResponse.json(
       { message: 'Income transaction deleted successfully' },

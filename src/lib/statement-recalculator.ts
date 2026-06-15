@@ -12,8 +12,18 @@ import { calculateStatementBalance } from "@/lib/statement-calculator";
  *
  * @param cardId - The FinancialAccount id of the credit card
  * @param transactionDate - The date of the transaction being created/edited/deleted
+ * @param accountType - Optional hint: if provided and not CREDIT_CARD, skip the DB lookup
  */
-async function recalculateForCard(cardId: string, transactionDate: Date): Promise<void> {
+async function recalculateForCard(
+  cardId: string,
+  transactionDate: Date,
+  accountType?: string
+): Promise<void> {
+  // Short-circuit: if we know the account is not a credit card, skip entirely
+  if (accountType !== undefined && accountType !== "CREDIT_CARD") {
+    return;
+  }
+
   const card = await db.financialAccount.findUnique({
     where: {
       id: cardId,
@@ -45,8 +55,6 @@ async function recalculateForCard(cardId: string, transactionDate: Date): Promis
     return;
   }
 
-  console.log(`Recalculating statement balance for card "${card.name}" (${card.id}), cycle: ${cycleStart.toISOString()} → ${cycleEnd.toISOString()}`);
-
   const previousBalance = Number(card.previousStatementBalance ?? 0);
   const newBalance = await calculateStatementBalance(card.id, cycleStart, cycleEnd, previousBalance);
 
@@ -54,8 +62,6 @@ async function recalculateForCard(cardId: string, transactionDate: Date): Promis
     where: { id: card.id },
     data: { statementBalance: newBalance },
   });
-
-  console.log(`Statement balance updated to ${newBalance} for card "${card.name}" (${card.id})`);
 }
 
 /**
@@ -65,17 +71,19 @@ async function recalculateForCard(cardId: string, transactionDate: Date): Promis
  * @param accountId - The card the expense is on
  * @param transactionDate - The date of the expense
  * @param oldDate - (edit only) The previous date, if the date was changed
+ * @param accountType - Optional hint: if not CREDIT_CARD, skips the DB lookup
  */
 export async function onExpenseTransactionChange(
   accountId: string,
   transactionDate: Date,
-  oldDate?: Date
+  oldDate?: Date,
+  accountType?: string
 ): Promise<void> {
-  await recalculateForCard(accountId, transactionDate);
+  await recalculateForCard(accountId, transactionDate, accountType);
 
   // If the date changed, also check the old date's cycle
   if (oldDate && new Date(oldDate).getTime() !== new Date(transactionDate).getTime()) {
-    await recalculateForCard(accountId, oldDate);
+    await recalculateForCard(accountId, oldDate, accountType);
   }
 }
 
@@ -90,13 +98,17 @@ export async function onExpenseTransactionChange(
  * @param transferTypeId - The TransferType id
  * @param transactionDate - The date of the transfer
  * @param oldDate - (edit only) The previous date, if the date was changed
+ * @param fromAccountType - Optional hint for the from account type
+ * @param toAccountType - Optional hint for the to account type
  */
 export async function onTransferTransactionChange(
   fromAccountId: string,
   toAccountId: string,
   transferTypeId: string,
   transactionDate: Date,
-  oldDate?: Date
+  oldDate?: Date,
+  fromAccountType?: string,
+  toAccountType?: string
 ): Promise<void> {
   const transferType = await db.transferType.findUnique({
     where: { id: transferTypeId },
@@ -105,16 +117,16 @@ export async function onTransferTransactionChange(
   if (!transferType) return;
 
   if (transferType.name === "Credit Card Payment") {
-    await recalculateForCard(toAccountId, transactionDate);
+    await recalculateForCard(toAccountId, transactionDate, toAccountType);
 
     if (oldDate && new Date(oldDate).getTime() !== new Date(transactionDate).getTime()) {
-      await recalculateForCard(toAccountId, oldDate);
+      await recalculateForCard(toAccountId, oldDate, toAccountType);
     }
   } else {
-    await recalculateForCard(fromAccountId, transactionDate);
+    await recalculateForCard(fromAccountId, transactionDate, fromAccountType);
 
     if (oldDate && new Date(oldDate).getTime() !== new Date(transactionDate).getTime()) {
-      await recalculateForCard(fromAccountId, oldDate);
+      await recalculateForCard(fromAccountId, oldDate, fromAccountType);
     }
   }
 }
@@ -126,15 +138,17 @@ export async function onTransferTransactionChange(
  * @param accountId - The card the income is on
  * @param transactionDate - The date of the income
  * @param oldDate - (edit only) The previous date, if the date was changed
+ * @param accountType - Optional hint: if not CREDIT_CARD, skips the DB lookup
  */
 export async function onIncomeTransactionChange(
   accountId: string,
   transactionDate: Date,
-  oldDate?: Date
+  oldDate?: Date,
+  accountType?: string
 ): Promise<void> {
-  await recalculateForCard(accountId, transactionDate);
+  await recalculateForCard(accountId, transactionDate, accountType);
 
   if (oldDate && new Date(oldDate).getTime() !== new Date(transactionDate).getTime()) {
-    await recalculateForCard(accountId, oldDate);
+    await recalculateForCard(accountId, oldDate, accountType);
   }
 }

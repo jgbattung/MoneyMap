@@ -7,6 +7,14 @@ vi.mock('next/headers', () => ({
   headers: vi.fn(() => Promise.resolve(new Headers())),
 }));
 
+vi.mock('next/server', async (importActual) => {
+  const mod = await importActual<typeof import('next/server')>();
+  return {
+    ...mod,
+    after: (cb: () => unknown) => { void cb(); },
+  };
+});
+
 vi.mock('@/lib/auth', () => ({
   auth: {
     api: {
@@ -273,6 +281,9 @@ describe('PATCH /api/installments/[id]', () => {
     vi.mocked(db.$transaction).mockResolvedValue([updatedRow] as any);
 
     await PATCH(makePatchRequest({ name: 'Updated Name' }), makeParams());
+    // Flush microtasks so the deferred after() callback fully resolves
+    await Promise.resolve();
+    await Promise.resolve();
 
     expect(onExpenseTransactionChange).toHaveBeenCalled();
   });
@@ -343,6 +354,9 @@ describe('DELETE /api/installments/[id]', () => {
     vi.mocked(db.$transaction).mockResolvedValue([{}, {}, {}] as any);
 
     await DELETE(makeDeleteRequest(), makeParams());
+    // Flush microtasks so the deferred after() callback fully resolves
+    await Promise.resolve();
+    await Promise.resolve();
 
     expect(onExpenseTransactionChange).toHaveBeenCalledWith('acc-1', mockInstallment.date);
   });

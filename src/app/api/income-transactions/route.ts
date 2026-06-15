@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { Prisma, PrismaPromise } from "@prisma/client";
@@ -118,29 +119,30 @@ export async function GET(request: NextRequest) {
       whereClause.accountId = accountId;
     }
 
-    const total = await db.incomeTransaction.count({
-      where: whereClause,
-    });
-
     // Determine limit - if searching, return more results (up to 100)
     let effectiveTake = takeNumber;
     if (search && search.trim().length > 0) {
       effectiveTake = 100;
     }
 
-    const incomeTransactions = await db.incomeTransaction.findMany({
-      where: whereClause,
-      include: {
-        account: true,
-        incomeType: true,
-        tags: true,
-      },
-      orderBy: {
-        date: 'desc',
-      },
-      ...(skipNumber !== undefined && { skip: skipNumber }),
-      ...(effectiveTake !== undefined && { take: effectiveTake }),
-    });
+    const [total, incomeTransactions] = await Promise.all([
+      db.incomeTransaction.count({
+        where: whereClause,
+      }),
+      db.incomeTransaction.findMany({
+        where: whereClause,
+        include: {
+          account: true,
+          incomeType: true,
+          tags: true,
+        },
+        orderBy: {
+          date: 'desc',
+        },
+        ...(skipNumber !== undefined && { skip: skipNumber }),
+        ...(effectiveTake !== undefined && { take: effectiveTake }),
+      }),
+    ]);
 
     // Calculate hasMore
     const currentCount = (skipNumber || 0) + incomeTransactions.length;
@@ -220,8 +222,17 @@ export async function POST(request: NextRequest) {
 
     const results = await db.$transaction(operations);
     const result = results[results.length - 1];
+    const accountResult = results[0] as { accountType?: string } | undefined;
+    const accountType = accountResult?.accountType;
+    const txDate = new Date(date);
 
-    await onIncomeTransactionChange(accountId, new Date(date));
+    after(async () => {
+      try {
+        await onIncomeTransactionChange(accountId, txDate, undefined, accountType);
+      } catch (err) {
+        console.error('Error in deferred onIncomeTransactionChange (POST income):', err);
+      }
+    });
 
     return NextResponse.json(result, { status: 201 });
 
