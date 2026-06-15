@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { RECENT_TRANSACTION_QUERY_KEYS, type RecentTransaction } from "./useRecentTransactions";
+import { invalidateAfterTransactionWrite } from "./transactionInvalidations";
 
 export type ExpenseTransaction = {
   id: string;
@@ -253,33 +254,44 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
         duration: 6000,
       });
     },
+    onSuccess: (serverTransaction: ExpenseTransaction) => {
+      // Give the optimistic row its real server id. We merge the id onto the
+      // existing optimistic row instead of replacing it wholesale, because the
+      // POST response is a bare create() result without the account/expenseType
+      // relations the table renders. onSettled refetches the fully-shaped row shortly after.
+      queryClient.setQueriesData<ExpenseTransactionsResponse>(
+        { queryKey: QUERY_KEYS.expenseTransactions, predicate: isListQuery },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            transactions: old.transactions.map((t) =>
+              t.id.startsWith('optimistic-') ? { ...t, id: serverTransaction.id } : t
+            ),
+          };
+        }
+      );
+      queryClient.setQueryData<RecentTransaction[]>(
+        RECENT_TRANSACTIONS_KEY,
+        (old) => {
+          if (!old) return old;
+          return old.map((t) =>
+            t.id.startsWith('optimistic-')
+              ? { ...t, id: serverTransaction.id }
+              : t
+          );
+        }
+      );
+    },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenseTransactions });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['cards'] });
-      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
-      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
-      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
-      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
-      queryClient.invalidateQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
-      queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
-      queryClient.invalidateQueries({ queryKey: ['expenseBreakdown'] });
+      invalidateAfterTransactionWrite(queryClient, QUERY_KEYS.expenseTransactions);
     },
   });
 
   const updateExpenseTransactionMutation = useMutation({
     mutationFn: updateExpenseTransaction,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenseTransactions });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['cards'] });
-      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
-      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
-      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
-      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
-      queryClient.invalidateQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
-      queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
-      queryClient.invalidateQueries({ queryKey: ['expenseBreakdown'] });
+      invalidateAfterTransactionWrite(queryClient, QUERY_KEYS.expenseTransactions);
     },
   });
 
@@ -332,16 +344,7 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
       });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenseTransactions });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['cards'] });
-      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
-      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
-      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
-      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
-      queryClient.invalidateQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
-      queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
-      queryClient.invalidateQueries({ queryKey: ['expenseBreakdown'] });
+      invalidateAfterTransactionWrite(queryClient, QUERY_KEYS.expenseTransactions);
     },
   });
 

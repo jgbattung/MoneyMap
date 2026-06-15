@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { RECENT_TRANSACTION_QUERY_KEYS, type RecentTransaction } from "./useRecentTransactions";
+import { invalidateAfterTransactionWrite } from "./transactionInvalidations";
 
 export type IncomeTransaction = {
   id: string;
@@ -234,31 +235,44 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
         duration: 6000,
       });
     },
+    onSuccess: (serverTransaction: IncomeTransaction) => {
+      // Give the optimistic row its real server id. We merge the id onto the
+      // existing optimistic row instead of replacing it wholesale, because the
+      // POST response is a bare create() result without the account relation
+      // the table renders. onSettled refetches the fully-shaped row shortly after.
+      queryClient.setQueriesData<IncomeTransactionsResponse>(
+        { queryKey: QUERY_KEYS.incomeTransactions, predicate: isListQuery },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            transactions: old.transactions.map((t) =>
+              t.id.startsWith('optimistic-') ? { ...t, id: serverTransaction.id } : t
+            ),
+          };
+        }
+      );
+      queryClient.setQueryData<RecentTransaction[]>(
+        RECENT_TRANSACTIONS_KEY,
+        (old) => {
+          if (!old) return old;
+          return old.map((t) =>
+            t.id.startsWith('optimistic-')
+              ? { ...t, id: serverTransaction.id }
+              : t
+          );
+        }
+      );
+    },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.incomeTransactions });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
-      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
-      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
-      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
-      queryClient.invalidateQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
-      queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
-      queryClient.invalidateQueries({ queryKey: ['incomeBreakdown'] });
+      invalidateAfterTransactionWrite(queryClient, QUERY_KEYS.incomeTransactions);
     },
   });
 
   const updateIncomeTransactionMutation = useMutation({
     mutationFn: updateIncomeTransaction,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.incomeTransactions });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
-      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
-      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
-      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
-      queryClient.invalidateQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
-      queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
-      queryClient.invalidateQueries({ queryKey: ['incomeBreakdown'] });
+      invalidateAfterTransactionWrite(queryClient, QUERY_KEYS.incomeTransactions);
     },
   });
 
@@ -311,15 +325,7 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
       });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.incomeTransactions });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['netWorth'] });
-      queryClient.invalidateQueries({ queryKey: ['netWorthHistory'] });
-      queryClient.invalidateQueries({ queryKey: ['monthlySummary'] });
-      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
-      queryClient.invalidateQueries({ queryKey: RECENT_TRANSACTIONS_KEY });
-      queryClient.invalidateQueries({ queryKey: ['annualSummary'] });
-      queryClient.invalidateQueries({ queryKey: ['incomeBreakdown'] });
+      invalidateAfterTransactionWrite(queryClient, QUERY_KEYS.incomeTransactions);
     },
   });
 
