@@ -449,7 +449,7 @@ export function EventLedger() {
         {hasAnalyzed && data && (
           <div className="rounded-lg bg-muted/20 p-3 md:p-4 space-y-4 md:space-y-6">
             {/* Summary Cards */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-lg border p-3 md:p-4 text-center">
                 <p className="text-xs text-muted-foreground">Expenses</p>
                 <p className="text-numeric text-lg md:text-xl font-bold text-text-error">
@@ -918,7 +918,7 @@ function AddTransactionsPanel({
 function LedgerLoadingSkeleton() {
   return (
     <div className="rounded-lg bg-muted/20 p-3 md:p-4 space-y-4 md:space-y-6">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Skeleton className="h-20 rounded-lg" />
         <Skeleton className="h-20 rounded-lg" />
         <Skeleton className="h-20 rounded-lg" />
