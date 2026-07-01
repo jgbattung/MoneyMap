@@ -6,6 +6,7 @@ import { Icons } from '../icons'
 import { Badge } from '../ui/badge'
 import { ChevronDownIcon } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { MOTION_DURATION } from '@/lib/motion'
 
 interface ExpenseCardProps {
   id: string;
@@ -159,7 +160,7 @@ const ExpenseCard = ({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            transition={{ duration: MOTION_DURATION.micro, ease: 'easeInOut' }}
             className='overflow-hidden'
           >
             <div className='mt-2 p-3 bg-neutral-800 rounded-md space-y-2 text-xs'>

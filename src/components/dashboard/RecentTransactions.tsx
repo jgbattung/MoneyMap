@@ -8,10 +8,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { IconArrowDown, IconArrowUp, IconArrowRight } from '@tabler/icons-react';
 import { ArrowLeftRight } from 'lucide-react';
 import { format } from 'date-fns';
+import { motion, useReducedMotion } from 'framer-motion';
+import { EASE_OUT_QUINT, MOTION_DURATION, STAGGER_STEP } from '@/lib/motion';
 import Link from 'next/link';
 
 const RecentTransactions = () => {
   const { transactions, isLoading, error } = useRecentTransactions();
+  const prefersReducedMotion = !!useReducedMotion();
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString('en-PH', {
@@ -131,10 +134,13 @@ const RecentTransactions = () => {
       <h2 className='text-lg font-semibold text-foreground tracking-tight'>Recent Transactions</h2>
 
       <div className='flex flex-col gap-3'>
-        {transactions.map((transaction) => (
-          <div
+        {transactions.map((transaction, index) => (
+          <motion.div
             key={transaction.id}
             className="flex items-center justify-between"
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: MOTION_DURATION.entrance, ease: EASE_OUT_QUINT, delay: index * STAGGER_STEP }}
           >
             <div className="flex items-center gap-3">
               <div className={`h-10 w-10 rounded-md flex items-center justify-center ${getIconBgColor(transaction.type)}`}>
@@ -164,7 +170,7 @@ const RecentTransactions = () => {
                 {format(new Date(transaction.date), 'MMM dd, yyyy')}
               </span>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 

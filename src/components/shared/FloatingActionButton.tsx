@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Icons } from '../icons'
 import { motion, AnimatePresence } from 'framer-motion'
+import { MOTION_DURATION, STAGGER_STEP } from '@/lib/motion'
 import CreateIncomeTransactionDrawer from '../forms/CreateIncomeTransactionDrawer';
 import CreateTransferDrawer from '../forms/CreateTransferDrawer';
 import CreateExpenseTransactionDrawer from '../forms/CreateExpenseTransactionDrawer';
@@ -77,7 +78,7 @@ const FloatingActionButton = () => {
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
-                transition={{ duration: 0.2, delay: 0 }}
+                transition={{ duration: MOTION_DURATION.micro, delay: 0 }}
                 className="absolute p-3 bg-error-500 hover:bg-error-600 rounded-full -top-24 left-1/2 transform -translate-x-1/2"
               >
                 <Icons.addExpense className="text-white" size={18} />
@@ -88,7 +89,7 @@ const FloatingActionButton = () => {
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
-                transition={{ duration: 0.2, delay: 0.05 }}
+                transition={{ duration: MOTION_DURATION.micro, delay: STAGGER_STEP }}
                 className="absolute p-3 bg-success-500 hover:bg-success-600 rounded-full -top-12 -left-15"
               >
                 <Icons.addIncome className="text-white" size={18} />
@@ -99,7 +100,7 @@ const FloatingActionButton = () => {
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
-                transition={{ duration: 0.2, delay: 0.1 }}
+                transition={{ duration: MOTION_DURATION.micro, delay: STAGGER_STEP * 2 }}
                 className="absolute p-3 bg-secondary-500 hover:bg-secondary-600 rounded-full -top-12 -right-15"
               >
                 <Icons.addTransfer className="text-white" size={18} />

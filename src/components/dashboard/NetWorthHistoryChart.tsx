@@ -9,6 +9,8 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { useReducedMotion } from 'framer-motion'
+import { CHART_DRAW_MS } from '@/lib/motion'
 import { useNetWorthHistory } from '@/hooks/useNetWorthHistory'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { TrendingUp } from 'lucide-react'
@@ -27,6 +29,7 @@ const RANGES = Object.keys(RANGE_MONTHS) as Range[]
 
 const NetWorthHistoryChart = () => {
   const { history, isLoading, error } = useNetWorthHistory();
+  const prefersReducedMotion = !!useReducedMotion();
 
   const [range, setRange] = useState<Range>('1Y');
 
@@ -174,6 +177,9 @@ const NetWorthHistoryChart = () => {
             fill="var(--color-netWorth)"
             fillOpacity={0.2}
             strokeWidth={2}
+            isAnimationActive={!prefersReducedMotion}
+            animationDuration={CHART_DRAW_MS}
+            animationEasing="ease-out"
           />
         </AreaChart>
       </ChartContainer>

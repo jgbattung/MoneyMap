@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { ArrowUp, ArrowDown, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import { useSpring, useTransform, useReducedMotion } from 'framer-motion'
+import { COUNT_UP_MS } from '@/lib/motion'
 import { useNetWorth } from '@/hooks/useNetWorth'
 import { formatCurrency } from '@/lib/format'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -12,7 +13,7 @@ const TotalNetWorthCard = () => {
   const prefersReducedMotion = useReducedMotion();
   const [isBalanceHidden, setIsBalanceHidden] = useState(false);
 
-  const springValue = useSpring(0, { duration: 800, bounce: 0 });
+  const springValue = useSpring(0, { duration: COUNT_UP_MS, bounce: 0 });
   const displayValue = useTransform(springValue, (v) => formatCurrency(v));
   const [animatedText, setAnimatedText] = useState('0.00');
 
