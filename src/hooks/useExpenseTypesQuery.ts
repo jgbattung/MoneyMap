@@ -90,6 +90,7 @@ export const useExpenseTypesQuery = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.budgets });
       queryClient.invalidateQueries({ queryKey: ['expenseTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
     }
   })
 

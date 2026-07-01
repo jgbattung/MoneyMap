@@ -184,7 +184,7 @@ describe('useExpenseTypesQuery', () => {
       expect(invalidatedKeys).toContainEqual(['expenseTransactions']);
     });
 
-    it('does NOT invalidate budgetStatus on deleteBudget', async () => {
+    it('invalidates budgetStatus on deleteBudget', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => [mockExpenseType],
@@ -213,8 +213,8 @@ describe('useExpenseTypesQuery', () => {
         (call) => (call[0] as any)?.queryKey
       );
 
-      // budgetStatus should NOT be in delete invalidations (only in create/update)
-      expect(invalidatedKeys).not.toContainEqual(['budgetStatus']);
+      // deleting a budget must refresh the budgets-page totals (budgetStatus)
+      expect(invalidatedKeys).toContainEqual(['budgetStatus']);
     });
 
     it('throws error when delete response is not ok', async () => {
