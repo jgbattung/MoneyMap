@@ -45,13 +45,13 @@ const TotalNetWorthCard = () => {
       <div className='flex flex-col gap-3'>
         <div className='flex items-center justify-between'>
           <h2 className='text-xl md:text-2xl font-semibold text-foreground tracking-tight'>Total Net Worth</h2>
-          <Skeleton className="h-6 w-28 md:w-36 rounded-full bg-secondary-500" />
+          <Skeleton className="h-6 w-28 md:w-36 rounded-full" />
         </div>
 
         <div className='flex flex-col items-start'>
           <div className='flex items-end gap-2'>
             <span className='text-muted-foreground font-light text-sm md:text-base'>₱</span>
-            <Skeleton className="h-10 w-48 md:h-12 md:w-64 lg:h-14 lg:w-80 bg-secondary-500" />
+            <Skeleton className="h-10 w-48 md:h-12 md:w-64 lg:h-14 lg:w-80" />
           </div>
         </div>
       </div>

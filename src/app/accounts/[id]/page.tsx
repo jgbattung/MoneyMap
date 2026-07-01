@@ -23,15 +23,15 @@ const AccountDetailSkeleton = () => {
           <div className="flex md:hidden flex-col gap-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Skeleton className="h-9 w-9 rounded-lg bg-secondary-500" />
+                <Skeleton className="h-9 w-9 rounded-lg" />
                 <div className="space-y-1.5">
-                  <Skeleton className="h-5 w-32 bg-secondary-500" />
-                  <Skeleton className="h-3 w-24 bg-secondary-500" />
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-3 w-24" />
                 </div>
               </div>
             </div>
             <div className="pt-1 border-t border-border/50">
-              <Skeleton className="h-8 w-36 bg-secondary-500" />
+              <Skeleton className="h-8 w-36" />
             </div>
           </div>
 
@@ -39,17 +39,17 @@ const AccountDetailSkeleton = () => {
           <div className="hidden md:flex md:items-center md:justify-between gap-6">
             {/* Left side */}
             <div className="flex items-center gap-4">
-              <Skeleton className="h-12 w-12 rounded-lg bg-secondary-500" />
+              <Skeleton className="h-12 w-12 rounded-lg" />
               <div className="space-y-2">
-                <Skeleton className="h-8 w-48 bg-secondary-500" />
-                <Skeleton className="h-4 w-32 bg-secondary-500" />
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-32" />
               </div>
             </div>
             
             {/* Right side */}
             <div className="flex flex-col items-end space-y-2">
-              <Skeleton className="h-4 w-24 bg-secondary-500" />
-              <Skeleton className="h-10 w-40 bg-secondary-500" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-10 w-40" />
             </div>
           </div>
         </div>
@@ -60,21 +60,21 @@ const AccountDetailSkeleton = () => {
         {[1, 2, 3].map((i) => (
           <div key={i}>
             <div className="mb-4">
-              <Skeleton className="h-7 w-32 mb-2 bg-secondary-500" />
-              <Skeleton className="h-4 w-64 bg-secondary-500" />
+              <Skeleton className="h-7 w-32 mb-2" />
+              <Skeleton className="h-4 w-64" />
             </div>
-            <Skeleton className="h-[400px] w-full rounded-lg bg-secondary-500" />
+            <Skeleton className="h-[400px] w-full rounded-lg" />
           </div>
         ))}
       </div>
 
       {/* Mobile Skeleton */}
       <div className="block md:hidden space-y-4">
-        <Skeleton className="h-10 w-full rounded-lg bg-secondary-500" />
-        <Skeleton className="h-8 w-full rounded-lg bg-secondary-500" />
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <Skeleton className="h-8 w-full rounded-lg" />
         <div className="space-y-2">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-lg bg-secondary-500" />
+            <Skeleton key={i} className="h-20 w-full rounded-lg" />
           ))}
         </div>
       </div>

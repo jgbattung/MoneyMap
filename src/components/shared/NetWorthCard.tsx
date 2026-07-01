@@ -52,26 +52,26 @@ const NetWorthCard = () => {
       <div className='money-map-card flex flex-col max-w-5xl gap-3'>
         {/* Header Section Skeleton */}
         <div className='flex items-center justify-between'>
-          <Skeleton className='h-5 w-32 md:h-6 md:w-36 bg-secondary-500' />
-          <Skeleton className='h-8 w-24 rounded-md bg-secondary-500' />
+          <Skeleton className='h-5 w-32 md:h-6 md:w-36' />
+          <Skeleton className='h-8 w-24 rounded-md' />
         </div>
 
         {/* Main Net Worth Display Skeleton */}
         <div className='flex flex-col items-start gap-1'>
-          <Skeleton className='h-3 w-10 bg-secondary-500' />
-          <Skeleton className='h-10 w-48 md:h-12 md:w-64 bg-secondary-500' />
+          <Skeleton className='h-3 w-10' />
+          <Skeleton className='h-10 w-48 md:h-12 md:w-64' />
         </div>
 
         {/* Monthly Change Indicator Skeleton */}
-        <Skeleton className='h-4 w-56 md:h-5 md:w-64 bg-secondary-500' />
+        <Skeleton className='h-4 w-56 md:h-5 md:w-64' />
 
         {/* Progress Section Skeleton */}
         <div className="space-y-2 pt-2 border-t border-border">
           <div className="flex items-center justify-between">
-            <Skeleton className='h-3 w-40 md:h-4 md:w-48 bg-secondary-500' />
-            <Skeleton className='h-3 w-12 bg-secondary-500' />
+            <Skeleton className='h-3 w-40 md:h-4 md:w-48' />
+            <Skeleton className='h-3 w-12' />
           </div>
-          <Skeleton className='h-2 w-full rounded-full bg-secondary-500' />
+          <Skeleton className='h-2 w-full rounded-full' />
         </div>
       </div>
     );

@@ -5,16 +5,16 @@ const SkeletonIncomeTypeCard = () => {
   return (
     <div className='money-map-card flex flex-col gap-3'>
       <div className='flex items-center gap-2'>
-        <Skeleton className='h-8 w-[35px] bg-secondary-500' />
-        <Skeleton className='h-6 w-[180px] bg-secondary-500' />
+        <Skeleton className='h-8 w-[35px]' />
+        <Skeleton className='h-6 w-[180px]' />
       </div>
       <div className='flex flex-col gap-1'>
-        <Skeleton className='h-4 w-[160px] bg-secondary-500' />
+        <Skeleton className='h-4 w-[160px]' />
       </div>
       <div className='flex flex-col gap-1'>
         <div className='flex justify-between'>
-          <Skeleton className='h-4 w-[130px] bg-secondary-500' />
-          <Skeleton className='h-4 w-[80px] bg-secondary-500' />
+          <Skeleton className='h-4 w-[130px]' />
+          <Skeleton className='h-4 w-[80px]' />
         </div>
       </div>
     </div>
