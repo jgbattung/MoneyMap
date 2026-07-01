@@ -80,11 +80,11 @@ const CellContent = ({ getValue, row, column, table }: any) => {
           return <span className="text-muted-foreground">—</span>;
         }
         const amount = parseFloat(value);
-        return <div className="text-numeric text-right pr-4">₱{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>;
+        return <span className="text-numeric">₱{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
       }
 
       const amount = parseFloat(value);
-      return <div className="text-numeric text-right pr-4">₱{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>;
+      return <span className="text-numeric">₱{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
     }
 
     if (columnMeta?.type === "select") {
@@ -417,7 +417,7 @@ const TransferTable = ({ accountId }: TransferTableProps = {}) => {
       },
     }),
     columnHelper.accessor("amount", {
-      header: () => <div className="text-right pr-4">Amount</div>,
+      header: "Amount",
       cell: CellContent,
       meta: {
         type: "number"
