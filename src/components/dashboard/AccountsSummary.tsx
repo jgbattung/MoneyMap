@@ -82,7 +82,7 @@ const AccountItem = ({ id, name, accountType, balance }: AccountItemProps) => {
         </div>
       </div>
 
-      <div className="font-semibold text-sm">
+      <div className="text-numeric font-semibold text-sm">
         ₱{formatCurrency(balance)}
       </div>
     </Link>
@@ -109,7 +109,7 @@ const CreditCardItem = ({ id, name, balance }: CreditCardItemProps) => {
         </div>
       </div>
 
-      <div className="font-semibold text-sm text-foreground">
+      <div className="text-numeric font-semibold text-sm text-foreground">
         ₱{formatCurrency(balance)}
       </div>
     </Link>

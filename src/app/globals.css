@@ -217,6 +217,12 @@
 }
 
 @layer components {
+  /* Monospace Money Rule: every currency figure is set in Geist Mono with
+     tabular figures so amounts align on the decimal. */
+  .text-numeric {
+    font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+  }
   .money-map-card {
     @apply bg-card border border-border/50 rounded-xl p-4 md:p-6;
   }

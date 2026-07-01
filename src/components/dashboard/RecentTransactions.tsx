@@ -157,7 +157,7 @@ const RecentTransactions = () => {
             </div>
 
             <div className="flex flex-col items-end">
-              <span className={`text-sm font-semibold ${getAmountColor(transaction.type)}`}>
+              <span className={`text-numeric text-sm font-semibold ${getAmountColor(transaction.type)}`}>
                 ₱{formatCurrency(transaction.amount)}
               </span>
               <span className="text-xs text-muted-foreground">

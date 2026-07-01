@@ -128,10 +128,10 @@ const AssetCategoriesChart = () => {
               <p className='text-foreground text-xs font-medium truncate'>
                 {category.name}
               </p>
-              <p className='text-muted-foreground text-xs'>
+              <p className='text-numeric text-muted-foreground text-xs'>
                 ₱{formatCurrency(category.value)}
               </p>
-              <p className='text-muted-foreground text-xs'>
+              <p className='text-numeric text-muted-foreground text-xs'>
                 {category.percentage}%
               </p>
             </div>
