@@ -4,10 +4,10 @@
   "title": "Design System: Money Map",
   "extensions": {
     "colorMeta": {
-      "teal-primary": { "role": "primary", "displayName": "Instrument Teal", "canonical": "oklch(0.637 0.121 187.5)", "tonalRamp": ["oklch(0.307 0.045 187.5)", "oklch(0.367 0.066 187.5)", "oklch(0.447 0.087 187.5)", "oklch(0.547 0.108 187.5)", "oklch(0.637 0.121 187.5)", "oklch(0.803 0.096 187.5)", "oklch(0.885 0.072 187.5)", "oklch(0.968 0.024 187.5)"] },
-      "gold-accent": { "role": "tertiary", "displayName": "Value Gold", "canonical": "oklch(0.878 0.138 90.8)", "tonalRamp": ["oklch(0.277 0.055 90.8)", "oklch(0.347 0.076 90.8)", "oklch(0.447 0.100 90.8)", "oklch(0.587 0.124 90.8)", "oklch(0.821 0.110 90.8)", "oklch(0.878 0.138 90.8)", "oklch(0.964 0.055 90.8)", "oklch(0.988 0.028 90.8)"] },
+      "teal-primary": { "role": "primary", "displayName": "Instrument Teal", "canonical": "oklch(0.565 0.09 190)", "tonalRamp": ["oklch(0.307 0.045 190)", "oklch(0.367 0.055 190)", "oklch(0.447 0.07 190)", "oklch(0.505 0.08 190)", "oklch(0.565 0.09 190)", "oklch(0.68 0.08 190)", "oklch(0.8 0.06 190)", "oklch(0.9 0.03 190)"] },
+      "gold-accent": { "role": "tertiary", "displayName": "Value Brass", "canonical": "oklch(0.64 0.10 80)", "tonalRamp": ["oklch(0.28 0.05 80)", "oklch(0.36 0.07 80)", "oklch(0.46 0.085 80)", "oklch(0.55 0.095 80)", "oklch(0.64 0.10 80)", "oklch(0.74 0.09 80)", "oklch(0.84 0.06 80)", "oklch(0.93 0.03 80)"] },
       "slate-secondary": { "role": "secondary", "displayName": "Structural Slate", "canonical": "oklch(0.367 0.015 236.8)", "tonalRamp": ["oklch(0.127 0.006 236.8)", "oklch(0.197 0.009 236.8)", "oklch(0.277 0.012 236.8)", "oklch(0.367 0.015 236.8)", "oklch(0.667 0.012 236.8)", "oklch(0.854 0.009 236.8)", "oklch(0.926 0.006 236.8)", "oklch(0.968 0.003 236.8)"] },
-      "ink-bg": { "role": "neutral", "displayName": "Ink Base", "canonical": "oklch(0.145 0 0)", "tonalRamp": ["oklch(0.145 0 0)", "oklch(0.205 0 0)", "oklch(0.269 0 0)", "oklch(0.371 0 0)", "oklch(0.556 0 0)", "oklch(0.708 0 0)", "oklch(0.893 0 0)", "oklch(0.985 0 0)"] },
+      "ink-bg": { "role": "neutral", "displayName": "Ink Base", "canonical": "oklch(0.16 0.008 185)", "tonalRamp": ["oklch(0.16 0.008 185)", "oklch(0.225 0.008 185)", "oklch(0.285 0.008 185)", "oklch(0.371 0.006 185)", "oklch(0.556 0 0)", "oklch(0.708 0 0)", "oklch(0.893 0 0)", "oklch(0.985 0 0)"] },
       "gain-green": { "role": "semantic", "displayName": "Gain Green", "canonical": "oklch(0.845 0.094 164.1)", "tonalRamp": ["oklch(0.327 0.057 164.1)", "oklch(0.497 0.100 164.1)", "oklch(0.686 0.143 164.1)", "oklch(0.803 0.114 164.1)", "oklch(0.845 0.094 164.1)", "oklch(0.885 0.086 164.1)", "oklch(0.934 0.057 164.1)", "oklch(0.985 0.014 164.1)"] },
       "loss-coral": { "role": "semantic", "displayName": "Loss Coral", "canonical": "oklch(0.800 0.075 20.5)", "tonalRamp": ["oklch(0.307 0.103 20.5)", "oklch(0.457 0.180 20.5)", "oklch(0.627 0.257 20.5)", "oklch(0.803 0.129 20.5)", "oklch(0.800 0.075 20.5)", "oklch(0.885 0.077 20.5)", "oklch(0.934 0.055 20.5)", "oklch(0.985 0.026 20.5)"] }
     },
@@ -37,7 +37,7 @@
       "refersTo": "button-primary",
       "description": "Teal identity button for the main action on a screen.",
       "html": "<button class=\"ds-btn-primary\">Add transaction</button>",
-      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 8px 16px; background: oklch(0.637 0.121 187.5); color: oklch(0.985 0 0); font: 500 14px/1 'Geist Sans', ui-sans-serif, system-ui, sans-serif; border: none; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.25); transition: background 0.2s ease-in-out, transform 0.2s ease-in-out; cursor: pointer; } .ds-btn-primary:hover { background: oklch(0.637 0.121 187.5 / 0.9); } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.556 0 0 / 0.5); }"
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 8px 16px; background: oklch(0.565 0.09 190); color: oklch(0.985 0 0); font: 500 14px/1 'Geist Sans', ui-sans-serif, system-ui, sans-serif; border: none; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.25); transition: background 0.2s ease-in-out, transform 0.2s ease-in-out; cursor: pointer; } .ds-btn-primary:hover { background: oklch(0.637 0.121 187.5 / 0.9); } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.556 0 0 / 0.5); }"
     },
     {
       "name": "Outline Button",
@@ -69,7 +69,7 @@
       "refersTo": "badge",
       "description": "Rounded pill label for status and tags.",
       "html": "<span class=\"ds-badge\">Income</span>",
-      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: oklch(0.637 0.121 187.5); color: oklch(0.985 0 0); font: 500 12px/1.2 'Geist Sans', ui-sans-serif, system-ui, sans-serif; border: 1px solid transparent; border-radius: 9999px; white-space: nowrap; }"
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: oklch(0.565 0.09 190); color: oklch(0.985 0 0); font: 500 12px/1.2 'Geist Sans', ui-sans-serif, system-ui, sans-serif; border: 1px solid transparent; border-radius: 9999px; white-space: nowrap; }"
     },
     {
       "name": "Animated Number",
@@ -82,7 +82,7 @@
   ],
   "narrative": {
     "northStar": "The Private Instrument",
-    "overview": "Money Map is a personal financial dashboard designed to feel like a well-made instrument the owner reaches for daily — quiet, exact, and trustworthy. Dark-only near-black canvas where teal carries identity, gold marks value, and everything else recedes so the numbers can speak. Depth comes from tonal layering, not shadow. Emphasis is rationed: a screen at rest is quiet, and color intensity is spent only where the data earns it.",
+    "overview": "Money Map is a personal financial dashboard designed to feel like a well-made instrument the owner reaches for daily — quiet, exact, and trustworthy. Dark-only, teal-tinted near-black canvas where a deepened teal carries identity, brass marks value, and everything else recedes so the numbers can speak. Depth comes from tonal layering, not shadow. Emphasis is rationed: a screen at rest is quiet, and color intensity is spent only where the data earns it.",
     "keyCharacteristics": [
       "Dark-only, near-black canvas with tonal-layer depth (not shadow-driven)",
       "Teal identity / gold value / slate structure on a neutral-gray ink base",

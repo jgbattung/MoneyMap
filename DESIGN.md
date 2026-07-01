@@ -2,12 +2,12 @@
 name: Money Map
 description: A calm, precise personal net-worth and money-tracking dashboard.
 colors:
-  teal-primary: "oklch(0.637 0.121 187.5)"
-  gold-accent: "oklch(0.878 0.138 90.8)"
+  teal-primary: "oklch(0.565 0.09 190)"
+  gold-accent: "oklch(0.64 0.10 80)"
   slate-secondary: "oklch(0.367 0.015 236.8)"
-  ink-bg: "oklch(0.145 0 0)"
-  surface-card: "oklch(0.205 0 0)"
-  surface-muted: "oklch(0.269 0 0)"
+  ink-bg: "oklch(0.16 0.008 185)"
+  surface-card: "oklch(0.225 0.008 185)"
+  surface-muted: "oklch(0.285 0.008 185)"
   text-primary: "oklch(0.893 0 0)"
   text-muted: "oklch(0.708 0 0)"
   gain-green: "oklch(0.845 0.094 164.1)"
@@ -97,7 +97,7 @@ components:
 
 **Creative North Star: "The Private Instrument"**
 
-Money Map is a personal financial dashboard designed to feel like a well-made instrument the owner reaches for daily — quiet, exact, and trustworthy. It is a dark-only interface built on a near-black canvas (`oklch(0.145 0 0)`, ~#121212) where teal carries identity, gold marks value, and everything else recedes so the numbers can speak. Depth is created almost entirely by tonal layering — flat cards a shade lighter than the background — rather than by shadow theatrics. The whole system is token-driven: an OKLCH palette on CSS custom properties, consumed through shadcn/ui "new-york" primitives and Radix behavior, so a change at the token layer propagates everywhere.
+Money Map is a personal financial dashboard designed to feel like a well-made instrument the owner reaches for daily — quiet, exact, and trustworthy. It is a dark-only interface built on a teal-tinted near-black canvas (`oklch(0.16 0.008 185)`, ~#111413) where a deepened teal carries identity, brass marks value, and everything else recedes so the numbers can speak. Depth is created almost entirely by tonal layering — flat cards a shade lighter than the background — rather than by shadow theatrics. The whole system is token-driven: an OKLCH palette on CSS custom properties, consumed through shadcn/ui "new-york" primitives and Radix behavior, so a change at the token layer propagates everywhere.
 
 The personality is **calm, trustworthy, precise**. Money is emotionally loaded, so the design's job is to reduce anxiety, not manufacture excitement. Emphasis is rationed: a screen at rest is quiet, and color intensity is spent only where the data earns it — a budget over its limit, a net-worth swing, a gain or a loss. Density is welcome because this is a single power user's daily tool, but rhythm and spacing keep richness from curdling into a spreadsheet.
 
@@ -105,28 +105,28 @@ This system explicitly rejects **enterprise / admin-panel blandness** (gray, den
 
 **Key Characteristics:**
 - Dark-only, near-black canvas with tonal-layer depth (not shadow-driven)
-- Teal identity / gold value / slate structure, on a neutral-gray ink base
+- Teal identity / brass value / slate structure, on a teal-tinted ink base
 - Monospaced numerics for exact, aligned figures
 - Restraint: color intensity reserved for data that warrants attention
 - Token-first architecture (OKLCH CSS variables → shadcn/Radix primitives)
 
 ## 2. Colors
 
-A restrained dark palette: a neutral near-black base, a single teal identity color, a gold value accent used sparingly, and semantic gain/loss colors deliberately desaturated so they read as calm signals rather than alarms.
+A restrained dark palette: a teal-tinted near-black base, a single deepened-teal identity color, a brass value accent used sparingly, and semantic gain/loss colors deliberately desaturated so they read as calm signals rather than alarms.
 
 ### Primary
-- **Instrument Teal** (`oklch(0.637 0.121 187.5)`, ~#00a9a5): The identity color. Primary buttons, active navigation, focus/selection, the net-worth line, and the first chart series. This is the app's voice — used with intent, not sprayed across surfaces.
+- **Instrument Teal** (`oklch(0.565 0.09 190)`, ~#178a86): The identity color, deepened and desaturated in the "Deep Teal, Refined" reskin. Primary buttons, active navigation, focus/selection, the net-worth line, and the first chart series. This is the app's voice — used with intent, not sprayed across surfaces.
 
 ### Secondary
 - **Structural Slate** (`oklch(0.367 0.015 236.8)`): Secondary buttons and structural chrome. A cool, low-chroma gray-blue that gives quiet weight without competing with teal.
 
 ### Tertiary
-- **Value Gold** (`oklch(0.878 0.138 90.8)`): The value/accent hue. Reserved for moments that connote worth or a second data series in charts. Deliberately rare; note the semantic UI `--accent` was intentionally reduced to a subtle white-alpha hover (`oklch(1 0 0 / 10%)`) so gold stays special rather than becoming generic hover paint.
+- **Value Brass** (`oklch(0.64 0.10 80)`, ~#b8863b): The value/accent hue, demoted from a bright gold to a deeper brass so it stays rare and grown-up. Reserved for moments that connote worth, a budget nearing its limit, or a second data series in charts. Deliberately rare; note the semantic UI `--accent` is a subtle white-alpha hover (`oklch(1 0 0 / 10%)`) so brass stays special rather than becoming generic hover paint.
 
 ### Neutral
-- **Ink Base** (`oklch(0.145 0 0)`, ~#121212): The app background. A true neutral near-black — no warm or cool tint.
-- **Card Surface** (`oklch(0.205 0 0)`): Cards, popovers, sidebar — one tonal step up from the base. This step *is* the elevation system.
-- **Muted Surface** (`oklch(0.269 0 0)`): Recessed fills and muted backgrounds.
+- **Ink Base** (`oklch(0.16 0.008 185)`, ~#111413): The app background. A near-black tinted faintly toward the brand teal — the tint is what keeps the dark surface from reading as generic enterprise gray.
+- **Card Surface** (`oklch(0.225 0.008 185)`): Cards, popovers, sidebar — one teal-tinted tonal step up from the base. This step *is* the elevation system.
+- **Muted Surface** (`oklch(0.285 0.008 185)`): The recessed insights panel and muted fills — a second deliberate tonal step, which is what makes the net-worth panel's two-tone signature intentional.
 - **Primary Text** (`oklch(0.893 0 0)`, ~#e0e0e0): Body and heading text. Off-white, never pure #fff, to soften glare on the dark canvas.
 - **Muted Text** (`oklch(0.708 0 0)`): Secondary labels, descriptions, timestamps.
 - **Hairline** (`oklch(1 0 0 / 10%)`): Borders and dividers as 10% white alpha — visible but never assertive.
@@ -160,7 +160,7 @@ A restrained dark palette: a neutral near-black base, a single teal identity col
 
 ## 4. Elevation
 
-Depth is conveyed by **tonal layering, not shadows**. The background is the darkest layer; cards sit one measured step lighter (`oklch(0.205 0 0)` over `oklch(0.145 0 0)`), and hairline 10%-white borders define edges. shadcn primitives carry a whisper-light `shadow-xs`/`shadow-sm`, but shadow is not the depth mechanism — the tonal step is. This keeps the surface calm and avoids the heavy drop-shadows that make dark UIs feel dated.
+Depth is conveyed by **tonal layering, not shadows**. The background is the darkest layer; cards sit one measured step lighter (`oklch(0.225 0.008 185)` over `oklch(0.16 0.008 185)`), and hairline 10%-white borders define edges. shadcn primitives carry a whisper-light `shadow-xs`/`shadow-sm`, but shadow is not the depth mechanism — the tonal step is. This keeps the surface calm and avoids the heavy drop-shadows that make dark UIs feel dated.
 
 ### Named Rules
 **The Tonal-Step Rule.** Elevation is a lightness step, not a shadow. If a surface needs to feel raised, lighten it toward the card tone and add a hairline border — don't reach for a bigger blur.
@@ -197,7 +197,7 @@ Depth is conveyed by **tonal layering, not shadows**. The background is the dark
 ## 6. Do's and Don'ts
 
 ### Do:
-- **Do** keep the canvas neutral near-black (`oklch(0.145 0 0)`) and build depth with a single tonal step to the card surface plus hairline borders.
+- **Do** keep the canvas teal-tinted near-black (`oklch(0.16 0.008 185)`) and build depth with a single tonal step to the card surface plus hairline borders.
 - **Do** set every currency amount in Geist Mono, aligned on the decimal.
 - **Do** ration teal and gold — reserve full-strength color for data that genuinely warrants attention.
 - **Do** pair gain/loss color with sign, arrow, or label cues; never rely on hue alone.
