@@ -1,26 +1,24 @@
 /**
- * Stable, on-brand categorical colors for charts. Maps a category key (id or
- * name) to one of the design-system chart tokens via a stable hash, so a given
- * category keeps the same color regardless of the result set's size or order.
+ * Stable, calm categorical colors for charts. Derives a color per category from
+ * a hash of its key, so a category keeps the same color regardless of the
+ * result set's size or order. Because the hue is continuous (not a fixed list
+ * of tokens), it never runs out or repeats early — it scales to 20+ categories.
  *
- * Excludes the alarm-red (--chart-4) and purple (--chart-6) tokens to stay on
- * the calm, rationed palette.
+ * Fixed OKLCH lightness/chroma keep the whole set muted and cohesive on the
+ * dark theme rather than a candy rainbow (the old `hsl(hue, 65%, 60%)`).
  */
-const CATEGORY_COLORS = [
-  'var(--chart-1)', // teal
-  'var(--chart-2)', // brass
-  'var(--chart-9)', // cyan
-  'var(--chart-10)', // mint
-  'var(--chart-3)', // green
-  'var(--chart-7)', // orange
-  'var(--chart-5)', // slate
-  'var(--chart-8)', // blue
-];
 
-export function getCategoryColor(key: string): string {
+function hashKey(key: string): number {
   let hash = 0;
   for (let i = 0; i < key.length; i++) {
     hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
   }
-  return CATEGORY_COLORS[hash % CATEGORY_COLORS.length];
+  return hash;
+}
+
+export function getCategoryColor(key: string): string {
+  // Golden-angle rotation spreads hashed keys evenly around the hue wheel so
+  // sibling categories rarely land on near-identical hues.
+  const hue = (hashKey(key) * 137.508) % 360;
+  return `oklch(0.72 0.12 ${hue.toFixed(1)})`;
 }

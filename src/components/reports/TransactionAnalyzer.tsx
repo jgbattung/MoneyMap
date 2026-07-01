@@ -675,14 +675,14 @@ export function TransactionAnalyzer() {
                 </p>
 
                 {/* Summary Stats */}
-                <div className="flex items-center rounded-lg border p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 rounded-lg border p-4">
                   <div className="flex-1 text-center">
                     <p className="text-xs md:text-sm text-muted-foreground">Total Amount</p>
                     <p className="text-numeric text-xl md:text-2xl font-bold">
                       {formatCurrency(data.totalAmount)}
                     </p>
                   </div>
-                  <Separator orientation="vertical" className="mx-4 h-10" />
+                  <Separator orientation="vertical" className="mx-4 h-10 hidden sm:block" />
                   <div className="flex-1 text-center">
                     <p className="text-xs md:text-sm text-muted-foreground">Avg / Transaction</p>
                     <p className="text-numeric text-xl md:text-2xl font-bold">
