@@ -49,7 +49,7 @@ const TotalNetWorthCard = () => {
 
         <div className='flex flex-col items-start'>
           <div className='flex items-end gap-2'>
-            <span className='text-muted-foreground font-light text-sm md:text-base'>PHP</span>
+            <span className='text-muted-foreground font-light text-sm md:text-base'>₱</span>
             <Skeleton className="h-10 w-48 md:h-12 md:w-64 lg:h-14 lg:w-80 bg-secondary-500" />
           </div>
         </div>
@@ -107,7 +107,7 @@ const TotalNetWorthCard = () => {
       {/* Main Net Worth Display */}
       <div className='flex flex-col items-start'>
         <div className='flex items-end gap-2'>
-          <span className='text-muted-foreground font-light text-sm md:text-base'>PHP</span>
+          <span className='text-muted-foreground font-light text-sm md:text-base'>₱</span>
           <p className='text-numeric text-foreground text-3xl md:text-4xl lg:text-5xl font-bold'>
             {isBalanceHidden ? '*****' : animatedText}
           </p>
