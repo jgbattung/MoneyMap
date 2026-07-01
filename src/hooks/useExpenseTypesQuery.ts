@@ -120,6 +120,27 @@ export const useExpenseTypesQuery = () => {
 
   const deleteBudgetMutation = useMutation({
     mutationFn: deleteBudget,
+    onMutate: async (deletedId: string) => {
+      // Optimistically remove the budget from the budgets-page table.
+      await queryClient.cancelQueries({ queryKey: ['budgetStatus'] });
+      const previous = queryClient.getQueriesData<BudgetStatusItem[]>({ queryKey: ['budgetStatus'] });
+
+      queryClient.setQueriesData<BudgetStatusItem[]>(
+        {
+          queryKey: ['budgetStatus'],
+          predicate: (query) =>
+            (query.queryKey[1] as { all?: boolean } | undefined)?.all === true,
+        },
+        (old) => (old ? old.filter((b) => b.id !== deletedId) : old)
+      );
+
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      context?.previous?.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.budgets });
       queryClient.invalidateQueries({ queryKey: ['expenseTransactions'] });

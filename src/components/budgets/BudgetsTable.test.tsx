@@ -54,6 +54,7 @@ describe('BudgetsTable', () => {
     fireEvent.click(editButtons[0])
     expect(screen.getByLabelText('Save')).toBeTruthy()
     expect(screen.getByLabelText('Cancel')).toBeTruthy()
+    expect(screen.getByLabelText('Delete budget')).toBeTruthy()
   })
 
   it('renders the overall percentage in the footer', () => {

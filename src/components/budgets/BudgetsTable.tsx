@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-table'
 import { toast } from 'sonner'
 import { IconCheck, IconEdit, IconX } from '@tabler/icons-react'
+import { Trash2 } from 'lucide-react'
 
 import { BudgetStatusItem } from '@/hooks/useBudgetStatus'
 import { useExpenseTypesQuery } from '@/hooks/useExpenseTypesQuery'
@@ -26,6 +27,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { Spinner } from '@/components/ui/spinner'
+import DeleteDialog from '@/components/shared/DeleteDialog'
 import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -152,6 +154,12 @@ const EditActionsCell = ({ row, table }: any) => {
     meta?.setEditedRows((old: any) => ({ ...old, [row.id]: false }))
   }
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    meta?.setBudgetToDelete({ id: row.original.id, name: row.original.name })
+    meta?.setDeleteDialogOpen(true)
+  }
+
   const save = async (e: React.MouseEvent) => {
     e.stopPropagation()
     try {
@@ -176,6 +184,15 @@ const EditActionsCell = ({ row, table }: any) => {
       </Button>
       <Button variant="ghost" size="icon" onClick={cancel} disabled={meta?.isUpdating} aria-label="Cancel">
         <IconX className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handleDelete}
+        disabled={meta?.isUpdating || meta?.isDeleting}
+        aria-label="Delete budget"
+      >
+        <Trash2 className="h-4 w-4" />
       </Button>
     </div>
   ) : (
@@ -205,9 +222,28 @@ const BudgetsTable = ({
   budgets: BudgetStatusItem[]
   onRowClick: (id: string) => void
 }) => {
-  const { updateBudget, isUpdating } = useExpenseTypesQuery()
+  const { updateBudget, isUpdating, deleteBudget, isDeleting } = useExpenseTypesQuery()
   const { mergedData, editedRows, setEditedRows, updateData, revertData, clearPendingEdits } =
     useEditableTable<BudgetStatusItem>({ queryData: budgets })
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [budgetToDelete, setBudgetToDelete] = useState<{ id: string; name: string } | null>(null)
+
+  const handleDeleteConfirm = async () => {
+    if (!budgetToDelete) return
+    const id = budgetToDelete.id
+    setDeleteDialogOpen(false)
+    setBudgetToDelete(null)
+    try {
+      await deleteBudget(id)
+      toast.success('Budget deleted', { duration: 4000 })
+    } catch (error) {
+      toast.error('Failed to delete budget', {
+        description: error instanceof Error ? error.message : 'Please try again.',
+        duration: 6000,
+      })
+    }
+  }
 
   const totals = mergedData.reduce<BudgetTotals>(
     (acc, b) => {
@@ -242,10 +278,14 @@ const BudgetsTable = ({
       clearPendingEdits,
       saveBudget,
       isUpdating,
+      isDeleting,
+      setDeleteDialogOpen,
+      setBudgetToDelete,
     },
   })
 
   return (
+    <>
     <div className="overflow-hidden rounded-md border">
       <Table>
         <TableHeader>
@@ -303,6 +343,21 @@ const BudgetsTable = ({
         </TableFooter>
       </Table>
     </div>
+
+    <DeleteDialog
+      open={deleteDialogOpen}
+      onOpenChange={setDeleteDialogOpen}
+      onConfirm={handleDeleteConfirm}
+      title="Delete budget?"
+      description={
+        <>
+          Deleting <span className="font-semibold">{budgetToDelete?.name}</span> will move its
+          transactions to Uncategorized. This can&apos;t be undone.
+        </>
+      }
+      isDeleting={isDeleting}
+    />
+    </>
   )
 }
 
