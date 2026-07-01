@@ -17,6 +17,8 @@
 /blob-report/
 /playwright/.auth/
 
+/docs
+
 # next.js
 /.next/
 /out/
