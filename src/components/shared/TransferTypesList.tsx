@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
+import { Skeleton } from '../ui/skeleton'
 import { Icons } from '../icons'
 import { EmptyState } from '@/components/shared/EmptyState';
 import { useTransferTypesQuery } from '@/hooks/useTransferTypesQuery'
@@ -150,7 +151,7 @@ const TransferTypesList = () => {
     return (
       <div className="space-y-3">
         {Array.from({ length: 5 }, (_, i) => (
-          <div key={i} className="h-12 bg-muted rounded-md animate-pulse" />
+          <Skeleton key={i} className="h-12" />
         ))}
       </div>
     );
