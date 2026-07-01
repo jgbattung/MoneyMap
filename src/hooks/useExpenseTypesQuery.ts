@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { BudgetStatusItem } from "./useBudgetStatus";
 
 type ExpenseType = {
   id: string;
@@ -71,6 +72,38 @@ export const useExpenseTypesQuery = () => {
 
   const createBudgetMutation = useMutation({
     mutationFn: createBudget,
+    onMutate: async (budgetData) => {
+      // Optimistically add the new budget to the budgets-page table so it
+      // appears instantly instead of waiting for the refetch round-trip.
+      await queryClient.cancelQueries({ queryKey: ['budgetStatus'] });
+      const previous = queryClient.getQueriesData<BudgetStatusItem[]>({ queryKey: ['budgetStatus'] });
+
+      const optimistic: BudgetStatusItem = {
+        id: `optimistic-${crypto.randomUUID()}`,
+        name: (budgetData.name as string) ?? '',
+        monthlyBudget: budgetData.monthlyBudget ? parseFloat(budgetData.monthlyBudget as string) : null,
+        spentAmount: 0,
+        progressPercentage: 0,
+        isOverBudget: false,
+      };
+
+      // Only the budgets-page cache (all=true); leave the dashboard's top-5 untouched.
+      queryClient.setQueriesData<BudgetStatusItem[]>(
+        {
+          queryKey: ['budgetStatus'],
+          predicate: (query) =>
+            (query.queryKey[1] as { all?: boolean } | undefined)?.all === true,
+        },
+        (old) => (old ? [...old, optimistic] : old)
+      );
+
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      context?.previous?.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.budgets });
       queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
