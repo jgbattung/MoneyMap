@@ -142,7 +142,7 @@ describe('NetWorthCard', () => {
 
     it('renders PHP currency label', () => {
       render(React.createElement(NetWorthCard), { wrapper: createWrapper() });
-      expect(screen.getByText('PHP')).toBeTruthy();
+      expect(screen.getByText('₱')).toBeTruthy();
     });
 
     it('renders "from last month" text', () => {

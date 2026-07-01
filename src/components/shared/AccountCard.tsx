@@ -98,8 +98,8 @@ const AccountCard = ({
       </div>
       <div className='flex flex-col items-end'>
         <div className='flex items-end justify-center gap-2'>
-          <span className='text-muted-foreground font-light text-xs md:text-md'>PHP</span>
-          <p className='text-foreground md:text-md lg:text-lg'>{formattedBalance}</p>
+          <span className='text-muted-foreground font-light text-xs md:text-md'>₱</span>
+          <p className='text-numeric text-foreground md:text-md lg:text-lg'>{formattedBalance}</p>
         </div>
         <p className='text-muted-foreground text-xs'>Balance</p>
       </div>

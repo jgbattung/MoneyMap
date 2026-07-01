@@ -95,7 +95,7 @@ const InstallmentTable = ({ installments, onEdit }: InstallmentTableProps) => {
     }),
     columnHelper.accessor('amount', {
       header: 'Total',
-      cell: (info) => <div className="text-right">₱{formatCurrency(info.getValue())}</div>,
+      cell: (info) => <div className="text-numeric text-right">₱{formatCurrency(info.getValue())}</div>,
     }),
     columnHelper.accessor('monthlyAmount', {
       header: 'Monthly',

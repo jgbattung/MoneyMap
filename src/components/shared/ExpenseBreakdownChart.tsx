@@ -210,7 +210,7 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
                         <span className="font-medium">{name}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{formatCurrency(value as number)}</span>
+                        <span className="text-numeric">{formatCurrency(value as number)}</span>
                         <span>({item.payload.percentage.toFixed(1)}%)</span>
                       </div>
                     </div>
@@ -289,7 +289,7 @@ const ExpenseBreakdownChart = ({ month, year, onMonthChange }: ExpenseBreakdownC
               </span>
               <span className="text-sm text-foreground">{item.name}</span>
             </div>
-            <span className="text-sm text-foreground">
+            <span className="text-numeric text-sm text-foreground">
               {formatCurrency(item.value)}
             </span>
           </div>
