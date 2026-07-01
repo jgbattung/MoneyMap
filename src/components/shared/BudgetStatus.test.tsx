@@ -382,7 +382,7 @@ describe('BudgetStatus', () => {
       expect(container.querySelector('.bg-text-success')).toBeTruthy();
     });
 
-    it('applies bg-amber-400 color when under budget but at or above 80%', () => {
+    it('applies bg-brand-gold color when under budget but at or above 80%', () => {
       const warningBudget = [
         {
           id: 'b-warn',
@@ -399,7 +399,7 @@ describe('BudgetStatus', () => {
         wrapper: createWrapper(),
       });
 
-      expect(container.querySelector('.bg-amber-400')).toBeTruthy();
+      expect(container.querySelector('.bg-brand-gold')).toBeTruthy();
     });
 
     it('applies bg-text-error color when over budget', () => {

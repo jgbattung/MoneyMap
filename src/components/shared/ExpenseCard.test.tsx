@@ -64,9 +64,9 @@ describe('ExpenseCard', () => {
       expect(screen.getByText('BDO Savings')).toBeTruthy();
     });
 
-    it('renders "PHP" currency label', () => {
+    it('renders "₱" currency label', () => {
       render(React.createElement(ExpenseCard, baseProps));
-      expect(screen.getByText('PHP')).toBeTruthy();
+      expect(screen.getByText('₱')).toBeTruthy();
     });
   });
 

@@ -78,12 +78,28 @@ export async function GET(_req: NextRequest) {
       `,
     ]);
 
-    // Build the trailing-12-months window (oldest first)
+    // Build the full-history window (oldest data month -> current month, oldest first).
+    // The client slices this to the user-selected range (3M / 6M / 1Y / All).
     const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    let windowStart: Date;
+    const allRows = [...incomeRows, ...expenseRows];
+    if (allRows.length > 0) {
+      const earliest = allRows.reduce((min, row) =>
+        row.year < min.year || (row.year === min.year && row.month < min.month) ? row : min
+      );
+      windowStart = new Date(earliest.year, earliest.month - 1, 1);
+    } else {
+      // No transaction history: keep a trailing 12-month window so the chart isn't a single point.
+      windowStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+    }
+
     const windowMonths: { year: number; month: number }[] = [];
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      windowMonths.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
+    const cursor = new Date(windowStart);
+    while (cursor <= currentMonthStart) {
+      windowMonths.push({ year: cursor.getFullYear(), month: cursor.getMonth() + 1 });
+      cursor.setMonth(cursor.getMonth() + 1);
     }
 
     const history = computeCumulativeNetWorth(

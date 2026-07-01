@@ -37,8 +37,8 @@ const BudgetStatusItem = ({
     progressColor = 'bg-text-error';
     pillClasses = 'bg-text-error/10 text-text-error';
   } else if (spentAmount > 0 && !isOverBudget && progressPercentage >= 80) {
-    progressColor = 'bg-amber-400';
-    pillClasses = 'bg-amber-400/10 text-amber-400';
+    progressColor = 'bg-brand-gold';
+    pillClasses = 'bg-brand-gold/10 text-brand-gold';
   } else if (spentAmount > 0 && !isOverBudget) {
     progressColor = 'bg-text-success';
     pillClasses = 'bg-text-success/10 text-text-success';
@@ -52,17 +52,17 @@ const BudgetStatusItem = ({
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-semibold text-sm truncate">{name}</span>
           {!hasNoBudget && (
-            <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${pillClasses}`}>
+            <span className={`text-numeric shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${pillClasses}`}>
               {progressPercentage.toLocaleString('en-PH')}%
             </span>
           )}
         </div>
 
         <div className="text-right shrink-0">
-          <div className="font-semibold text-sm">
+          <div className="text-numeric font-semibold text-sm">
             ₱{formatCurrency(spentAmount)}
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-numeric text-xs text-muted-foreground">
             {hasNoBudget
               ? 'No budget set'
               : `of ₱${formatCurrency(monthlyBudget)}`

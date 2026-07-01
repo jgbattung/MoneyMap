@@ -86,9 +86,9 @@ describe('AccountCard', () => {
       expect(screen.getByText('Balance')).toBeTruthy();
     });
 
-    it('renders "PHP" currency label', () => {
+    it('renders "₱" currency label', () => {
       render(React.createElement(AccountCard, baseProps));
-      expect(screen.getByText('PHP')).toBeTruthy();
+      expect(screen.getByText('₱')).toBeTruthy();
     });
   });
 

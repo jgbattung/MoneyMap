@@ -47,9 +47,9 @@ describe('IncomeCard', () => {
       expect(screen.getByText('BDO Savings')).toBeTruthy();
     });
 
-    it('renders "PHP" currency label', () => {
+    it('renders "₱" currency label', () => {
       render(React.createElement(IncomeCard, baseProps));
-      expect(screen.getByText('PHP')).toBeTruthy();
+      expect(screen.getByText('₱')).toBeTruthy();
     });
   });
 

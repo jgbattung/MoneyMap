@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import {
   ChartConfig,
@@ -8,6 +8,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useNetWorthHistory } from '@/hooks/useNetWorthHistory'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { TrendingUp } from 'lucide-react'
@@ -19,8 +20,28 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
+const RANGE_KEY = 'networth-history-range'
+const RANGE_MONTHS = { '3M': 3, '6M': 6, '1Y': 12, All: Infinity } as const
+type Range = keyof typeof RANGE_MONTHS
+const RANGES = Object.keys(RANGE_MONTHS) as Range[]
+
 const NetWorthHistoryChart = () => {
   const { history, isLoading, error } = useNetWorthHistory();
+
+  const [range, setRange] = useState<Range>('1Y');
+
+  useEffect(() => {
+    const saved = localStorage.getItem(RANGE_KEY);
+    if (saved && saved in RANGE_MONTHS) {
+      setRange(saved as Range);
+    }
+  }, []);
+
+  const handleRangeChange = (value: string) => {
+    if (!value) return; // ignore deselection of the active item
+    setRange(value as Range);
+    localStorage.setItem(RANGE_KEY, value);
+  };
 
   const formatCurrency = (value: number) => {
     return `₱${value.toLocaleString('en-PH', {
@@ -77,23 +98,46 @@ const NetWorthHistoryChart = () => {
     );
   }
 
+  const months = RANGE_MONTHS[range];
+  const displayed = months === Infinity ? history : history.slice(-months);
+  const spansMultipleYears =
+    new Set(displayed.map((d) => d.month.split(' ')[1])).size > 1;
+  const formatXTick = (value: string) => {
+    const [month, year] = value.split(' ');
+    return spansMultipleYears ? `${month} '${year.slice(2)}` : month;
+  };
+
   return (
     <div className='flex flex-col gap-3'>
       {/* Chart Title */}
-      <div className='flex items-center justify-between'>
+      <div className='flex items-center justify-between gap-2'>
         <h2 className='text-lg font-semibold text-foreground tracking-tight mt-6'>
           Net Worth Over Time
         </h2>
-        <p className='text-muted-foreground text-xs md:text-sm'>
-          Last 12 Months
-        </p>
+        <ToggleGroup
+          type='single'
+          value={range}
+          onValueChange={handleRangeChange}
+          aria-label='Select net worth time range'
+          className='gap-1'
+        >
+          {RANGES.map((r) => (
+            <ToggleGroupItem
+              key={r}
+              value={r}
+              className='h-7 rounded-md px-2 text-xs font-medium text-muted-foreground data-[state=on]:bg-primary/15 data-[state=on]:text-primary'
+            >
+              {r}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       </div>
 
       {/* Chart */}
       <ChartContainer config={chartConfig} className="h-[200px] md:h-[250px] w-full">
         <AreaChart
           accessibilityLayer
-          data={history}
+          data={displayed}
           margin={{
             top: 10,
             right: 10,
@@ -107,7 +151,7 @@ const NetWorthHistoryChart = () => {
             tickLine={false}
             axisLine={false}
             tickMargin={8}
-            tickFormatter={(value) => value.slice(0, 3)}
+            tickFormatter={formatXTick}
           />
           <YAxis
             tickLine={false}

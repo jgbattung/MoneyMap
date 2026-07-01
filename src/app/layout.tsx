@@ -31,12 +31,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NextTopLoader 
-          color="#2DD4BF"
+        <NextTopLoader
+          color="#178A86"
           height={3}
           showSpinner={false}
           speed={200}
-          shadow="0 0 10px #2DD4BF,0 0 5px #2DD4BF"
+          shadow="0 0 10px #178A86,0 0 5px #178A86"
         />
         <Providers>
           <main className="flex h-screen overflow-hidden">

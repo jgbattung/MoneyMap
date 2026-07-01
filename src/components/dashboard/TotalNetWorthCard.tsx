@@ -49,7 +49,7 @@ const TotalNetWorthCard = () => {
 
         <div className='flex flex-col items-start'>
           <div className='flex items-end gap-2'>
-            <span className='text-muted-foreground font-light text-sm md:text-base'>PHP</span>
+            <span className='text-muted-foreground font-light text-sm md:text-base'>₱</span>
             <Skeleton className="h-10 w-48 md:h-12 md:w-64 lg:h-14 lg:w-80 bg-secondary-500" />
           </div>
         </div>
@@ -95,7 +95,7 @@ const TotalNetWorthCard = () => {
         {/* Monthly Change Pill Badge */}
         <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs md:text-sm font-medium ${changePillClasses}`}>
           <ChangeIcon className="h-3 w-3 md:h-4 md:w-4" />
-          <span>
+          <span className="text-numeric">
             {isBalanceHidden
               ? '***'
               : `₱${formatCurrency(Math.abs(monthlyChange.amount))} (${Math.abs(monthlyChange.percentage)}%)`
@@ -106,9 +106,9 @@ const TotalNetWorthCard = () => {
 
       {/* Main Net Worth Display */}
       <div className='flex flex-col items-start'>
-        <div className='flex items-end gap-2'>
-          <span className='text-muted-foreground font-light text-sm md:text-base'>PHP</span>
-          <p className='text-foreground text-3xl md:text-4xl lg:text-5xl font-bold'>
+        <div className='flex items-baseline gap-1'>
+          <span className='text-muted-foreground font-light text-sm md:text-base'>₱</span>
+          <p className='text-numeric text-foreground text-3xl md:text-4xl lg:text-5xl font-bold'>
             {isBalanceHidden ? '*****' : animatedText}
           </p>
         </div>

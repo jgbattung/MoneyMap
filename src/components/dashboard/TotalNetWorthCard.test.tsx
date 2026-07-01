@@ -105,12 +105,12 @@ describe('TotalNetWorthCard', () => {
       expect(screen.getByText('Total Net Worth')).toBeTruthy();
     });
 
-    it('renders the PHP currency label during loading', () => {
+    it('renders the ₱ currency label during loading', () => {
       vi.mocked(useNetWorth).mockReturnValue({ ...makeDefaultReturn(), isLoading: true });
 
       render(React.createElement(TotalNetWorthCard), { wrapper: createWrapper() });
 
-      expect(screen.getByText('PHP')).toBeTruthy();
+      expect(screen.getByText('₱')).toBeTruthy();
     });
 
     it('does not render the eye toggle button during loading', () => {
@@ -175,10 +175,10 @@ describe('TotalNetWorthCard', () => {
       expect(screen.getByText('Total Net Worth')).toBeTruthy();
     });
 
-    it('renders the PHP currency label', () => {
+    it('renders the ₱ currency label', () => {
       render(React.createElement(TotalNetWorthCard), { wrapper: createWrapper() });
 
-      expect(screen.getByText('PHP')).toBeTruthy();
+      expect(screen.getByText('₱')).toBeTruthy();
     });
 
     it('renders the Eye icon (balance visible by default)', () => {

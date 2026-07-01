@@ -55,9 +55,9 @@ describe('TransferCard', () => {
       expect(accountRow.textContent).toContain('BDO Savings');
     });
 
-    it('renders "PHP" currency label', () => {
+    it('renders "₱" currency label', () => {
       render(React.createElement(TransferCard, baseProps));
-      expect(screen.getByText('PHP')).toBeTruthy();
+      expect(screen.getByText('₱')).toBeTruthy();
     });
 
     it('formats date as "MMM d, yyyy"', () => {

@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-01T00:00:00Z",
+  "title": "Design System: Money Map",
+  "extensions": {
+    "colorMeta": {
+      "teal-primary": { "role": "primary", "displayName": "Instrument Teal", "canonical": "oklch(0.565 0.09 190)", "tonalRamp": ["oklch(0.307 0.045 190)", "oklch(0.367 0.055 190)", "oklch(0.447 0.07 190)", "oklch(0.505 0.08 190)", "oklch(0.565 0.09 190)", "oklch(0.68 0.08 190)", "oklch(0.8 0.06 190)", "oklch(0.9 0.03 190)"] },
+      "gold-accent": { "role": "tertiary", "displayName": "Value Brass", "canonical": "oklch(0.64 0.10 80)", "tonalRamp": ["oklch(0.28 0.05 80)", "oklch(0.36 0.07 80)", "oklch(0.46 0.085 80)", "oklch(0.55 0.095 80)", "oklch(0.64 0.10 80)", "oklch(0.74 0.09 80)", "oklch(0.84 0.06 80)", "oklch(0.93 0.03 80)"] },
+      "slate-secondary": { "role": "secondary", "displayName": "Structural Slate", "canonical": "oklch(0.367 0.015 236.8)", "tonalRamp": ["oklch(0.127 0.006 236.8)", "oklch(0.197 0.009 236.8)", "oklch(0.277 0.012 236.8)", "oklch(0.367 0.015 236.8)", "oklch(0.667 0.012 236.8)", "oklch(0.854 0.009 236.8)", "oklch(0.926 0.006 236.8)", "oklch(0.968 0.003 236.8)"] },
+      "ink-bg": { "role": "neutral", "displayName": "Ink Base", "canonical": "oklch(0.16 0.008 185)", "tonalRamp": ["oklch(0.16 0.008 185)", "oklch(0.225 0.008 185)", "oklch(0.285 0.008 185)", "oklch(0.371 0.006 185)", "oklch(0.556 0 0)", "oklch(0.708 0 0)", "oklch(0.893 0 0)", "oklch(0.985 0 0)"] },
+      "gain-green": { "role": "semantic", "displayName": "Gain Green", "canonical": "oklch(0.845 0.094 164.1)", "tonalRamp": ["oklch(0.327 0.057 164.1)", "oklch(0.497 0.100 164.1)", "oklch(0.686 0.143 164.1)", "oklch(0.803 0.114 164.1)", "oklch(0.845 0.094 164.1)", "oklch(0.885 0.086 164.1)", "oklch(0.934 0.057 164.1)", "oklch(0.985 0.014 164.1)"] },
+      "loss-coral": { "role": "semantic", "displayName": "Loss Coral", "canonical": "oklch(0.800 0.075 20.5)", "tonalRamp": ["oklch(0.307 0.103 20.5)", "oklch(0.457 0.180 20.5)", "oklch(0.627 0.257 20.5)", "oklch(0.803 0.129 20.5)", "oklch(0.800 0.075 20.5)", "oklch(0.885 0.077 20.5)", "oklch(0.934 0.055 20.5)", "oklch(0.985 0.026 20.5)"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page titles and the net-worth hero figure." },
+      "numeric": { "displayName": "Numeric (Mono)", "purpose": "All currency amounts, balances, and deltas; tabular and aligned." },
+      "body": { "displayName": "Body", "purpose": "Default reading text at relaxed line-height." }
+    },
+    "shadows": [
+      { "name": "whisper-xs", "value": "0 1px 2px rgba(0,0,0,0.25)", "purpose": "Barely-there lift on buttons/inputs. Shadow is not the depth mechanism; the tonal step is." },
+      { "name": "card-sm", "value": "0 1px 3px rgba(0,0,0,0.3)", "purpose": "Optional soft settle under cards. Never heavier than this." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default 200ms ease-in-out for state and color transitions." },
+      { "name": "reveal-rows", "value": "grid-template-rows 200ms ease-out", "purpose": "Nav-group and field reveals via 0fr -> 1fr grid rows." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Teal identity button for the main action on a screen.",
+      "html": "<button class=\"ds-btn-primary\">Add transaction</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 8px 16px; background: oklch(0.565 0.09 190); color: oklch(0.985 0 0); font: 500 14px/1 'Geist Sans', ui-sans-serif, system-ui, sans-serif; border: none; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.25); transition: background 0.2s ease-in-out, transform 0.2s ease-in-out; cursor: pointer; } .ds-btn-primary:hover { background: oklch(0.637 0.121 187.5 / 0.9); } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.556 0 0 / 0.5); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action with a hairline border over a subtle fill.",
+      "html": "<button class=\"ds-btn-outline\">Cancel</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 8px 16px; background: oklch(1 0 0 / 0.06); color: oklch(0.893 0 0); font: 500 14px/1 'Geist Sans', ui-sans-serif, system-ui, sans-serif; border: 1px solid oklch(1 0 0 / 0.1); border-radius: 8px; transition: background 0.2s ease-in-out; cursor: pointer; } .ds-btn-outline:hover { background: oklch(1 0 0 / 0.12); } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.556 0 0 / 0.5); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The .money-map-card surface: tonal-step elevation with a hairline border.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">Net Worth</div><div class=\"ds-card-amount\">$128,540.22</div></div>",
+      "css": ".ds-card { background: oklch(0.205 0 0); color: oklch(0.893 0 0); border: 1px solid oklch(1 0 0 / 0.1); border-radius: 14px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); } .ds-card-title { font: 600 18px/1.2 'Geist Sans', ui-sans-serif, system-ui, sans-serif; letter-spacing: -0.01em; } .ds-card-amount { margin-top: 8px; font: 500 28px/1.1 'Geist Mono', ui-monospace, monospace; color: oklch(0.845 0.094 164.1); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Standard field: transparent-to-subtle fill over a hairline border.",
+      "html": "<input class=\"ds-input\" placeholder=\"0.00\" />",
+      "css": ".ds-input { display: flex; width: 100%; height: 36px; padding: 4px 12px; background: oklch(1 0 0 / 0.06); color: oklch(0.893 0 0); font: 400 14px/1.4 'Geist Sans', ui-sans-serif, system-ui, sans-serif; border: 1px solid oklch(1 0 0 / 0.1); border-radius: 8px; outline: none; transition: box-shadow 0.2s, border-color 0.2s; } .ds-input::placeholder { color: oklch(0.708 0 0); } .ds-input:focus-visible { border-color: oklch(0.556 0 0); box-shadow: 0 0 0 3px oklch(0.556 0 0 / 0.5); }"
+    },
+    {
+      "name": "Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Rounded pill label for status and tags.",
+      "html": "<span class=\"ds-badge\">Income</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: oklch(0.565 0.09 190); color: oklch(0.985 0 0); font: 500 12px/1.2 'Geist Sans', ui-sans-serif, system-ui, sans-serif; border: 1px solid transparent; border-radius: 9999px; white-space: nowrap; }"
+    },
+    {
+      "name": "Animated Number",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Signature monospaced currency figure with gain/loss sign coloring.",
+      "html": "<span class=\"ds-amount ds-amount-gain\">+$1,204.50</span>",
+      "css": ".ds-amount { font: 500 20px/1.2 'Geist Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; } .ds-amount-gain { color: oklch(0.845 0.094 164.1); } .ds-amount-loss { color: oklch(0.800 0.075 20.5); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Private Instrument",
+    "overview": "Money Map is a personal financial dashboard designed to feel like a well-made instrument the owner reaches for daily — quiet, exact, and trustworthy. Dark-only, teal-tinted near-black canvas where a deepened teal carries identity, brass marks value, and everything else recedes so the numbers can speak. Depth comes from tonal layering, not shadow. Emphasis is rationed: a screen at rest is quiet, and color intensity is spent only where the data earns it.",
+    "keyCharacteristics": [
+      "Dark-only, near-black canvas with tonal-layer depth (not shadow-driven)",
+      "Teal identity / gold value / slate structure on a neutral-gray ink base",
+      "Monospaced numerics for exact, aligned figures",
+      "Restraint: color intensity reserved for data that warrants attention",
+      "Token-first architecture (OKLCH CSS variables to shadcn/Radix primitives)"
+    ],
+    "rules": [
+      { "name": "The Rationed Accent Rule", "body": "Gold and full-strength teal are earned, not defaulted. The canvas stays neutral and color marks meaning.", "section": "colors" },
+      { "name": "The Two-Reds Rule", "body": "Ordinary negative money uses the calm Loss Coral; only genuinely destructive actions and errors use Destructive Red.", "section": "colors" },
+      { "name": "The Monospace Money Rule", "body": "Every currency figure is set in Geist Mono, aligned on the decimal.", "section": "typography" },
+      { "name": "The Tonal-Step Rule", "body": "Elevation is a lightness step plus a hairline border, not a shadow.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep the canvas neutral near-black and build depth with a single tonal step plus hairline borders.",
+      "Do set every currency amount in Geist Mono, aligned on the decimal.",
+      "Do ration teal and gold — reserve full-strength color for data that warrants attention.",
+      "Do pair gain/loss color with sign, arrow, or label cues; never rely on hue alone.",
+      "Do honor prefers-reduced-motion on every animation."
+    ],
+    "donts": [
+      "Don't drift toward enterprise / admin-panel blandness.",
+      "Don't introduce purple-gradient AI-SaaS cues — no violet gradients, glassmorphism, or AI-startup sheen.",
+      "Don't use heavy drop-shadows to fake elevation; use the tonal step.",
+      "Don't use the alarm Destructive Red for ordinary negative balances.",
+      "Don't use gradient text or colored side-stripe borders as accents."
+    ]
+  }
+}

@@ -62,7 +62,7 @@ export const MobileHeroSummary = () => {
         {/* Income Card */}
         <div className="flex flex-col gap-1 p-3 rounded-lg bg-success-950/20 border border-success-900/30">
           <span className="text-muted-foreground text-xs">Income</span>
-          <span className="text-foreground text-lg font-semibold">
+          <span className="text-numeric text-foreground text-lg font-semibold">
             {formatCurrency(summary.currentMonth.income)}
           </span>
           <div className={`flex items-center gap-1 text-xs ${getChangeColor(incomeChange)}`}>
@@ -74,7 +74,7 @@ export const MobileHeroSummary = () => {
         {/* Expense Card */}
         <div className="flex flex-col gap-1 p-3 rounded-lg bg-error-950/20 border border-error-900/30">
           <span className="text-muted-foreground text-xs">Expenses</span>
-          <span className="text-foreground text-lg font-semibold">
+          <span className="text-numeric text-foreground text-lg font-semibold">
             {formatCurrency(summary.currentMonth.expenses)}
           </span>
           <div className={`flex items-center gap-1 text-xs ${getChangeColor(expenseChange, true)}`}>
@@ -87,7 +87,7 @@ export const MobileHeroSummary = () => {
       {/* Net Savings Bar */}
       <div className="flex items-center justify-between p-3 rounded-lg bg-secondary-950/50 border border-border">
         <span className="text-muted-foreground text-sm">Net savings</span>
-        <span className={`text-xl font-bold ${summary.currentMonth.savings >= 0 ? 'text-text-success' : 'text-text-error'}`}>
+        <span className={`text-numeric text-xl font-bold ${summary.currentMonth.savings >= 0 ? 'text-text-success' : 'text-text-error'}`}>
           {formatCurrency(summary.currentMonth.savings)}
         </span>
       </div>

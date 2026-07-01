@@ -99,7 +99,7 @@ const CompactTransactionCard = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <h3 className="font-medium text-foreground text-sm truncate">{name}</h3>
-            <span className={`font-semibold text-sm flex-shrink-0 ${getAmountColor()}`}>
+            <span className={`text-numeric font-semibold text-sm flex-shrink-0 ${getAmountColor()}`}>
               ₱{formattedAmount}
             </span>
           </div>

@@ -126,14 +126,14 @@ export default function AnnualSummaryTable() {
                     />
                     {year.year}
                   </div>
-                  <span className="text-xs md:text-sm text-foreground text-right">
+                  <span className="text-numeric text-xs md:text-sm text-foreground text-right">
                     {formatCurrency(year.totalIncome)}
                   </span>
-                  <span className="text-xs md:text-sm text-foreground text-right">
+                  <span className="text-numeric text-xs md:text-sm text-foreground text-right">
                     {formatCurrency(year.totalExpenses)}
                   </span>
                   <span
-                    className={`text-xs md:text-sm text-right ${getSavingsColorClass(year.totalSavings)}`}
+                    className={`text-numeric text-xs md:text-sm text-right ${getSavingsColorClass(year.totalSavings)}`}
                   >
                     {formatCurrency(year.totalSavings)}
                   </span>
@@ -155,13 +155,13 @@ export default function AnnualSummaryTable() {
                         <span className="text-xs md:text-sm text-muted-foreground pl-7">
                           {MONTH_NAMES[month.month - 1]}
                         </span>
-                        <span className="text-xs md:text-sm text-muted-foreground text-right">
+                        <span className="text-numeric text-xs md:text-sm text-muted-foreground text-right">
                           {formatCurrency(month.totalIncome)}
                         </span>
-                        <span className="text-xs md:text-sm text-muted-foreground text-right">
+                        <span className="text-numeric text-xs md:text-sm text-muted-foreground text-right">
                           {formatCurrency(month.totalExpenses)}
                         </span>
-                        <span className={`text-xs md:text-sm text-right ${getSavingsColorClass(month.totalSavings) || "text-muted-foreground"}`}>
+                        <span className={`text-numeric text-xs md:text-sm text-right ${getSavingsColorClass(month.totalSavings) || "text-muted-foreground"}`}>
                           {formatCurrency(month.totalSavings)}
                         </span>
                       </div>
@@ -177,10 +177,10 @@ export default function AnnualSummaryTable() {
             <span className="text-xs md:text-sm text-foreground font-semibold pl-5">
               Total
             </span>
-            <span className="text-xs md:text-sm text-foreground text-right font-semibold">
+            <span className="text-numeric text-xs md:text-sm text-foreground text-right font-semibold">
               {formatCurrency(Math.round(totals.totalIncome * 100) / 100)}
             </span>
-            <span className="text-xs md:text-sm text-foreground text-right font-semibold">
+            <span className="text-numeric text-xs md:text-sm text-foreground text-right font-semibold">
               {formatCurrency(Math.round(totals.totalExpenses * 100) / 100)}
             </span>
             <span className={`text-xs md:text-sm text-right font-semibold ${getSavingsColorClass(totals.totalSavings)}`}>
