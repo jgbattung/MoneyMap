@@ -14,7 +14,7 @@ interface BudgetStatusItem {
   isOverBudget: boolean;
 }
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
     const session = await auth.api.getSession({
       headers: await headers()
@@ -88,12 +88,12 @@ export async function GET(_req: NextRequest) {
       };
     });
 
-    const top5Budgets = budgetStatus
-      .sort((a, b) => b.spentAmount - a.spentAmount)
-      .slice(0, 5);
+    // ?all=true returns every category (budgets page); default is top-5 (dashboard widget).
+    const returnAll = req.nextUrl.searchParams.get('all') === 'true';
+    const sorted = budgetStatus.sort((a, b) => b.spentAmount - a.spentAmount);
 
     return NextResponse.json({
-      budgets: top5Budgets
+      budgets: returnAll ? sorted : sorted.slice(0, 5)
     });
 
   } catch (error) {

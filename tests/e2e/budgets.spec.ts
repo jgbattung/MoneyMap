@@ -90,7 +90,7 @@ test.describe("Budgets (expense types)", () => {
     await page.locator('[data-slot="sheet-content"]').getByRole("button", { name: "Add budget" }).click();
 
     await expect(page.getByText("Budget created successfully")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("ET New Category", { exact: true })).toBeVisible();
+    await expect(page.locator("tbody").getByText("ET New Category", { exact: true })).toBeVisible();
   });
 
   // -------------------------------------------------------------------------
@@ -122,7 +122,7 @@ test.describe("Budgets (expense types)", () => {
     await page.locator('[data-slot="sheet-content"]').getByRole("button", { name: "Add budget" }).click();
 
     await expect(page.getByText("Budget created successfully")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("ET With Subs", { exact: true })).toBeVisible();
+    await expect(page.locator("tbody").getByText("ET With Subs", { exact: true })).toBeVisible();
   });
 
   // -------------------------------------------------------------------------
@@ -132,10 +132,10 @@ test.describe("Budgets (expense types)", () => {
     await page.goto("/budgets");
     await page.waitForLoadState("networkidle");
 
-    // Click the ET Transport budget card
-    const card = page.locator(".money-map-card-interactive").filter({ hasText: "ET Transport" });
-    await card.waitFor({ state: "visible", timeout: 10000 });
-    await card.click();
+    // Open the ET Transport budget from the desktop table (row click opens the sheet)
+    const row = page.locator("tbody tr").filter({ hasText: "ET Transport" });
+    await row.waitFor({ state: "visible", timeout: 10000 });
+    await row.getByText("ET Transport", { exact: true }).click();
 
     await expect(page.getByText("Edit budget")).toBeVisible({ timeout: 10000 });
 
@@ -146,7 +146,7 @@ test.describe("Budgets (expense types)", () => {
     await page.locator('[data-slot="sheet-content"]').getByRole("button", { name: "Update budget" }).click();
 
     await expect(page.getByText("Budget updated successfully")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("ET Transport Updated", { exact: true })).toBeVisible();
+    await expect(page.locator("tbody").getByText("ET Transport Updated", { exact: true })).toBeVisible();
   });
 
   // -------------------------------------------------------------------------
@@ -156,9 +156,9 @@ test.describe("Budgets (expense types)", () => {
     await page.goto("/budgets");
     await page.waitForLoadState("networkidle");
 
-    const card = page.locator(".money-map-card-interactive").filter({ hasText: "ET ToDelete" });
-    await card.waitFor({ state: "visible", timeout: 10000 });
-    await card.click();
+    const row = page.locator("tbody tr").filter({ hasText: "ET ToDelete" });
+    await row.waitFor({ state: "visible", timeout: 10000 });
+    await row.getByText("ET ToDelete", { exact: true }).click();
 
     await expect(page.getByText("Edit budget")).toBeVisible({ timeout: 10000 });
 
@@ -171,8 +171,8 @@ test.describe("Budgets (expense types)", () => {
 
     await expect(page.getByText("Budget deleted successfully")).toBeVisible({ timeout: 10000 });
 
-    // Budget card should no longer appear
-    await expect(page.locator(".money-map-card-interactive").filter({ hasText: "ET ToDelete" })).not.toBeVisible();
+    // Budget row should no longer appear in the table
+    await expect(page.locator("tbody").getByText("ET ToDelete", { exact: true })).not.toBeVisible();
 
     // Verify the transaction was reassigned — check in DB directly
     const txn = await prisma.expenseTransaction.findUnique({ where: { id: "et-txn-1" } });

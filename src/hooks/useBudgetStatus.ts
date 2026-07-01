@@ -17,26 +17,28 @@ const QUERY_KEYS = {
   budgetStatus: ['budgetStatus'] as const,
 };
 
-const fetchBudgetStatus = async (): Promise<BudgetStatusItem[]> => {
-  const response = await fetch('/api/dashboard/budget-status');
-  
+const fetchBudgetStatus = async (all: boolean): Promise<BudgetStatusItem[]> => {
+  const response = await fetch(`/api/dashboard/budget-status${all ? '?all=true' : ''}`);
+
   if (!response.ok) {
     throw new Error('Failed to fetch budget status');
   }
-  
+
   const data: BudgetStatusResponse = await response.json();
   return data.budgets;
 };
 
-export const useBudgetStatus = () => {
+export const useBudgetStatus = (options: { all?: boolean } = {}) => {
+  const { all = false } = options;
+
   const {
     data: budgets = [],
     isPending,
     error,
     refetch,
   } = useQuery({
-    queryKey: QUERY_KEYS.budgetStatus,
-    queryFn: fetchBudgetStatus,
+    queryKey: [...QUERY_KEYS.budgetStatus, { all }],
+    queryFn: () => fetchBudgetStatus(all),
     staleTime: 5 * 60 * 1000,
   });
 
