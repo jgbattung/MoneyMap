@@ -125,6 +125,11 @@
 
 :root {
   --radius: 0.625rem;
+
+  /* Motion: confident ease-out curves (never bounce/elastic). Mirrors EASE_OUT_QUINT in lib/motion.ts. */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   
   /* Light theme - these won't be used since we're dark-only */
   --text-success: oklch(0.500 0.120 142.5); /* Darker green for light mode */

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { EASE_OUT_QUINT } from '@/lib/motion';
 import Link from 'next/link';
 
 const formatAccountType = (type: string): string => {
@@ -194,7 +195,7 @@ const TopAccounts = () => {
             key={account.id}
             initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: "easeOut", delay: index * 0.05 }}
+            transition={{ duration: 0.3, ease: EASE_OUT_QUINT, delay: index * 0.05 }}
           >
             <AccountItem
               id={account.id}
@@ -260,7 +261,7 @@ const TopCreditCards = () => {
               key={card.id}
               initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, ease: "easeOut", delay: index * 0.05 }}
+              transition={{ duration: 0.3, ease: EASE_OUT_QUINT, delay: index * 0.05 }}
             >
               <CreditCardItem
                 id={card.id}

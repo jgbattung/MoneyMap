@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/lib/format';
 import { motion, useReducedMotion } from 'framer-motion';
+import { EASE_OUT_QUINT } from '@/lib/motion';
 import { AlertCircle, PieChart } from 'lucide-react';
 
 const AssetCategoriesChart = () => {
@@ -100,7 +101,7 @@ const AssetCategoriesChart = () => {
                 <motion.div
                   initial={{ width: "0%" }}
                   animate={{ width: `${category.percentage}%` }}
-                  transition={{ duration: 0.5, ease: "easeOut", delay: index * 0.05 }}
+                  transition={{ duration: 0.5, ease: EASE_OUT_QUINT, delay: index * 0.05 }}
                   style={{ backgroundColor: category.color }}
                   className='cursor-pointer transition-opacity hover:opacity-80'
                 />

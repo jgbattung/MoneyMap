@@ -3,13 +3,13 @@
 import { useMonthlySummary } from '@/hooks/useMonthlySummary'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
 
-const formatCurrency = (value: number) => {
-  return `₱${value.toLocaleString('en-PH', {
+const formatNumber = (value: number) =>
+  value.toLocaleString('en-PH', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  })}`
-}
+  })
 
 const getChangeIcon = (change: number) => {
   if (change > 0) return TrendingUp
@@ -63,7 +63,7 @@ export const MobileHeroSummary = () => {
         <div className="flex flex-col gap-1 p-3 rounded-lg bg-success-950/20 border border-success-900/30">
           <span className="text-muted-foreground text-xs">Income</span>
           <span className="text-numeric text-foreground text-lg font-semibold">
-            {formatCurrency(summary.currentMonth.income)}
+            ₱<AnimatedNumber value={summary.currentMonth.income} format={formatNumber} />
           </span>
           <div className={`flex items-center gap-1 text-xs ${getChangeColor(incomeChange)}`}>
             <IncomeIcon className="w-3 h-3" />
@@ -75,7 +75,7 @@ export const MobileHeroSummary = () => {
         <div className="flex flex-col gap-1 p-3 rounded-lg bg-error-950/20 border border-error-900/30">
           <span className="text-muted-foreground text-xs">Expenses</span>
           <span className="text-numeric text-foreground text-lg font-semibold">
-            {formatCurrency(summary.currentMonth.expenses)}
+            ₱<AnimatedNumber value={summary.currentMonth.expenses} format={formatNumber} />
           </span>
           <div className={`flex items-center gap-1 text-xs ${getChangeColor(expenseChange, true)}`}>
             <ExpenseIcon className="w-3 h-3" />
@@ -88,7 +88,7 @@ export const MobileHeroSummary = () => {
       <div className="flex items-center justify-between p-3 rounded-lg bg-secondary-950/50 border border-border">
         <span className="text-muted-foreground text-sm">Net savings</span>
         <span className={`text-numeric text-xl font-bold ${summary.currentMonth.savings >= 0 ? 'text-text-success' : 'text-text-error'}`}>
-          {formatCurrency(summary.currentMonth.savings)}
+          ₱<AnimatedNumber value={summary.currentMonth.savings} format={formatNumber} />
         </span>
       </div>
     </div>
