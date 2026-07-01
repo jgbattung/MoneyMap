@@ -106,7 +106,7 @@ const TotalNetWorthCard = () => {
 
       {/* Main Net Worth Display */}
       <div className='flex flex-col items-start'>
-        <div className='flex items-end gap-2'>
+        <div className='flex items-baseline gap-1'>
           <span className='text-muted-foreground font-light text-sm md:text-base'>₱</span>
           <p className='text-numeric text-foreground text-3xl md:text-4xl lg:text-5xl font-bold'>
             {isBalanceHidden ? '*****' : animatedText}

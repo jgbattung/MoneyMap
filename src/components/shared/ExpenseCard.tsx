@@ -143,7 +143,7 @@ const ExpenseCard = ({
         )}
 
         <div className='flex flex-col items-end ml-auto'>
-          <div className='flex items-end justify-center gap-2'>
+          <div className='flex items-baseline justify-center gap-1'>
             <span className='text-muted-foreground font-light text-xs md:text-md'>₱</span>
             <p className='text-numeric text-foreground md:text-md lg:text-lg'>
               {isInstallment ? formattedMonthly : formattedAmount}

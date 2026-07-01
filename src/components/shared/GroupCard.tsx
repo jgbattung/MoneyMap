@@ -88,7 +88,7 @@ const GroupCard = ({
           className="flex flex-col items-end cursor-pointer"
           onClick={onGroupClick}
         >
-          <div className="flex items-end justify-center gap-2">
+          <div className="flex items-baseline justify-center gap-1">
             <span className="text-muted-foreground font-light text-xs md:text-md">
               ₱
             </span>

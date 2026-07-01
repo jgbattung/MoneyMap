@@ -80,7 +80,7 @@ const TransferCard = ({
         )}
       </div>
       <div className='flex flex-col items-end'>
-        <div className='flex items-end justify-center gap-2'>
+        <div className='flex items-baseline justify-center gap-1'>
           <span className='text-muted-foreground font-light text-xs md:text-md'>₱</span>
           <p className='text-numeric text-foreground md:text-md lg:text-lg'>{formattedAmount}</p>
         </div>

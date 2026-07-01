@@ -106,7 +106,7 @@ const NetWorthCard = () => {
 
         {/* Main Net Worth Display */}
         <div className='flex flex-col items-start'>
-          <div className='flex items-end justify-center gap-2'>
+          <div className='flex items-baseline justify-center gap-1'>
             <span className='text-muted-foreground font-light text-xs md:text-md'>₱</span>
             <p className='text-numeric text-foreground text-2xl md:text-3xl lg:text-4xl font-bold'>{formatCurrency(netWorth)}</p>
           </div>
