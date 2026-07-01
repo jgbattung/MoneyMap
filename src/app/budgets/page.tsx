@@ -152,7 +152,6 @@ const Budgets = () => {
           <div className="hidden md:block mt-10">
             <BudgetsTable
               budgets={sortedBudgets}
-              totals={totals}
               onRowClick={handleExpenseTypeClick}
             />
           </div>

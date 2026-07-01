@@ -1,8 +1,12 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, within, fireEvent } from '@testing-library/react'
 import React from 'react'
-import BudgetsTable, { type BudgetTotals } from './BudgetsTable'
+import BudgetsTable from './BudgetsTable'
 import type { BudgetStatusItem } from '@/hooks/useBudgetStatus'
+
+vi.mock('@/hooks/useExpenseTypesQuery', () => ({
+  useExpenseTypesQuery: () => ({ updateBudget: vi.fn(), isUpdating: false }),
+}))
 
 const budgets: BudgetStatusItem[] = [
   { id: '1', name: 'Rent', monthlyBudget: 20000, spentAmount: 20000, progressPercentage: 100, isOverBudget: false },
@@ -10,14 +14,8 @@ const budgets: BudgetStatusItem[] = [
   { id: '3', name: 'Misc', monthlyBudget: null, spentAmount: 1200, progressPercentage: 0, isOverBudget: false },
 ]
 
-const totals: BudgetTotals = {
-  totalBudgeted: 28000,
-  totalSpent: 30700,
-  totalRemaining: -2700,
-}
-
 const renderTable = () =>
-  render(<BudgetsTable budgets={budgets} totals={totals} onRowClick={() => {}} />)
+  render(<BudgetsTable budgets={budgets} onRowClick={() => {}} />)
 
 describe('BudgetsTable', () => {
   it('renders a row per category with budgeted, spent and remaining', () => {
@@ -47,6 +45,15 @@ describe('BudgetsTable', () => {
     renderTable()
     // Food is over by 1,500 -> remaining -1,500.00
     expect(screen.getByText('-₱1,500.00')).toBeTruthy()
+  })
+
+  it('enters inline edit mode when the row edit button is clicked', () => {
+    renderTable()
+    const editButtons = screen.getAllByLabelText('Edit budget')
+    expect(editButtons.length).toBe(3)
+    fireEvent.click(editButtons[0])
+    expect(screen.getByLabelText('Save')).toBeTruthy()
+    expect(screen.getByLabelText('Cancel')).toBeTruthy()
   })
 
   it('renders the overall percentage in the footer', () => {
