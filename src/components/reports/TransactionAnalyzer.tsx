@@ -62,6 +62,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { getCategoryColor } from "@/lib/chart-colors";
 
 
 const ALL_VALUE = "__all__";
@@ -677,14 +678,14 @@ export function TransactionAnalyzer() {
                 <div className="flex items-center rounded-lg border p-4">
                   <div className="flex-1 text-center">
                     <p className="text-xs md:text-sm text-muted-foreground">Total Amount</p>
-                    <p className="text-xl md:text-2xl font-bold">
+                    <p className="text-numeric text-xl md:text-2xl font-bold">
                       {formatCurrency(data.totalAmount)}
                     </p>
                   </div>
                   <Separator orientation="vertical" className="mx-4 h-10" />
                   <div className="flex-1 text-center">
                     <p className="text-xs md:text-sm text-muted-foreground">Avg / Transaction</p>
-                    <p className="text-xl md:text-2xl font-bold">
+                    <p className="text-numeric text-xl md:text-2xl font-bold">
                       {formatCurrency(data.transactionCount > 0 ? data.totalAmount / data.transactionCount : 0)}
                     </p>
                   </div>
@@ -700,13 +701,13 @@ export function TransactionAnalyzer() {
                         : "Category"}
                     </h3>
                     <div className="space-y-3">
-                      {data.breakdown.map((item, index) => (
+                      {data.breakdown.map((item) => (
                         <div key={item.id} className="space-y-1">
                           <div className="flex justify-between">
                             <span className="text-sm font-medium">
                               {item.name}
                             </span>
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-numeric text-sm text-muted-foreground">
                               {formatCurrency(item.amount)} ({item.percentage}%)
                             </span>
                           </div>
@@ -717,10 +718,7 @@ export function TransactionAnalyzer() {
                               className="h-full rounded-full transition-all"
                               style={{
                                 width: `${item.percentage}%`,
-                                backgroundColor: generateColor(
-                                  index,
-                                  data.breakdown.length
-                                ),
+                                backgroundColor: getCategoryColor(item.id),
                               }}
                             />
                           </div>
@@ -758,7 +756,7 @@ export function TransactionAnalyzer() {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-medium">
+                            <p className="text-numeric text-sm font-medium">
                               {formatCurrency(t.amount)}
                             </p>
                             <p className="text-xs text-muted-foreground">
@@ -828,11 +826,6 @@ const currencyFormatter = new Intl.NumberFormat("en-PH", {
 
 function formatCurrency(amount: number): string {
   return currencyFormatter.format(amount);
-}
-
-function generateColor(index: number, total: number): string {
-  const hue = (index * 360) / total;
-  return `hsl(${hue}, 65%, 60%)`;
 }
 
 function ActiveFilters({

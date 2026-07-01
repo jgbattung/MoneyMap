@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useExpenseBreakdown } from '@/hooks/useExpenseBreakdown'
 import { useIncomeBreakdown } from '@/hooks/useIncomeBreakdown'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { getCategoryColor } from '@/lib/chart-colors'
 import { PieChart as PieChartIcon, HandCoins } from 'lucide-react'
 
 type BreakdownType = 'expense' | 'income'
@@ -31,12 +32,6 @@ const TYPE_CONFIG = {
     errorMessage: 'Failed to load income breakdown',
   },
 } as const
-
-// Generate distinct colors programmatically using HSL color wheel distribution
-const generateColor = (index: number, total: number): string => {
-  const hue = (index * 360) / total
-  return `hsl(${hue}, 65%, 60%)`
-}
 
 const INITIAL_DISPLAY_COUNT = 10
 
@@ -76,18 +71,18 @@ const CategoryBreakdownChart = ({ type, month, year }: CategoryBreakdownChartPro
   }
 
   // Prepare chart data with programmatically generated colors
-  const chartData = breakdown?.data.map((item, index) => ({
+  const chartData = breakdown?.data.map((item) => ({
     name: item.name,
     value: item.amount,
     percentage: item.percentage,
-    fill: generateColor(index, breakdown.data.length),
+    fill: getCategoryColor(item.name),
   })) || []
 
-  // Chart config with programmatic colors
-  const chartConfig = breakdown?.data.reduce((acc, item, index) => {
+  // Chart config with stable, on-brand category colors
+  const chartConfig = breakdown?.data.reduce((acc, item) => {
     acc[item.name] = {
       label: item.name,
-      color: generateColor(index, breakdown.data.length),
+      color: getCategoryColor(item.name),
     }
     return acc
   }, {} as ChartConfig) || {} satisfies ChartConfig

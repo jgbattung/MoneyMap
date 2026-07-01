@@ -452,13 +452,13 @@ export function EventLedger() {
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-lg border p-3 md:p-4 text-center">
                 <p className="text-xs text-muted-foreground">Expenses</p>
-                <p className="text-lg md:text-xl font-bold text-red-500">
+                <p className="text-numeric text-lg md:text-xl font-bold text-text-error">
                   {formatCurrency(data.totalExpenses)}
                 </p>
               </div>
               <div className="rounded-lg border p-3 md:p-4 text-center">
                 <p className="text-xs text-muted-foreground">Income</p>
-                <p className="text-lg md:text-xl font-bold text-green-500">
+                <p className="text-numeric text-lg md:text-xl font-bold text-text-success">
                   {formatCurrency(data.totalIncome)}
                 </p>
               </div>
@@ -468,8 +468,8 @@ export function EventLedger() {
                 </p>
                 <p
                   className={cn(
-                    "text-lg md:text-xl font-bold",
-                    data.netAmount >= 0 ? "text-red-500" : "text-green-500"
+                    "text-numeric text-lg md:text-xl font-bold",
+                    data.netAmount >= 0 ? "text-text-error" : "text-text-success"
                   )}
                 >
                   {formatCurrency(Math.abs(data.netAmount))}
@@ -522,8 +522,8 @@ export function EventLedger() {
                           <span
                             className={
                               t.type === "expense"
-                                ? "text-red-500"
-                                : "text-green-500"
+                                ? "text-text-error"
+                                : "text-text-success"
                             }
                           >
                             {t.type === "expense" ? "−" : "+"}
@@ -541,10 +541,10 @@ export function EventLedger() {
                       <div className="text-right">
                         <p
                           className={cn(
-                            "text-sm font-medium",
+                            "text-numeric text-sm font-medium",
                             t.type === "expense"
-                              ? "text-red-500"
-                              : "text-green-500"
+                              ? "text-text-error"
+                              : "text-text-success"
                           )}
                         >
                           {t.type === "expense" ? "−" : "+"}
@@ -885,7 +885,7 @@ function AddTransactionsPanel({
                     </p>
                   </div>
                   <div className="flex items-center gap-2 ml-2">
-                    <p className="text-sm font-medium whitespace-nowrap">
+                    <p className="text-numeric text-sm font-medium whitespace-nowrap">
                       {formatCurrency(t.amount)}
                     </p>
                     <Button
