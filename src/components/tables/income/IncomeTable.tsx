@@ -76,7 +76,7 @@ const CellContent = ({ getValue, row, column, table }: any) => {
     
     if (columnMeta?.type === "number") {
       const amount = parseFloat(value);
-      return <span>{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
+      return <span className="text-numeric">₱{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
     }
 
     if (columnMeta?.type === "select") {
