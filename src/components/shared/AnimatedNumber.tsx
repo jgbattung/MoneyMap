@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSpring, useTransform, useReducedMotion } from 'framer-motion'
+import { COUNT_UP_MS } from '@/lib/motion'
 
 interface AnimatedNumberProps {
   value: number
@@ -15,7 +16,7 @@ interface AnimatedNumberProps {
  */
 export function AnimatedNumber({ value, format }: AnimatedNumberProps) {
   const prefersReducedMotion = useReducedMotion()
-  const springValue = useSpring(0, { duration: 700, bounce: 0 })
+  const springValue = useSpring(0, { duration: COUNT_UP_MS, bounce: 0 })
   const displayValue = useTransform(springValue, (v) => format(v))
   const [text, setText] = useState(() => format(0))
 

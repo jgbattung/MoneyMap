@@ -141,7 +141,7 @@ export default function AnnualSummaryTable() {
 
                 {/* Month rows - animated container */}
                 <div
-                  className="grid overflow-hidden transition-[grid-template-rows] duration-200 ease-out"
+                  className="grid overflow-hidden transition-[grid-template-rows] duration-300 ease-out"
                   style={{
                     gridTemplateRows: isExpanded ? "1fr" : "0fr",
                   }}

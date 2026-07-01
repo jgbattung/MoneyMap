@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/chart"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useReducedMotion } from 'framer-motion'
+import { CHART_DRAW_MS } from '@/lib/motion'
 import { useNetWorthHistory } from '@/hooks/useNetWorthHistory'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { TrendingUp } from 'lucide-react'
@@ -177,7 +178,7 @@ const NetWorthHistoryChart = () => {
             fillOpacity={0.2}
             strokeWidth={2}
             isAnimationActive={!prefersReducedMotion}
-            animationDuration={800}
+            animationDuration={CHART_DRAW_MS}
             animationEasing="ease-out"
           />
         </AreaChart>

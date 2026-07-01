@@ -9,7 +9,7 @@ import { IconArrowDown, IconArrowUp, IconArrowRight } from '@tabler/icons-react'
 import { ArrowLeftRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion, useReducedMotion } from 'framer-motion';
-import { EASE_OUT_QUINT } from '@/lib/motion';
+import { EASE_OUT_QUINT, MOTION_DURATION, STAGGER_STEP } from '@/lib/motion';
 import Link from 'next/link';
 
 const RecentTransactions = () => {
@@ -140,7 +140,7 @@ const RecentTransactions = () => {
             className="flex items-center justify-between"
             initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: EASE_OUT_QUINT, delay: index * 0.05 }}
+            transition={{ duration: MOTION_DURATION.entrance, ease: EASE_OUT_QUINT, delay: index * STAGGER_STEP }}
           >
             <div className="flex items-center gap-3">
               <div className={`h-10 w-10 rounded-md flex items-center justify-center ${getIconBgColor(transaction.type)}`}>

@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/format';
 import { motion, useReducedMotion } from 'framer-motion';
-import { EASE_OUT_QUINT } from '@/lib/motion';
+import { EASE_OUT_QUINT, MOTION_DURATION } from '@/lib/motion';
 import { AlertCircle, PiggyBank } from 'lucide-react';
 import Link from 'next/link';
 
@@ -83,7 +83,7 @@ const BudgetStatusItem = ({
             className={`h-2 rounded-full ${progressColor}`}
             initial={{ width: "0%" }}
             animate={{ width: `${progressWidth}%` }}
-            transition={{ duration: 0.5, ease: EASE_OUT_QUINT }}
+            transition={{ duration: MOTION_DURATION.reveal, ease: EASE_OUT_QUINT }}
           />
         )}
       </div>
