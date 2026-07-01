@@ -76,7 +76,7 @@ const CellContent = ({ getValue, row, column, table }: any) => {
     
     if (columnMeta?.type === "number") {
       const amount = parseFloat(value);
-      return <span>{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
+      return <div className="text-numeric text-right pr-4">₱{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>;
     }
 
     if (columnMeta?.type === "select") {
@@ -407,7 +407,7 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
       },
     }),
     columnHelper.accessor("amount", {
-      header: "Amount",
+      header: () => <div className="text-right pr-4">Amount</div>,
       cell: CellContent,
       meta: {
         type: "number"

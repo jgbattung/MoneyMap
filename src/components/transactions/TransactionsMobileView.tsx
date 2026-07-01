@@ -159,11 +159,6 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
     setEditTransferDrawerOpen(true);
   };
 
-  // Determine if filtering is active for each tab
-  const isExpenseFiltering = debouncedExpenseSearch.length > 0 || expenseDateFilter !== dateFilterOptions.viewAll;
-  const isIncomeFiltering = debouncedIncomeSearch.length > 0 || incomeDateFilter !== dateFilterOptions.viewAll;
-  const isTransferFiltering = debouncedTransferSearch.length > 0 || transferDateFilter !== dateFilterOptions.viewAll;
-
   return (
     <>
       <div className="space-y-4">
@@ -283,7 +278,7 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
                       ))}
                     </div>
                   )}
-                  {!isExpenseFiltering && expensesHasMore && !expensesFetchingMore && (
+                  {expensesHasMore && !expensesFetchingMore && (
                     <Button
                       variant="outline"
                       className="w-full mt-4"
@@ -384,7 +379,7 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
                       ))}
                     </div>
                   )}
-                  {!isIncomeFiltering && incomeHasMore && !incomeFetchingMore && (
+                  {incomeHasMore && !incomeFetchingMore && (
                     <Button
                       variant="outline"
                       className="w-full mt-4"
@@ -486,7 +481,7 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
                       ))}
                     </div>
                   )}
-                  {!isTransferFiltering && transfersHasMore && !transfersFetchingMore && (
+                  {transfersHasMore && !transfersFetchingMore && (
                     <Button
                       variant="outline"
                       className="w-full mt-4"
