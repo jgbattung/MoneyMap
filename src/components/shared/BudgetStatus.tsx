@@ -37,8 +37,8 @@ const BudgetStatusItem = ({
     progressColor = 'bg-text-error';
     pillClasses = 'bg-text-error/10 text-text-error';
   } else if (spentAmount > 0 && !isOverBudget && progressPercentage >= 80) {
-    progressColor = 'bg-amber-400';
-    pillClasses = 'bg-amber-400/10 text-amber-400';
+    progressColor = 'bg-brand-gold';
+    pillClasses = 'bg-brand-gold/10 text-brand-gold';
   } else if (spentAmount > 0 && !isOverBudget) {
     progressColor = 'bg-text-success';
     pillClasses = 'bg-text-success/10 text-text-success';
