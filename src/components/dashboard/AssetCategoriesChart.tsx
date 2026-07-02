@@ -22,19 +22,19 @@ const AssetCategoriesChart = () => {
         <h2 className='text-lg font-semibold text-foreground tracking-tight'>Asset Categories</h2>
 
         {/* Segmented Bar Skeleton */}
-        <Skeleton className='h-4 w-full rounded-md bg-secondary-500' />
+        <Skeleton className='h-4 w-full rounded-md' />
 
         {/* Labels Skeleton */}
         <div className='grid grid-cols-2 sm:grid-cols-3 gap-3'>
           {[...Array(6)].map((_, index) => (
             <div key={index} className='flex items-start gap-2'>
               {/* Color Indicator Skeleton */}
-              <Skeleton className='w-2 h-2 rounded-full flex-shrink-0 mt-1 bg-secondary-500' />
+              <Skeleton className='w-2 h-2 rounded-full flex-shrink-0 mt-1' />
               
               {/* Name and Percentage Skeleton */}
               <div className='flex flex-col min-w-0 gap-2'>
-                <Skeleton className='h-3 w-24 bg-secondary-500' />
-                <Skeleton className='h-3 w-12 bg-secondary-500' />
+                <Skeleton className='h-3 w-24' />
+                <Skeleton className='h-3 w-12' />
               </div>
             </div>
           ))}

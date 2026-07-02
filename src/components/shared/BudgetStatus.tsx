@@ -96,10 +96,10 @@ const SkeletonBudgetList = () => (
     {[...Array(5)].map((_, i) => (
       <div key={i} className="space-y-2">
         <div className="flex justify-between">
-          <Skeleton className="h-4 w-24 bg-secondary-500" />
-          <Skeleton className="h-4 w-20 bg-secondary-500" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-20" />
         </div>
-        <Skeleton className="h-2 w-full bg-secondary-500" />
+        <Skeleton className="h-2 w-full" />
       </div>
     ))}
   </div>

@@ -13,6 +13,7 @@ import { useReducedMotion } from 'framer-motion'
 import { CHART_DRAW_MS } from '@/lib/motion'
 import { useNetWorthHistory } from '@/hooks/useNetWorthHistory'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { Skeleton } from '@/components/ui/skeleton'
 import { TrendingUp } from 'lucide-react'
 
 const chartConfig = {
@@ -60,19 +61,10 @@ const NetWorthHistoryChart = () => {
           <h2 className='text-lg font-semibold text-foreground tracking-tight mt-6'>
             Net Worth Over Time
           </h2>
-          <div className="h-3 w-20 md:h-4 md:w-24 bg-secondary-500 rounded animate-pulse" />
+          <Skeleton className="h-3 w-20 md:h-4 md:w-24" />
         </div>
 
-        <div className="relative h-[200px] md:h-[250px] w-full bg-secondary-500/20 rounded animate-pulse overflow-hidden">
-          <div className="absolute inset-0 flex flex-col justify-between p-4">
-            <div className="h-px bg-secondary-500/40" />
-            <div className="h-px bg-secondary-500/40" />
-            <div className="h-px bg-secondary-500/40" />
-            <div className="h-px bg-secondary-500/40" />
-          </div>
-          
-          <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-secondary-500/30 to-transparent" />
-        </div>
+        <Skeleton className="h-[200px] md:h-[250px] w-full" />
       </div>
     );
   }

@@ -119,19 +119,19 @@ const CreditCardItem = ({ id, name, balance }: CreditCardItemProps) => {
 
 const SkeletonList = () => (
   <div className="space-y-4">
-    <Skeleton className="h-6 w-32 bg-secondary-500" />
+    <Skeleton className="h-6 w-32" />
     <div className="space-y-3">
       {[...Array(5)].map((_, i) => (
         <div key={i} className="flex justify-between items-center">
           <div className="space-y-1">
-            <Skeleton className="h-4 w-24 bg-secondary-500" />
-            <Skeleton className="h-3 w-16 bg-secondary-500" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-16" />
           </div>
-          <Skeleton className="h-4 w-20 bg-secondary-500" />
+          <Skeleton className="h-4 w-20" />
         </div>
       ))}
     </div>
-    <Skeleton className="h-10 w-full bg-secondary-500" />
+    <Skeleton className="h-10 w-full" />
   </div>
 );
 
