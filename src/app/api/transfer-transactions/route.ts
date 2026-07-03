@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
 
     if (feeAmount && parseFloat(feeAmount) > 0) {
       // Parallelize the two independent pre-transaction read lookups
-      let [transferFeeType, fromAccount] = await Promise.all([
+      const [foundFeeType, fromAccount] = await Promise.all([
         db.expenseType.findFirst({
           where: {
             userId: session.user.id,
@@ -226,6 +226,7 @@ export async function POST(request: NextRequest) {
           select: { name: true },
         }),
       ]);
+      let transferFeeType = foundFeeType;
 
       if (!transferFeeType) {
         transferFeeType = await db.expenseType.create({
