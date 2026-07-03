@@ -731,6 +731,197 @@ describe('useExpenseTransactionsQuery', () => {
       resolveCreate({ ok: true, json: async () => mockExpense });
     });
   });
+
+  // -------------------------------------------------------------------------
+  // balance / net-worth / budget optimism (create + delete)
+  // -------------------------------------------------------------------------
+  describe('balance optimism — create/delete', () => {
+    const accountsKey = ['accounts', { includeCards: true }];
+    const netWorthKey = ['netWorth'];
+    const budgetStatusKey = ['budgetStatus', { all: false }];
+
+    function seedBalanceCaches(queryClient: QueryClient) {
+      queryClient.setQueryData(accountsKey, [
+        { id: 'acc-1', name: 'BDO Savings', accountType: 'SAVINGS', currentBalance: '1000.00', initialBalance: '0', addToNetWorth: true },
+      ]);
+      queryClient.setQueryData(netWorthKey, {
+        currentNetWorth: 5000,
+        monthlyChange: { amount: 100, percentage: 2 },
+      });
+      queryClient.setQueryData(budgetStatusKey, [
+        { id: 'type-1', name: 'Food', monthlyBudget: 500, spentAmount: 100, progressPercentage: 20, isOverBudget: false },
+      ]);
+    }
+
+    it('drops account balance, netWorth and bumps budget spentAmount instantly on create', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedBalanceCaches(queryClient);
+
+      let resolveCreate!: (v: unknown) => void;
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveCreate = resolve; }));
+
+      const { result } = renderHook(() => useExpenseTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => {
+        result.current.createExpenseTransaction({
+          payload: { name: 'New Expense', amount: '50', accountId: 'acc-1', expenseTypeId: 'type-1', date: new Date().toISOString(), isInstallment: false },
+          meta: { accountName: 'BDO Savings', expenseTypeName: 'Food' },
+        });
+      });
+
+      await waitFor(() => {
+        const accounts = queryClient.getQueryData<any>(accountsKey);
+        expect(accounts[0].currentBalance).toBe('950.00');
+      });
+
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(4950);
+      // Option A: monthlyChange untouched
+      expect(queryClient.getQueryData<any>(netWorthKey).monthlyChange).toEqual({ amount: 100, percentage: 2 });
+      const budgets = queryClient.getQueryData<any>(budgetStatusKey);
+      expect(budgets[0].spentAmount).toBe(150);
+      expect(budgets[0].progressPercentage).toBe(30);
+
+      resolveCreate({ ok: true, json: async () => mockExpense });
+    });
+
+    it('does NOT bump budget spentAmount for an out-of-month expense', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedBalanceCaches(queryClient);
+
+      let resolveCreate!: (v: unknown) => void;
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveCreate = resolve; }));
+
+      const { result } = renderHook(() => useExpenseTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => {
+        result.current.createExpenseTransaction({
+          payload: { name: 'Old Expense', amount: '50', accountId: 'acc-1', expenseTypeId: 'type-1', date: '2020-01-15', isInstallment: false },
+          meta: { accountName: 'BDO Savings', expenseTypeName: 'Food' },
+        });
+      });
+
+      // Balance still moves...
+      await waitFor(() => {
+        const accounts = queryClient.getQueryData<any>(accountsKey);
+        expect(accounts[0].currentBalance).toBe('950.00');
+      });
+      // ...but the month-scoped budget bar does not
+      expect(queryClient.getQueryData<any>(budgetStatusKey)[0].spentAmount).toBe(100);
+
+      resolveCreate({ ok: true, json: async () => mockExpense });
+    });
+
+    it('restores balances, netWorth and budgets on create error', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedBalanceCaches(queryClient);
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Server Error' }) });
+
+      const { result } = renderHook(() => useExpenseTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(async () => {
+        try {
+          await result.current.createExpenseTransactionAsync({
+            payload: { name: 'Bad Expense', amount: '50', accountId: 'acc-1', expenseTypeId: 'type-1', date: new Date().toISOString(), isInstallment: false },
+            meta: { accountName: 'BDO Savings', expenseTypeName: 'Food' },
+          });
+        } catch {
+          // expected
+        }
+      });
+
+      expect(queryClient.getQueryData<any>(accountsKey)[0].currentBalance).toBe('1000.00');
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(5000);
+      expect(queryClient.getQueryData<any>(budgetStatusKey)[0].spentAmount).toBe(100);
+    });
+
+    it('reverses account balance and budget spentAmount on delete', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedBalanceCaches(queryClient);
+
+      const currentMonthExpense = { ...mockExpense, date: new Date().toISOString() };
+      const listKey = ['expenseTransactions', { skip: 0, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+      queryClient.setQueryData(listKey, { transactions: [currentMonthExpense], total: 1, hasMore: false });
+
+      let resolveDelete!: (v: unknown) => void;
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveDelete = resolve; }));
+
+      const { result } = renderHook(() => useExpenseTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => {
+        result.current.deleteExpenseTransaction('exp-1');
+      });
+
+      // Expense of 100.00 reversed: balance +100, netWorth +100, spent -100
+      await waitFor(() => {
+        const accounts = queryClient.getQueryData<any>(accountsKey);
+        expect(accounts[0].currentBalance).toBe('1100.00');
+      });
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(5100);
+      expect(queryClient.getQueryData<any>(budgetStatusKey)[0].spentAmount).toBe(0);
+
+      resolveDelete({ ok: true, json: async () => ({}) });
+    });
+
+    it('skips balance optimism on delete when the row is not in any list cache', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedBalanceCaches(queryClient);
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+
+      const { result } = renderHook(() => useExpenseTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(async () => {
+        await result.current.deleteExpenseTransactionAsync('not-cached-id');
+      });
+
+      expect(queryClient.getQueryData<any>(accountsKey)[0].currentBalance).toBe('1000.00');
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(5000);
+    });
+
+    it('restores balances on delete error', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedBalanceCaches(queryClient);
+
+      const currentMonthExpense = { ...mockExpense, date: new Date().toISOString() };
+      const listKey = ['expenseTransactions', { skip: 0, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+      queryClient.setQueryData(listKey, { transactions: [currentMonthExpense], total: 1, hasMore: false });
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Not found' }) });
+
+      const { result } = renderHook(() => useExpenseTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(async () => {
+        try {
+          await result.current.deleteExpenseTransactionAsync('exp-1');
+        } catch {
+          // expected
+        }
+      });
+
+      expect(queryClient.getQueryData<any>(accountsKey)[0].currentBalance).toBe('1000.00');
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(5000);
+      expect(queryClient.getQueryData<any>(budgetStatusKey)[0].spentAmount).toBe(100);
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -2,6 +2,12 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { toast } from "sonner";
 import { RECENT_TRANSACTION_QUERY_KEYS, type RecentTransaction } from "./useRecentTransactions";
 import { invalidateAfterTransactionWrite } from "./transactionInvalidations";
+import {
+  applyAccountDelta,
+  applyBudgetSpentDelta,
+  restoreBalanceCaches,
+  snapshotBalanceCaches,
+} from "./optimisticBalances";
 
 export type ExpenseTransaction = {
   id: string;
@@ -238,7 +244,37 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
         }
       );
 
-      return { previousTransactions, previousRecent };
+      // Optimistic balance / net-worth / budget deltas (expense = -amount).
+      const previousBalances = snapshotBalanceCaches(queryClient);
+      const amount = parseFloat(variables.payload.amount as string);
+      const accountId = variables.payload.accountId as string;
+      const expenseTypeId = variables.payload.expenseTypeId as string;
+
+      if (!Number.isNaN(amount)) {
+        if (variables.payload.isInstallment) {
+          // Mirrors api/expense-transactions/route.ts:315-368 — only the first
+          // monthly payment hits the balance, and only when startDate <= today.
+          const installmentDuration = variables.payload.installmentDuration as number | undefined;
+          const installmentStartDate = variables.payload.installmentStartDate as string | undefined;
+          if (installmentDuration && installmentStartDate) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const startDate = new Date(installmentStartDate);
+            startDate.setHours(0, 0, 0, 0);
+            if (startDate <= today) {
+              const monthlyAmount = amount / installmentDuration;
+              applyAccountDelta(queryClient, accountId, -monthlyAmount);
+              applyBudgetSpentDelta(queryClient, expenseTypeId, monthlyAmount, installmentStartDate);
+            }
+          }
+        } else {
+          const txDate = (variables.payload.date as string) || new Date().toISOString();
+          applyAccountDelta(queryClient, accountId, -amount);
+          applyBudgetSpentDelta(queryClient, expenseTypeId, amount, txDate);
+        }
+      }
+
+      return { previousTransactions, previousRecent, previousBalances };
     },
     onError: (_error, _variables, context) => {
       if (context?.previousTransactions) {
@@ -249,6 +285,7 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
       if (context?.previousRecent !== undefined) {
         queryClient.setQueryData(RECENT_TRANSACTIONS_KEY, context.previousRecent);
       }
+      restoreBalanceCaches(queryClient, context?.previousBalances);
       toast.error("Failed to create expense transaction", {
         description: "The transaction could not be saved. Please try again.",
         duration: 6000,
@@ -327,7 +364,24 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
         }
       );
 
-      return { previousTransactions, previousRecent };
+      // Optimistic balance / net-worth / budget reversal (delete = +amount).
+      // The old row comes from the pre-delete list snapshots; if it is not
+      // cached anywhere, skip balance optimism — the refetch reconciles.
+      // Installment parents are excluded (server rejects them on this route).
+      const previousBalances = snapshotBalanceCaches(queryClient);
+      const deletedRow = previousTransactions
+        .flatMap(([, data]) => data?.transactions ?? [])
+        .find((t) => t.id === deletedId);
+
+      if (deletedRow && !deletedRow.isInstallment) {
+        const amount = parseFloat(deletedRow.amount);
+        if (!Number.isNaN(amount)) {
+          applyAccountDelta(queryClient, deletedRow.accountId, amount);
+          applyBudgetSpentDelta(queryClient, deletedRow.expenseTypeId, -amount, deletedRow.date);
+        }
+      }
+
+      return { previousTransactions, previousRecent, previousBalances };
     },
     onError: (_error, _variables, context) => {
       if (context?.previousTransactions) {
@@ -338,6 +392,7 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
       if (context?.previousRecent !== undefined) {
         queryClient.setQueryData(RECENT_TRANSACTIONS_KEY, context.previousRecent);
       }
+      restoreBalanceCaches(queryClient, context?.previousBalances);
       toast.error("Failed to delete expense transaction", {
         description: "The transaction could not be deleted. Please try again.",
         duration: 6000,
