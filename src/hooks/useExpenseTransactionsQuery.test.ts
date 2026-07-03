@@ -669,6 +669,157 @@ describe('useExpenseTransactionsQuery', () => {
   });
 
   // -------------------------------------------------------------------------
+  // updateExpenseTransaction — optimistic updates
+  // -------------------------------------------------------------------------
+  describe('updateExpenseTransaction — optimistic updates', () => {
+    const accountsKey = ['accounts', { includeCards: true }];
+    const netWorthKey = ['netWorth'];
+    const listKey = ['expenseTransactions', { skip: 0, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+
+    function seedUpdateCaches(queryClient: QueryClient) {
+      queryClient.setQueryData(accountsKey, [
+        { id: 'acc-1', name: 'BDO Savings', accountType: 'SAVINGS', currentBalance: '1000.00', initialBalance: '0', addToNetWorth: true },
+        { id: 'acc-2', name: 'Cash', accountType: 'CASH', currentBalance: '500.00', initialBalance: '0', addToNetWorth: true },
+      ]);
+      queryClient.setQueryData(netWorthKey, {
+        currentNetWorth: 5000,
+        monthlyChange: { amount: 100, percentage: 2 },
+      });
+      queryClient.setQueryData(listKey, {
+        transactions: [mockExpense],
+        total: 1,
+        hasMore: false,
+      });
+    }
+
+    it('updates the row, account balance and netWorth instantly on an amount edit', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedUpdateCaches(queryClient);
+
+      let resolveUpdate!: (v: unknown) => void;
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveUpdate = resolve; }));
+
+      const { result } = renderHook(() => useExpenseTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => {
+        // amount 100.00 -> 250: same account delta = -(250 - 100) = -150
+        result.current.updateExpenseTransaction({ id: 'exp-1', amount: '250' }).catch(() => {});
+      });
+
+      await waitFor(() => {
+        const cached = queryClient.getQueryData<any>(listKey);
+        expect(cached.transactions[0].amount).toBe('250');
+      });
+      expect(queryClient.getQueryData<any>(accountsKey)[0].currentBalance).toBe('850.00');
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(4850);
+
+      resolveUpdate({ ok: true, json: async () => ({ ...mockExpense, amount: '250' }) });
+    });
+
+    it('adjusts both account balances when the edit moves accounts', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedUpdateCaches(queryClient);
+
+      let resolveUpdate!: (v: unknown) => void;
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveUpdate = resolve; }));
+
+      const { result } = renderHook(() => useExpenseTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => {
+        // Move the 100.00 expense from acc-1 to acc-2 with a new amount of 80:
+        // +100 back on acc-1, -80 on acc-2
+        result.current.updateExpenseTransaction({ id: 'exp-1', amount: '80', accountId: 'acc-2' }).catch(() => {});
+      });
+
+      await waitFor(() => {
+        const accounts = queryClient.getQueryData<any>(accountsKey);
+        expect(accounts[0].currentBalance).toBe('1100.00');
+      });
+      const accounts = queryClient.getQueryData<any>(accountsKey);
+      expect(accounts[1].currentBalance).toBe('420.00');
+      // Both accounts add to net worth: net delta = +100 - 80 = +20
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(5020);
+
+      resolveUpdate({ ok: true, json: async () => ({ ...mockExpense, amount: '80', accountId: 'acc-2' }) });
+    });
+
+    it('moves the account balance without an amount change (account-only edit)', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedUpdateCaches(queryClient);
+
+      let resolveUpdate!: (v: unknown) => void;
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveUpdate = resolve; }));
+
+      const { result } = renderHook(() => useExpenseTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => {
+        result.current.updateExpenseTransaction({ id: 'exp-1', accountId: 'acc-2' }).catch(() => {});
+      });
+
+      await waitFor(() => {
+        const accounts = queryClient.getQueryData<any>(accountsKey);
+        expect(accounts[0].currentBalance).toBe('1100.00');
+      });
+      expect(queryClient.getQueryData<any>(accountsKey)[1].currentBalance).toBe('400.00');
+
+      resolveUpdate({ ok: true, json: async () => ({ ...mockExpense, accountId: 'acc-2' }) });
+    });
+
+    it('applies no balance delta when the old row is not in any list cache', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedUpdateCaches(queryClient);
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => mockExpense });
+
+      const { result } = renderHook(() => useExpenseTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(async () => {
+        await result.current.updateExpenseTransaction({ id: 'not-cached-id', amount: '999' });
+      });
+
+      expect(queryClient.getQueryData<any>(accountsKey)[0].currentBalance).toBe('1000.00');
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(5000);
+    });
+
+    it('restores the row and all balance caches on error', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedUpdateCaches(queryClient);
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Server Error' }) });
+
+      const { result } = renderHook(() => useExpenseTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(async () => {
+        try {
+          await result.current.updateExpenseTransaction({ id: 'exp-1', amount: '250' });
+        } catch {
+          // expected
+        }
+      });
+
+      const cached = queryClient.getQueryData<any>(listKey);
+      expect(cached.transactions[0].amount).toBe('100.00');
+      expect(queryClient.getQueryData<any>(accountsKey)[0].currentBalance).toBe('1000.00');
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(5000);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // recentTransactions optimistic update
   // -------------------------------------------------------------------------
   describe('createExpenseTransaction — recentTransactions optimistic update', () => {

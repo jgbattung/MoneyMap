@@ -327,7 +327,110 @@ export const useExpenseTransactionsQuery = (options: UseExpenseTransactionsOptio
 
   const updateExpenseTransactionMutation = useMutation({
     mutationFn: updateExpenseTransaction,
-    onSuccess: () => {
+    onMutate: async (variables) => {
+      const { id, ...changes } = variables;
+
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.expenseTransactions, predicate: isListQuery });
+
+      const previousTransactions = queryClient.getQueriesData<ExpenseTransactionsResponse>({
+        queryKey: QUERY_KEYS.expenseTransactions,
+        predicate: isListQuery,
+      }).filter(([, data]) => data !== undefined);
+      const previousBalances = snapshotBalanceCaches(queryClient);
+
+      // The OLD row comes from the cached list data; if it is not cached
+      // anywhere (e.g. deep-linked edit), balance/budget optimism is skipped
+      // entirely and only the row patch applies — the refetch reconciles.
+      const oldRow = previousTransactions
+        .flatMap(([, data]) => data?.transactions ?? [])
+        .find((t) => t.id === id);
+
+      // Patch the edited row in all list caches (merge the changed scalar
+      // fields; relation display objects reconcile via the refetch).
+      const scalarChanges: Record<string, unknown> = { ...changes };
+      delete scalarChanges.tagIds;
+      queryClient.setQueriesData<ExpenseTransactionsResponse>(
+        { queryKey: QUERY_KEYS.expenseTransactions, predicate: isListQuery },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            transactions: old.transactions.map((t) =>
+              t.id === id
+                ? {
+                    ...t,
+                    ...scalarChanges,
+                    ...(scalarChanges.amount !== undefined && { amount: String(scalarChanges.amount) }),
+                  }
+                : t
+            ),
+          };
+        }
+      );
+
+      if (oldRow) {
+        // Balance deltas mirror api/expense-transactions/[id]/route.ts:177-282.
+        const oldAmount = oldRow.isInstallment && oldRow.monthlyAmount
+          ? parseFloat(oldRow.monthlyAmount)
+          : parseFloat(oldRow.amount);
+        const newAccountId = (changes.accountId as string | undefined) ?? oldRow.accountId;
+        const accountChanged = changes.accountId !== undefined && newAccountId !== oldRow.accountId;
+
+        if (!Number.isNaN(oldAmount)) {
+          if (changes.amount !== undefined) {
+            const parsedAmount = parseFloat(changes.amount as string);
+            const newAmount = changes.isInstallment && changes.installmentDuration
+              ? parsedAmount / (changes.installmentDuration as number)
+              : parsedAmount;
+            if (!Number.isNaN(newAmount)) {
+              if (accountChanged) {
+                applyAccountDelta(queryClient, oldRow.accountId, oldAmount);
+                applyAccountDelta(queryClient, newAccountId, -newAmount);
+              } else {
+                applyAccountDelta(queryClient, oldRow.accountId, -(newAmount - oldAmount));
+              }
+            }
+          } else if (accountChanged) {
+            applyAccountDelta(queryClient, oldRow.accountId, oldAmount);
+            applyAccountDelta(queryClient, newAccountId, -oldAmount);
+          }
+        }
+
+        // Budget bars: remove the old contribution, add the new one. Nets to
+        // the amount difference when the category is unchanged, and moves the
+        // spend between categories when it changed. Installment parents are
+        // excluded (the month-scoped budget groupBy filters isInstallment).
+        const newExpenseTypeId = (changes.expenseTypeId as string | undefined) ?? oldRow.expenseTypeId;
+        const newDate = (changes.date as string | undefined) ?? oldRow.date;
+        const newIsInstallment = (changes.isInstallment as boolean | undefined) ?? oldRow.isInstallment;
+
+        if (!oldRow.isInstallment) {
+          const oldBudgetAmount = parseFloat(oldRow.amount);
+          if (!Number.isNaN(oldBudgetAmount)) {
+            applyBudgetSpentDelta(queryClient, oldRow.expenseTypeId, -oldBudgetAmount, oldRow.date);
+          }
+        }
+        if (!newIsInstallment) {
+          const newBudgetAmount = changes.amount !== undefined
+            ? parseFloat(changes.amount as string)
+            : parseFloat(oldRow.amount);
+          if (!Number.isNaN(newBudgetAmount)) {
+            applyBudgetSpentDelta(queryClient, newExpenseTypeId, newBudgetAmount, newDate);
+          }
+        }
+      }
+
+      return { previousTransactions, previousBalances };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousTransactions) {
+        context.previousTransactions.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      restoreBalanceCaches(queryClient, context?.previousBalances);
+    },
+    onSettled: () => {
       invalidateAfterTransactionWrite(queryClient, QUERY_KEYS.expenseTransactions);
     },
   });
