@@ -148,6 +148,99 @@ describe('useExpenseTypesQuery', () => {
       // Newly added invalidation
       expect(invalidatedKeys).toContainEqual(['budgetStatus']);
     });
+
+    it('optimistically updates monthlyBudget/name and recomputes progress in both budgetStatus variants', async () => {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      const wrapper = ({ children }: { children: React.ReactNode }) =>
+        React.createElement(QueryClientProvider, { client: queryClient }, children);
+
+      const top5Key = ['budgetStatus', { all: false }];
+      const allKey = ['budgetStatus', { all: true }];
+      const item = { id: 'budget-1', name: 'Food', monthlyBudget: 500, spentAmount: 450, progressPercentage: 90, isOverBudget: false };
+      queryClient.setQueryData(top5Key, [item]);
+      queryClient.setQueryData(allKey, [item, { id: 'budget-2', name: 'Transport', monthlyBudget: 100, spentAmount: 10, progressPercentage: 10, isOverBudget: false }]);
+      queryClient.setQueryData(['budgets'], [mockExpenseType]);
+
+      // ['budgets'] is pre-seeded and fresh, so no fetch happens on mount:
+      // the first mock is consumed by the PATCH. Keep it hanging so the
+      // optimistic state can be asserted, with a generic fallback for the
+      // post-success invalidation refetches.
+      let resolveUpdate!: (v: unknown) => void;
+      mockFetch
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveUpdate = resolve; }))
+        .mockResolvedValue({ ok: true, json: async () => [] });
+
+      const { result } = renderHook(() => useExpenseTypesQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => {
+        // 500 -> 300 budget with spent 450: 150% progress, over budget
+        result.current.updateBudget({ id: 'budget-1', name: 'Groceries', monthlyBudget: '300' }).catch(() => {});
+      });
+
+      await waitFor(() => {
+        const top5 = queryClient.getQueryData<any>(top5Key);
+        expect(top5[0].monthlyBudget).toBe(300);
+      });
+
+      const top5 = queryClient.getQueryData<any>(top5Key);
+      expect(top5[0].name).toBe('Groceries');
+      expect(top5[0].progressPercentage).toBe(150);
+      expect(top5[0].isOverBudget).toBe(true);
+      expect(top5[0].spentAmount).toBe(450); // untouched
+
+      const all = queryClient.getQueryData<any>(allKey);
+      expect(all[0].name).toBe('Groceries');
+      expect(all[0].monthlyBudget).toBe(300);
+      expect(all[0].isOverBudget).toBe(true);
+      expect(all[1].name).toBe('Transport'); // other item untouched
+
+      const budgets = queryClient.getQueryData<any>(['budgets']);
+      expect(budgets[0].name).toBe('Groceries');
+      expect(budgets[0].monthlyBudget).toBe('300');
+
+      resolveUpdate({ ok: true, json: async () => ({ ...mockExpenseType, name: 'Groceries', monthlyBudget: '300' }) });
+    });
+
+    it('clears the budget (null) and rolls back on error', async () => {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      const wrapper = ({ children }: { children: React.ReactNode }) =>
+        React.createElement(QueryClientProvider, { client: queryClient }, children);
+
+      const allKey = ['budgetStatus', { all: true }];
+      const item = { id: 'budget-1', name: 'Food', monthlyBudget: 500, spentAmount: 450, progressPercentage: 90, isOverBudget: false };
+      queryClient.setQueryData(allKey, [item]);
+      queryClient.setQueryData(['budgets'], [mockExpenseType]);
+
+      // ['budgets'] is pre-seeded and fresh, so no fetch happens on mount:
+      // the first mock is consumed by the PATCH and fails it.
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Server Error' }) })
+        .mockResolvedValue({ ok: true, json: async () => [] });
+
+      const { result } = renderHook(() => useExpenseTypesQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(async () => {
+        try {
+          await result.current.updateBudget({ id: 'budget-1', monthlyBudget: null });
+        } catch {
+          // expected
+        }
+      });
+
+      // Rolled back to the original values
+      const all = queryClient.getQueryData<any>(allKey);
+      expect(all[0].monthlyBudget).toBe(500);
+      expect(all[0].progressPercentage).toBe(90);
+      expect(all[0].isOverBudget).toBe(false);
+      const budgets = queryClient.getQueryData<any>(['budgets']);
+      expect(budgets[0].monthlyBudget).toBe('500');
+    });
   });
 
   describe('deleteBudget mutation', () => {

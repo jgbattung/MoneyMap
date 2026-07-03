@@ -2,6 +2,11 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { toast } from "sonner";
 import { RECENT_TRANSACTION_QUERY_KEYS, type RecentTransaction } from "./useRecentTransactions";
 import { invalidateAfterTransactionWrite } from "./transactionInvalidations";
+import {
+  applyAccountDelta,
+  restoreBalanceCaches,
+  snapshotBalanceCaches,
+} from "./optimisticBalances";
 
 export type IncomeTransaction = {
   id: string;
@@ -219,7 +224,15 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
         }
       );
 
-      return { previousTransactions, previousRecent };
+      // Optimistic balance / net-worth delta (income = +amount; income does
+      // not affect budget bars).
+      const previousBalances = snapshotBalanceCaches(queryClient);
+      const amount = parseFloat(variables.payload.amount as string);
+      if (!Number.isNaN(amount)) {
+        applyAccountDelta(queryClient, variables.payload.accountId as string, amount);
+      }
+
+      return { previousTransactions, previousRecent, previousBalances };
     },
     onError: (_error, _variables, context) => {
       if (context?.previousTransactions) {
@@ -230,6 +243,7 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
       if (context?.previousRecent !== undefined) {
         queryClient.setQueryData(RECENT_TRANSACTIONS_KEY, context.previousRecent);
       }
+      restoreBalanceCaches(queryClient, context?.previousBalances);
       toast.error("Failed to create income transaction", {
         description: "The transaction could not be saved. Please try again.",
         duration: 6000,
@@ -271,7 +285,83 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
 
   const updateIncomeTransactionMutation = useMutation({
     mutationFn: updateIncomeTransaction,
-    onSuccess: () => {
+    onMutate: async (variables) => {
+      const { id, ...changes } = variables;
+
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.incomeTransactions, predicate: isListQuery });
+
+      const previousTransactions = queryClient.getQueriesData<IncomeTransactionsResponse>({
+        queryKey: QUERY_KEYS.incomeTransactions,
+        predicate: isListQuery,
+      }).filter(([, data]) => data !== undefined);
+      const previousBalances = snapshotBalanceCaches(queryClient);
+
+      // The OLD row comes from the cached list data; if it is not cached
+      // anywhere, balance optimism is skipped entirely and only the row
+      // patch applies — the refetch reconciles.
+      const oldRow = previousTransactions
+        .flatMap(([, data]) => data?.transactions ?? [])
+        .find((t) => t.id === id);
+
+      // Patch the edited row in all list caches (merge the changed scalar
+      // fields; relation display objects reconcile via the refetch).
+      const scalarChanges: Record<string, unknown> = { ...changes };
+      delete scalarChanges.tagIds;
+      queryClient.setQueriesData<IncomeTransactionsResponse>(
+        { queryKey: QUERY_KEYS.incomeTransactions, predicate: isListQuery },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            transactions: old.transactions.map((t) =>
+              t.id === id
+                ? {
+                    ...t,
+                    ...scalarChanges,
+                    ...(scalarChanges.amount !== undefined && { amount: String(scalarChanges.amount) }),
+                  }
+                : t
+            ),
+          };
+        }
+      );
+
+      if (oldRow) {
+        // Balance deltas mirror api/income-transactions/[id]/route.ts (income
+        // is the sign-inverse of expense).
+        const oldAmount = parseFloat(oldRow.amount);
+        const newAccountId = (changes.accountId as string | undefined) ?? oldRow.accountId;
+        const accountChanged = changes.accountId !== undefined && newAccountId !== oldRow.accountId;
+
+        if (!Number.isNaN(oldAmount)) {
+          if (changes.amount !== undefined) {
+            const newAmount = parseFloat(changes.amount as string);
+            if (!Number.isNaN(newAmount)) {
+              if (accountChanged) {
+                applyAccountDelta(queryClient, oldRow.accountId, -oldAmount);
+                applyAccountDelta(queryClient, newAccountId, newAmount);
+              } else {
+                applyAccountDelta(queryClient, oldRow.accountId, newAmount - oldAmount);
+              }
+            }
+          } else if (accountChanged) {
+            applyAccountDelta(queryClient, oldRow.accountId, -oldAmount);
+            applyAccountDelta(queryClient, newAccountId, oldAmount);
+          }
+        }
+      }
+
+      return { previousTransactions, previousBalances };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousTransactions) {
+        context.previousTransactions.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      restoreBalanceCaches(queryClient, context?.previousBalances);
+    },
+    onSettled: () => {
       invalidateAfterTransactionWrite(queryClient, QUERY_KEYS.incomeTransactions);
     },
   });
@@ -308,7 +398,22 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
         }
       );
 
-      return { previousTransactions, previousRecent };
+      // Optimistic balance / net-worth reversal (income delete = -amount).
+      // The old row comes from the pre-delete list snapshots; if it is not
+      // cached anywhere, skip balance optimism — the refetch reconciles.
+      const previousBalances = snapshotBalanceCaches(queryClient);
+      const deletedRow = previousTransactions
+        .flatMap(([, data]) => data?.transactions ?? [])
+        .find((t) => t.id === deletedId);
+
+      if (deletedRow) {
+        const amount = parseFloat(deletedRow.amount);
+        if (!Number.isNaN(amount)) {
+          applyAccountDelta(queryClient, deletedRow.accountId, -amount);
+        }
+      }
+
+      return { previousTransactions, previousRecent, previousBalances };
     },
     onError: (_error, _variables, context) => {
       if (context?.previousTransactions) {
@@ -319,6 +424,7 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
       if (context?.previousRecent !== undefined) {
         queryClient.setQueryData(RECENT_TRANSACTIONS_KEY, context.previousRecent);
       }
+      restoreBalanceCaches(queryClient, context?.previousBalances);
       toast.error("Failed to delete income transaction", {
         description: "The transaction could not be deleted. Please try again.",
         duration: 6000,

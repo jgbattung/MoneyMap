@@ -213,13 +213,20 @@ export async function POST(request: NextRequest) {
     let transferIndex = 0;
 
     if (feeAmount && parseFloat(feeAmount) > 0) {
-      // Move lookups before the transaction
-      let transferFeeType = await db.expenseType.findFirst({
-        where: {
-          userId: session.user.id,
-          name: "Transfer fee",
-        },
-      });
+      // Parallelize the two independent pre-transaction read lookups
+      const [foundFeeType, fromAccount] = await Promise.all([
+        db.expenseType.findFirst({
+          where: {
+            userId: session.user.id,
+            name: "Transfer fee",
+          },
+        }),
+        db.financialAccount.findUnique({
+          where: { id: fromAccountId },
+          select: { name: true },
+        }),
+      ]);
+      let transferFeeType = foundFeeType;
 
       if (!transferFeeType) {
         transferFeeType = await db.expenseType.create({
@@ -231,11 +238,6 @@ export async function POST(request: NextRequest) {
           },
         });
       }
-
-      const fromAccount = await db.financialAccount.findUnique({
-        where: { id: fromAccountId },
-        select: { name: true },
-      });
 
       feeExpenseId = randomUUID();
 

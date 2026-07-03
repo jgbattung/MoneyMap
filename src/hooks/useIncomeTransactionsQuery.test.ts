@@ -585,6 +585,229 @@ describe('useIncomeTransactionsQuery', () => {
       expect(invalidatedKeys).toContainEqual(['incomeBreakdown']);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // balance / net-worth optimism (create + update + delete)
+  // -------------------------------------------------------------------------
+  describe('balance optimism', () => {
+    const accountsKey = ['accounts', { includeCards: true }];
+    const netWorthKey = ['netWorth'];
+    const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+
+    function seedBalanceCaches(queryClient: QueryClient) {
+      queryClient.setQueryData(accountsKey, [
+        { id: 'acc-1', name: 'BDO Savings', accountType: 'SAVINGS', currentBalance: '1000.00', initialBalance: '0', addToNetWorth: true },
+        { id: 'acc-2', name: 'Cash', accountType: 'CASH', currentBalance: '500.00', initialBalance: '0', addToNetWorth: true },
+      ]);
+      queryClient.setQueryData(netWorthKey, {
+        currentNetWorth: 5000,
+        monthlyChange: { amount: 100, percentage: 2 },
+      });
+    }
+
+    it('bumps account balance and netWorth instantly on create', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedBalanceCaches(queryClient);
+
+      let resolveCreate!: (v: unknown) => void;
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveCreate = resolve; }));
+
+      const { result } = renderHook(() => useIncomeTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => {
+        result.current.createIncomeTransaction({
+          payload: { name: 'Bonus', amount: '250', accountId: 'acc-1', incomeTypeId: 'itype-1', date: new Date().toISOString() },
+          meta: { accountName: 'BDO Savings', incomeTypeName: 'Salary' },
+        });
+      });
+
+      await waitFor(() => {
+        const accounts = queryClient.getQueryData<any>(accountsKey);
+        expect(accounts[0].currentBalance).toBe('1250.00');
+      });
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(5250);
+      // Option A: monthlyChange untouched
+      expect(queryClient.getQueryData<any>(netWorthKey).monthlyChange).toEqual({ amount: 100, percentage: 2 });
+
+      resolveCreate({ ok: true, json: async () => mockIncome });
+    });
+
+    it('restores balances and netWorth on create error', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedBalanceCaches(queryClient);
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Server Error' }) });
+
+      const { result } = renderHook(() => useIncomeTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(async () => {
+        try {
+          await result.current.createIncomeTransactionAsync({
+            payload: { name: 'Bad Income', amount: '250', accountId: 'acc-1', incomeTypeId: 'itype-1', date: new Date().toISOString() },
+            meta: { accountName: 'BDO Savings', incomeTypeName: 'Salary' },
+          });
+        } catch {
+          // expected
+        }
+      });
+
+      expect(queryClient.getQueryData<any>(accountsKey)[0].currentBalance).toBe('1000.00');
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(5000);
+    });
+
+    it('reverses account balance and netWorth on delete', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedBalanceCaches(queryClient);
+      queryClient.setQueryData(listKey, { transactions: [{ ...mockIncome, amount: '300.00' }], total: 1, hasMore: false });
+
+      let resolveDelete!: (v: unknown) => void;
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveDelete = resolve; }));
+
+      const { result } = renderHook(() => useIncomeTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => {
+        result.current.deleteIncomeTransaction('inc-1');
+      });
+
+      await waitFor(() => {
+        const accounts = queryClient.getQueryData<any>(accountsKey);
+        expect(accounts[0].currentBalance).toBe('700.00');
+      });
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(4700);
+
+      resolveDelete({ ok: true, json: async () => ({}) });
+    });
+
+    it('skips balance optimism on delete when the row is not cached', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedBalanceCaches(queryClient);
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+
+      const { result } = renderHook(() => useIncomeTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(async () => {
+        await result.current.deleteIncomeTransactionAsync('not-cached-id');
+      });
+
+      expect(queryClient.getQueryData<any>(accountsKey)[0].currentBalance).toBe('1000.00');
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(5000);
+    });
+
+    it('updates the row and applies +(new - old) on an amount edit', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedBalanceCaches(queryClient);
+      queryClient.setQueryData(listKey, { transactions: [{ ...mockIncome, amount: '300.00' }], total: 1, hasMore: false });
+
+      let resolveUpdate!: (v: unknown) => void;
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveUpdate = resolve; }));
+
+      const { result } = renderHook(() => useIncomeTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => {
+        // 300 -> 500: delta = +200
+        result.current.updateIncomeTransaction({ id: 'inc-1', amount: '500' }).catch(() => {});
+      });
+
+      await waitFor(() => {
+        const cached = queryClient.getQueryData<any>(listKey);
+        expect(cached.transactions[0].amount).toBe('500');
+      });
+      expect(queryClient.getQueryData<any>(accountsKey)[0].currentBalance).toBe('1200.00');
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(5200);
+
+      resolveUpdate({ ok: true, json: async () => ({ ...mockIncome, amount: '500' }) });
+    });
+
+    it('moves the amount between accounts on an account edit', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedBalanceCaches(queryClient);
+      queryClient.setQueryData(listKey, { transactions: [{ ...mockIncome, amount: '300.00' }], total: 1, hasMore: false });
+
+      let resolveUpdate!: (v: unknown) => void;
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveUpdate = resolve; }));
+
+      const { result } = renderHook(() => useIncomeTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => {
+        // Move 300 from acc-1 to acc-2 with new amount 400: -300 acc-1, +400 acc-2
+        result.current.updateIncomeTransaction({ id: 'inc-1', amount: '400', accountId: 'acc-2' }).catch(() => {});
+      });
+
+      await waitFor(() => {
+        const accounts = queryClient.getQueryData<any>(accountsKey);
+        expect(accounts[0].currentBalance).toBe('700.00');
+      });
+      expect(queryClient.getQueryData<any>(accountsKey)[1].currentBalance).toBe('900.00');
+      // Net delta on netWorth: -300 + 400 = +100
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(5100);
+
+      resolveUpdate({ ok: true, json: async () => ({ ...mockIncome, amount: '400', accountId: 'acc-2' }) });
+    });
+
+    it('applies no balance delta on update when the old row is not cached', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedBalanceCaches(queryClient);
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => mockIncome });
+
+      const { result } = renderHook(() => useIncomeTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(async () => {
+        await result.current.updateIncomeTransaction({ id: 'not-cached-id', amount: '999' });
+      });
+
+      expect(queryClient.getQueryData<any>(accountsKey)[0].currentBalance).toBe('1000.00');
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(5000);
+    });
+
+    it('restores the row and balance caches on update error', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedBalanceCaches(queryClient);
+      queryClient.setQueryData(listKey, { transactions: [{ ...mockIncome, amount: '300.00' }], total: 1, hasMore: false });
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Server Error' }) });
+
+      const { result } = renderHook(() => useIncomeTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(async () => {
+        try {
+          await result.current.updateIncomeTransaction({ id: 'inc-1', amount: '500' });
+        } catch {
+          // expected
+        }
+      });
+
+      const cached = queryClient.getQueryData<any>(listKey);
+      expect(cached.transactions[0].amount).toBe('300.00');
+      expect(queryClient.getQueryData<any>(accountsKey)[0].currentBalance).toBe('1000.00');
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(5000);
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

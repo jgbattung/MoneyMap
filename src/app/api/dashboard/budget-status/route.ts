@@ -33,30 +33,31 @@ export async function GET(req: NextRequest) {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    const expenseTypes = await db.expenseType.findMany({
-      where: {
-        userId,
-      },
-      select: {
-        id: true,
-        name: true,
-        monthlyBudget: true,
-      },
-    });
-
-    // Use groupBy to let PostgreSQL aggregate spending per expense type
-    const spendingGroups = await db.expenseTransaction.groupBy({
-      by: ['expenseTypeId'],
-      where: {
-        userId,
-        date: {
-          gte: startOfMonth,
-          lte: endOfMonth,
+    const [expenseTypes, spendingGroups] = await Promise.all([
+      db.expenseType.findMany({
+        where: {
+          userId,
         },
-        isInstallment: false,
-      },
-      _sum: { amount: true },
-    });
+        select: {
+          id: true,
+          name: true,
+          monthlyBudget: true,
+        },
+      }),
+      // Use groupBy to let PostgreSQL aggregate spending per expense type
+      db.expenseTransaction.groupBy({
+        by: ['expenseTypeId'],
+        where: {
+          userId,
+          date: {
+            gte: startOfMonth,
+            lte: endOfMonth,
+          },
+          isInstallment: false,
+        },
+        _sum: { amount: true },
+      }),
+    ]);
 
     const spendingByType: Record<string, number> = {};
     for (const group of spendingGroups) {

@@ -20,7 +20,7 @@ export async function GET() {
 
     const currentNetWorth = await calculateCurrentNetWorth(session.user.id);
 
-    const monthlyChange = await calculateMonthlyChange(session.user.id);
+    const monthlyChange = await calculateMonthlyChange(session.user.id, currentNetWorth);
 
     return NextResponse.json(
       {
