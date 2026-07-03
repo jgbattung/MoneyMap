@@ -112,6 +112,69 @@ export const useExpenseTypesQuery = () => {
 
   const updateBudgetsMutation = useMutation({
     mutationFn: updateBudget,
+    onMutate: async (variables) => {
+      const { id, ...changes } = variables;
+
+      // Optimistically patch the edited budget so the row updates instantly.
+      // Unlike create/delete, an edited existing item may appear in BOTH the
+      // dashboard top-5 and the all=true budgets-page caches — patch all.
+      await queryClient.cancelQueries({ queryKey: ['budgetStatus'] });
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.budgets });
+
+      const previousBudgetStatus = queryClient.getQueriesData<BudgetStatusItem[]>({ queryKey: ['budgetStatus'] });
+      const previousBudgets = queryClient.getQueryData<ExpenseType[]>(QUERY_KEYS.budgets);
+
+      const hasName = changes.name !== undefined;
+      const hasBudget = changes.monthlyBudget !== undefined;
+
+      queryClient.setQueriesData<BudgetStatusItem[]>(
+        { queryKey: ['budgetStatus'] },
+        (old) => {
+          if (!Array.isArray(old)) return old;
+          return old.map((item) => {
+            if (item.id !== id) return item;
+            const monthlyBudget = hasBudget
+              ? (changes.monthlyBudget ? parseFloat(changes.monthlyBudget as string) : null)
+              : item.monthlyBudget;
+            // Same math as the budget-status route, from the cached spentAmount.
+            const progressPercentage = monthlyBudget && monthlyBudget > 0
+              ? Math.round((item.spentAmount / monthlyBudget) * 100 * 100) / 100
+              : 0;
+            const isOverBudget = monthlyBudget ? item.spentAmount > monthlyBudget : false;
+            return {
+              ...item,
+              ...(hasName && { name: changes.name as string }),
+              monthlyBudget,
+              progressPercentage,
+              isOverBudget,
+            };
+          });
+        }
+      );
+
+      queryClient.setQueryData<ExpenseType[]>(QUERY_KEYS.budgets, (old) => {
+        if (!old) return old;
+        return old.map((b) =>
+          b.id === id
+            ? {
+                ...b,
+                ...(hasName && { name: changes.name as string }),
+                ...(hasBudget && { monthlyBudget: (changes.monthlyBudget as string | null) ?? null }),
+              }
+            : b
+        );
+      });
+
+      return { previousBudgetStatus, previousBudgets };
+    },
+    onError: (_error, _variables, context) => {
+      context?.previousBudgetStatus?.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+      if (context?.previousBudgets !== undefined) {
+        queryClient.setQueryData(QUERY_KEYS.budgets, context.previousBudgets);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.budgets });
       queryClient.invalidateQueries({ queryKey: ['budgetStatus'] });
