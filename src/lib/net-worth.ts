@@ -16,41 +16,21 @@ export async function calculateCurrentNetWorth(userId: string): Promise<number> 
     : 0;
 }
 
-export async function calculateMonthlyChange(userId: string): Promise<{
+export async function calculateMonthlyChange(userId: string, currentNetWorth: number): Promise<{
   change: number;
   percentage: number;
 }> {
   const today = new Date();
-  
+
   // Get start and end of current month
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
-
-  // Get current net worth
-  const currentNetWorth = await calculateCurrentNetWorth(userId);
-
-  const accounts = await db.financialAccount.findMany({
-    where: {
-      userId,
-      addToNetWorth: true,
-    },
-    select: { id: true },
-  });
-
-  if (accounts.length === 0) {
-    return {
-      change: 0,
-      percentage: 0,
-    };
-  }
-
-  const accountIds = accounts.map(a => a.id);
 
   const [incomeThisMonth, expensesThisMonth] = await Promise.all([
     db.incomeTransaction.aggregate({
       where: {
         userId,
-        accountId: { in: accountIds },
+        account: { addToNetWorth: true },
         date: {
           gte: startOfMonth,
           lte: endOfMonth,
@@ -61,7 +41,7 @@ export async function calculateMonthlyChange(userId: string): Promise<{
     db.expenseTransaction.aggregate({
       where: {
         userId,
-        accountId: { in: accountIds },
+        account: { addToNetWorth: true },
         isInstallment: { not: true },
         date: {
           gte: startOfMonth,
