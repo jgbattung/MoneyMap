@@ -2,6 +2,11 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { toast } from "sonner";
 import { RECENT_TRANSACTION_QUERY_KEYS, type RecentTransaction } from "./useRecentTransactions";
 import { invalidateAfterTransactionWrite } from "./transactionInvalidations";
+import {
+  applyAccountDelta,
+  restoreBalanceCaches,
+  snapshotBalanceCaches,
+} from "./optimisticBalances";
 
 export type TransferTransaction = {
   id: string;
@@ -244,7 +249,26 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
         }
       );
 
-      return { previousTransactions, previousRecent };
+      // Optimistic balance / net-worth deltas (transfer = -amount on from,
+      // +amount on to, -fee on from). A transfer between two addToNetWorth
+      // accounts nets to zero on currentNetWorth via the per-account deltas.
+      const previousBalances = snapshotBalanceCaches(queryClient);
+      const amount = parseFloat(variables.payload.amount as string);
+      const fromAccountId = variables.payload.fromAccountId as string;
+      const toAccountId = variables.payload.toAccountId as string;
+      const feeAmount = variables.payload.feeAmount
+        ? parseFloat(variables.payload.feeAmount as string)
+        : 0;
+
+      if (!Number.isNaN(amount)) {
+        applyAccountDelta(queryClient, fromAccountId, -amount);
+        applyAccountDelta(queryClient, toAccountId, amount);
+      }
+      if (!Number.isNaN(feeAmount) && feeAmount > 0) {
+        applyAccountDelta(queryClient, fromAccountId, -feeAmount);
+      }
+
+      return { previousTransactions, previousRecent, previousBalances };
     },
     onError: (_error, _variables, context) => {
       if (context?.previousTransactions) {
@@ -255,6 +279,7 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
       if (context?.previousRecent !== undefined) {
         queryClient.setQueryData(RECENT_TRANSACTIONS_KEY, context.previousRecent);
       }
+      restoreBalanceCaches(queryClient, context?.previousBalances);
       toast.error("Failed to create transfer transaction", {
         description: "The transaction could not be saved. Please try again.",
         duration: 6000,
@@ -297,7 +322,106 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
 
   const updateTransferMutation = useMutation({
     mutationFn: updateTransfer,
-    onSuccess: () => {
+    onMutate: async (variables) => {
+      const { id, ...changes } = variables;
+
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.transfers, predicate: isListQuery });
+
+      const previousTransactions = queryClient.getQueriesData<TransferTransactionsResponse>({
+        queryKey: QUERY_KEYS.transfers,
+        predicate: isListQuery,
+      }).filter(([, data]) => data !== undefined);
+      const previousBalances = snapshotBalanceCaches(queryClient);
+
+      // The OLD row comes from the cached list data; if it is not cached
+      // anywhere, balance optimism is skipped entirely and only the row
+      // patch applies — the refetch reconciles.
+      const oldRow = previousTransactions
+        .flatMap(([, data]) => data?.transactions ?? [])
+        .find((t) => t.id === id);
+
+      // Patch the edited row in all list caches (merge the changed scalar
+      // fields, normalizing amounts to the cache's number format).
+      const scalarChanges: Record<string, unknown> = { ...changes };
+      delete scalarChanges.tagIds;
+      if (scalarChanges.amount !== undefined) {
+        scalarChanges.amount = parseFloat(String(scalarChanges.amount));
+      }
+      if (scalarChanges.feeAmount !== undefined) {
+        const parsedFee = scalarChanges.feeAmount ? parseFloat(String(scalarChanges.feeAmount)) : 0;
+        scalarChanges.feeAmount = parsedFee > 0 ? parsedFee : null;
+      }
+      queryClient.setQueriesData<TransferTransactionsResponse>(
+        { queryKey: QUERY_KEYS.transfers, predicate: isListQuery },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            transactions: old.transactions.map((t) =>
+              t.id === id ? { ...t, ...scalarChanges } : t
+            ),
+          };
+        }
+      );
+
+      if (oldRow) {
+        // Balance deltas mirror api/transfer-transactions/[id]/route.ts:
+        // reverse the OLD from/to/fee deltas and apply the NEW ones.
+        const oldAmount = oldRow.amount;
+        const newAmount = changes.amount !== undefined
+          ? parseFloat(String(changes.amount))
+          : oldAmount;
+        const effectiveFromId = (changes.fromAccountId as string | undefined) ?? oldRow.fromAccountId;
+        const effectiveToId = (changes.toAccountId as string | undefined) ?? oldRow.toAccountId;
+        const accountsChanged =
+          effectiveFromId !== oldRow.fromAccountId || effectiveToId !== oldRow.toAccountId;
+
+        if (!Number.isNaN(newAmount)) {
+          if (accountsChanged) {
+            applyAccountDelta(queryClient, oldRow.fromAccountId, oldAmount);
+            applyAccountDelta(queryClient, oldRow.toAccountId, -oldAmount);
+            applyAccountDelta(queryClient, effectiveFromId, -newAmount);
+            applyAccountDelta(queryClient, effectiveToId, newAmount);
+          } else {
+            const amountDifference = newAmount - oldAmount;
+            applyAccountDelta(queryClient, effectiveFromId, -amountDifference);
+            applyAccountDelta(queryClient, effectiveToId, amountDifference);
+          }
+        }
+
+        // Fee deltas only when the request carries feeAmount (server gates
+        // all fee balance ops on feeAmount !== undefined).
+        if (changes.feeAmount !== undefined) {
+          const oldFee = oldRow.feeAmount ?? null;
+          const parsedFee = changes.feeAmount ? parseFloat(String(changes.feeAmount)) : 0;
+          const newFee = parsedFee > 0 ? parsedFee : null;
+
+          if (oldFee === null && newFee !== null) {
+            applyAccountDelta(queryClient, effectiveFromId, -newFee);
+          } else if (oldFee !== null && newFee === null) {
+            applyAccountDelta(queryClient, oldRow.fromAccountId, oldFee);
+          } else if (oldFee !== null && newFee !== null && oldRow.feeExpenseId) {
+            if (oldRow.fromAccountId !== effectiveFromId) {
+              applyAccountDelta(queryClient, oldRow.fromAccountId, oldFee);
+              applyAccountDelta(queryClient, effectiveFromId, -newFee);
+            } else {
+              applyAccountDelta(queryClient, effectiveFromId, -(newFee - oldFee));
+            }
+          }
+        }
+      }
+
+      return { previousTransactions, previousBalances };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousTransactions) {
+        context.previousTransactions.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      restoreBalanceCaches(queryClient, context?.previousBalances);
+    },
+    onSettled: () => {
       invalidateAfterTransactionWrite(queryClient, QUERY_KEYS.transfers, [['expenseTransactions']]);
     },
   });
@@ -334,7 +458,23 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
         }
       );
 
-      return { previousTransactions, previousRecent };
+      // Optimistic balance / net-worth reversal (exact reverse of create:
+      // +amount on from, -amount on to, +fee on from). The old row comes
+      // from the pre-delete list snapshots; not cached → skip.
+      const previousBalances = snapshotBalanceCaches(queryClient);
+      const deletedRow = previousTransactions
+        .flatMap(([, data]) => data?.transactions ?? [])
+        .find((t) => t.id === deletedId);
+
+      if (deletedRow && !Number.isNaN(deletedRow.amount)) {
+        applyAccountDelta(queryClient, deletedRow.fromAccountId, deletedRow.amount);
+        applyAccountDelta(queryClient, deletedRow.toAccountId, -deletedRow.amount);
+        if (deletedRow.feeAmount && deletedRow.feeExpenseId) {
+          applyAccountDelta(queryClient, deletedRow.fromAccountId, deletedRow.feeAmount);
+        }
+      }
+
+      return { previousTransactions, previousRecent, previousBalances };
     },
     onError: (_error, _variables, context) => {
       if (context?.previousTransactions) {
@@ -345,6 +485,7 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
       if (context?.previousRecent !== undefined) {
         queryClient.setQueryData(RECENT_TRANSACTIONS_KEY, context.previousRecent);
       }
+      restoreBalanceCaches(queryClient, context?.previousBalances);
       toast.error("Failed to delete transfer transaction", {
         description: "The transaction could not be deleted. Please try again.",
         duration: 6000,
