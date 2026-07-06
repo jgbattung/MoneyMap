@@ -21,15 +21,13 @@ docker compose up -d && npm run test:e2e
 
 ## Invariants
 
-- API routes (`src/app/api/**`): `force-dynamic`, session check -> zod -> Prisma. Middleware only guards pages, not `/api`.
+Detailed pattern guides live next to the code and load automatically when working there: `src/app/api/CLAUDE.md` (route anatomy, mutation/balance pattern, installments, cron) and `src/hooks/CLAUDE.md` (query keys, optimistic mutation recipe, invalidation rules). Cross-cutting rules:
+
 - **Atomicity:** mutations batch denormalized balance updates (`FinancialAccount.currentBalance`) + record writes in one `db.$transaction([...])`. Never weaken.
 - Prisma Decimals serialize as **strings** in JSON; caches store amounts as strings - `parseFloat` before math, write back as string.
-- Statement recalculation runs post-response via `after()` (`src/lib/statement-recalculator.ts`); `/api/cron/*` is hit daily by GitHub Actions with `CRON_SECRET`.
-- Post-write cache invalidation is centralized in `src/hooks/transactionInvalidations.ts` (EAGER vs DEFERRED keys); optimistic updates follow the snapshot/patch/restore pattern in the transaction hooks with shared `optimisticBalances.ts`.
-- Report widgets fetch on explicit trigger only (`enabled: false` + `refetch()`; params object is the query key) - preserve this.
 - Aggregate queries filter `isInstallment: false` (installment parents would double-count).
 - Report endpoints cap `take` at 50 - paginate by advancing `skip`, never by growing `take`.
-- `Tag` is the only cross-type M2M (expense/income/transfer). Prisma `updateMany` can't `connect` relations - batch tag writes need individual `update`s in a `$transaction`.
+- Middleware only guards pages, not `/api` - every route does its own session check.
 - Schema debt: `TransferTransaction.amount` is `Float` (everything else `Decimal(15,2)`); fix requires a user-run migration.
 
 ## Design System
