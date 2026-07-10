@@ -625,6 +625,7 @@ export function TransactionAnalyzer() {
             <ActiveFilters
               form={form}
               categories={categories}
+              subcategories={subcategories}
               tags={tags}
               accounts={accounts}
               onRemove={handleRemoveFilter}
@@ -831,12 +832,14 @@ function formatCurrency(amount: number): string {
 function ActiveFilters({
   form,
   categories,
+  subcategories,
   tags,
   accounts,
   onRemove,
 }: {
   form: ReturnType<typeof useForm<TransactionAnalysisFormValues>>;
   categories: { id: string; name: string }[];
+  subcategories: { id: string; name: string }[];
   tags: { id: string; name: string }[];
   accounts: { id: string; name: string }[];
   onRemove: (key: string, tagId?: string) => void;
@@ -881,7 +884,9 @@ function ActiveFilters({
 
       {values.subcategoryId && (
         <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
-          Subcategory: {values.subcategoryId}
+          Subcategory:{" "}
+          {subcategories.find((s) => s.id === values.subcategoryId)?.name ??
+            values.subcategoryId}
           <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("subcategoryId")}>
             <X className="h-3 w-3" />
           </button>
