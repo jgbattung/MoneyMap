@@ -53,14 +53,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,6 +61,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { MultiSelectPopover } from "@/components/shared/MultiSelectPopover";
 import { cn } from "@/lib/utils";
 
 const ALL_VALUE = "__all__";
@@ -96,7 +89,6 @@ export function EventLedger() {
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
-  const [tagsOpen, setTagsOpen] = useState(false);
   const [addPanelOpen, setAddPanelOpen] = useState(false);
 
   const form = useForm<EventLedgerFormValues>({
@@ -190,52 +182,14 @@ export function EventLedger() {
               render={() => (
                 <FormItem>
                   <FormLabel>Select Tags</FormLabel>
-                  <Popover
-                    open={tagsOpen}
-                    onOpenChange={setTagsOpen}
-                    modal
-                  >
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-between font-normal"
-                        >
-                          {selectedTagIds.length > 0 ? (
-                            `${selectedTagIds.length} tag${selectedTagIds.length > 1 ? "s" : ""} selected`
-                          ) : (
-                            <span className="text-muted-foreground">
-                              Select tags
-                            </span>
-                          )}
-                          <ChevronDownIcon className="h-4 w-4" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[250px] p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Search tags..." />
-                        <CommandList>
-                          <CommandEmpty>No tags found.</CommandEmpty>
-                          <CommandGroup>
-                            {tags.map((tag) => (
-                              <CommandItem
-                                key={tag.id}
-                                value={tag.name}
-                                onSelect={() => toggleTag(tag.id)}
-                              >
-                                <Checkbox
-                                  checked={selectedTagIds.includes(tag.id)}
-                                  className="mr-2"
-                                />
-                                {tag.name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <MultiSelectPopover
+                    options={tags}
+                    selectedIds={selectedTagIds}
+                    onToggle={toggleTag}
+                    placeholder="Select tags"
+                    itemLabel="tag"
+                    searchPlaceholder="Search tags..."
+                  />
                   {selectedTagIds.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {selectedTagIds.map((tagId) => {

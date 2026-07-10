@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { Search, ChevronDownIcon, ChevronUp, X, SearchX } from "lucide-react";
+import { Search, ChevronDownIcon, ChevronUp, SearchX } from "lucide-react";
 
 import {
   transactionAnalysisFormSchema,
@@ -46,15 +46,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +53,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { MultiSelectPopover } from "@/components/shared/MultiSelectPopover";
+import { FilterBadge } from "@/components/shared/FilterBadge";
 import { getCategoryColor } from "@/lib/chart-colors";
 
 
@@ -89,7 +82,6 @@ export function TransactionAnalyzer() {
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
-  const [tagsOpen, setTagsOpen] = useState(false);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
 
   const form = useForm<TransactionAnalysisFormValues>({
@@ -476,52 +468,14 @@ export function TransactionAnalyzer() {
                     render={() => (
                       <FormItem>
                         <FormLabel>Tags</FormLabel>
-                        <Popover
-                          open={tagsOpen}
-                          onOpenChange={setTagsOpen}
-                          modal
-                        >
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className="w-full justify-between font-normal"
-                              >
-                                {selectedTagIds.length > 0 ? (
-                                  `${selectedTagIds.length} tag${selectedTagIds.length > 1 ? "s" : ""} selected`
-                                ) : (
-                                  <span className="text-muted-foreground">
-                                    Select tags
-                                  </span>
-                                )}
-                                <ChevronDownIcon className="h-4 w-4" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[250px] p-0" align="start">
-                            <Command>
-                              <CommandInput placeholder="Search tags..." />
-                              <CommandList>
-                                <CommandEmpty>No tags found.</CommandEmpty>
-                                <CommandGroup>
-                                  {tags.map((tag) => (
-                                    <CommandItem
-                                      key={tag.id}
-                                      value={tag.name}
-                                      onSelect={() => toggleTag(tag.id)}
-                                    >
-                                      <Checkbox
-                                        checked={selectedTagIds.includes(tag.id)}
-                                        className="mr-2"
-                                      />
-                                      {tag.name}
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                        <MultiSelectPopover
+                          options={tags}
+                          selectedIds={selectedTagIds}
+                          onToggle={toggleTag}
+                          placeholder="Select tags"
+                          itemLabel="tag"
+                          searchPlaceholder="Search tags..."
+                        />
                         {selectedTagIds.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {selectedTagIds.map((tagId) => {
@@ -867,75 +821,54 @@ function ActiveFilters({
       </Badge>
 
       {values.startDate && (
-        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
+        <FilterBadge onRemove={() => onRemove("startDate")}>
           From: {format(values.startDate, "MMM d, yyyy")}
-          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("startDate")}>
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
+        </FilterBadge>
       )}
 
       {values.endDate && (
-        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
+        <FilterBadge onRemove={() => onRemove("endDate")}>
           To: {format(values.endDate, "MMM d, yyyy")}
-          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("endDate")}>
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
+        </FilterBadge>
       )}
 
       {values.categoryId && (
-        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
+        <FilterBadge onRemove={() => onRemove("categoryId")}>
           Category:{" "}
           {categories.find((c) => c.id === values.categoryId)?.name ??
             values.categoryId}
-          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("categoryId")}>
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
+        </FilterBadge>
       )}
 
       {values.subcategoryId && (
-        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
+        <FilterBadge onRemove={() => onRemove("subcategoryId")}>
           Subcategory:{" "}
           {subcategories.find((s) => s.id === values.subcategoryId)?.name ??
             values.subcategoryId}
-          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("subcategoryId")}>
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
+        </FilterBadge>
       )}
 
       {values.tagIds?.map((tagId) => {
         const tag = tags.find((t) => t.id === tagId);
         return tag ? (
-          <Badge key={tagId} variant="secondary" className="gap-1">
+          <FilterBadge key={tagId} onRemove={() => onRemove("tagId", tagId)}>
             Tag: {tag.name}
-            <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("tagId", tagId)}>
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
+          </FilterBadge>
         ) : null;
       })}
 
       {values.accountId && (
-        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
+        <FilterBadge onRemove={() => onRemove("accountId")}>
           Account:{" "}
           {accounts.find((a) => a.id === values.accountId)?.name ??
             values.accountId}
-          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("accountId")}>
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
+        </FilterBadge>
       )}
 
       {values.search && (
-        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
+        <FilterBadge onRemove={() => onRemove("search")}>
           Search: {values.search}
-          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("search")}>
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
+        </FilterBadge>
       )}
     </div>
   );
