@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { TransactionAnalyzer } from './TransactionAnalyzer';
@@ -86,8 +86,28 @@ vi.mock('@/components/ui/popover', () => ({
     React.createElement('div', { 'data-testid': 'popover-content' }, children),
 }));
 
+// Fixed day options the mocked Calendar can emit — used to drive the From/To
+// date pickers independently in the date-range validation tests below.
+const CALENDAR_DAY_OPTIONS = ['2024-01-05', '2024-01-10', '2024-01-20', '2024-01-25'];
+
 vi.mock('@/components/ui/calendar', () => ({
-  Calendar: () => React.createElement('div', { 'data-testid': 'calendar' }),
+  Calendar: ({ onDayClick }: { onDayClick?: (date: Date) => void }) =>
+    React.createElement(
+      'div',
+      { 'data-testid': 'calendar' },
+      CALENDAR_DAY_OPTIONS.map((dateStr) =>
+        React.createElement(
+          'button',
+          {
+            key: dateStr,
+            type: 'button',
+            'data-testid': `calendar-day-${dateStr}`,
+            onClick: () => onDayClick?.(new Date(`${dateStr}T00:00:00Z`)),
+          },
+          dateStr
+        )
+      )
+    ),
 }));
 
 vi.mock('@/components/ui/select', () => ({
@@ -898,6 +918,102 @@ describe('TransactionAnalyzer', () => {
       // Income categories should now be shown — the select content renders income types
       expect(screen.getByTestId('select-item-inc-1')).toBeTruthy();
       expect(screen.getByText('Salary')).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Date-range validation — drives the mocked From/To Calendar day buttons
+  // independently. calendars[0] is the "From" (startDate) picker, calendars[1]
+  // is the "To" (endDate) picker, per JSX render order in TransactionAnalyzer.
+  describe('date-range validation (end before start)', () => {
+    function getCalendars() {
+      const calendars = screen.getAllByTestId('calendar');
+      return { fromCalendar: calendars[0], toCalendar: calendars[1] };
+    }
+
+    function pickDay(calendar: HTMLElement, dateStr: string) {
+      fireEvent.click(within(calendar).getByTestId(`calendar-day-${dateStr}`));
+    }
+
+    it('blocks Analyze and shows an inline error for a reversed range', async () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      const { fromCalendar, toCalendar } = getCalendars();
+
+      // From = Jan 20, To = Jan 10 — To is before From.
+      pickDay(fromCalendar, '2024-01-20');
+      pickDay(toCalendar, '2024-01-10');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('End date cannot be before start date')
+        ).toBeTruthy();
+      });
+      expect(mockRefetch).not.toHaveBeenCalled();
+    });
+
+    it('clears the message when the From date is corrected without re-clicking Analyze', async () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      const { fromCalendar, toCalendar } = getCalendars();
+
+      pickDay(fromCalendar, '2024-01-20');
+      pickDay(toCalendar, '2024-01-10');
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('End date cannot be before start date')
+        ).toBeTruthy();
+      });
+
+      // Correct From to a date before To (Jan 10) — e.g. Jan 5 — without clicking Analyze again.
+      pickDay(fromCalendar, '2024-01-05');
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText('End date cannot be before start date')
+        ).toBeNull();
+      });
+    });
+
+    it('clears the message when the To date is corrected without re-clicking Analyze', async () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      const { fromCalendar, toCalendar } = getCalendars();
+
+      pickDay(fromCalendar, '2024-01-20');
+      pickDay(toCalendar, '2024-01-10');
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('End date cannot be before start date')
+        ).toBeTruthy();
+      });
+
+      // Correct To to a date after From (Jan 20) — e.g. Jan 25 — without clicking Analyze again.
+      pickDay(toCalendar, '2024-01-25');
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText('End date cannot be before start date')
+        ).toBeNull();
+      });
+    });
+
+    it('runs the analysis normally for a valid range', async () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      const { fromCalendar, toCalendar } = getCalendars();
+
+      pickDay(fromCalendar, '2024-01-05');
+      pickDay(toCalendar, '2024-01-20');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+
+      await waitFor(() => expect(mockRefetch).toHaveBeenCalled());
+      expect(
+        screen.queryByText('End date cannot be before start date')
+      ).toBeNull();
     });
   });
 });
