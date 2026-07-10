@@ -80,11 +80,20 @@ describe("eventLedgerQuerySchema", () => {
 });
 
 describe("eventLedgerTagSchema", () => {
-  it("passes for valid tag params", () => {
+  it("passes for valid tag params with a single tagId", () => {
     const result = eventLedgerTagSchema.safeParse({
       transactionId: "tx-1",
       transactionType: "expense",
-      tagId: "tag-1",
+      tagIds: ["tag-1"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("passes for valid tag params with multiple tagIds", () => {
+    const result = eventLedgerTagSchema.safeParse({
+      transactionId: "tx-1",
+      transactionType: "expense",
+      tagIds: ["tag-1", "tag-2"],
     });
     expect(result.success).toBe(true);
   });
@@ -93,7 +102,7 @@ describe("eventLedgerTagSchema", () => {
     const result = eventLedgerTagSchema.safeParse({
       transactionId: "tx-1",
       transactionType: "income",
-      tagId: "tag-1",
+      tagIds: ["tag-1"],
     });
     expect(result.success).toBe(true);
   });
@@ -102,7 +111,7 @@ describe("eventLedgerTagSchema", () => {
     const result = eventLedgerTagSchema.safeParse({
       transactionId: "tx-1",
       transactionType: "transfer",
-      tagId: "tag-1",
+      tagIds: ["tag-1"],
     });
     expect(result.success).toBe(false);
   });
@@ -111,16 +120,25 @@ describe("eventLedgerTagSchema", () => {
     const result = eventLedgerTagSchema.safeParse({
       transactionId: "",
       transactionType: "expense",
-      tagId: "tag-1",
+      tagIds: ["tag-1"],
     });
     expect(result.success).toBe(false);
   });
 
-  it("fails when tagId is empty", () => {
+  it("fails when tagIds is an empty array", () => {
     const result = eventLedgerTagSchema.safeParse({
       transactionId: "tx-1",
       transactionType: "expense",
-      tagId: "",
+      tagIds: [],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("fails when tagIds contains an empty string", () => {
+    const result = eventLedgerTagSchema.safeParse({
+      transactionId: "tx-1",
+      transactionType: "expense",
+      tagIds: [""],
     });
     expect(result.success).toBe(false);
   });

@@ -367,7 +367,7 @@ describe('useEventLedgerTag', () => {
     result.current.addTag({
       transactionId: 'tx-1',
       transactionType: 'expense',
-      tagId: 'tag-1',
+      tagIds: ['tag-1', 'tag-2'],
     });
 
     await waitFor(() => expect(mockFetch).toHaveBeenCalled());
@@ -378,7 +378,7 @@ describe('useEventLedgerTag', () => {
       body: JSON.stringify({
         transactionId: 'tx-1',
         transactionType: 'expense',
-        tagId: 'tag-1',
+        tagIds: ['tag-1', 'tag-2'],
       }),
     });
   });

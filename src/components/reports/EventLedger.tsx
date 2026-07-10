@@ -667,7 +667,7 @@ function AddTransactionsPanel({
       {
         transactionId,
         transactionType: searchType,
-        tagId: selectedTagIds[0],
+        tagIds: selectedTagIds,
       },
       {
         onSuccess: () => {
