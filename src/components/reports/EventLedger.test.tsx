@@ -294,7 +294,7 @@ function setupDefaultMocks() {
   });
 
   vi.mocked(useEventLedgerTag).mockReturnValue({
-    addTag: mockAddTag,
+    tagTransactions: mockAddTag,
     isAdding: false,
   });
 

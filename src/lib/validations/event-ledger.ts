@@ -12,7 +12,7 @@ export const eventLedgerQuerySchema = z.object({
 export type EventLedgerQuery = z.infer<typeof eventLedgerQuerySchema>;
 
 export const eventLedgerTagSchema = z.object({
-  transactionId: z.string().min(1),
+  transactionIds: z.array(z.string().min(1)).min(1).max(50), // cap matches search page size
   transactionType: z.enum(["expense", "income"]),
   tagIds: z.array(z.string().min(1)).min(1),
 });

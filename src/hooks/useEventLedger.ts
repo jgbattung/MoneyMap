@@ -33,7 +33,7 @@ async function fetchEventLedger(
   return response.json();
 }
 
-async function addTagToTransaction(params: EventLedgerTagParams): Promise<void> {
+async function tagTransactions(params: EventLedgerTagParams): Promise<void> {
   const response = await fetch("/api/reports/event-ledger/tag", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -96,14 +96,14 @@ export const useEventLedgerTag = () => {
   const queryClient = useQueryClient();
 
   const { mutate, isPending } = useMutation({
-    mutationFn: addTagToTransaction,
+    mutationFn: tagTransactions,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["eventLedger"] });
     },
   });
 
   return {
-    addTag: mutate,
+    tagTransactions: mutate,
     isAdding: isPending,
   };
 };

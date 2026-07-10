@@ -646,7 +646,7 @@ function AddTransactionsPanel({
   const { data: searchData, isFetching: isSearching, refetch: searchRefetch } =
     useTransactionAnalysis(searchParams, { initialTake: 50 });
 
-  const { addTag, isAdding } = useEventLedgerTag();
+  const { tagTransactions, isAdding } = useEventLedgerTag();
 
   const categories = searchType === "expense" ? budgets : incomeTypes;
 
@@ -667,9 +667,9 @@ function AddTransactionsPanel({
 
   const handleAddTag = (transactionId: string) => {
     if (selectedTagIds.length === 0) return;
-    addTag(
+    tagTransactions(
       {
-        transactionId,
+        transactionIds: [transactionId],
         transactionType: searchType,
         tagIds: selectedTagIds,
       },
