@@ -634,6 +634,9 @@ function AddTransactionsPanel({
   const [searchEndDateOpen, setSearchEndDateOpen] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [taggedIds, setTaggedIds] = useState<Set<string>>(new Set());
+  const [selectedResultIds, setSelectedResultIds] = useState<Set<string>>(
+    new Set()
+  );
 
   const [searchParams, setSearchParams] = useState<TransactionAnalysisParams>({
     type: "expense",
@@ -660,32 +663,63 @@ function AddTransactionsPanel({
     if (searchAccountId) params.accountId = searchAccountId;
     if (searchName) params.search = searchName;
 
+    setSelectedResultIds(new Set());
     setSearchParams(params);
     setHasSearched(true);
     setTimeout(() => searchRefetch(), 0);
   };
 
-  const handleAddTag = (transactionId: string) => {
-    if (selectedTagIds.length === 0) return;
-    tagTransactions(
-      {
-        transactionIds: [transactionId],
-        transactionType: searchType,
-        tagIds: selectedTagIds,
-      },
-      {
-        onSuccess: () => {
-          setTaggedIds((prev) => new Set(prev).add(transactionId));
-          onTagAdded();
-        },
+  const toggleResultSelection = (transactionId: string) => {
+    setSelectedResultIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(transactionId)) {
+        next.delete(transactionId);
+      } else {
+        next.add(transactionId);
       }
-    );
+      return next;
+    });
   };
 
   const filteredResults =
     searchData?.transactions.filter(
       (t) => !ledgerTransactionIds.includes(t.id) && !taggedIds.has(t.id)
     ) ?? [];
+
+  const allResultsSelected =
+    filteredResults.length > 0 &&
+    filteredResults.every((t) => selectedResultIds.has(t.id));
+
+  const toggleSelectAll = () => {
+    setSelectedResultIds(
+      allResultsSelected
+        ? new Set()
+        : new Set(filteredResults.map((t) => t.id))
+    );
+  };
+
+  const handleTagSelected = () => {
+    if (selectedTagIds.length === 0 || selectedResultIds.size === 0) return;
+    const idsToTag = Array.from(selectedResultIds);
+    tagTransactions(
+      {
+        transactionIds: idsToTag,
+        transactionType: searchType,
+        tagIds: selectedTagIds,
+      },
+      {
+        onSuccess: () => {
+          setTaggedIds((prev) => {
+            const next = new Set(prev);
+            idsToTag.forEach((id) => next.add(id));
+            return next;
+          });
+          setSelectedResultIds(new Set());
+          onTagAdded();
+        },
+      }
+    );
+  };
 
   return (
     <div className="rounded-lg border p-3 md:p-4 space-y-3">
@@ -706,6 +740,7 @@ function AddTransactionsPanel({
             if (value) {
               setSearchType(value as "expense" | "income");
               setSearchCategoryId("");
+              setSelectedResultIds(new Set());
             }
           }}
           className="w-full"
@@ -847,7 +882,7 @@ function AddTransactionsPanel({
 
       {/* Search Results */}
       {hasSearched && (
-        <div>
+        <div data-testid="search-results">
           {isSearching && !searchData ? (
             <div className="space-y-2">
               {[...Array(3)].map((_, i) => (
@@ -860,11 +895,26 @@ function AddTransactionsPanel({
             </p>
           ) : (
             <div>
+              <div className="flex items-center gap-2 py-2 border-b">
+                <Checkbox
+                  checked={allResultsSelected}
+                  onCheckedChange={toggleSelectAll}
+                />
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                  onClick={toggleSelectAll}
+                >
+                  Select all ({filteredResults.length})
+                </button>
+              </div>
               {filteredResults.map((t) => (
                 <div
                   key={t.id}
-                  className="flex items-center justify-between py-2 border-b last:border-b-0"
+                  className="flex items-center gap-2 py-2 border-b last:border-b-0 cursor-pointer"
+                  onClick={() => toggleResultSelection(t.id)}
                 >
+                  <Checkbox checked={selectedResultIds.has(t.id)} />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{t.name}</p>
                     <p className="text-xs text-muted-foreground">
@@ -876,21 +926,21 @@ function AddTransactionsPanel({
                       {format(new Date(t.date), "MMM d, yyyy")}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 ml-2">
-                    <p className="text-numeric text-sm font-medium whitespace-nowrap">
-                      {formatCurrency(t.amount)}
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleAddTag(t.id)}
-                      disabled={isAdding}
-                    >
-                      Add Tag
-                    </Button>
-                  </div>
+                  <p className="text-numeric text-sm font-medium whitespace-nowrap ml-2">
+                    {formatCurrency(t.amount)}
+                  </p>
                 </div>
               ))}
+              <div className="flex justify-end pt-3">
+                <Button
+                  onClick={handleTagSelected}
+                  disabled={selectedResultIds.size === 0 || isAdding}
+                  size="sm"
+                >
+                  {isAdding && <Spinner className="mr-2" />}
+                  Tag selected ({selectedResultIds.size})
+                </Button>
+              </div>
             </div>
           )}
         </div>
