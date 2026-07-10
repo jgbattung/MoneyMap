@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { TransactionAnalyzer } from './TransactionAnalyzer';
+import type { TransactionAnalysisResponse } from '@/types/transaction-analysis';
 
 // ---------------------------------------------------------------------------
 // Hook mocks
@@ -257,6 +258,7 @@ const mockAccounts = [
 ];
 
 const mockRefetch = vi.fn();
+const mockFetchNextPage = vi.fn();
 
 const mockAnalysisData = {
   type: 'expense' as const,
@@ -365,12 +367,14 @@ function setupDefaultMocks() {
     isFetchingMore: false,
     error: null,
     refetch: mockRefetch,
+    fetchNextPage: mockFetchNextPage,
   });
 }
 
 beforeEach(() => {
   vi.resetAllMocks();
   mockRefetch.mockResolvedValue(undefined);
+  mockFetchNextPage.mockResolvedValue(undefined);
   setupDefaultMocks();
 });
 
@@ -384,7 +388,9 @@ beforeEach(() => {
 //  3. On next render the mock returns real data → results panel appears
 // ---------------------------------------------------------------------------
 
-async function renderAndAnalyze(analysisData = mockAnalysisData) {
+async function renderAndAnalyze(
+  analysisData: TransactionAnalysisResponse = mockAnalysisData
+) {
   let callCount = 0;
   vi.mocked(useTransactionAnalysis).mockImplementation(() => {
     callCount++;
@@ -395,10 +401,11 @@ async function renderAndAnalyze(analysisData = mockAnalysisData) {
       isFetchingMore: false,
       error: null as string | null,
       refetch: mockRefetch,
+      fetchNextPage: mockFetchNextPage,
     };
   });
 
-  render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+  const view = render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
 
   // First render: data=null, no results
   expect(screen.queryByText('Total Amount')).toBeNull();
@@ -418,6 +425,8 @@ async function renderAndAnalyze(analysisData = mockAnalysisData) {
       expect(screen.getByText(analysisData.transactions[0].name)).toBeTruthy();
     }, { timeout: 5000 });
   }
+
+  return view;
 }
 
 // ---------------------------------------------------------------------------
@@ -526,6 +535,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -541,6 +551,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -573,6 +584,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -591,6 +603,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -613,6 +626,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: 'Failed to fetch transaction analysis',
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -631,6 +645,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: 'Network error',
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -652,6 +667,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -762,6 +778,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -806,15 +823,14 @@ describe('TransactionAnalyzer', () => {
       expect(screen.queryByText(/Load More/)).toBeNull();
     });
 
-    it('calls refetch when Load More is clicked', async () => {
+    it('calls fetchNextPage when Load More is clicked', async () => {
       await renderAndAnalyze({ ...mockAnalysisData, hasMore: true, transactionCount: 10 });
 
       const loadMoreBtn = screen.getByText(/Load More \(7 remaining\)/).closest('button')!;
       fireEvent.click(loadMoreBtn);
 
       await waitFor(() => {
-        // refetch was called at least twice: once for Analyze, once for Load More
-        expect(mockRefetch).toHaveBeenCalledTimes(2);
+        expect(mockFetchNextPage).toHaveBeenCalledTimes(1);
       });
     });
   });
@@ -823,10 +839,11 @@ describe('TransactionAnalyzer', () => {
   describe('isFetchingMore skeleton', () => {
     it('renders skeleton rows when isFetchingMore is true after analyze', async () => {
       // First: use renderAndAnalyze to get into the "results visible" state
-      await renderAndAnalyze({ ...mockAnalysisData, hasMore: true, transactionCount: 10 });
+      const { rerender } = await renderAndAnalyze({ ...mockAnalysisData, hasMore: true, transactionCount: 10 });
 
-      // Now update the mock to simulate isFetchingMore=true (a Load More is in progress)
-      // Data remains present so the results panel stays visible
+      // Now update the mock to simulate isFetchingMore=true (a Load More is in progress
+      // via the query hook itself, not local component state) and force a re-render —
+      // handleLoadMore no longer owns any local state, it only calls fetchNextPage().
       vi.mocked(useTransactionAnalysis).mockReturnValue({
         data: { ...mockAnalysisData, hasMore: true, transactionCount: 10 },
         isLoading: false,
@@ -834,11 +851,10 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: true,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
-      // Click Load More to trigger a re-render with the updated mock
-      const loadMoreBtn = screen.getByText(/Load More/).closest('button')!;
-      fireEvent.click(loadMoreBtn);
+      rerender(React.createElement(TransactionAnalyzer));
 
       await waitFor(() => {
         expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
@@ -863,6 +879,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });

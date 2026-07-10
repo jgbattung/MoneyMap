@@ -650,7 +650,7 @@ function AddTransactionsPanel({
   const { accounts } = useAccountsQuery();
 
   const { data: searchData, isFetching: isSearching, refetch: searchRefetch } =
-    useTransactionAnalysis(searchParams);
+    useTransactionAnalysis(searchParams, { initialTake: 50 });
 
   const { addTag, isAdding } = useEventLedgerTag();
 
@@ -659,8 +659,6 @@ function AddTransactionsPanel({
   const handleSearch = () => {
     const params: TransactionAnalysisParams = {
       type: searchType,
-      skip: 0,
-      take: 50,
     };
     if (searchStartDate) params.startDate = searchStartDate.toISOString();
     if (searchEndDate) params.endDate = searchEndDate.toISOString();

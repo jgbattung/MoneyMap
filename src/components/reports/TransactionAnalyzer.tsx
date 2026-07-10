@@ -87,7 +87,6 @@ export function TransactionAnalyzer() {
     accountName?: string;
   }>({});
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
-  const [displayCount, setDisplayCount] = useState(5);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
@@ -106,7 +105,7 @@ export function TransactionAnalyzer() {
   const { tags } = useTagsQuery();
   const { accounts } = useAccountsQuery();
 
-  const { data, isFetching, isFetchingMore, error, refetch } =
+  const { data, isFetching, isFetchingMore, error, refetch, fetchNextPage } =
     useTransactionAnalysis(analysisParams);
 
   const categories = watchType === "expense" ? budgets : incomeTypes;
@@ -122,11 +121,9 @@ export function TransactionAnalyzer() {
     watchType === "expense" && watchCategoryId && watchCategoryId.length > 0;
 
   const buildParams = useCallback(
-    (values: TransactionAnalysisFormValues, take: number): TransactionAnalysisParams => {
+    (values: TransactionAnalysisFormValues): TransactionAnalysisParams => {
       const params: TransactionAnalysisParams = {
         type: values.type,
-        skip: 0,
-        take,
       };
       if (values.startDate)
         params.startDate = values.startDate.toISOString();
@@ -143,14 +140,14 @@ export function TransactionAnalyzer() {
   );
 
   const runAnalysis = useCallback(
-    (values: TransactionAnalysisFormValues, take: number) => {
+    (values: TransactionAnalysisFormValues) => {
       setSummaryLabels({
         categoryName: categories.find((c) => c.id === values.categoryId)?.name,
         subcategoryName: subcategories.find((s) => s.id === values.subcategoryId)
           ?.name,
         accountName: accounts.find((a) => a.id === values.accountId)?.name,
       });
-      const params = buildParams(values, take);
+      const params = buildParams(values);
       setAnalysisParams(params);
       setHasAnalyzed(true);
       setTimeout(() => refetch(), 0);
@@ -162,26 +159,19 @@ export function TransactionAnalyzer() {
     const isValid = await form.trigger();
     if (!isValid) return;
     const values = form.getValues();
-    setDisplayCount(5);
-    runAnalysis(values, 5);
+    runAnalysis(values);
   }, [form, runAnalysis]);
 
   const handleClearFilters = useCallback(() => {
     form.reset(DEFAULT_FORM_VALUES);
     setAnalysisParams({ type: "expense" });
     setSummaryLabels({});
-    setDisplayCount(5);
     setHasAnalyzed(false);
   }, [form]);
 
   const handleLoadMore = useCallback(() => {
-    const newCount = displayCount + 10;
-    setDisplayCount(newCount);
-    const values = form.getValues();
-    const params = buildParams(values, newCount);
-    setAnalysisParams(params);
-    setTimeout(() => refetch(), 0);
-  }, [displayCount, form, buildParams, refetch]);
+    fetchNextPage();
+  }, [fetchNextPage]);
 
   const handleRemoveFilter = useCallback(
     (filterKey: string, tagId?: string) => {
@@ -204,8 +194,7 @@ export function TransactionAnalyzer() {
       // Re-trigger analysis with updated filters
       setTimeout(() => {
         const values = form.getValues();
-        setDisplayCount(5);
-        runAnalysis(values, 5);
+        runAnalysis(values);
       }, 0);
     },
     [form, runAnalysis]

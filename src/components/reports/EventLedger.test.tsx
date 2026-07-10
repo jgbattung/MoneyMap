@@ -303,6 +303,7 @@ function setupDefaultMocks() {
     isFetchingMore: false,
     error: null,
     refetch: vi.fn(),
+    fetchNextPage: vi.fn(),
   });
 
   vi.mocked(useExpenseTypesQuery).mockReturnValue({
