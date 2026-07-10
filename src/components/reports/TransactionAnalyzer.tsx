@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
@@ -111,10 +111,13 @@ export function TransactionAnalyzer() {
 
   const categories = watchType === "expense" ? budgets : incomeTypes;
   const selectedExpenseType = budgets.find((b) => b.id === watchCategoryId);
-  const subcategories =
-    watchType === "expense" && watchCategoryId
-      ? selectedExpenseType?.subcategories ?? []
-      : [];
+  const subcategories = useMemo(
+    () =>
+      watchType === "expense" && watchCategoryId
+        ? selectedExpenseType?.subcategories ?? []
+        : [],
+    [watchType, watchCategoryId, selectedExpenseType]
+  );
   const showSubcategory =
     watchType === "expense" && watchCategoryId && watchCategoryId.length > 0;
 
