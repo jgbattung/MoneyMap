@@ -81,6 +81,11 @@ const DEFAULT_FORM_VALUES: TransactionAnalysisFormValues = {
 export function TransactionAnalyzer() {
   const [analysisParams, setAnalysisParams] =
     useState<TransactionAnalysisParams>({ type: "expense" });
+  const [summaryLabels, setSummaryLabels] = useState<{
+    categoryName?: string;
+    subcategoryName?: string;
+    accountName?: string;
+  }>({});
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
   const [displayCount, setDisplayCount] = useState(5);
   const [startDateOpen, setStartDateOpen] = useState(false);
@@ -134,18 +139,32 @@ export function TransactionAnalyzer() {
     []
   );
 
+  const runAnalysis = useCallback(
+    (values: TransactionAnalysisFormValues, take: number) => {
+      setSummaryLabels({
+        categoryName: categories.find((c) => c.id === values.categoryId)?.name,
+        subcategoryName: subcategories.find((s) => s.id === values.subcategoryId)
+          ?.name,
+        accountName: accounts.find((a) => a.id === values.accountId)?.name,
+      });
+      const params = buildParams(values, take);
+      setAnalysisParams(params);
+      setHasAnalyzed(true);
+      setTimeout(() => refetch(), 0);
+    },
+    [categories, subcategories, accounts, buildParams, refetch]
+  );
+
   const handleAnalyze = useCallback(() => {
     const values = form.getValues();
     setDisplayCount(5);
-    const params = buildParams(values, 5);
-    setAnalysisParams(params);
-    setHasAnalyzed(true);
-    setTimeout(() => refetch(), 0);
-  }, [form, buildParams, refetch]);
+    runAnalysis(values, 5);
+  }, [form, runAnalysis]);
 
   const handleClearFilters = useCallback(() => {
     form.reset(DEFAULT_FORM_VALUES);
     setAnalysisParams({ type: "expense" });
+    setSummaryLabels({});
     setDisplayCount(5);
     setHasAnalyzed(false);
   }, [form]);
@@ -181,12 +200,10 @@ export function TransactionAnalyzer() {
       setTimeout(() => {
         const values = form.getValues();
         setDisplayCount(5);
-        const params = buildParams(values, 5);
-        setAnalysisParams(params);
-        setTimeout(() => refetch(), 0);
+        runAnalysis(values, 5);
       }, 0);
     },
-    [form, buildParams, refetch]
+    [form, runAnalysis]
   );
 
   const hasActiveFilters = () => {
@@ -650,9 +667,9 @@ export function TransactionAnalyzer() {
                   {analysisParams.categoryId && (
                     <>{" "}on{" "}
                       <span className="font-medium text-foreground">
-                        {categories.find(c => c.id === analysisParams.categoryId)?.name}
+                        {summaryLabels.categoryName}
                         {analysisParams.subcategoryId && (
-                          <>{" > "}{subcategories.find(s => s.id === analysisParams.subcategoryId)?.name}</>
+                          <>{" > "}{summaryLabels.subcategoryName}</>
                         )}
                       </span>
                     </>
@@ -660,7 +677,7 @@ export function TransactionAnalyzer() {
                   {analysisParams.accountId && (
                     <>{" "}in{" "}
                       <span className="font-medium text-foreground">
-                        {accounts.find(a => a.id === analysisParams.accountId)?.name}
+                        {summaryLabels.accountName}
                       </span>
                     </>
                   )}
