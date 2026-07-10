@@ -3,8 +3,6 @@ export interface EventLedgerParams {
   startDate?: string;
   endDate?: string;
   accountId?: string;
-  skip?: number;
-  take?: number;
 }
 
 export interface EventLedgerTransaction {
@@ -32,5 +30,5 @@ export interface EventLedgerResponse {
 export interface EventLedgerTagParams {
   transactionId: string;
   transactionType: "expense" | "income";
-  tagId: string;
+  tagIds: string[];
 }

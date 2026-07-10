@@ -211,6 +211,7 @@ const mockAccounts = [
 ];
 
 const mockRefetch = vi.fn();
+const mockFetchNextPage = vi.fn();
 const mockAddTag = vi.fn();
 
 const mockLedgerData = {
@@ -289,6 +290,7 @@ function setupDefaultMocks() {
     isFetchingMore: false,
     error: null,
     refetch: mockRefetch,
+    fetchNextPage: mockFetchNextPage,
   });
 
   vi.mocked(useEventLedgerTag).mockReturnValue({
@@ -303,6 +305,7 @@ function setupDefaultMocks() {
     isFetchingMore: false,
     error: null,
     refetch: vi.fn(),
+    fetchNextPage: vi.fn(),
   });
 
   vi.mocked(useExpenseTypesQuery).mockReturnValue({
@@ -333,6 +336,7 @@ function setupDefaultMocks() {
 beforeEach(() => {
   vi.resetAllMocks();
   mockRefetch.mockResolvedValue(undefined);
+  mockFetchNextPage.mockResolvedValue(undefined);
   setupDefaultMocks();
 });
 
@@ -356,10 +360,11 @@ async function renderAndAnalyze(ledgerData = mockLedgerData) {
       isFetchingMore: false,
       error: null as string | null,
       refetch: mockRefetch,
+      fetchNextPage: mockFetchNextPage,
     };
   });
 
-  render(React.createElement(EventLedger), { wrapper: createWrapper() });
+  const view = render(React.createElement(EventLedger), { wrapper: createWrapper() });
 
   // Select a tag first so the View Ledger button becomes enabled
   const tagItems = screen.getAllByTestId('command-item');
@@ -371,6 +376,8 @@ async function renderAndAnalyze(ledgerData = mockLedgerData) {
   await waitFor(() => {
     expect(screen.getByText('Expenses')).toBeTruthy();
   }, { timeout: 5000 });
+
+  return view;
 }
 
 // ---------------------------------------------------------------------------
@@ -446,6 +453,7 @@ describe('EventLedger', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(EventLedger), { wrapper: createWrapper() });
@@ -460,6 +468,7 @@ describe('EventLedger', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(EventLedger), { wrapper: createWrapper() });
@@ -491,6 +500,7 @@ describe('EventLedger', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(EventLedger), { wrapper: createWrapper() });
@@ -512,6 +522,7 @@ describe('EventLedger', () => {
         isFetchingMore: false,
         error: 'Failed to fetch event ledger',
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(EventLedger), { wrapper: createWrapper() });
@@ -534,6 +545,7 @@ describe('EventLedger', () => {
         isFetchingMore: false,
         error: 'Network error',
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(EventLedger), { wrapper: createWrapper() });
@@ -654,13 +666,13 @@ describe('EventLedger', () => {
       expect(screen.queryByRole('button', { name: 'Load More' })).toBeNull();
     });
 
-    it('calls refetch when Load More is clicked', async () => {
+    it('calls fetchNextPage when Load More is clicked', async () => {
       await renderAndAnalyze({ ...mockLedgerData, hasMore: true });
 
       fireEvent.click(screen.getByRole('button', { name: 'Load More' }));
 
       await waitFor(() => {
-        expect(mockRefetch).toHaveBeenCalledTimes(2);
+        expect(mockFetchNextPage).toHaveBeenCalledTimes(1);
       });
     });
   });
@@ -668,7 +680,7 @@ describe('EventLedger', () => {
   // -------------------------------------------------------------------------
   describe('isFetchingMore skeleton', () => {
     it('renders skeleton rows when isFetchingMore is true', async () => {
-      await renderAndAnalyze({ ...mockLedgerData, hasMore: true });
+      const { rerender } = await renderAndAnalyze({ ...mockLedgerData, hasMore: true });
 
       vi.mocked(useEventLedger).mockReturnValue({
         data: { ...mockLedgerData, hasMore: true },
@@ -676,9 +688,10 @@ describe('EventLedger', () => {
         isFetchingMore: true,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
-      fireEvent.click(screen.getByRole('button', { name: 'Load More' }));
+      rerender(React.createElement(EventLedger));
 
       await waitFor(() => {
         expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);

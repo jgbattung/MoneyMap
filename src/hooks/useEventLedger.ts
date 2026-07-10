@@ -1,12 +1,16 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   EventLedgerParams,
   EventLedgerResponse,
   EventLedgerTagParams,
 } from "@/types/event-ledger";
 
+const PAGE_SIZE = 10;
+
 async function fetchEventLedger(
-  params: EventLedgerParams
+  params: EventLedgerParams,
+  skip: number,
+  take: number
 ): Promise<EventLedgerResponse> {
   const searchParams = new URLSearchParams();
 
@@ -15,10 +19,8 @@ async function fetchEventLedger(
   if (params.startDate) searchParams.set("startDate", params.startDate);
   if (params.endDate) searchParams.set("endDate", params.endDate);
   if (params.accountId) searchParams.set("accountId", params.accountId);
-  if (params.skip !== undefined)
-    searchParams.set("skip", params.skip.toString());
-  if (params.take !== undefined)
-    searchParams.set("take", params.take.toString());
+  searchParams.set("skip", skip.toString());
+  searchParams.set("take", take.toString());
 
   const response = await fetch(
     `/api/reports/event-ledger?${searchParams.toString()}`
@@ -44,21 +46,49 @@ async function addTagToTransaction(params: EventLedgerTagParams): Promise<void> 
 }
 
 export const useEventLedger = (params: EventLedgerParams) => {
-  const { data, isFetching, error, refetch, isPlaceholderData } = useQuery({
+  const {
+    data,
+    isFetching,
+    isFetchingNextPage,
+    error,
+    refetch,
+    fetchNextPage,
+  } = useInfiniteQuery({
     queryKey: ["eventLedger", params],
-    queryFn: () => fetchEventLedger(params),
+    queryFn: ({ pageParam }) => fetchEventLedger(params, pageParam, PAGE_SIZE),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.hasMore
+        ? allPages.reduce((sum, page) => sum + page.transactions.length, 0)
+        : undefined,
     enabled: false,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
-    placeholderData: keepPreviousData,
   });
 
+  const pages = data?.pages ?? [];
+  const firstPage = pages[0];
+  const lastPage = pages[pages.length - 1];
+
+  const combinedData: EventLedgerResponse | null = firstPage
+    ? {
+        totalExpenses: firstPage.totalExpenses,
+        totalIncome: firstPage.totalIncome,
+        netAmount: firstPage.netAmount,
+        expenseCount: firstPage.expenseCount,
+        incomeCount: firstPage.incomeCount,
+        transactions: pages.flatMap((page) => page.transactions),
+        hasMore: lastPage.hasMore,
+      }
+    : null;
+
   return {
-    data: data ?? null,
+    data: combinedData,
     isFetching,
-    isFetchingMore: isFetching && isPlaceholderData,
+    isFetchingMore: isFetchingNextPage,
     error: error ? (error as Error).message : null,
     refetch,
+    fetchNextPage,
   };
 };
 

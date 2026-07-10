@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
@@ -81,8 +81,12 @@ const DEFAULT_FORM_VALUES: TransactionAnalysisFormValues = {
 export function TransactionAnalyzer() {
   const [analysisParams, setAnalysisParams] =
     useState<TransactionAnalysisParams>({ type: "expense" });
+  const [summaryLabels, setSummaryLabels] = useState<{
+    categoryName?: string;
+    subcategoryName?: string;
+    accountName?: string;
+  }>({});
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
-  const [displayCount, setDisplayCount] = useState(5);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
@@ -101,24 +105,25 @@ export function TransactionAnalyzer() {
   const { tags } = useTagsQuery();
   const { accounts } = useAccountsQuery();
 
-  const { data, isFetching, isFetchingMore, error, refetch } =
+  const { data, isFetching, isFetchingMore, error, refetch, fetchNextPage } =
     useTransactionAnalysis(analysisParams);
 
   const categories = watchType === "expense" ? budgets : incomeTypes;
   const selectedExpenseType = budgets.find((b) => b.id === watchCategoryId);
-  const subcategories =
-    watchType === "expense" && watchCategoryId
-      ? selectedExpenseType?.subcategories ?? []
-      : [];
+  const subcategories = useMemo(
+    () =>
+      watchType === "expense" && watchCategoryId
+        ? selectedExpenseType?.subcategories ?? []
+        : [],
+    [watchType, watchCategoryId, selectedExpenseType]
+  );
   const showSubcategory =
     watchType === "expense" && watchCategoryId && watchCategoryId.length > 0;
 
   const buildParams = useCallback(
-    (values: TransactionAnalysisFormValues, take: number): TransactionAnalysisParams => {
+    (values: TransactionAnalysisFormValues): TransactionAnalysisParams => {
       const params: TransactionAnalysisParams = {
         type: values.type,
-        skip: 0,
-        take,
       };
       if (values.startDate)
         params.startDate = values.startDate.toISOString();
@@ -134,30 +139,39 @@ export function TransactionAnalyzer() {
     []
   );
 
-  const handleAnalyze = useCallback(() => {
+  const runAnalysis = useCallback(
+    (values: TransactionAnalysisFormValues) => {
+      setSummaryLabels({
+        categoryName: categories.find((c) => c.id === values.categoryId)?.name,
+        subcategoryName: subcategories.find((s) => s.id === values.subcategoryId)
+          ?.name,
+        accountName: accounts.find((a) => a.id === values.accountId)?.name,
+      });
+      const params = buildParams(values);
+      setAnalysisParams(params);
+      setHasAnalyzed(true);
+      setTimeout(() => refetch(), 0);
+    },
+    [categories, subcategories, accounts, buildParams, refetch]
+  );
+
+  const handleAnalyze = useCallback(async () => {
+    const isValid = await form.trigger();
+    if (!isValid) return;
     const values = form.getValues();
-    setDisplayCount(5);
-    const params = buildParams(values, 5);
-    setAnalysisParams(params);
-    setHasAnalyzed(true);
-    setTimeout(() => refetch(), 0);
-  }, [form, buildParams, refetch]);
+    runAnalysis(values);
+  }, [form, runAnalysis]);
 
   const handleClearFilters = useCallback(() => {
     form.reset(DEFAULT_FORM_VALUES);
     setAnalysisParams({ type: "expense" });
-    setDisplayCount(5);
+    setSummaryLabels({});
     setHasAnalyzed(false);
   }, [form]);
 
   const handleLoadMore = useCallback(() => {
-    const newCount = displayCount + 10;
-    setDisplayCount(newCount);
-    const values = form.getValues();
-    const params = buildParams(values, newCount);
-    setAnalysisParams(params);
-    setTimeout(() => refetch(), 0);
-  }, [displayCount, form, buildParams, refetch]);
+    fetchNextPage();
+  }, [fetchNextPage]);
 
   const handleRemoveFilter = useCallback(
     (filterKey: string, tagId?: string) => {
@@ -180,13 +194,10 @@ export function TransactionAnalyzer() {
       // Re-trigger analysis with updated filters
       setTimeout(() => {
         const values = form.getValues();
-        setDisplayCount(5);
-        const params = buildParams(values, 5);
-        setAnalysisParams(params);
-        setTimeout(() => refetch(), 0);
+        runAnalysis(values);
       }, 0);
     },
-    [form, buildParams, refetch]
+    [form, runAnalysis]
   );
 
   const hasActiveFilters = () => {
@@ -305,6 +316,7 @@ export function TransactionAnalyzer() {
                           captionLayout="dropdown"
                           onDayClick={(date) => {
                             field.onChange(date);
+                            if (form.getValues("endDate")) void form.trigger("endDate");
                             setStartDateOpen(false);
                           }}
                           disabled={(date) => date > new Date()}
@@ -355,6 +367,7 @@ export function TransactionAnalyzer() {
                           captionLayout="dropdown"
                           onDayClick={(date) => {
                             field.onChange(date);
+                            void form.trigger("endDate");
                             setEndDateOpen(false);
                           }}
                           disabled={(date) => date > new Date()}
@@ -625,6 +638,7 @@ export function TransactionAnalyzer() {
             <ActiveFilters
               form={form}
               categories={categories}
+              subcategories={subcategories}
               tags={tags}
               accounts={accounts}
               onRemove={handleRemoveFilter}
@@ -649,9 +663,9 @@ export function TransactionAnalyzer() {
                   {analysisParams.categoryId && (
                     <>{" "}on{" "}
                       <span className="font-medium text-foreground">
-                        {categories.find(c => c.id === analysisParams.categoryId)?.name}
+                        {summaryLabels.categoryName}
                         {analysisParams.subcategoryId && (
-                          <>{" > "}{subcategories.find(s => s.id === analysisParams.subcategoryId)?.name}</>
+                          <>{" > "}{summaryLabels.subcategoryName}</>
                         )}
                       </span>
                     </>
@@ -659,7 +673,7 @@ export function TransactionAnalyzer() {
                   {analysisParams.accountId && (
                     <>{" "}in{" "}
                       <span className="font-medium text-foreground">
-                        {accounts.find(a => a.id === analysisParams.accountId)?.name}
+                        {summaryLabels.accountName}
                       </span>
                     </>
                   )}
@@ -831,12 +845,14 @@ function formatCurrency(amount: number): string {
 function ActiveFilters({
   form,
   categories,
+  subcategories,
   tags,
   accounts,
   onRemove,
 }: {
   form: ReturnType<typeof useForm<TransactionAnalysisFormValues>>;
   categories: { id: string; name: string }[];
+  subcategories: { id: string; name: string }[];
   tags: { id: string; name: string }[];
   accounts: { id: string; name: string }[];
   onRemove: (key: string, tagId?: string) => void;
@@ -881,7 +897,9 @@ function ActiveFilters({
 
       {values.subcategoryId && (
         <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
-          Subcategory: {values.subcategoryId}
+          Subcategory:{" "}
+          {subcategories.find((s) => s.id === values.subcategoryId)?.name ??
+            values.subcategoryId}
           <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("subcategoryId")}>
             <X className="h-3 w-3" />
           </button>

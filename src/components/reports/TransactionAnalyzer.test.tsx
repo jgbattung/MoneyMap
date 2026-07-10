@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { TransactionAnalyzer } from './TransactionAnalyzer';
+import type { TransactionAnalysisResponse } from '@/types/transaction-analysis';
 
 // ---------------------------------------------------------------------------
 // Hook mocks
@@ -85,8 +86,28 @@ vi.mock('@/components/ui/popover', () => ({
     React.createElement('div', { 'data-testid': 'popover-content' }, children),
 }));
 
+// Fixed day options the mocked Calendar can emit — used to drive the From/To
+// date pickers independently in the date-range validation tests below.
+const CALENDAR_DAY_OPTIONS = ['2024-01-05', '2024-01-10', '2024-01-20', '2024-01-25'];
+
 vi.mock('@/components/ui/calendar', () => ({
-  Calendar: () => React.createElement('div', { 'data-testid': 'calendar' }),
+  Calendar: ({ onDayClick }: { onDayClick?: (date: Date) => void }) =>
+    React.createElement(
+      'div',
+      { 'data-testid': 'calendar' },
+      CALENDAR_DAY_OPTIONS.map((dateStr) =>
+        React.createElement(
+          'button',
+          {
+            key: dateStr,
+            type: 'button',
+            'data-testid': `calendar-day-${dateStr}`,
+            onClick: () => onDayClick?.(new Date(`${dateStr}T00:00:00Z`)),
+          },
+          dateStr
+        )
+      )
+    ),
 }));
 
 vi.mock('@/components/ui/select', () => ({
@@ -257,6 +278,7 @@ const mockAccounts = [
 ];
 
 const mockRefetch = vi.fn();
+const mockFetchNextPage = vi.fn();
 
 const mockAnalysisData = {
   type: 'expense' as const,
@@ -365,12 +387,14 @@ function setupDefaultMocks() {
     isFetchingMore: false,
     error: null,
     refetch: mockRefetch,
+    fetchNextPage: mockFetchNextPage,
   });
 }
 
 beforeEach(() => {
   vi.resetAllMocks();
   mockRefetch.mockResolvedValue(undefined);
+  mockFetchNextPage.mockResolvedValue(undefined);
   setupDefaultMocks();
 });
 
@@ -384,7 +408,9 @@ beforeEach(() => {
 //  3. On next render the mock returns real data → results panel appears
 // ---------------------------------------------------------------------------
 
-async function renderAndAnalyze(analysisData = mockAnalysisData) {
+async function renderAndAnalyze(
+  analysisData: TransactionAnalysisResponse = mockAnalysisData
+) {
   let callCount = 0;
   vi.mocked(useTransactionAnalysis).mockImplementation(() => {
     callCount++;
@@ -395,10 +421,11 @@ async function renderAndAnalyze(analysisData = mockAnalysisData) {
       isFetchingMore: false,
       error: null as string | null,
       refetch: mockRefetch,
+      fetchNextPage: mockFetchNextPage,
     };
   });
 
-  render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+  const view = render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
 
   // First render: data=null, no results
   expect(screen.queryByText('Total Amount')).toBeNull();
@@ -418,6 +445,8 @@ async function renderAndAnalyze(analysisData = mockAnalysisData) {
       expect(screen.getByText(analysisData.transactions[0].name)).toBeTruthy();
     }, { timeout: 5000 });
   }
+
+  return view;
 }
 
 // ---------------------------------------------------------------------------
@@ -526,6 +555,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -541,6 +571,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -573,6 +604,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -591,6 +623,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -613,6 +646,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: 'Failed to fetch transaction analysis',
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -631,6 +665,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: 'Network error',
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -652,6 +687,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -762,6 +798,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -806,15 +843,14 @@ describe('TransactionAnalyzer', () => {
       expect(screen.queryByText(/Load More/)).toBeNull();
     });
 
-    it('calls refetch when Load More is clicked', async () => {
+    it('calls fetchNextPage when Load More is clicked', async () => {
       await renderAndAnalyze({ ...mockAnalysisData, hasMore: true, transactionCount: 10 });
 
       const loadMoreBtn = screen.getByText(/Load More \(7 remaining\)/).closest('button')!;
       fireEvent.click(loadMoreBtn);
 
       await waitFor(() => {
-        // refetch was called at least twice: once for Analyze, once for Load More
-        expect(mockRefetch).toHaveBeenCalledTimes(2);
+        expect(mockFetchNextPage).toHaveBeenCalledTimes(1);
       });
     });
   });
@@ -823,10 +859,11 @@ describe('TransactionAnalyzer', () => {
   describe('isFetchingMore skeleton', () => {
     it('renders skeleton rows when isFetchingMore is true after analyze', async () => {
       // First: use renderAndAnalyze to get into the "results visible" state
-      await renderAndAnalyze({ ...mockAnalysisData, hasMore: true, transactionCount: 10 });
+      const { rerender } = await renderAndAnalyze({ ...mockAnalysisData, hasMore: true, transactionCount: 10 });
 
-      // Now update the mock to simulate isFetchingMore=true (a Load More is in progress)
-      // Data remains present so the results panel stays visible
+      // Now update the mock to simulate isFetchingMore=true (a Load More is in progress
+      // via the query hook itself, not local component state) and force a re-render —
+      // handleLoadMore no longer owns any local state, it only calls fetchNextPage().
       vi.mocked(useTransactionAnalysis).mockReturnValue({
         data: { ...mockAnalysisData, hasMore: true, transactionCount: 10 },
         isLoading: false,
@@ -834,11 +871,10 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: true,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
-      // Click Load More to trigger a re-render with the updated mock
-      const loadMoreBtn = screen.getByText(/Load More/).closest('button')!;
-      fireEvent.click(loadMoreBtn);
+      rerender(React.createElement(TransactionAnalyzer));
 
       await waitFor(() => {
         expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
@@ -863,6 +899,7 @@ describe('TransactionAnalyzer', () => {
         isFetchingMore: false,
         error: null,
         refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
       });
 
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
@@ -881,6 +918,102 @@ describe('TransactionAnalyzer', () => {
       // Income categories should now be shown — the select content renders income types
       expect(screen.getByTestId('select-item-inc-1')).toBeTruthy();
       expect(screen.getByText('Salary')).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Date-range validation — drives the mocked From/To Calendar day buttons
+  // independently. calendars[0] is the "From" (startDate) picker, calendars[1]
+  // is the "To" (endDate) picker, per JSX render order in TransactionAnalyzer.
+  describe('date-range validation (end before start)', () => {
+    function getCalendars() {
+      const calendars = screen.getAllByTestId('calendar');
+      return { fromCalendar: calendars[0], toCalendar: calendars[1] };
+    }
+
+    function pickDay(calendar: HTMLElement, dateStr: string) {
+      fireEvent.click(within(calendar).getByTestId(`calendar-day-${dateStr}`));
+    }
+
+    it('blocks Analyze and shows an inline error for a reversed range', async () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      const { fromCalendar, toCalendar } = getCalendars();
+
+      // From = Jan 20, To = Jan 10 — To is before From.
+      pickDay(fromCalendar, '2024-01-20');
+      pickDay(toCalendar, '2024-01-10');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('End date cannot be before start date')
+        ).toBeTruthy();
+      });
+      expect(mockRefetch).not.toHaveBeenCalled();
+    });
+
+    it('clears the message when the From date is corrected without re-clicking Analyze', async () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      const { fromCalendar, toCalendar } = getCalendars();
+
+      pickDay(fromCalendar, '2024-01-20');
+      pickDay(toCalendar, '2024-01-10');
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('End date cannot be before start date')
+        ).toBeTruthy();
+      });
+
+      // Correct From to a date before To (Jan 10) — e.g. Jan 5 — without clicking Analyze again.
+      pickDay(fromCalendar, '2024-01-05');
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText('End date cannot be before start date')
+        ).toBeNull();
+      });
+    });
+
+    it('clears the message when the To date is corrected without re-clicking Analyze', async () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      const { fromCalendar, toCalendar } = getCalendars();
+
+      pickDay(fromCalendar, '2024-01-20');
+      pickDay(toCalendar, '2024-01-10');
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('End date cannot be before start date')
+        ).toBeTruthy();
+      });
+
+      // Correct To to a date after From (Jan 20) — e.g. Jan 25 — without clicking Analyze again.
+      pickDay(toCalendar, '2024-01-25');
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText('End date cannot be before start date')
+        ).toBeNull();
+      });
+    });
+
+    it('runs the analysis normally for a valid range', async () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      const { fromCalendar, toCalendar } = getCalendars();
+
+      pickDay(fromCalendar, '2024-01-05');
+      pickDay(toCalendar, '2024-01-20');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+
+      await waitFor(() => expect(mockRefetch).toHaveBeenCalled());
+      expect(
+        screen.queryByText('End date cannot be before start date')
+      ).toBeNull();
     });
   });
 });

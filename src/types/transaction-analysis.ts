@@ -7,8 +7,6 @@ export interface TransactionAnalysisParams {
   tagIds?: string[];
   accountId?: string;
   search?: string;
-  skip?: number;
-  take?: number;
 }
 
 export interface TransactionAnalysisBreakdownItem {

@@ -14,7 +14,7 @@ export type EventLedgerQuery = z.infer<typeof eventLedgerQuerySchema>;
 export const eventLedgerTagSchema = z.object({
   transactionId: z.string().min(1),
   transactionType: z.enum(["expense", "income"]),
-  tagId: z.string().min(1),
+  tagIds: z.array(z.string().min(1)).min(1),
 });
 
 export type EventLedgerTagInput = z.infer<typeof eventLedgerTagSchema>;

@@ -103,6 +103,14 @@ describe('useTransactionAnalysis', () => {
       expect(typeof result.current.refetch).toBe('function');
     });
 
+    it('returns a fetchNextPage function', () => {
+      const { result } = renderHook(() => useTransactionAnalysis(mockParams), {
+        wrapper: createWrapper(),
+      });
+
+      expect(typeof result.current.fetchNextPage).toBe('function');
+    });
+
     it('returns isFetchingMore=false initially', () => {
       const { result } = renderHook(() => useTransactionAnalysis(mockParams), {
         wrapper: createWrapper(),
@@ -172,15 +180,33 @@ describe('useTransactionAnalysis', () => {
       expect(calledUrl).toContain('type=income');
     });
 
-    it('sends skip and take params when provided', async () => {
+    it('sends skip=0 and the default take=5 on the first page', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockAnalysisResponse,
+      });
+
+      const { result } = renderHook(() => useTransactionAnalysis(mockParams), {
+        wrapper: createWrapper(),
+      });
+
+      await result.current.refetch();
+
+      await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      expect(calledUrl).toContain('skip=0');
+      expect(calledUrl).toContain('take=5');
+    });
+
+    it('honors the initialTake option on the first page', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockAnalysisResponse,
       });
 
       const { result } = renderHook(
-        () =>
-          useTransactionAnalysis({ type: 'expense', skip: 0, take: 15 }),
+        () => useTransactionAnalysis(mockParams, { initialTake: 50 }),
         { wrapper: createWrapper() }
       );
 
@@ -190,7 +216,7 @@ describe('useTransactionAnalysis', () => {
 
       const calledUrl = mockFetch.mock.calls[0][0] as string;
       expect(calledUrl).toContain('skip=0');
-      expect(calledUrl).toContain('take=15');
+      expect(calledUrl).toContain('take=50');
     });
 
     it('sends optional filter params when provided', async () => {
@@ -288,48 +314,62 @@ describe('useTransactionAnalysis', () => {
         wrapper: createWrapper(),
       });
 
-      // isFetchingMore = isFetching && isPlaceholderData
-      // Neither is true at idle state
       expect(result.current.isFetchingMore).toBe(false);
     });
   });
 
   // -------------------------------------------------------------------------
-  describe('keepPreviousData behavior', () => {
-    it('returns previous data while refetching with new params (no data flash to null)', async () => {
-      // First fetch — returns data
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockAnalysisResponse,
-      });
+  describe('fetchNextPage — skip/append pagination', () => {
+    it('fetches the next page with an advancing skip and appends transactions', async () => {
+      const firstPage = {
+        ...mockAnalysisResponse,
+        transactionCount: 3,
+        transactions: [
+          { id: 'tx-1', name: 'Jollibee', amount: 200, date: '2024-03-01T00:00:00Z', categoryName: 'Food', accountName: 'BPI' },
+        ],
+        hasMore: true,
+      };
+      const secondPage = {
+        ...mockAnalysisResponse,
+        transactionCount: 3,
+        transactions: [
+          { id: 'tx-2', name: 'Grab', amount: 150, date: '2024-03-02T00:00:00Z', categoryName: 'Transport', accountName: 'GCash' },
+          { id: 'tx-3', name: 'Jollibee 2', amount: 300, date: '2024-03-03T00:00:00Z', categoryName: 'Food', accountName: 'BPI' },
+        ],
+        hasMore: false,
+      };
 
-      const { result, rerender } = renderHook(
-        ({ params }) => useTransactionAnalysis(params),
-        {
-          wrapper: createWrapper(),
-          initialProps: { params: { type: 'expense' as const, take: 5 } },
-        }
-      );
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => firstPage });
+
+      const { result } = renderHook(() => useTransactionAnalysis(mockParams), {
+        wrapper: createWrapper(),
+      });
 
       await result.current.refetch();
 
       await waitFor(() => {
-        expect(result.current.data).not.toBeNull();
+        expect(result.current.data?.transactions.length).toBe(1);
+      });
+      expect(result.current.data?.hasMore).toBe(true);
+
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => secondPage });
+
+      await result.current.fetchNextPage();
+
+      await waitFor(() => {
+        expect(result.current.data?.transactions.length).toBe(3);
       });
 
-      // Slow second fetch — should keep previous data visible
-      mockFetch.mockImplementationOnce(
-        () => new Promise((resolve) => setTimeout(() => resolve({ ok: true, json: async () => mockAnalysisResponse }), 100))
-      );
+      // Second request should carry skip = number of transactions already loaded (1), take = 10
+      const secondCallUrl = mockFetch.mock.calls[1][0] as string;
+      expect(secondCallUrl).toContain('skip=1');
+      expect(secondCallUrl).toContain('take=10');
 
-      // Change params to trigger a new query key
-      rerender({ params: { type: 'expense' as const, take: 15 } });
+      // hasMore reflects the last page
+      expect(result.current.data?.hasMore).toBe(false);
 
-      await result.current.refetch();
-
-      // During the fetch, data should still be the previous data (not null)
-      // because keepPreviousData / placeholderData is enabled
-      expect(result.current.data).not.toBeNull();
+      // Summary fields still come from the first page
+      expect(result.current.data?.transactionCount).toBe(3);
     });
   });
 });
