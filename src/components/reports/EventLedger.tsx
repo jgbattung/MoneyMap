@@ -94,7 +94,6 @@ export function EventLedger() {
     tagIds: [],
   });
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
-  const [displayCount, setDisplayCount] = useState(10);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
@@ -108,7 +107,7 @@ export function EventLedger() {
   const { tags } = useTagsQuery();
   const { accounts } = useAccountsQuery();
 
-  const { data, isFetching, isFetchingMore, error, refetch } =
+  const { data, isFetching, isFetchingMore, error, refetch, fetchNextPage } =
     useEventLedger(ledgerParams);
 
   const selectedTagIds = form.watch("tagIds") ?? [];
@@ -122,11 +121,9 @@ export function EventLedger() {
   };
 
   const buildParams = useCallback(
-    (values: EventLedgerFormValues, take: number): EventLedgerParams => {
+    (values: EventLedgerFormValues): EventLedgerParams => {
       const params: EventLedgerParams = {
         tagIds: values.tagIds,
-        skip: 0,
-        take,
       };
       if (values.startDate) params.startDate = values.startDate.toISOString();
       if (values.endDate) params.endDate = values.endDate.toISOString();
@@ -138,8 +135,7 @@ export function EventLedger() {
 
   const handleAnalyze = useCallback(() => {
     const values = form.getValues();
-    setDisplayCount(10);
-    const params = buildParams(values, 10);
+    const params = buildParams(values);
     setLedgerParams(params);
     setHasAnalyzed(true);
     setTimeout(() => refetch(), 0);
@@ -148,19 +144,13 @@ export function EventLedger() {
   const handleClear = useCallback(() => {
     form.reset(DEFAULT_FORM_VALUES);
     setLedgerParams({ tagIds: [] });
-    setDisplayCount(10);
     setHasAnalyzed(false);
     setAddPanelOpen(false);
   }, [form]);
 
   const handleLoadMore = useCallback(() => {
-    const newCount = displayCount + 10;
-    setDisplayCount(newCount);
-    const values = form.getValues();
-    const params = buildParams(values, newCount);
-    setLedgerParams(params);
-    setTimeout(() => refetch(), 0);
-  }, [displayCount, form, buildParams, refetch]);
+    fetchNextPage();
+  }, [fetchNextPage]);
 
   const hasActiveFilters = () => {
     const values = form.getValues();

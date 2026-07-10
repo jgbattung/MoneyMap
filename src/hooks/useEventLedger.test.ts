@@ -89,6 +89,13 @@ describe('useEventLedger', () => {
       expect(typeof result.current.refetch).toBe('function');
     });
 
+    it('returns a fetchNextPage function', () => {
+      const { result } = renderHook(() => useEventLedger(mockParams), {
+        wrapper: createWrapper(),
+      });
+      expect(typeof result.current.fetchNextPage).toBe('function');
+    });
+
     it('returns isFetchingMore=false initially', () => {
       const { result } = renderHook(() => useEventLedger(mockParams), {
         wrapper: createWrapper(),
@@ -138,6 +145,25 @@ describe('useEventLedger', () => {
       expect(calledUrl).toContain('tagIds=tag-1%2Ctag-2');
     });
 
+    it('sends skip=0 and take=10 on the first page', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockLedgerResponse,
+      });
+
+      const { result } = renderHook(() => useEventLedger(mockParams), {
+        wrapper: createWrapper(),
+      });
+
+      await result.current.refetch();
+
+      await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      expect(calledUrl).toContain('skip=0');
+      expect(calledUrl).toContain('take=10');
+    });
+
     it('sends optional filter params when provided', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -151,8 +177,6 @@ describe('useEventLedger', () => {
             startDate: '2024-01-01',
             endDate: '2024-12-31',
             accountId: 'acc-1',
-            skip: 0,
-            take: 20,
           }),
         { wrapper: createWrapper() }
       );
@@ -166,7 +190,7 @@ describe('useEventLedger', () => {
       expect(calledUrl).toContain('endDate=2024-12-31');
       expect(calledUrl).toContain('accountId=acc-1');
       expect(calledUrl).toContain('skip=0');
-      expect(calledUrl).toContain('take=20');
+      expect(calledUrl).toContain('take=10');
     });
 
     it('sets error=null on successful fetch', async () => {
@@ -242,6 +266,76 @@ describe('useEventLedger', () => {
       });
 
       expect(result.current.data).toBeNull();
+    });
+  });
+
+  describe('fetchNextPage — skip/append pagination', () => {
+    it('fetches the next page with an advancing skip and appends transactions', async () => {
+      const firstPage = {
+        ...mockLedgerResponse,
+        expenseCount: 3,
+        incomeCount: 1,
+        transactions: [
+          {
+            id: 'tx-1',
+            name: 'Jollibee',
+            amount: 200,
+            type: 'expense' as const,
+            date: '2024-03-01T00:00:00Z',
+            categoryName: 'Food',
+            accountName: 'BPI Checking',
+            tags: [{ id: 'tag-1', name: 'Trip', color: '#ff0000' }],
+          },
+        ],
+        hasMore: true,
+      };
+      const secondPage = {
+        ...mockLedgerResponse,
+        expenseCount: 3,
+        incomeCount: 1,
+        transactions: [
+          {
+            id: 'tx-2',
+            name: 'Freelance Payment',
+            amount: 2000,
+            type: 'income' as const,
+            date: '2024-03-02T00:00:00Z',
+            categoryName: 'Salary',
+            accountName: 'BPI Checking',
+            tags: [{ id: 'tag-1', name: 'Trip', color: '#ff0000' }],
+          },
+        ],
+        hasMore: false,
+      };
+
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => firstPage });
+
+      const { result } = renderHook(() => useEventLedger(mockParams), {
+        wrapper: createWrapper(),
+      });
+
+      await result.current.refetch();
+
+      await waitFor(() => {
+        expect(result.current.data?.transactions.length).toBe(1);
+      });
+      expect(result.current.data?.hasMore).toBe(true);
+
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => secondPage });
+
+      await result.current.fetchNextPage();
+
+      await waitFor(() => {
+        expect(result.current.data?.transactions.length).toBe(2);
+      });
+
+      const secondCallUrl = mockFetch.mock.calls[1][0] as string;
+      expect(secondCallUrl).toContain('skip=1');
+      expect(secondCallUrl).toContain('take=10');
+
+      expect(result.current.data?.hasMore).toBe(false);
+      // Summary fields still come from the first page
+      expect(result.current.data?.totalExpenses).toBe(5000);
     });
   });
 });
