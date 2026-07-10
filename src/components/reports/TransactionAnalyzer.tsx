@@ -155,7 +155,9 @@ export function TransactionAnalyzer() {
     [categories, subcategories, accounts, buildParams, refetch]
   );
 
-  const handleAnalyze = useCallback(() => {
+  const handleAnalyze = useCallback(async () => {
+    const isValid = await form.trigger();
+    if (!isValid) return;
     const values = form.getValues();
     setDisplayCount(5);
     runAnalysis(values, 5);

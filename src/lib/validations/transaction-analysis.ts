@@ -17,15 +17,20 @@ export const transactionAnalysisQuerySchema = z.object({
 export type TransactionAnalysisQuery = z.infer<typeof transactionAnalysisQuerySchema>;
 
 // Client-side schema for React Hook Form
-export const transactionAnalysisFormSchema = z.object({
-  type: z.enum(["expense", "income"]),
-  startDate: z.date().optional().nullable(),
-  endDate: z.date().optional().nullable(),
-  categoryId: z.string().optional(),
-  subcategoryId: z.string().optional(),
-  tagIds: z.array(z.string()).optional(),
-  accountId: z.string().optional(),
-  search: z.string().max(100).optional(),
-});
+export const transactionAnalysisFormSchema = z
+  .object({
+    type: z.enum(["expense", "income"]),
+    startDate: z.date().optional().nullable(),
+    endDate: z.date().optional().nullable(),
+    categoryId: z.string().optional(),
+    subcategoryId: z.string().optional(),
+    tagIds: z.array(z.string()).optional(),
+    accountId: z.string().optional(),
+    search: z.string().max(100).optional(),
+  })
+  .refine(
+    (v) => !v.startDate || !v.endDate || v.endDate >= v.startDate,
+    { message: "End date cannot be before start date", path: ["endDate"] }
+  );
 
 export type TransactionAnalysisFormValues = z.infer<typeof transactionAnalysisFormSchema>;
