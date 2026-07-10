@@ -497,7 +497,11 @@ export function EventLedger() {
                 variant="widget"
                 icon={SearchX}
                 title="No transactions found"
-                description="No transactions match the selected tags."
+                description="No transactions have these tags yet. Search your history and tag them below."
+                action={{
+                  label: "Find & tag transactions",
+                  onClick: () => setAddPanelOpen(true),
+                }}
               />
             ) : (
               <div>
@@ -577,9 +581,9 @@ export function EventLedger() {
             )}
 
             {/* Add Transactions Button */}
-            {totalTransactions > 0 && (
-              <div>
-                {!addPanelOpen ? (
+            <div>
+              {!addPanelOpen ? (
+                totalTransactions > 0 && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -588,18 +592,18 @@ export function EventLedger() {
                     <Plus className="h-4 w-4 mr-1" />
                     Add Transactions
                   </Button>
-                ) : (
-                  <AddTransactionsPanel
-                    selectedTagIds={selectedTagIds}
-                    ledgerTransactionIds={
-                      data.transactions.map((t) => t.id)
-                    }
-                    onClose={() => setAddPanelOpen(false)}
-                    onTagAdded={() => refetch()}
-                  />
-                )}
-              </div>
-            )}
+                )
+              ) : (
+                <AddTransactionsPanel
+                  selectedTagIds={selectedTagIds}
+                  ledgerTransactionIds={
+                    data.transactions.map((t) => t.id)
+                  }
+                  onClose={() => setAddPanelOpen(false)}
+                  onTagAdded={() => refetch()}
+                />
+              )}
+            </div>
           </div>
         )}
       </CardContent>
