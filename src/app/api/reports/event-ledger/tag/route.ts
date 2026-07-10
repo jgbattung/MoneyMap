@@ -27,18 +27,22 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const { transactionId, transactionType, tagIds } = parsed.data;
+    const { transactionIds, transactionType, tagIds } = parsed.data;
+
+    const data = { tags: { connect: tagIds.map((id) => ({ id })) } };
 
     if (transactionType === "expense") {
-      await db.expenseTransaction.update({
-        where: { id: transactionId, userId },
-        data: { tags: { connect: tagIds.map((id) => ({ id })) } },
-      });
+      await db.$transaction(
+        transactionIds.map((id) =>
+          db.expenseTransaction.update({ where: { id, userId }, data })
+        )
+      );
     } else {
-      await db.incomeTransaction.update({
-        where: { id: transactionId, userId },
-        data: { tags: { connect: tagIds.map((id) => ({ id })) } },
-      });
+      await db.$transaction(
+        transactionIds.map((id) =>
+          db.incomeTransaction.update({ where: { id, userId }, data })
+        )
+      );
     }
 
     return NextResponse.json({ success: true });

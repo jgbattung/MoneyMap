@@ -345,16 +345,16 @@ describe('useEventLedger', () => {
 // ---------------------------------------------------------------------------
 
 describe('useEventLedgerTag', () => {
-  it('returns addTag function and isAdding=false initially', () => {
+  it('returns tagTransactions function and isAdding=false initially', () => {
     const { result } = renderHook(() => useEventLedgerTag(), {
       wrapper: createWrapper(),
     });
 
-    expect(typeof result.current.addTag).toBe('function');
+    expect(typeof result.current.tagTransactions).toBe('function');
     expect(result.current.isAdding).toBe(false);
   });
 
-  it('calls PATCH /api/reports/event-ledger/tag on addTag', async () => {
+  it('calls PATCH /api/reports/event-ledger/tag with transactionIds on tagTransactions', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ success: true }),
@@ -364,8 +364,8 @@ describe('useEventLedgerTag', () => {
       wrapper: createWrapper(),
     });
 
-    result.current.addTag({
-      transactionId: 'tx-1',
+    result.current.tagTransactions({
+      transactionIds: ['tx-1', 'tx-2'],
       transactionType: 'expense',
       tagIds: ['tag-1', 'tag-2'],
     });
@@ -376,7 +376,7 @@ describe('useEventLedgerTag', () => {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        transactionId: 'tx-1',
+        transactionIds: ['tx-1', 'tx-2'],
         transactionType: 'expense',
         tagIds: ['tag-1', 'tag-2'],
       }),

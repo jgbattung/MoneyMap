@@ -80,18 +80,18 @@ describe("eventLedgerQuerySchema", () => {
 });
 
 describe("eventLedgerTagSchema", () => {
-  it("passes for valid tag params with a single tagId", () => {
+  it("passes for valid tag params with a single transactionId", () => {
     const result = eventLedgerTagSchema.safeParse({
-      transactionId: "tx-1",
+      transactionIds: ["tx-1"],
       transactionType: "expense",
       tagIds: ["tag-1"],
     });
     expect(result.success).toBe(true);
   });
 
-  it("passes for valid tag params with multiple tagIds", () => {
+  it("passes for valid tag params with multiple transactionIds and tagIds", () => {
     const result = eventLedgerTagSchema.safeParse({
-      transactionId: "tx-1",
+      transactionIds: ["tx-1", "tx-2"],
       transactionType: "expense",
       tagIds: ["tag-1", "tag-2"],
     });
@@ -100,7 +100,7 @@ describe("eventLedgerTagSchema", () => {
 
   it("accepts income as transactionType", () => {
     const result = eventLedgerTagSchema.safeParse({
-      transactionId: "tx-1",
+      transactionIds: ["tx-1"],
       transactionType: "income",
       tagIds: ["tag-1"],
     });
@@ -109,25 +109,52 @@ describe("eventLedgerTagSchema", () => {
 
   it("fails for invalid transactionType", () => {
     const result = eventLedgerTagSchema.safeParse({
-      transactionId: "tx-1",
+      transactionIds: ["tx-1"],
       transactionType: "transfer",
       tagIds: ["tag-1"],
     });
     expect(result.success).toBe(false);
   });
 
-  it("fails when transactionId is empty", () => {
+  it("fails when transactionIds is an empty array", () => {
     const result = eventLedgerTagSchema.safeParse({
-      transactionId: "",
+      transactionIds: [],
       transactionType: "expense",
       tagIds: ["tag-1"],
     });
     expect(result.success).toBe(false);
   });
 
+  it("fails when transactionIds contains an empty string", () => {
+    const result = eventLedgerTagSchema.safeParse({
+      transactionIds: [""],
+      transactionType: "expense",
+      tagIds: ["tag-1"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("fails when transactionIds exceeds 50 entries", () => {
+    const result = eventLedgerTagSchema.safeParse({
+      transactionIds: Array.from({ length: 51 }, (_, i) => `tx-${i}`),
+      transactionType: "expense",
+      tagIds: ["tag-1"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("passes when transactionIds has exactly 50 entries", () => {
+    const result = eventLedgerTagSchema.safeParse({
+      transactionIds: Array.from({ length: 50 }, (_, i) => `tx-${i}`),
+      transactionType: "expense",
+      tagIds: ["tag-1"],
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("fails when tagIds is an empty array", () => {
     const result = eventLedgerTagSchema.safeParse({
-      transactionId: "tx-1",
+      transactionIds: ["tx-1"],
       transactionType: "expense",
       tagIds: [],
     });
@@ -136,7 +163,7 @@ describe("eventLedgerTagSchema", () => {
 
   it("fails when tagIds contains an empty string", () => {
     const result = eventLedgerTagSchema.safeParse({
-      transactionId: "tx-1",
+      transactionIds: ["tx-1"],
       transactionType: "expense",
       tagIds: [""],
     });

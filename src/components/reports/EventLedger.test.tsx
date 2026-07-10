@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { EventLedger } from './EventLedger';
@@ -157,8 +157,18 @@ vi.mock('@/components/ui/command', () => ({
 }));
 
 vi.mock('@/components/ui/checkbox', () => ({
-  Checkbox: ({ checked }: { checked?: boolean }) =>
-    React.createElement('input', { type: 'checkbox', readOnly: true, checked: !!checked }),
+  Checkbox: ({
+    checked,
+    onCheckedChange,
+  }: {
+    checked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+  }) =>
+    React.createElement('input', {
+      type: 'checkbox',
+      checked: !!checked,
+      onChange: () => onCheckedChange?.(!checked),
+    }),
 }));
 
 vi.mock('@/components/ui/spinner', () => ({
@@ -174,15 +184,24 @@ vi.mock('@/components/shared/EmptyState', () => ({
   EmptyState: ({
     title,
     description,
+    action,
   }: {
     title: string;
     description: string;
+    action?: { label: string; onClick?: () => void };
   }) =>
     React.createElement(
       'div',
       { 'data-testid': 'empty-state' },
       React.createElement('p', null, title),
-      React.createElement('p', null, description)
+      React.createElement('p', null, description),
+      action
+        ? React.createElement(
+            'button',
+            { onClick: action.onClick },
+            action.label
+          )
+        : null
     ),
 }));
 
@@ -246,6 +265,25 @@ const mockLedgerData = {
   hasMore: false,
 };
 
+const mockSearchTransactions = [
+  {
+    id: 'stx-1',
+    name: 'Grab Ride',
+    amount: 150,
+    categoryName: 'Transport',
+    accountName: 'BPI Checking',
+    date: '2024-03-05T00:00:00Z',
+  },
+  {
+    id: 'stx-2',
+    name: 'Coffee',
+    amount: 120,
+    categoryName: 'Food',
+    accountName: 'BPI Checking',
+    date: '2024-03-06T00:00:00Z',
+  },
+];
+
 // ---------------------------------------------------------------------------
 // Setup helpers
 // ---------------------------------------------------------------------------
@@ -294,7 +332,7 @@ function setupDefaultMocks() {
   });
 
   vi.mocked(useEventLedgerTag).mockReturnValue({
-    addTag: mockAddTag,
+    tagTransactions: mockAddTag,
     isAdding: false,
   });
 
@@ -378,6 +416,41 @@ async function renderAndAnalyze(ledgerData = mockLedgerData) {
   }, { timeout: 5000 });
 
   return view;
+}
+
+// ---------------------------------------------------------------------------
+// openPanelWithResults: renders + analyzes the ledger, opens the Add
+// Transactions panel, and runs a search that resolves to searchTransactions.
+// ---------------------------------------------------------------------------
+
+async function openPanelWithResults(searchTransactions = mockSearchTransactions) {
+  vi.mocked(useTransactionAnalysis).mockReturnValue({
+    data: {
+      type: 'expense',
+      totalAmount: searchTransactions.reduce((sum, t) => sum + t.amount, 0),
+      transactionCount: searchTransactions.length,
+      breakdown: [],
+      transactions: searchTransactions,
+      hasMore: false,
+    },
+    isLoading: false,
+    isFetching: false,
+    isFetchingMore: false,
+    error: null,
+    refetch: vi.fn(),
+    fetchNextPage: vi.fn(),
+  });
+
+  await renderAndAnalyze();
+
+  fireEvent.click(screen.getByRole('button', { name: /Add Transactions/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+
+  if (searchTransactions.length > 0) {
+    await waitFor(() => {
+      expect(screen.getByText(searchTransactions[0].name)).toBeTruthy();
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -714,6 +787,144 @@ describe('EventLedger', () => {
         transactions: [],
       });
       expect(screen.queryByRole('button', { name: /Add Transactions/ })).toBeNull();
+    });
+
+    it('shows the "Find & tag transactions" CTA in the empty state', async () => {
+      await renderAndAnalyze({
+        ...mockLedgerData,
+        expenseCount: 0,
+        incomeCount: 0,
+        transactions: [],
+      });
+      expect(
+        screen.getByRole('button', { name: 'Find & tag transactions' })
+      ).toBeTruthy();
+    });
+
+    it('opens the Add Transactions panel from the empty-state CTA', async () => {
+      await renderAndAnalyze({
+        ...mockLedgerData,
+        expenseCount: 0,
+        incomeCount: 0,
+        transactions: [],
+      });
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Find & tag transactions' })
+      );
+      expect(screen.getByPlaceholderText('Search by name...')).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('bulk tagging — checkbox selection and batch action', () => {
+    it('renders a checkbox for select-all plus one per search result', async () => {
+      await openPanelWithResults();
+      const results = within(screen.getByTestId('search-results'));
+      const checkboxes = results.getAllByRole('checkbox');
+      // 1 select-all + 2 result rows
+      expect(checkboxes.length).toBe(3);
+    });
+
+    it('the "Tag selected" button is disabled at zero selections', async () => {
+      await openPanelWithResults();
+      expect(
+        (screen.getByRole('button', { name: 'Tag selected (0)' }) as HTMLButtonElement)
+          .disabled
+      ).toBe(true);
+    });
+
+    it('selecting a single row enables and updates the "Tag selected" count', async () => {
+      await openPanelWithResults();
+      fireEvent.click(screen.getByText('Grab Ride'));
+
+      const btn = screen.getByRole('button', { name: 'Tag selected (1)' });
+      expect((btn as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('"Select all" selects every filtered result', async () => {
+      await openPanelWithResults();
+      fireEvent.click(screen.getByText(/Select all/));
+
+      expect(
+        screen.getByRole('button', { name: 'Tag selected (2)' })
+      ).toBeTruthy();
+    });
+
+    it('"Select all" toggles off when clicked again', async () => {
+      await openPanelWithResults();
+      fireEvent.click(screen.getByText(/Select all/));
+      expect(screen.getByRole('button', { name: 'Tag selected (2)' })).toBeTruthy();
+
+      fireEvent.click(screen.getByText(/Select all/));
+      expect(screen.getByRole('button', { name: 'Tag selected (0)' })).toBeTruthy();
+    });
+
+    it('fires exactly one tagTransactions call with all selected ids on "Tag selected"', async () => {
+      await openPanelWithResults();
+      fireEvent.click(screen.getByText(/Select all/));
+      fireEvent.click(screen.getByRole('button', { name: 'Tag selected (2)' }));
+
+      expect(mockAddTag).toHaveBeenCalledTimes(1);
+      expect(mockAddTag).toHaveBeenCalledWith(
+        {
+          transactionIds: ['stx-1', 'stx-2'],
+          transactionType: 'expense',
+          tagIds: ['tag-1'],
+        },
+        expect.objectContaining({ onSuccess: expect.any(Function) })
+      );
+    });
+
+    it('clears selection and calls onTagAdded when the batch tag succeeds', async () => {
+      mockAddTag.mockImplementation((_params, options) => {
+        options.onSuccess();
+      });
+
+      await openPanelWithResults();
+      fireEvent.click(screen.getByText(/Select all/));
+      fireEvent.click(screen.getByRole('button', { name: 'Tag selected (2)' }));
+
+      // Both results were tagged and drop out of filteredResults entirely,
+      // so the batch action itself disappears along with the rows.
+      await waitFor(() => {
+        expect(screen.getByText('No matching transactions found.')).toBeTruthy();
+      });
+      expect(mockRefetch).toHaveBeenCalled();
+    });
+
+    it('tagged rows disappear from the results after a successful batch', async () => {
+      mockAddTag.mockImplementation((_params, options) => {
+        options.onSuccess();
+      });
+
+      await openPanelWithResults();
+      fireEvent.click(screen.getByText('Grab Ride'));
+      fireEvent.click(screen.getByRole('button', { name: 'Tag selected (1)' }));
+
+      await waitFor(() => {
+        expect(screen.queryByText('Grab Ride')).toBeNull();
+      });
+      expect(screen.getByText('Coffee')).toBeTruthy();
+    });
+
+    it('clears selection when the search type toggle changes', async () => {
+      await openPanelWithResults();
+      fireEvent.click(screen.getByText(/Select all/));
+      expect(screen.getByRole('button', { name: 'Tag selected (2)' })).toBeTruthy();
+
+      fireEvent.click(screen.getByTestId('toggle-item-income'));
+
+      expect(screen.getByRole('button', { name: 'Tag selected (0)' })).toBeTruthy();
+    });
+
+    it('clears selection when a new search is run', async () => {
+      await openPanelWithResults();
+      fireEvent.click(screen.getByText(/Select all/));
+      expect(screen.getByRole('button', { name: 'Tag selected (2)' })).toBeTruthy();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+
+      expect(screen.getByRole('button', { name: 'Tag selected (0)' })).toBeTruthy();
     });
   });
 });

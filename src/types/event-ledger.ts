@@ -28,7 +28,7 @@ export interface EventLedgerResponse {
 }
 
 export interface EventLedgerTagParams {
-  transactionId: string;
+  transactionIds: string[];
   transactionType: "expense" | "income";
   tagIds: string[];
 }
