@@ -316,6 +316,7 @@ export function TransactionAnalyzer() {
                           captionLayout="dropdown"
                           onDayClick={(date) => {
                             field.onChange(date);
+                            if (form.getValues("endDate")) void form.trigger("endDate");
                             setStartDateOpen(false);
                           }}
                           disabled={(date) => date > new Date()}
@@ -366,6 +367,7 @@ export function TransactionAnalyzer() {
                           captionLayout="dropdown"
                           onDayClick={(date) => {
                             field.onChange(date);
+                            void form.trigger("endDate");
                             setEndDateOpen(false);
                           }}
                           disabled={(date) => date > new Date()}
