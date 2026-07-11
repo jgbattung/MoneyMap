@@ -25,6 +25,8 @@ interface MultiSelectPopoverProps {
   onToggle: (id: string) => void;
   placeholder: string;
   itemLabel: string;
+  /** Plural form of itemLabel, for irregular plurals (e.g. "category" -> "categories"). Defaults to `${itemLabel}s`. */
+  itemLabelPlural?: string;
   searchPlaceholder?: string;
 }
 
@@ -34,16 +36,18 @@ export function MultiSelectPopover({
   onToggle,
   placeholder,
   itemLabel,
+  itemLabelPlural,
   searchPlaceholder,
 }: MultiSelectPopoverProps) {
   const [open, setOpen] = useState(false);
+  const plural = itemLabelPlural ?? `${itemLabel}s`;
 
   return (
     <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <Button variant="outline" className="w-full justify-between font-normal">
           {selectedIds.length > 0 ? (
-            `${selectedIds.length} ${itemLabel}${selectedIds.length > 1 ? "s" : ""} selected`
+            `${selectedIds.length} ${selectedIds.length > 1 ? plural : itemLabel} selected`
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}
@@ -52,9 +56,9 @@ export function MultiSelectPopover({
       </PopoverTrigger>
       <PopoverContent className="w-[250px] p-0" align="start">
         <Command>
-          <CommandInput placeholder={searchPlaceholder ?? `Search ${itemLabel}s...`} />
+          <CommandInput placeholder={searchPlaceholder ?? `Search ${plural}...`} />
           <CommandList>
-            <CommandEmpty>No {itemLabel}s found.</CommandEmpty>
+            <CommandEmpty>No {plural} found.</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem

@@ -240,7 +240,10 @@ const mockBudgets = [
   {
     id: 'cat-2',
     name: 'Transport',
-    subcategories: [],
+    subcategories: [
+      { id: 'sub-3', name: 'Angkas' },
+      { id: 'sub-4', name: 'Joyride' },
+    ],
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
   },
@@ -288,6 +291,7 @@ const mockAnalysisData = {
     { id: 'cat-1', name: 'Food', amount: 3000, percentage: 60 },
     { id: 'cat-2', name: 'Transport', amount: 2000, percentage: 40 },
   ],
+  breakdownBy: 'category' as const,
   transactions: [
     {
       id: 'tx-1',
@@ -536,12 +540,15 @@ describe('TransactionAnalyzer', () => {
 
   // -------------------------------------------------------------------------
   describe('category options from useExpenseTypesQuery', () => {
-    it('renders expense category options in the category select', () => {
+    it('renders expense category options in the category multi-select popover', () => {
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
-      expect(screen.getByTestId('select-item-cat-1')).toBeTruthy();
-      expect(screen.getByTestId('select-item-cat-2')).toBeTruthy();
       expect(screen.getByText('Food')).toBeTruthy();
       expect(screen.getByText('Transport')).toBeTruthy();
+    });
+
+    it('shows the "All categories" placeholder when nothing is selected', () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      expect(screen.getByText('All categories')).toBeTruthy();
     });
   });
 
@@ -915,9 +922,185 @@ describe('TransactionAnalyzer', () => {
       render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
       fireEvent.click(screen.getByTestId('toggle-item-income'));
 
-      // Income categories should now be shown — the select content renders income types
-      expect(screen.getByTestId('select-item-inc-1')).toBeTruthy();
+      // Income categories should now be shown in the category multi-select popover
       expect(screen.getByText('Salary')).toBeTruthy();
+    });
+
+    it('clears selected categoryIds/subcategoryIds when the type toggle changes (pruning invariant)', () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+
+      // Select the Food category, then a subcategory under it
+      fireEvent.click(screen.getByText('Food').closest('[data-testid="command-item"]')!);
+      fireEvent.click(screen.getByText('Groceries').closest('[data-testid="command-item"]')!);
+      expect(screen.getByText('1 category selected')).toBeTruthy();
+      expect(screen.getByText('1 subcategory selected')).toBeTruthy();
+
+      // Toggling the type must reset both — a stale subcategory id surviving
+      // a type change would silently over-filter the next analysis.
+      fireEvent.click(screen.getByTestId('toggle-item-income'));
+
+      expect(screen.getByText('All categories')).toBeTruthy();
+      expect(screen.queryByText('1 category selected')).toBeNull();
+      expect(screen.queryByText('1 subcategory selected')).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Category/subcategory multi-select — the user's primary scenario
+  // (Expense → Transport → Angkas + Joyride → combined total + per-
+  // subcategory breakdown) plus the pruning invariant across its three paths:
+  // deselect-category, badge-removal, and type-toggle (covered above).
+  describe('category/subcategory multi-select', () => {
+    function mockAnalysisSequence(analysisData: TransactionAnalysisResponse = mockAnalysisData) {
+      let callCount = 0;
+      vi.mocked(useTransactionAnalysis).mockImplementation(() => {
+        callCount++;
+        return {
+          data: callCount === 1 ? null : { ...analysisData },
+          isLoading: false,
+          isFetching: false,
+          isFetchingMore: false,
+          error: null as string | null,
+          refetch: mockRefetch,
+          fetchNextPage: mockFetchNextPage,
+        };
+      });
+    }
+
+    function selectCommandItem(text: string) {
+      fireEvent.click(screen.getByText(text).closest('[data-testid="command-item"]')!);
+    }
+
+    it('selecting two categories shows the correct pill count', () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      selectCommandItem('Food');
+      selectCommandItem('Transport');
+      expect(screen.getByText('2 categories selected')).toBeTruthy();
+    });
+
+    it('deselecting a category prunes its selected subcategories (pruning invariant — deselect path)', () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+
+      selectCommandItem('Food');
+      selectCommandItem('Groceries');
+      expect(screen.getByText('1 category selected')).toBeTruthy();
+      expect(screen.getByText('1 subcategory selected')).toBeTruthy();
+
+      // Deselect Food by clicking it again — Groceries is no longer a valid
+      // subcategory option and must be pruned, not silently carried forward.
+      selectCommandItem('Food');
+
+      expect(screen.getByText('All categories')).toBeTruthy();
+      expect(screen.getByText('All subcategories')).toBeTruthy();
+    });
+
+    it('removing a category badge also removes its orphaned subcategory badges (pruning invariant — badge-removal path)', async () => {
+      mockAnalysisSequence({
+        ...mockAnalysisData,
+        breakdownBy: 'subcategory',
+        breakdown: [
+          { id: 'sub-1', name: 'Groceries', amount: 5000, percentage: 100 },
+        ],
+      });
+
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      selectCommandItem('Food');
+      selectCommandItem('Groceries');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+      await waitFor(() => expect(screen.getByText('Total Amount')).toBeTruthy());
+
+      expect(screen.getByText('Category: Food')).toBeTruthy();
+      expect(screen.getByText('Subcategory: Groceries')).toBeTruthy();
+
+      // Remove the category badge — its orphaned subcategory badge must go too.
+      const categoryBadge = screen.getByText('Category: Food').closest('span')!;
+      fireEvent.click(within(categoryBadge).getByRole('button'));
+
+      await waitFor(() => {
+        expect(screen.queryByText('Category: Food')).toBeNull();
+        expect(screen.queryByText('Subcategory: Groceries')).toBeNull();
+      });
+    });
+
+    it('combines multiple subcategories under one category into a single per-subcategory breakdown (primary scenario)', async () => {
+      mockAnalysisSequence({
+        ...mockAnalysisData,
+        breakdownBy: 'subcategory',
+        breakdown: [
+          { id: 'sub-3', name: 'Angkas', amount: 3000, percentage: 60 },
+          { id: 'sub-4', name: 'Joyride', amount: 2000, percentage: 40 },
+        ],
+      });
+
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      selectCommandItem('Transport');
+      selectCommandItem('Angkas');
+      selectCommandItem('Joyride');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+      await waitFor(() => expect(screen.getByText('Total Amount')).toBeTruthy());
+
+      // Combined total + per-subcategory breakdown, all three as removable name badges
+      expect(screen.getByText(/Breakdown by Subcategory/)).toBeTruthy();
+      expect(screen.getByText('Category: Transport')).toBeTruthy();
+      expect(screen.getByText('Subcategory: Angkas')).toBeTruthy();
+      expect(screen.getByText('Subcategory: Joyride')).toBeTruthy();
+      expect(
+        screen.getByText((_, element) =>
+          element?.tagName === 'P' &&
+          /on/.test(element.textContent ?? '') &&
+          /Transport/.test(element.textContent ?? '') &&
+          /Angkas, Joyride/.test(element.textContent ?? '')
+        )
+      ).toBeTruthy();
+    });
+
+    it('selecting two categories with no subcategories shows a per-category breakdown', async () => {
+      mockAnalysisSequence({
+        ...mockAnalysisData,
+        breakdownBy: 'category',
+      });
+
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      selectCommandItem('Food');
+      selectCommandItem('Transport');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+      await waitFor(() => expect(screen.getByText('Total Amount')).toBeTruthy());
+
+      expect(screen.getByText(/Breakdown by Category/)).toBeTruthy();
+      expect(screen.getByText('Category: Food')).toBeTruthy();
+      expect(screen.getByText('Category: Transport')).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('date-range presets', () => {
+    it('renders all four preset chips', () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      expect(screen.getByRole('button', { name: 'This month' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'This year' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Last 12 months' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'All time' })).toBeTruthy();
+    });
+
+    it('"This year" sets From to Jan 1 of the current year and To to today, without fetching', () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      fireEvent.click(screen.getByRole('button', { name: 'This year' }));
+
+      const currentYear = new Date().getFullYear();
+      expect(screen.getByText(new RegExp(`Jan 1, ${currentYear}`))).toBeTruthy();
+      expect(mockRefetch).not.toHaveBeenCalled();
+    });
+
+    it('"All time" clears both date pickers', () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      fireEvent.click(screen.getByRole('button', { name: 'This year' }));
+      fireEvent.click(screen.getByRole('button', { name: 'All time' }));
+
+      expect(screen.getByText('Start date')).toBeTruthy();
+      expect(screen.getByText('End date')).toBeTruthy();
     });
   });
 
