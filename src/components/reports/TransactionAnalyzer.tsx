@@ -59,6 +59,10 @@ import { getCategoryColor } from "@/lib/chart-colors";
 
 
 const ALL_VALUE = "__all__";
+// Stable empty-array fallback for form.watch(...) ?? [] — a fresh [] literal
+// on every render would make useMemo/useCallback deps that include it appear
+// to change every render (react-hooks/exhaustive-deps).
+const EMPTY_IDS: string[] = [];
 
 const DEFAULT_FORM_VALUES: TransactionAnalysisFormValues = {
   type: "expense",
@@ -90,8 +94,8 @@ export function TransactionAnalyzer() {
   });
 
   const watchType = form.watch("type");
-  const watchCategoryIds = form.watch("categoryIds") ?? [];
-  const watchSubcategoryIds = form.watch("subcategoryIds") ?? [];
+  const watchCategoryIds = form.watch("categoryIds") ?? EMPTY_IDS;
+  const watchSubcategoryIds = form.watch("subcategoryIds") ?? EMPTY_IDS;
 
   const { budgets } = useExpenseTypesQuery();
   const { incomeTypes } = useIncomeTypesQuery();
