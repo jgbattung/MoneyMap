@@ -2,8 +2,8 @@ export interface TransactionAnalysisParams {
   type: "expense" | "income";
   startDate?: string;
   endDate?: string;
-  categoryId?: string;
-  subcategoryId?: string;
+  categoryIds?: string[];
+  subcategoryIds?: string[];
   tagIds?: string[];
   accountId?: string;
   search?: string;

@@ -613,7 +613,7 @@ function AddTransactionsPanel({
     };
     if (searchStartDate) params.startDate = searchStartDate.toISOString();
     if (searchEndDate) params.endDate = searchEndDate.toISOString();
-    if (searchCategoryId) params.categoryId = searchCategoryId;
+    if (searchCategoryId) params.categoryIds = [searchCategoryId];
     if (searchAccountId) params.accountId = searchAccountId;
     if (searchName) params.search = searchName;
 
