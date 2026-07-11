@@ -31,6 +31,7 @@ export interface TransactionAnalysisResponse {
   totalAmount: number;
   transactionCount: number;
   breakdown: TransactionAnalysisBreakdownItem[];
+  breakdownBy: "category" | "subcategory" | null;
   transactions: TransactionAnalysisTransaction[];
   hasMore: boolean;
 }
