@@ -1051,7 +1051,55 @@ describe('TransactionAnalyzer', () => {
           element?.tagName === 'P' &&
           /on/.test(element.textContent ?? '') &&
           /Transport/.test(element.textContent ?? '') &&
-          /Angkas, Joyride/.test(element.textContent ?? '')
+          /Angkas and Joyride/.test(element.textContent ?? '')
+        )
+      ).toBeTruthy();
+    });
+
+    it('joins two category names with "and" (no comma) in the summary sentence', async () => {
+      mockAnalysisSequence({ ...mockAnalysisData, breakdownBy: 'category' });
+
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      selectCommandItem('Food');
+      selectCommandItem('Transport');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+      await waitFor(() => expect(screen.getByText('Total Amount')).toBeTruthy());
+
+      expect(
+        screen.getByText((_, element) =>
+          element?.tagName === 'P' &&
+          /on Food and Transport/.test(element.textContent ?? '')
+        )
+      ).toBeTruthy();
+    });
+
+    it('joins three names with commas and an Oxford comma before "and"', async () => {
+      mockAnalysisSequence({
+        ...mockAnalysisData,
+        breakdownBy: 'subcategory',
+        breakdown: [
+          { id: 'sub-1', name: 'Groceries', amount: 3000, percentage: 50 },
+          { id: 'sub-3', name: 'Angkas', amount: 2000, percentage: 33 },
+          { id: 'sub-4', name: 'Joyride', amount: 1000, percentage: 17 },
+        ],
+      });
+
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      // Select both categories so Groceries, Angkas and Joyride are all valid options
+      selectCommandItem('Food');
+      selectCommandItem('Transport');
+      selectCommandItem('Groceries');
+      selectCommandItem('Angkas');
+      selectCommandItem('Joyride');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+      await waitFor(() => expect(screen.getByText('Total Amount')).toBeTruthy());
+
+      expect(
+        screen.getByText((_, element) =>
+          element?.tagName === 'P' &&
+          /Groceries, Angkas, and Joyride/.test(element.textContent ?? '')
         )
       ).toBeTruthy();
     });

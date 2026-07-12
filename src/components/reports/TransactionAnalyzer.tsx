@@ -64,6 +64,12 @@ const ALL_VALUE = "__all__";
 // to change every render (react-hooks/exhaustive-deps).
 const EMPTY_IDS: string[] = [];
 
+// "A"; "A and B"; "A, B, and C" (Oxford comma)
+const nameListFormatter = new Intl.ListFormat("en-US", {
+  style: "long",
+  type: "conjunction",
+});
+
 const DEFAULT_FORM_VALUES: TransactionAnalysisFormValues = {
   type: "expense",
   startDate: null,
@@ -712,9 +718,9 @@ export function TransactionAnalyzer() {
                   {analysisParams.categoryIds && analysisParams.categoryIds.length > 0 && (
                     <>{" "}on{" "}
                       <span className="font-medium text-foreground">
-                        {summaryLabels.categoryNames.join(", ")}
+                        {nameListFormatter.format(summaryLabels.categoryNames)}
                         {analysisParams.subcategoryIds && analysisParams.subcategoryIds.length > 0 && (
-                          <>{" > "}{summaryLabels.subcategoryNames.join(", ")}</>
+                          <>{" > "}{nameListFormatter.format(summaryLabels.subcategoryNames)}</>
                         )}
                       </span>
                     </>
