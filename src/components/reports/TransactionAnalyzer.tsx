@@ -55,7 +55,7 @@ import { Separator } from "@/components/ui/separator";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { MultiSelectPopover } from "@/components/shared/MultiSelectPopover";
 import { FilterBadge } from "@/components/shared/FilterBadge";
-import { getCategoryColor } from "@/lib/chart-colors";
+import { getCategoryColorMap } from "@/lib/chart-colors";
 
 
 const ALL_VALUE = "__all__";
@@ -770,29 +770,34 @@ export function TransactionAnalyzer() {
                         : "Category"}
                     </h3>
                     <div className="space-y-3">
-                      {data.breakdown.map((item) => (
-                        <div key={item.id} className="space-y-1">
-                          <div className="flex justify-between">
-                            <span className="text-sm font-medium">
-                              {item.name}
-                            </span>
-                            <span className="text-numeric text-sm text-muted-foreground">
-                              {formatCurrency(item.amount)} ({item.percentage}%)
-                            </span>
-                          </div>
-                          <div
-                            className="relative h-2 w-full overflow-hidden rounded-full bg-primary/20"
-                          >
+                      {(() => {
+                        const breakdownColorMap = getCategoryColorMap(
+                          data.breakdown.map((i) => i.id)
+                        );
+                        return data.breakdown.map((item) => (
+                          <div key={item.id} className="space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-sm font-medium">
+                                {item.name}
+                              </span>
+                              <span className="text-numeric text-sm text-muted-foreground">
+                                {formatCurrency(item.amount)} ({item.percentage}%)
+                              </span>
+                            </div>
                             <div
-                              className="h-full rounded-full transition-all"
-                              style={{
-                                width: `${item.percentage}%`,
-                                backgroundColor: getCategoryColor(item.id),
-                              }}
-                            />
+                              className="relative h-2 w-full overflow-hidden rounded-full bg-primary/20"
+                            >
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{
+                                  width: `${item.percentage}%`,
+                                  backgroundColor: breakdownColorMap.get(item.id)!,
+                                }}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ));
+                      })()}
                     </div>
                   </div>
                 )}
