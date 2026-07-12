@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useExpenseBreakdown } from '@/hooks/useExpenseBreakdown'
 import { useIncomeBreakdown } from '@/hooks/useIncomeBreakdown'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { getCategoryColor } from '@/lib/chart-colors'
+import { getCategoryColorMap, getReadableTextColor } from '@/lib/chart-colors'
 import { PieChart as PieChartIcon, HandCoins } from 'lucide-react'
 
 type BreakdownType = 'expense' | 'income'
@@ -70,19 +70,24 @@ const CategoryBreakdownChart = ({ type, month, year }: CategoryBreakdownChartPro
     })}`
   }
 
-  // Prepare chart data with programmatically generated colors
+  // Set-aware color assignment: build the map once from the full ordered
+  // list so colors stay stable within this render and are guaranteed
+  // distinct for up to 20 categories.
+  const colorMap = getCategoryColorMap(breakdown?.data.map((d) => d.name) ?? [])
+
+  // Prepare chart data with the assigned colors
   const chartData = breakdown?.data.map((item) => ({
     name: item.name,
     value: item.amount,
     percentage: item.percentage,
-    fill: getCategoryColor(item.name),
+    fill: colorMap.get(item.name)!,
   })) || []
 
   // Chart config with stable, on-brand category colors
   const chartConfig = breakdown?.data.reduce((acc, item) => {
     acc[item.name] = {
       label: item.name,
-      color: getCategoryColor(item.name),
+      color: colorMap.get(item.name)!,
     }
     return acc
   }, {} as ChartConfig) || {} satisfies ChartConfig
@@ -227,8 +232,8 @@ const CategoryBreakdownChart = ({ type, month, year }: CategoryBreakdownChartPro
           >
             <div className="flex items-center gap-3">
               <span
-                className="text-xs font-semibold px-2 py-0.5 rounded min-w-[40px] text-center text-primary-950"
-                style={{ backgroundColor: item.fill }}
+                className="text-xs font-semibold px-2 py-0.5 rounded min-w-[40px] text-center"
+                style={{ backgroundColor: item.fill, color: getReadableTextColor(item.fill) }}
               >
                 {Math.round(item.percentage)}%
               </span>
