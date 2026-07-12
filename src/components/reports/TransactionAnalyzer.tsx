@@ -3,8 +3,8 @@
 import { useState, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { Search, ChevronDownIcon, ChevronUp, X, SearchX } from "lucide-react";
+import { format, startOfMonth, startOfYear, subMonths } from "date-fns";
+import { Search, ChevronDownIcon, ChevronUp, SearchX } from "lucide-react";
 
 import {
   transactionAnalysisFormSchema,
@@ -46,15 +46,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,17 +53,29 @@ import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { MultiSelectPopover } from "@/components/shared/MultiSelectPopover";
+import { FilterBadge } from "@/components/shared/FilterBadge";
 import { getCategoryColor } from "@/lib/chart-colors";
 
 
 const ALL_VALUE = "__all__";
+// Stable empty-array fallback for form.watch(...) ?? [] — a fresh [] literal
+// on every render would make useMemo/useCallback deps that include it appear
+// to change every render (react-hooks/exhaustive-deps).
+const EMPTY_IDS: string[] = [];
+
+// "A"; "A and B"; "A, B, and C" (Oxford comma)
+const nameListFormatter = new Intl.ListFormat("en-US", {
+  style: "long",
+  type: "conjunction",
+});
 
 const DEFAULT_FORM_VALUES: TransactionAnalysisFormValues = {
   type: "expense",
   startDate: null,
   endDate: null,
-  categoryId: "",
-  subcategoryId: "",
+  categoryIds: [],
+  subcategoryIds: [],
   tagIds: [],
   accountId: "",
   search: "",
@@ -82,14 +85,13 @@ export function TransactionAnalyzer() {
   const [analysisParams, setAnalysisParams] =
     useState<TransactionAnalysisParams>({ type: "expense" });
   const [summaryLabels, setSummaryLabels] = useState<{
-    categoryName?: string;
-    subcategoryName?: string;
+    categoryNames: string[];
+    subcategoryNames: string[];
     accountName?: string;
-  }>({});
+  }>({ categoryNames: [], subcategoryNames: [] });
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
-  const [tagsOpen, setTagsOpen] = useState(false);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
 
   const form = useForm<TransactionAnalysisFormValues>({
@@ -98,7 +100,8 @@ export function TransactionAnalyzer() {
   });
 
   const watchType = form.watch("type");
-  const watchCategoryId = form.watch("categoryId");
+  const watchCategoryIds = form.watch("categoryIds") ?? EMPTY_IDS;
+  const watchSubcategoryIds = form.watch("subcategoryIds") ?? EMPTY_IDS;
 
   const { budgets } = useExpenseTypesQuery();
   const { incomeTypes } = useIncomeTypesQuery();
@@ -109,16 +112,57 @@ export function TransactionAnalyzer() {
     useTransactionAnalysis(analysisParams);
 
   const categories = watchType === "expense" ? budgets : incomeTypes;
-  const selectedExpenseType = budgets.find((b) => b.id === watchCategoryId);
-  const subcategories = useMemo(
+  // Subcategory options are the union of subcategories across every selected
+  // expense category (was keyed on a single categoryId before multi-select).
+  const subcategoryOptions = useMemo(
     () =>
-      watchType === "expense" && watchCategoryId
-        ? selectedExpenseType?.subcategories ?? []
+      watchType === "expense"
+        ? budgets
+            .filter((b) => watchCategoryIds.includes(b.id))
+            .flatMap((b) => b.subcategories ?? [])
         : [],
-    [watchType, watchCategoryId, selectedExpenseType]
+    [watchType, watchCategoryIds, budgets]
   );
   const showSubcategory =
-    watchType === "expense" && watchCategoryId && watchCategoryId.length > 0;
+    watchType === "expense" &&
+    watchCategoryIds.length > 0 &&
+    subcategoryOptions.length > 0;
+
+  // Toggle helpers for the category/subcategory multi-select popovers.
+  // Deselecting a category (or the type toggle below) must prune any
+  // selected subcategory ids that are no longer in the option union —
+  // otherwise the analysis would silently filter on subcategories the
+  // user can no longer see.
+  const toggleCategory = (categoryId: string) => {
+    const current = form.getValues("categoryIds") ?? [];
+    const next = current.includes(categoryId)
+      ? current.filter((id) => id !== categoryId)
+      : [...current, categoryId];
+    form.setValue("categoryIds", next);
+
+    if (watchType === "expense") {
+      const validSubcategoryIds = new Set(
+        budgets
+          .filter((b) => next.includes(b.id))
+          .flatMap((b) => (b.subcategories ?? []).map((s) => s.id))
+      );
+      const currentSubcategoryIds = form.getValues("subcategoryIds") ?? [];
+      const prunedSubcategoryIds = currentSubcategoryIds.filter((id) =>
+        validSubcategoryIds.has(id)
+      );
+      if (prunedSubcategoryIds.length !== currentSubcategoryIds.length) {
+        form.setValue("subcategoryIds", prunedSubcategoryIds);
+      }
+    }
+  };
+
+  const toggleSubcategory = (subcategoryId: string) => {
+    const current = form.getValues("subcategoryIds") ?? [];
+    const next = current.includes(subcategoryId)
+      ? current.filter((id) => id !== subcategoryId)
+      : [...current, subcategoryId];
+    form.setValue("subcategoryIds", next);
+  };
 
   const buildParams = useCallback(
     (values: TransactionAnalysisFormValues): TransactionAnalysisParams => {
@@ -128,8 +172,10 @@ export function TransactionAnalyzer() {
       if (values.startDate)
         params.startDate = values.startDate.toISOString();
       if (values.endDate) params.endDate = values.endDate.toISOString();
-      if (values.categoryId) params.categoryId = values.categoryId;
-      if (values.subcategoryId) params.subcategoryId = values.subcategoryId;
+      if (values.categoryIds && values.categoryIds.length > 0)
+        params.categoryIds = values.categoryIds;
+      if (values.subcategoryIds && values.subcategoryIds.length > 0)
+        params.subcategoryIds = values.subcategoryIds;
       if (values.tagIds && values.tagIds.length > 0)
         params.tagIds = values.tagIds;
       if (values.accountId) params.accountId = values.accountId;
@@ -142,9 +188,12 @@ export function TransactionAnalyzer() {
   const runAnalysis = useCallback(
     (values: TransactionAnalysisFormValues) => {
       setSummaryLabels({
-        categoryName: categories.find((c) => c.id === values.categoryId)?.name,
-        subcategoryName: subcategories.find((s) => s.id === values.subcategoryId)
-          ?.name,
+        categoryNames: categories
+          .filter((c) => values.categoryIds?.includes(c.id))
+          .map((c) => c.name),
+        subcategoryNames: subcategoryOptions
+          .filter((s) => values.subcategoryIds?.includes(s.id))
+          .map((s) => s.name),
         accountName: accounts.find((a) => a.id === values.accountId)?.name,
       });
       const params = buildParams(values);
@@ -152,7 +201,7 @@ export function TransactionAnalyzer() {
       setHasAnalyzed(true);
       setTimeout(() => refetch(), 0);
     },
-    [categories, subcategories, accounts, buildParams, refetch]
+    [categories, subcategoryOptions, accounts, buildParams, refetch]
   );
 
   const handleAnalyze = useCallback(async () => {
@@ -165,7 +214,7 @@ export function TransactionAnalyzer() {
   const handleClearFilters = useCallback(() => {
     form.reset(DEFAULT_FORM_VALUES);
     setAnalysisParams({ type: "expense" });
-    setSummaryLabels({});
+    setSummaryLabels({ categoryNames: [], subcategoryNames: [] });
     setHasAnalyzed(false);
   }, [form]);
 
@@ -174,19 +223,40 @@ export function TransactionAnalyzer() {
   }, [fetchNextPage]);
 
   const handleRemoveFilter = useCallback(
-    (filterKey: string, tagId?: string) => {
+    (filterKey: string, id?: string) => {
       if (filterKey === "startDate") form.setValue("startDate", null);
       else if (filterKey === "endDate") form.setValue("endDate", null);
-      else if (filterKey === "categoryId") {
-        form.setValue("categoryId", "");
-        form.setValue("subcategoryId", "");
-      } else if (filterKey === "subcategoryId")
-        form.setValue("subcategoryId", "");
-      else if (filterKey === "tagId" && tagId) {
+      else if (filterKey === "categoryId" && id) {
+        const current = form.getValues("categoryIds") ?? [];
+        const next = current.filter((catId) => catId !== id);
+        form.setValue("categoryIds", next);
+
+        // Prune orphaned subcategory selections, same as toggleCategory
+        if (watchType === "expense") {
+          const validSubcategoryIds = new Set(
+            budgets
+              .filter((b) => next.includes(b.id))
+              .flatMap((b) => (b.subcategories ?? []).map((s) => s.id))
+          );
+          const currentSubcategoryIds = form.getValues("subcategoryIds") ?? [];
+          form.setValue(
+            "subcategoryIds",
+            currentSubcategoryIds.filter((subId) =>
+              validSubcategoryIds.has(subId)
+            )
+          );
+        }
+      } else if (filterKey === "subcategoryId" && id) {
+        const current = form.getValues("subcategoryIds") ?? [];
+        form.setValue(
+          "subcategoryIds",
+          current.filter((subId) => subId !== id)
+        );
+      } else if (filterKey === "tagId" && id) {
         const current = form.getValues("tagIds") ?? [];
         form.setValue(
           "tagIds",
-          current.filter((id) => id !== tagId)
+          current.filter((tagId) => tagId !== id)
         );
       } else if (filterKey === "accountId") form.setValue("accountId", "");
       else if (filterKey === "search") form.setValue("search", "");
@@ -197,7 +267,7 @@ export function TransactionAnalyzer() {
         runAnalysis(values);
       }, 0);
     },
-    [form, runAnalysis]
+    [form, runAnalysis, watchType, budgets]
   );
 
   const hasActiveFilters = () => {
@@ -205,8 +275,8 @@ export function TransactionAnalyzer() {
     return (
       values.startDate ||
       values.endDate ||
-      values.categoryId ||
-      values.subcategoryId ||
+      (values.categoryIds && values.categoryIds.length > 0) ||
+      (values.subcategoryIds && values.subcategoryIds.length > 0) ||
       (values.tagIds && values.tagIds.length > 0) ||
       values.accountId ||
       values.search
@@ -257,8 +327,8 @@ export function TransactionAnalyzer() {
                       onValueChange={(value) => {
                         if (value) {
                           field.onChange(value);
-                          form.setValue("categoryId", "");
-                          form.setValue("subcategoryId", "");
+                          form.setValue("categoryIds", []);
+                          form.setValue("subcategoryIds", []);
                         }
                       }}
                       className="w-full"
@@ -274,6 +344,54 @@ export function TransactionAnalyzer() {
                 </FormItem>
               )}
             />
+
+            {/* Date range presets */}
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  form.setValue("startDate", startOfMonth(new Date()));
+                  form.setValue("endDate", new Date());
+                }}
+              >
+                This month
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  form.setValue("startDate", startOfYear(new Date()));
+                  form.setValue("endDate", new Date());
+                }}
+              >
+                This year
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  form.setValue("startDate", subMonths(new Date(), 12));
+                  form.setValue("endDate", new Date());
+                }}
+              >
+                Last 12 months
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  form.setValue("startDate", null);
+                  form.setValue("endDate", null);
+                }}
+              >
+                All time
+              </Button>
+            </div>
 
             {/* Tier 1 Filters — always visible */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
@@ -382,31 +500,18 @@ export function TransactionAnalyzer() {
               {/* Category */}
               <FormField
                 control={form.control}
-                name="categoryId"
-                render={({ field }) => (
+                name="categoryIds"
+                render={() => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select
-                      value={field.value || ALL_VALUE}
-                      onValueChange={(value) => {
-                        field.onChange(value === ALL_VALUE ? "" : value);
-                        form.setValue("subcategoryId", "");
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="All categories" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={ALL_VALUE}>All categories</SelectItem>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <MultiSelectPopover
+                      options={categories}
+                      selectedIds={watchCategoryIds}
+                      onToggle={toggleCategory}
+                      placeholder="All categories"
+                      itemLabel="category"
+                      itemLabelPlural="categories"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -417,30 +522,18 @@ export function TransactionAnalyzer() {
                 <div>
                   <FormField
                     control={form.control}
-                    name="subcategoryId"
-                    render={({ field }) => (
+                    name="subcategoryIds"
+                    render={() => (
                       <FormItem>
                         <FormLabel>Subcategory</FormLabel>
-                        <Select
-                          value={field.value || ALL_VALUE}
-                          onValueChange={(value) =>
-                            field.onChange(value === ALL_VALUE ? "" : value)
-                          }
-                        >
-                          <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="All subcategories" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value={ALL_VALUE}>All subcategories</SelectItem>
-                            {subcategories.map((sub) => (
-                              <SelectItem key={sub.id} value={sub.id}>
-                                {sub.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <MultiSelectPopover
+                          options={subcategoryOptions}
+                          selectedIds={watchSubcategoryIds}
+                          onToggle={toggleSubcategory}
+                          placeholder="All subcategories"
+                          itemLabel="subcategory"
+                          itemLabelPlural="subcategories"
+                        />
                         <FormMessage />
                       </FormItem>
                     )}
@@ -476,52 +569,14 @@ export function TransactionAnalyzer() {
                     render={() => (
                       <FormItem>
                         <FormLabel>Tags</FormLabel>
-                        <Popover
-                          open={tagsOpen}
-                          onOpenChange={setTagsOpen}
-                          modal
-                        >
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className="w-full justify-between font-normal"
-                              >
-                                {selectedTagIds.length > 0 ? (
-                                  `${selectedTagIds.length} tag${selectedTagIds.length > 1 ? "s" : ""} selected`
-                                ) : (
-                                  <span className="text-muted-foreground">
-                                    Select tags
-                                  </span>
-                                )}
-                                <ChevronDownIcon className="h-4 w-4" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[250px] p-0" align="start">
-                            <Command>
-                              <CommandInput placeholder="Search tags..." />
-                              <CommandList>
-                                <CommandEmpty>No tags found.</CommandEmpty>
-                                <CommandGroup>
-                                  {tags.map((tag) => (
-                                    <CommandItem
-                                      key={tag.id}
-                                      value={tag.name}
-                                      onSelect={() => toggleTag(tag.id)}
-                                    >
-                                      <Checkbox
-                                        checked={selectedTagIds.includes(tag.id)}
-                                        className="mr-2"
-                                      />
-                                      {tag.name}
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                        <MultiSelectPopover
+                          options={tags}
+                          selectedIds={selectedTagIds}
+                          onToggle={toggleTag}
+                          placeholder="Select tags"
+                          itemLabel="tag"
+                          searchPlaceholder="Search tags..."
+                        />
                         {selectedTagIds.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {selectedTagIds.map((tagId) => {
@@ -638,7 +693,7 @@ export function TransactionAnalyzer() {
             <ActiveFilters
               form={form}
               categories={categories}
-              subcategories={subcategories}
+              subcategories={subcategoryOptions}
               tags={tags}
               accounts={accounts}
               onRemove={handleRemoveFilter}
@@ -660,12 +715,12 @@ export function TransactionAnalyzer() {
                   <span className="font-medium text-foreground">{formatCurrency(data.totalAmount)}</span>
                   {" "}across{" "}
                   <span className="font-medium text-foreground">{data.transactionCount} transaction{data.transactionCount !== 1 ? "s" : ""}</span>
-                  {analysisParams.categoryId && (
+                  {analysisParams.categoryIds && analysisParams.categoryIds.length > 0 && (
                     <>{" "}on{" "}
                       <span className="font-medium text-foreground">
-                        {summaryLabels.categoryName}
-                        {analysisParams.subcategoryId && (
-                          <>{" > "}{summaryLabels.subcategoryName}</>
+                        {nameListFormatter.format(summaryLabels.categoryNames)}
+                        {analysisParams.subcategoryIds && analysisParams.subcategoryIds.length > 0 && (
+                          <>{" > "}{nameListFormatter.format(summaryLabels.subcategoryNames)}</>
                         )}
                       </span>
                     </>
@@ -710,7 +765,7 @@ export function TransactionAnalyzer() {
                   <div>
                     <h3 className="text-sm font-semibold mb-3 mt-2">
                       Breakdown by{" "}
-                      {analysisParams.categoryId
+                      {data.breakdownBy === "subcategory"
                         ? "Subcategory"
                         : "Category"}
                     </h3>
@@ -855,7 +910,7 @@ function ActiveFilters({
   subcategories: { id: string; name: string }[];
   tags: { id: string; name: string }[];
   accounts: { id: string; name: string }[];
-  onRemove: (key: string, tagId?: string) => void;
+  onRemove: (key: string, id?: string) => void;
 }) {
   const values = form.watch();
 
@@ -867,75 +922,62 @@ function ActiveFilters({
       </Badge>
 
       {values.startDate && (
-        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
+        <FilterBadge onRemove={() => onRemove("startDate")}>
           From: {format(values.startDate, "MMM d, yyyy")}
-          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("startDate")}>
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
+        </FilterBadge>
       )}
 
       {values.endDate && (
-        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
+        <FilterBadge onRemove={() => onRemove("endDate")}>
           To: {format(values.endDate, "MMM d, yyyy")}
-          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("endDate")}>
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
+        </FilterBadge>
       )}
 
-      {values.categoryId && (
-        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
-          Category:{" "}
-          {categories.find((c) => c.id === values.categoryId)?.name ??
-            values.categoryId}
-          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("categoryId")}>
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
-      )}
+      {values.categoryIds?.map((categoryId) => {
+        const category = categories.find((c) => c.id === categoryId);
+        return category ? (
+          <FilterBadge
+            key={categoryId}
+            onRemove={() => onRemove("categoryId", categoryId)}
+          >
+            Category: {category.name}
+          </FilterBadge>
+        ) : null;
+      })}
 
-      {values.subcategoryId && (
-        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
-          Subcategory:{" "}
-          {subcategories.find((s) => s.id === values.subcategoryId)?.name ??
-            values.subcategoryId}
-          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("subcategoryId")}>
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
-      )}
+      {values.subcategoryIds?.map((subcategoryId) => {
+        const subcategory = subcategories.find((s) => s.id === subcategoryId);
+        return subcategory ? (
+          <FilterBadge
+            key={subcategoryId}
+            onRemove={() => onRemove("subcategoryId", subcategoryId)}
+          >
+            Subcategory: {subcategory.name}
+          </FilterBadge>
+        ) : null;
+      })}
 
       {values.tagIds?.map((tagId) => {
         const tag = tags.find((t) => t.id === tagId);
         return tag ? (
-          <Badge key={tagId} variant="secondary" className="gap-1">
+          <FilterBadge key={tagId} onRemove={() => onRemove("tagId", tagId)}>
             Tag: {tag.name}
-            <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("tagId", tagId)}>
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
+          </FilterBadge>
         ) : null;
       })}
 
       {values.accountId && (
-        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
+        <FilterBadge onRemove={() => onRemove("accountId")}>
           Account:{" "}
           {accounts.find((a) => a.id === values.accountId)?.name ??
             values.accountId}
-          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("accountId")}>
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
+        </FilterBadge>
       )}
 
       {values.search && (
-        <Badge variant="secondary" className="text-xs gap-1 hover:bg-secondary/80 transition-colors duration-150">
+        <FilterBadge onRemove={() => onRemove("search")}>
           Search: {values.search}
-          <button type="button" className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer" onClick={() => onRemove("search")}>
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
+        </FilterBadge>
       )}
     </div>
   );

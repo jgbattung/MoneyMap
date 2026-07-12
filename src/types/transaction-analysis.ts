@@ -2,8 +2,8 @@ export interface TransactionAnalysisParams {
   type: "expense" | "income";
   startDate?: string;
   endDate?: string;
-  categoryId?: string;
-  subcategoryId?: string;
+  categoryIds?: string[];
+  subcategoryIds?: string[];
   tagIds?: string[];
   accountId?: string;
   search?: string;
@@ -31,6 +31,7 @@ export interface TransactionAnalysisResponse {
   totalAmount: number;
   transactionCount: number;
   breakdown: TransactionAnalysisBreakdownItem[];
+  breakdownBy: "category" | "subcategory" | null;
   transactions: TransactionAnalysisTransaction[];
   hasMore: boolean;
 }

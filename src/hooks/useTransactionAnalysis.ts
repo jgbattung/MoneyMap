@@ -15,9 +15,10 @@ async function fetchTransactionAnalysis(
 
   if (params.startDate) searchParams.set("startDate", params.startDate);
   if (params.endDate) searchParams.set("endDate", params.endDate);
-  if (params.categoryId) searchParams.set("categoryId", params.categoryId);
-  if (params.subcategoryId)
-    searchParams.set("subcategoryId", params.subcategoryId);
+  if (params.categoryIds && params.categoryIds.length > 0)
+    searchParams.set("categoryIds", params.categoryIds.join(","));
+  if (params.subcategoryIds && params.subcategoryIds.length > 0)
+    searchParams.set("subcategoryIds", params.subcategoryIds.join(","));
   if (params.tagIds && params.tagIds.length > 0)
     searchParams.set("tagIds", params.tagIds.join(","));
   if (params.accountId) searchParams.set("accountId", params.accountId);
@@ -82,6 +83,7 @@ export const useTransactionAnalysis = (
         totalAmount: firstPage.totalAmount,
         transactionCount: firstPage.transactionCount,
         breakdown: firstPage.breakdown,
+        breakdownBy: firstPage.breakdownBy,
         transactions: pages.flatMap((page) => page.transactions),
         hasMore: lastPage.hasMore,
       }

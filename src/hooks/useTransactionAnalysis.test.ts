@@ -227,7 +227,7 @@ describe('useTransactionAnalysis', () => {
 
       const paramsWithFilters = {
         type: 'expense' as const,
-        categoryId: 'cat-1',
+        categoryIds: ['cat-1'],
         accountId: 'acc-1',
         search: 'jollibee',
         tagIds: ['tag-1', 'tag-2'],
@@ -243,10 +243,55 @@ describe('useTransactionAnalysis', () => {
       await waitFor(() => expect(mockFetch).toHaveBeenCalled());
 
       const calledUrl = mockFetch.mock.calls[0][0] as string;
-      expect(calledUrl).toContain('categoryId=cat-1');
+      expect(calledUrl).toContain('categoryIds=cat-1');
       expect(calledUrl).toContain('accountId=acc-1');
       expect(calledUrl).toContain('search=jollibee');
       expect(calledUrl).toContain('tagIds=tag-1%2Ctag-2');
+    });
+
+    it('sends comma-joined categoryIds and subcategoryIds when multiple are selected', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockAnalysisResponse,
+      });
+
+      const paramsWithFilters = {
+        type: 'expense' as const,
+        categoryIds: ['cat-1', 'cat-2'],
+        subcategoryIds: ['sub-1', 'sub-2'],
+      };
+
+      const { result } = renderHook(
+        () => useTransactionAnalysis(paramsWithFilters),
+        { wrapper: createWrapper() }
+      );
+
+      await result.current.refetch();
+
+      await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      expect(calledUrl).toContain('categoryIds=cat-1%2Ccat-2');
+      expect(calledUrl).toContain('subcategoryIds=sub-1%2Csub-2');
+    });
+
+    it('carries breakdownBy from the first page into the combined data', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ...mockAnalysisResponse, breakdownBy: 'subcategory' }),
+      });
+
+      const { result } = renderHook(() => useTransactionAnalysis(mockParams), {
+        wrapper: createWrapper(),
+      });
+
+      await result.current.refetch();
+
+      await waitFor(() => {
+        expect(result.current.data).not.toBeNull();
+      });
+
+      expect(result.current.data?.breakdownBy).toBe('subcategory');
     });
   });
 

@@ -38,8 +38,8 @@ export async function GET(req: NextRequest) {
       type,
       startDate,
       endDate,
-      categoryId,
-      subcategoryId,
+      categoryIds,
+      subcategoryIds,
       tagIds,
       accountId,
       search,
@@ -52,6 +52,14 @@ export async function GET(req: NextRequest) {
     // Parse tag IDs from comma-separated string
     const tagIdArray = tagIds
       ? tagIds.split(",").filter((id) => id.trim().length > 0)
+      : [];
+
+    // Parse category/subcategory IDs from comma-separated strings
+    const categoryIdArray = categoryIds
+      ? categoryIds.split(",").filter((id) => id.trim().length > 0)
+      : [];
+    const subcategoryIdArray = subcategoryIds
+      ? subcategoryIds.split(",").filter((id) => id.trim().length > 0)
       : [];
 
     // Build dynamic where clause
@@ -71,16 +79,16 @@ export async function GET(req: NextRequest) {
       where.date = { ...where.date, lte: end };
     }
 
-    if (categoryId) {
+    if (categoryIdArray.length > 0) {
       if (isExpense) {
-        where.expenseTypeId = categoryId;
+        where.expenseTypeId = { in: categoryIdArray };
       } else {
-        where.incomeTypeId = categoryId;
+        where.incomeTypeId = { in: categoryIdArray };
       }
     }
 
-    if (subcategoryId && isExpense) {
-      where.expenseSubcategoryId = subcategoryId;
+    if (subcategoryIdArray.length > 0 && isExpense) {
+      where.expenseSubcategoryId = { in: subcategoryIdArray };
     }
 
     if (accountId) {
@@ -112,8 +120,8 @@ export async function GET(req: NextRequest) {
         getBreakdown(
           isExpense,
           where,
-          categoryId,
-          subcategoryId,
+          categoryIdArray,
+          subcategoryIdArray,
           userId
         ),
 
@@ -145,7 +153,7 @@ export async function GET(req: NextRequest) {
     const transactionCount = aggregateResult._count;
 
     // Calculate breakdown percentages
-    const breakdown = breakdownResult.map(
+    const breakdown = breakdownResult.items.map(
       (item: { id: string; name: string; amount: number }) => ({
         id: item.id,
         name: item.name,
@@ -177,6 +185,7 @@ export async function GET(req: NextRequest) {
       totalAmount,
       transactionCount,
       breakdown,
+      breakdownBy: breakdownResult.breakdownBy,
       transactions,
       hasMore,
     };
@@ -195,41 +204,26 @@ async function getBreakdown(
   isExpense: boolean,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   where: any,
-  categoryId: string | undefined,
-  subcategoryId: string | undefined,
+  categoryIdArray: string[],
+  subcategoryIdArray: string[],
   userId: string
-): Promise<{ id: string; name: string; amount: number }[]> {
-  // If subcategory is selected, or income with category — no breakdown
-  if (subcategoryId) return [];
-  if (!isExpense && categoryId) return [];
-
+): Promise<{
+  items: { id: string; name: string; amount: number }[];
+  breakdownBy: "category" | "subcategory" | null;
+}> {
   if (isExpense) {
-    if (!categoryId) {
-      // Group by expense type
-      const groups = await db.expenseTransaction.groupBy({
-        by: ["expenseTypeId"],
-        where,
-        _sum: { amount: true },
-      });
+    // Exactly 1 subcategory selected — a 1-row breakdown is noise
+    if (subcategoryIdArray.length === 1) {
+      return { items: [], breakdownBy: null };
+    }
 
-      if (groups.length === 0) return [];
+    // 2+ subcategories selected (any # of categories) — group by subcategory, restricted via where
+    // Exactly 1 category and no subcategories — group by subcategory (existing behavior)
+    const groupBySubcategory =
+      subcategoryIdArray.length >= 2 ||
+      (subcategoryIdArray.length === 0 && categoryIdArray.length === 1);
 
-      const types = await db.expenseType.findMany({
-        where: { userId },
-        select: { id: true, name: true },
-      });
-      const typeMap = new Map(types.map((t) => [t.id, t.name]));
-
-      return groups
-        .map((g) => ({
-          id: g.expenseTypeId,
-          name: typeMap.get(g.expenseTypeId) ?? "Unknown",
-          amount:
-            Math.round(parseFloat(g._sum.amount?.toString() ?? "0") * 100) /
-            100,
-        }))
-        .sort((a, b) => b.amount - a.amount);
-    } else {
+    if (groupBySubcategory) {
       // Group by subcategory
       const groups = await db.expenseTransaction.groupBy({
         by: ["expenseSubcategoryId"],
@@ -237,7 +231,7 @@ async function getBreakdown(
         _sum: { amount: true },
       });
 
-      if (groups.length === 0) return [];
+      if (groups.length === 0) return { items: [], breakdownBy: "subcategory" };
 
       const subcategoryIds = groups
         .map((g) => g.expenseSubcategoryId)
@@ -252,7 +246,7 @@ async function getBreakdown(
           : [];
       const subMap = new Map(subcategories.map((s) => [s.id, s.name]));
 
-      return groups
+      const items = groups
         .map((g) => ({
           id: g.expenseSubcategoryId ?? "uncategorized",
           name: g.expenseSubcategoryId
@@ -263,16 +257,48 @@ async function getBreakdown(
             100,
         }))
         .sort((a, b) => b.amount - a.amount);
+      return { items, breakdownBy: "subcategory" };
+    } else {
+      // No categories, or 2+ categories with no subcategories — group by expense type, restricted via where
+      const groups = await db.expenseTransaction.groupBy({
+        by: ["expenseTypeId"],
+        where,
+        _sum: { amount: true },
+      });
+
+      if (groups.length === 0) return { items: [], breakdownBy: "category" };
+
+      const types = await db.expenseType.findMany({
+        where: { userId },
+        select: { id: true, name: true },
+      });
+      const typeMap = new Map(types.map((t) => [t.id, t.name]));
+
+      const items = groups
+        .map((g) => ({
+          id: g.expenseTypeId,
+          name: typeMap.get(g.expenseTypeId) ?? "Unknown",
+          amount:
+            Math.round(parseFloat(g._sum.amount?.toString() ?? "0") * 100) /
+            100,
+        }))
+        .sort((a, b) => b.amount - a.amount);
+      return { items, breakdownBy: "category" };
     }
   } else {
-    // Income: group by income type
+    // Income: exactly 1 category selected — a 1-row breakdown is noise
+    if (categoryIdArray.length === 1) {
+      return { items: [], breakdownBy: null };
+    }
+
+    // No categories, or 2+ categories — group by income type, restricted via where
     const groups = await db.incomeTransaction.groupBy({
       by: ["incomeTypeId"],
       where,
       _sum: { amount: true },
     });
 
-    if (groups.length === 0) return [];
+    if (groups.length === 0) return { items: [], breakdownBy: "category" };
 
     const types = await db.incomeType.findMany({
       where: { userId },
@@ -280,13 +306,15 @@ async function getBreakdown(
     });
     const typeMap = new Map(types.map((t) => [t.id, t.name]));
 
-    return groups
+    const items = groups
       .map((g) => ({
         id: g.incomeTypeId,
         name: typeMap.get(g.incomeTypeId) ?? "Unknown",
         amount:
-          Math.round(parseFloat(g._sum.amount?.toString() ?? "0") * 100) / 100,
+          Math.round(parseFloat(g._sum.amount?.toString() ?? "0") * 100) /
+          100,
       }))
       .sort((a, b) => b.amount - a.amount);
+    return { items, breakdownBy: "category" };
   }
 }

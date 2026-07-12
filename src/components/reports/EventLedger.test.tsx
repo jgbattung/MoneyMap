@@ -430,6 +430,7 @@ async function openPanelWithResults(searchTransactions = mockSearchTransactions)
       totalAmount: searchTransactions.reduce((sum, t) => sum + t.amount, 0),
       transactionCount: searchTransactions.length,
       breakdown: [],
+      breakdownBy: null,
       transactions: searchTransactions,
       hasMore: false,
     },
