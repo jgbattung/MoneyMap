@@ -33,7 +33,7 @@ Detailed pattern guides live next to the code and load automatically when workin
 ## Design System
 
 - **Dark-only**; light `:root` tokens are placeholders. Palette = OKLCH vars in Tailwind v4 `@theme` - change tokens, never per-component colors.
-- Money: `₱` + `.text-numeric` (Geist Mono, tabular-nums). Category chart colors via `getCategoryColor` in `src/lib/chart-colors.ts`, not index-based palettes.
+- Money: `₱` + `.text-numeric` (Geist Mono, tabular-nums). Category chart colors via `getCategoryColorMap` in `src/lib/chart-colors.ts` - a curated 20-color OKLCH palette assigned set-aware, guaranteeing distinct colors for up to 20 categories per render.
 - Skeleton fill is single-sourced in `src/components/ui/skeleton.tsx` - no per-usage bg overrides.
 - Gain/loss uses semantic tokens (`text-text-success/error`) always paired with a sign/arrow cue.
 
