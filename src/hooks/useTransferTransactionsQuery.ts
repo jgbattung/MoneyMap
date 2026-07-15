@@ -18,7 +18,8 @@ export type TransferTransaction = {
   transferTypeId: string;
   date: string;
   notes: string | null;
-  feeAmount: number | null;
+  // Prisma Decimal — string in server responses, number on optimistic rows.
+  feeAmount: number | string | null;
   feeExpenseId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -392,7 +393,8 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
         // Fee deltas only when the request carries feeAmount (server gates
         // all fee balance ops on feeAmount !== undefined).
         if (changes.feeAmount !== undefined) {
-          const oldFee = oldRow.feeAmount ?? null;
+          // feeAmount is a Prisma Decimal — a string in server rows.
+          const oldFee = oldRow.feeAmount != null ? parseFloat(String(oldRow.feeAmount)) : null;
           const parsedFee = changes.feeAmount ? parseFloat(String(changes.feeAmount)) : 0;
           const newFee = parsedFee > 0 ? parsedFee : null;
 
@@ -469,8 +471,10 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
       if (deletedRow && !Number.isNaN(deletedRow.amount)) {
         applyAccountDelta(queryClient, deletedRow.fromAccountId, deletedRow.amount);
         applyAccountDelta(queryClient, deletedRow.toAccountId, -deletedRow.amount);
-        if (deletedRow.feeAmount && deletedRow.feeExpenseId) {
-          applyAccountDelta(queryClient, deletedRow.fromAccountId, deletedRow.feeAmount);
+        // feeAmount is a Prisma Decimal — a string in server rows.
+        const deletedFee = deletedRow.feeAmount ? parseFloat(String(deletedRow.feeAmount)) : 0;
+        if (!Number.isNaN(deletedFee) && deletedFee > 0 && deletedRow.feeExpenseId) {
+          applyAccountDelta(queryClient, deletedRow.fromAccountId, deletedFee);
         }
       }
 

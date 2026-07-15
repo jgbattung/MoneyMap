@@ -752,6 +752,41 @@ describe('useTransfersQuery', () => {
       resolveDelete({ ok: true, json: async () => ({}) });
     });
 
+    it('deletes and reverses the fee when feeAmount is a Decimal string (server shape)', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+      seedBalanceCaches(queryClient);
+      // Server rows serialize Prisma Decimals as strings.
+      queryClient.setQueryData(listKey, {
+        transactions: [{ ...mockTransfer, amount: 400, feeAmount: '15.00', feeExpenseId: 'fee-1' }],
+        total: 1,
+        hasMore: false,
+      });
+
+      let resolveDelete!: (v: unknown) => void;
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveDelete = resolve; }));
+
+      const { result } = renderHook(() => useTransfersQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => {
+        result.current.deleteTransfer('transfer-1');
+      });
+
+      // The DELETE request must actually fire (a throw in onMutate would skip it)
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith('/api/transfer-transactions/transfer-1', { method: 'DELETE' });
+      });
+      const accounts = queryClient.getQueryData<any>(accountsKey);
+      // +400 transfer + 15 fee refunded
+      expect(accounts[0].currentBalance).toBe('5415.00');
+      expect(accounts[1].currentBalance).toBe('1600.00');
+      expect(queryClient.getQueryData<any>(netWorthKey).currentNetWorth).toBe(7315);
+
+      resolveDelete({ ok: true, json: async () => ({}) });
+    });
+
     it('reverses old deltas and applies new ones on an account-move edit', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
       seedBalanceCaches(queryClient);
