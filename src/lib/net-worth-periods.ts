@@ -57,3 +57,89 @@ export function resolvePeriodBounds(
   const startIndex = endIndex - monthsBack;
   return startIndex < 0 ? null : { startIndex, endIndex };
 }
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+export interface PeriodDelta {
+  amount: number;
+  percentage: number;
+}
+
+/**
+ * Peso delta over the bounds, plus a percentage computed against a
+ * balance-derived baseline (`currentNetWorth - amount`), mirroring
+ * `src/lib/net-worth.ts:68`. The `totalInitialBalance` constant baked into
+ * every history entry cancels out of the peso amount but would inflate a
+ * naive percentage-of-start-value calculation across a roster change.
+ */
+export function computePeriodDelta(
+  history: HistoryPoint[],
+  bounds: PeriodBounds,
+  currentNetWorth: number
+): PeriodDelta {
+  const amount = round2(history[bounds.endIndex].netWorth - history[bounds.startIndex].netWorth);
+  const baseline = currentNetWorth - amount;
+  const percentage = baseline !== 0 ? round2((amount / Math.abs(baseline)) * 100) : 0;
+  return { amount, percentage };
+}
+
+export interface MonthlyChange {
+  month: string;
+  change: number;
+}
+
+/** First-difference series across the bounds - one entry per month after the opening point. */
+export function computeMonthlyChanges(history: HistoryPoint[], bounds: PeriodBounds): MonthlyChange[] {
+  const changes: MonthlyChange[] = [];
+  for (let i = bounds.startIndex + 1; i <= bounds.endIndex; i++) {
+    changes.push({
+      month: history[i].month,
+      change: round2(history[i].netWorth - history[i - 1].netWorth),
+    });
+  }
+  return changes;
+}
+
+export interface PeriodStats {
+  peak: { value: number; month: string };
+  average: number;
+  monthsUp: number;
+  monthsTotal: number;
+  streak: number;
+}
+
+/**
+ * Derived stats for the bounds. `peak` is the maximum cumulative `netWorth`
+ * level within bounds (scanned from `history`, NOT from `monthlyChanges` -
+ * a level is not derivable from a first-difference series). `streak` counts
+ * trailing consecutive positive months.
+ */
+export function computeStats(
+  monthlyChanges: MonthlyChange[],
+  history: HistoryPoint[],
+  bounds: PeriodBounds
+): PeriodStats {
+  let peak = { value: history[bounds.startIndex].netWorth, month: history[bounds.startIndex].month };
+  for (let i = bounds.startIndex; i <= bounds.endIndex; i++) {
+    if (history[i].netWorth > peak.value) {
+      peak = { value: history[i].netWorth, month: history[i].month };
+    }
+  }
+  peak = { value: round2(peak.value), month: peak.month };
+
+  const monthsTotal = monthlyChanges.length;
+  const average = monthsTotal > 0
+    ? round2(monthlyChanges.reduce((sum, m) => sum + m.change, 0) / monthsTotal)
+    : 0;
+  const monthsUp = monthlyChanges.filter((m) => m.change > 0).length;
+
+  let streak = 0;
+  for (let i = monthlyChanges.length - 1; i >= 0; i--) {
+    if (monthlyChanges[i].change > 0) streak++;
+    else break;
+  }
+
+  return { peak, average, monthsUp, monthsTotal, streak };
+}
