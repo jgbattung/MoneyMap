@@ -143,3 +143,41 @@ export function computeStats(
 
   return { peak, average, monthsUp, monthsTotal, streak };
 }
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+export type TargetProjection =
+  | { kind: 'met' }
+  | { kind: 'insufficient-data' }
+  | { kind: 'not-on-pace' }
+  | { kind: 'on-pace'; date: Date; monthsOut: number };
+
+/**
+ * Hedged target-date projection. Uses the MEDIAN monthly change, never the
+ * mean - the mean is dominated by a single outlier month in a short series.
+ * Checked in this order: already met, then insufficient history, then a
+ * non-positive trend, otherwise a projected date.
+ */
+export function projectTargetDate(
+  monthlyChanges: MonthlyChange[],
+  currentNetWorth: number,
+  target: number,
+  minMonths = 3
+): TargetProjection {
+  if (currentNetWorth >= target) return { kind: 'met' };
+  if (monthlyChanges.length < minMonths) return { kind: 'insufficient-data' };
+
+  const medianChange = median(monthlyChanges.map((m) => m.change));
+  if (medianChange <= 0) return { kind: 'not-on-pace' };
+
+  const remaining = target - currentNetWorth;
+  const monthsOut = Math.ceil(remaining / medianChange);
+  const date = new Date();
+  date.setMonth(date.getMonth() + monthsOut);
+
+  return { kind: 'on-pace', date, monthsOut };
+}

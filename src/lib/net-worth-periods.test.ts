@@ -4,7 +4,9 @@ import {
   computePeriodDelta,
   computeMonthlyChanges,
   computeStats,
+  projectTargetDate,
   type HistoryPoint,
+  type MonthlyChange,
 } from './net-worth-periods';
 
 describe('resolvePeriodBounds', () => {
@@ -164,5 +166,50 @@ describe('computeStats', () => {
     expect(stats.monthsUp).toBe(1);
     expect(stats.streak).toBe(1);
     expect(stats.average).toBe(3000);
+  });
+});
+
+describe('projectTargetDate', () => {
+  const toChanges = (values: number[]): MonthlyChange[] =>
+    values.map((change, i) => ({ month: `M${i}`, change }));
+
+  it('returns not-on-pace when the median monthly change is non-positive', () => {
+    const result = projectTargetDate(toChanges([-5, -3, -8]), 100000, 200000);
+    expect(result.kind).toBe('not-on-pace');
+  });
+
+  it('returns insufficient-data for a series shorter than minMonths', () => {
+    const result = projectTargetDate(toChanges([5000, 6000]), 100000, 200000);
+    expect(result.kind).toBe('insufficient-data');
+  });
+
+  it('returns met when the target is already reached', () => {
+    const result = projectTargetDate(toChanges([-5, -3, -8]), 200000, 200000);
+    expect(result.kind).toBe('met');
+  });
+
+  it('projects from the median, landing materially later than a mean-based calculation would', () => {
+    // Median of [1000, 1000, 1000, 50000] is 1000; mean is 13250.
+    // A mean-based projection would reach a 100000 gap in ~8 months;
+    // the median-based one should take dramatically longer.
+    const changes = toChanges([1000, 1000, 1000, 50000]);
+    const currentNetWorth = 0;
+    const target = 100000;
+
+    const result = projectTargetDate(changes, currentNetWorth, target);
+    expect(result.kind).toBe('on-pace');
+    if (result.kind === 'on-pace') {
+      const meanBasedMonths = Math.ceil(target / (13250));
+      expect(result.monthsOut).toBeGreaterThan(meanBasedMonths * 2);
+    }
+  });
+
+  it('never emits a past date for an on-pace projection', () => {
+    const changes = toChanges([5000, 6000, 4000]);
+    const result = projectTargetDate(changes, 100000, 150000);
+    expect(result.kind).toBe('on-pace');
+    if (result.kind === 'on-pace') {
+      expect(result.date.getTime()).toBeGreaterThan(Date.now());
+    }
   });
 });
