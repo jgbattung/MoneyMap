@@ -18,8 +18,8 @@ vi.mock('@/hooks/useEarliestTransaction', () => ({
 }));
 
 // Mock child components to isolate Reports page logic
-vi.mock('@/components/shared/NetWorthCard', () => ({
-  default: () => React.createElement('div', { 'data-testid': 'net-worth-card' }),
+vi.mock('@/components/reports/NetWorthOverview', () => ({
+  default: () => React.createElement('div', { 'data-testid': 'net-worth-overview' }),
 }));
 
 vi.mock('@/components/shared/CategoryBreakdownChart', () => ({
@@ -104,9 +104,9 @@ describe('Reports page', () => {
       expect(screen.getByText('Reports')).toBeTruthy();
     });
 
-    it('renders the NetWorthCard component', () => {
+    it('renders the NetWorthOverview component', () => {
       render(React.createElement(Reports), { wrapper: createWrapper() });
-      expect(screen.getByTestId('net-worth-card')).toBeTruthy();
+      expect(screen.getByTestId('net-worth-overview')).toBeTruthy();
     });
 
     it('renders the AnnualSummaryTable component', () => {
