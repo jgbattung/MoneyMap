@@ -31,6 +31,20 @@ describe('resolvePeriodBounds', () => {
     expect(resolvePeriodBounds('3M', history, now)).toEqual({ startIndex: 4, endIndex: 7 });
   });
 
+  it('resolves 6M to six months back when six months of history exist', () => {
+    expect(resolvePeriodBounds('6M', history, now)).toEqual({ startIndex: 1, endIndex: 7 });
+  });
+
+  it('returns null for 6M when fewer than six months of history is available', () => {
+    const shortHistory: HistoryPoint[] = [
+      { month: 'Apr 2026', netWorth: 100 },
+      { month: 'May 2026', netWorth: 105 },
+      { month: 'Jun 2026', netWorth: 108 },
+      { month: 'Jul 2026', netWorth: 110 },
+    ];
+    expect(resolvePeriodBounds('6M', shortHistory, now)).toBeNull();
+  });
+
   it('resolves YEAR to the December entry of the previous calendar year', () => {
     expect(resolvePeriodBounds('YEAR', history, now)).toEqual({ startIndex: 0, endIndex: 7 });
   });
@@ -51,6 +65,7 @@ describe('resolvePeriodBounds', () => {
     const single: HistoryPoint[] = [{ month: 'Jul 2026', netWorth: 100 }];
     expect(resolvePeriodBounds('1M', single, now)).toBeNull();
     expect(resolvePeriodBounds('3M', single, now)).toBeNull();
+    expect(resolvePeriodBounds('6M', single, now)).toBeNull();
     expect(resolvePeriodBounds('YEAR', single, now)).toBeNull();
     expect(resolvePeriodBounds('1Y', single, now)).toBeNull();
   });

@@ -25,6 +25,7 @@ const PERIOD_KEY = 'networth-overview-period'
 const PERIOD_DEFS: { period: Period; label: string }[] = [
   { period: '1M', label: '1M' },
   { period: '3M', label: '3M' },
+  { period: '6M', label: '6M' },
   { period: 'YEAR', label: 'This year' },
   { period: '1Y', label: '1Y' },
 ]
@@ -32,6 +33,7 @@ const PERIOD_DEFS: { period: Period; label: string }[] = [
 const SCOPE_LABELS: Record<Period, string> = {
   '1M': 'last month',
   '3M': 'last 3M',
+  '6M': 'last 6M',
   YEAR: 'this year',
   '1Y': 'last year',
 }
@@ -39,6 +41,7 @@ const SCOPE_LABELS: Record<Period, string> = {
 const MONTHS_BACK: Record<Exclude<Period, 'YEAR'>, number> = {
   '1M': 1,
   '3M': 3,
+  '6M': 6,
   '1Y': 12,
 }
 

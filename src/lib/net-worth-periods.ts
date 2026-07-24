@@ -4,7 +4,7 @@
  * already fetched by `useNetWorthHistory`.
  */
 
-export type Period = '1M' | '3M' | 'YEAR' | '1Y';
+export type Period = '1M' | '3M' | '6M' | 'YEAR' | '1Y';
 
 export interface HistoryPoint {
   month: string; // e.g. "Jul 2026" - matches `/api/net-worth/history` response shape
@@ -26,6 +26,7 @@ function parseMonthLabel(label: string): { year: number; month: number } {
 const PERIOD_MONTHS_BACK: Record<Exclude<Period, 'YEAR'>, number> = {
   '1M': 1,
   '3M': 3,
+  '6M': 6,
   '1Y': 12,
 };
 
