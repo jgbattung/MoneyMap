@@ -15,7 +15,14 @@ vi.mock('@/hooks/useNetWorthTarget', () => ({
 }));
 
 vi.mock('@/components/forms/SetTargetDialog', () => ({
-  default: () => null,
+  default: ({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) =>
+    open
+      ? React.createElement(
+          'div',
+          { 'data-testid': 'set-target-dialog' },
+          React.createElement('button', { onClick: () => onOpenChange(false) }, 'Close Dialog')
+        )
+      : null,
 }));
 
 vi.mock('lucide-react', () => ({
@@ -104,6 +111,39 @@ describe('NetWorthOverview', () => {
       wrapper: createWrapper(),
     });
     expect(container.querySelector('.money-map-card')).toBeTruthy();
+  });
+
+  it('renders the formatted headline net worth with the PHP currency label', () => {
+    render(React.createElement(NetWorthOverview), { wrapper: createWrapper() });
+    expect(screen.getByText('Total Net Worth')).toBeTruthy();
+    expect(screen.getByText('130,000.00')).toBeTruthy();
+    expect(screen.getByText('₱')).toBeTruthy();
+  });
+
+  it('renders "Set target" when no target is set and opens the dialog on click', () => {
+    render(React.createElement(NetWorthOverview), { wrapper: createWrapper() });
+
+    const button = screen.getByRole('button', { name: 'Set target' });
+    expect(screen.queryByTestId('set-target-dialog')).toBeNull();
+
+    fireEvent.click(button);
+    expect(screen.getByTestId('set-target-dialog')).toBeTruthy();
+  });
+
+  it('renders "Edit target" and the progress bar when a target is set', () => {
+    vi.mocked(useNetWorthTarget).mockReturnValue({
+      target: 500000,
+      targetDate: null,
+      isLoading: false,
+      error: null,
+      updateTarget: vi.fn(),
+      isUpdating: false,
+    });
+
+    render(React.createElement(NetWorthOverview), { wrapper: createWrapper() });
+
+    expect(screen.getByRole('button', { name: 'Edit target' })).toBeTruthy();
+    expect(screen.getByText(/Target: ₱500,000\.00/)).toBeTruthy();
   });
 
   it('rescopes the bars and stats (not just the delta) when the period changes', () => {
