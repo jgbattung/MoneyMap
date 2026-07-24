@@ -56,6 +56,7 @@ const NetWorthMonthlyBars = ({ data }: NetWorthMonthlyBarsProps) => {
           <Bar
             dataKey='change'
             radius={[2, 2, 2, 2]}
+            maxBarSize={48}
             isAnimationActive={!prefersReducedMotion}
             animationDuration={CHART_DRAW_MS}
             animationEasing='ease-out'

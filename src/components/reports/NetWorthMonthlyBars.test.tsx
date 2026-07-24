@@ -11,8 +11,8 @@ vi.mock('framer-motion', () => ({
 vi.mock('recharts', () => ({
   BarChart: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', { 'data-testid': 'bar-chart' }, children),
-  Bar: ({ dataKey, children }: { dataKey: string; children: React.ReactNode }) =>
-    React.createElement('div', { 'data-testid': `bar-${dataKey}` }, children),
+  Bar: ({ dataKey, maxBarSize, children }: { dataKey: string; maxBarSize?: number; children: React.ReactNode }) =>
+    React.createElement('div', { 'data-testid': `bar-${dataKey}`, 'data-max-bar-size': maxBarSize }, children),
   Cell: ({ fill }: { fill: string }) =>
     React.createElement('div', { 'data-testid': 'bar-cell', 'data-fill': fill }),
   CartesianGrid: () => null,
@@ -59,5 +59,11 @@ describe('NetWorthMonthlyBars', () => {
     render(React.createElement(NetWorthMonthlyBars, { data: SAMPLE_DATA }));
     const cells = screen.getAllByTestId('bar-cell');
     expect(cells[0].getAttribute('data-fill')).toBe('var(--text-success)');
+  });
+
+  it('caps bar width via maxBarSize so few-bar periods do not balloon', () => {
+    render(React.createElement(NetWorthMonthlyBars, { data: SAMPLE_DATA }));
+    const bar = screen.getByTestId('bar-change');
+    expect(bar.getAttribute('data-max-bar-size')).toBe('48');
   });
 });
