@@ -17,7 +17,7 @@ const basePeriods = [
 ];
 
 describe('NetWorthPeriodDelta', () => {
-  it('renders an unavailable period disabled and shows its unlock month', () => {
+  it('renders an unavailable period disabled, keeping its original label, with the unlock month as a tooltip', () => {
     render(
       React.createElement(NetWorthPeriodDelta, {
         netWorth: 150000,
@@ -28,8 +28,9 @@ describe('NetWorthPeriodDelta', () => {
       })
     );
 
-    const button = screen.getByRole('radio', { name: /Unlocks Jan 2027/ });
+    const button = screen.getByRole('radio', { name: '1Y' });
     expect(button.hasAttribute('disabled')).toBe(true);
+    expect(button.getAttribute('title')).toBe('Unlocks Jan 2027');
   });
 
   it('renders the up arrow and success color for a positive delta', () => {

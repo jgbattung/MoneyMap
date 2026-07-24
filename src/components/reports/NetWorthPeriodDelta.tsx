@@ -60,7 +60,7 @@ const NetWorthPeriodDelta = ({ netWorth, periods, selected, onSelect, delta }: N
               title={p.available ? undefined : `Unlocks ${p.unlocksAt}`}
               className='h-7 rounded-md px-2 text-xs font-medium text-muted-foreground data-[state=on]:bg-primary/15 data-[state=on]:text-primary disabled:opacity-40 disabled:cursor-not-allowed'
             >
-              {p.available ? p.label : `Unlocks ${p.unlocksAt}`}
+              {p.label}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>

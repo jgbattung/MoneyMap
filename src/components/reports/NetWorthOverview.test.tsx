@@ -171,10 +171,11 @@ describe('NetWorthOverview', () => {
     expect(oneMonthButton.getAttribute('data-state')).toBe('on');
   });
 
-  it('renders a disabled 1Y toggle with its unlock month', () => {
+  it('renders a disabled 1Y toggle keeping its label, with the unlock month as a tooltip', () => {
     render(React.createElement(NetWorthOverview), { wrapper: createWrapper() });
-    const oneYearButton = screen.getByRole('radio', { name: /Unlocks/ });
+    const oneYearButton = screen.getByRole('radio', { name: '1Y' });
     expect(oneYearButton.hasAttribute('disabled')).toBe(true);
+    expect(oneYearButton.getAttribute('title')).toMatch(/^Unlocks /);
   });
 
   describe('band-level error isolation', () => {
