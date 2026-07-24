@@ -95,8 +95,12 @@ export async function GET(_req: NextRequest) {
       windowStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
     }
 
+    // Start one month before windowStart: that leading month has zero flows,
+    // so it computes to the true opening balance (fixes the month-end
+    // off-by-one where history[jan] is Jan 31 and already includes January's
+    // activity).
     const windowMonths: { year: number; month: number }[] = [];
-    const cursor = new Date(windowStart);
+    const cursor = new Date(windowStart.getFullYear(), windowStart.getMonth() - 1, 1);
     while (cursor <= currentMonthStart) {
       windowMonths.push({ year: cursor.getFullYear(), month: cursor.getMonth() + 1 });
       cursor.setMonth(cursor.getMonth() + 1);

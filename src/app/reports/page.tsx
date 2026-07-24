@@ -1,6 +1,6 @@
 "use client"
 
-import NetWorthCard from '@/components/shared/NetWorthCard'
+import NetWorthOverview from '@/components/reports/NetWorthOverview'
 import CategoryBreakdownChart from '@/components/shared/CategoryBreakdownChart'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -66,7 +66,7 @@ const Reports = () => {
 
       <div className='mt-2 space-y-6'>
         <div>
-          <NetWorthCard />
+          <NetWorthOverview />
         </div>
 
         {/* Category Breakdown Card with Tabs */}
