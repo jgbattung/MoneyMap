@@ -136,4 +136,39 @@ describe('NetWorthOverview', () => {
     const oneYearButton = screen.getByRole('radio', { name: /Unlocks/ });
     expect(oneYearButton.hasAttribute('disabled')).toBe(true);
   });
+
+  describe('band-level error isolation', () => {
+    it('keeps the headline and target bar rendering when history fails, replacing bars with an inline message', () => {
+      vi.mocked(useNetWorthHistory).mockReturnValue({
+        history: [],
+        isLoading: false,
+        error: 'Failed to fetch net worth history',
+      });
+
+      render(React.createElement(NetWorthOverview), { wrapper: createWrapper() });
+
+      // Band 1 headline still renders
+      expect(screen.getByText('Total Net Worth')).toBeTruthy();
+      expect(screen.getByText(/130,000\.00/)).toBeTruthy();
+      // Band 4 target bar (no-target affordance) still renders
+      expect(screen.getByRole('button', { name: 'Set target' })).toBeTruthy();
+      // Bands 2-3 replaced by the inline failure message
+      expect(screen.getByText("Couldn't load history")).toBeTruthy();
+      expect(screen.queryByTestId('bar-chart')).toBeNull();
+    });
+
+    it('renders the whole-card error surface when useNetWorth fails, even if history succeeds', () => {
+      vi.mocked(useNetWorth).mockReturnValue({
+        netWorth: 0,
+        monthlyChange: { amount: 0, percentage: 0 },
+        isLoading: false,
+        error: 'Failed to fetch net worth',
+      });
+
+      render(React.createElement(NetWorthOverview), { wrapper: createWrapper() });
+
+      expect(screen.getByText('Failed to load net worth')).toBeTruthy();
+      expect(screen.queryByText('Total Net Worth')).toBeNull();
+    });
+  });
 });

@@ -98,7 +98,8 @@ const NetWorthOverview = () => {
   const projection = target ? projectTargetDate(monthlyChanges, netWorth, target) : null
 
   const isLoading = isLoadingNetWorth || isLoadingHistory || isLoadingTarget
-  const error = netWorthError || historyError || targetError
+  // A history failure isolates to bands 2-3; net worth/target failures fail the whole card.
+  const wholeCardError = netWorthError || targetError
 
   if (isLoading) {
     return (
@@ -128,12 +129,12 @@ const NetWorthOverview = () => {
     )
   }
 
-  if (error) {
+  if (wholeCardError) {
     return (
       <div className='money-map-card flex flex-col max-w-5xl gap-3'>
         <div className='flex flex-col items-center justify-center py-12 text-center'>
           <p className='text-error-600 font-semibold'>Failed to load net worth</p>
-          <p className='text-muted-foreground text-sm mt-2'>{error}</p>
+          <p className='text-muted-foreground text-sm mt-2'>{wholeCardError}</p>
         </div>
       </div>
     )
@@ -147,17 +148,25 @@ const NetWorthOverview = () => {
           periods={periods}
           selected={selectedPeriod}
           onSelect={handleSelectPeriod}
-          delta={delta}
+          delta={historyError ? null : delta}
         />
 
-        <div className='pt-2 border-t border-border'>
-          <NetWorthMonthlyBars data={monthlyChanges} />
-        </div>
-
-        {stats && (
-          <div className='pt-2 border-t border-border'>
-            <NetWorthStats stats={stats} scopeLabel={SCOPE_LABELS[selectedPeriod]} />
+        {historyError ? (
+          <div className='pt-2 border-t border-border py-6 text-center'>
+            <p className='text-muted-foreground text-sm'>Couldn&apos;t load history</p>
           </div>
+        ) : (
+          <>
+            <div className='pt-2 border-t border-border'>
+              <NetWorthMonthlyBars data={monthlyChanges} />
+            </div>
+
+            {stats && (
+              <div className='pt-2 border-t border-border'>
+                <NetWorthStats stats={stats} scopeLabel={SCOPE_LABELS[selectedPeriod]} />
+              </div>
+            )}
+          </>
         )}
 
         <NetWorthTargetProgress
