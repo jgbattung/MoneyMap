@@ -73,6 +73,19 @@ describe('resolvePeriodBounds', () => {
   it('returns null for an empty history', () => {
     expect(resolvePeriodBounds('1M', [], now)).toBeNull();
   });
+
+  it('locates the previous-December anchor when it is not at index 0', () => {
+    // Series that opens earlier than Dec 2025, so the anchor is mid-array —
+    // guards against a findIndex regression that assumed the opening point.
+    const longer: HistoryPoint[] = [
+      { month: 'Oct 2025', netWorth: 90000 },
+      { month: 'Nov 2025', netWorth: 95000 },
+      { month: 'Dec 2025', netWorth: 100000 },
+      { month: 'Jan 2026', netWorth: 105000 },
+      { month: 'Feb 2026', netWorth: 108000 },
+    ];
+    expect(resolvePeriodBounds('YEAR', longer, now)).toEqual({ startIndex: 2, endIndex: 4 });
+  });
 });
 
 describe('computePeriodDelta', () => {
@@ -96,6 +109,8 @@ describe('computePeriodDelta', () => {
   it('handles a negative delta', () => {
     const delta = computePeriodDelta(history, { startIndex: 0, endIndex: 1 }, 90000);
     expect(delta.amount).toBe(-10000);
+    // baseline = 90000 - (-10000) = 100000, pct = -10000 / 100000 * 100 = -10%
+    expect(delta.percentage).toBe(-10);
   });
 
   it('guards divide-by-zero baseline to 0', () => {
@@ -181,6 +196,22 @@ describe('computeStats', () => {
     expect(stats.monthsUp).toBe(1);
     expect(stats.streak).toBe(1);
     expect(stats.average).toBe(3000);
+  });
+
+  it('reports the peak level even when it is not the trailing month', () => {
+    // Peak is Feb (mid-period); a later drawdown must not shift peak to the end.
+    const history: HistoryPoint[] = [
+      { month: 'Jan 2026', netWorth: 100000 },
+      { month: 'Feb 2026', netWorth: 130000 },
+      { month: 'Mar 2026', netWorth: 90000 },
+    ];
+    const bounds = { startIndex: 0, endIndex: 2 };
+    const changes = computeMonthlyChanges(history, bounds);
+    const stats = computeStats(changes, history, bounds);
+
+    expect(stats.peak).toEqual({ value: 130000, month: 'Feb 2026' });
+    // Broke the trailing positive streak with March's drawdown.
+    expect(stats.streak).toBe(0);
   });
 });
 
