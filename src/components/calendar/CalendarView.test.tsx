@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { CalendarView } from './CalendarView';
 import { useCalendarSummary } from '@/hooks/useCalendarSummary';
 import { useEarliestTransaction } from '@/hooks/useEarliestTransaction';
@@ -68,7 +68,18 @@ const activeSummary = {
   error: null,
 };
 
+/**
+ * CalendarView always opens on the CURRENT month, while these fixtures are
+ * pinned to July 2026. Without a frozen clock every `data-day="2026-07-.."`
+ * query silently starts returning null on 1 Aug 2026 and the suite fails on a
+ * date boundary rather than on a code change. Only Date is faked - faking
+ * timers wholesale interferes with Testing Library's async work.
+ */
+const FROZEN_NOW = new Date('2026-07-15T12:00:00.000Z');
+
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(FROZEN_NOW);
   vi.clearAllMocks();
   mockUseEarliestTransaction.mockReturnValue({
     earliestMonth: null,
@@ -77,6 +88,10 @@ beforeEach(() => {
   });
   mockUseCalendarSummary.mockReturnValue(emptySummary);
   mockUseCalendarDay.mockReturnValue({ data: undefined, isLoading: false, error: null });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('CalendarView', () => {
@@ -273,5 +288,127 @@ describe('CalendarView', () => {
         expect.objectContaining({ open: true, transferId: 'trf-1' })
       );
     });
+  });
+
+  // react-day-picker supplies tabIndex/aria-label/onKeyDown/onFocus/onBlur to its
+  // DayButton. A custom DayButton that forwards only `day`/`modifiers`/`className`
+  // silently drops all of it, leaving a mouse-only grid whose buttons announce as
+  // bare cell text. These lock that forwarding in place.
+  describe('keyboard navigation and accessible naming', () => {
+    beforeEach(() => {
+      mockUseCalendarSummary.mockReturnValue(activeSummary);
+    });
+
+    it('gives every day button an accessible name from react-day-picker', () => {
+      const { container } = render(<CalendarView />);
+
+      const dayButtons = Array.from(
+        container.querySelectorAll('button[data-slot="calendar-day-cell"]')
+      );
+      expect(dayButtons.length).toBeGreaterThan(0);
+      for (const button of dayButtons) {
+        expect(button.getAttribute('aria-label')).toBeTruthy();
+      }
+    });
+
+    it('uses a roving tabindex so the grid is a single tab stop', () => {
+      const { container } = render(<CalendarView />);
+
+      const dayButtons = Array.from(
+        container.querySelectorAll('button[data-slot="calendar-day-cell"]')
+      );
+      const focusable = dayButtons.filter((b) => b.getAttribute('tabindex') === '0');
+
+      expect(focusable).toHaveLength(1);
+      expect(dayButtons.length).toBeGreaterThan(1);
+      expect(
+        dayButtons.filter((b) => b.getAttribute('tabindex') === '-1').length
+      ).toBe(dayButtons.length - 1);
+    });
+
+    it('moves focus to the next day on ArrowRight', () => {
+      const { container } = render(<CalendarView />);
+
+      const focusTarget = container.querySelector(
+        'button[data-slot="calendar-day-cell"][tabindex="0"]'
+      ) as HTMLButtonElement;
+      expect(focusTarget.getAttribute('data-day')).toBe('2026-07-15');
+
+      // react-day-picker only knows which day to move FROM once its own onFocus
+      // handler has run, so focus the roving target before sending the key.
+      act(() => {
+        focusTarget.focus();
+        fireEvent.focus(focusTarget);
+      });
+      act(() => {
+        fireEvent.keyDown(focusTarget, { key: 'ArrowRight' });
+      });
+
+      expect((document.activeElement as HTMLElement).getAttribute('data-day')).toBe(
+        '2026-07-16'
+      );
+    });
+  });
+
+  describe('outside days', () => {
+    // The summary range is startOfMonth..endOfMonth, so the leading/trailing days
+    // react-day-picker renders from the adjacent months are never fetched and
+    // therefore always paint as no-activity. Documented deliberately: the range is
+    // month-bounded by design, and this pins the consequence so a future change to
+    // the window is a visible test change rather than a silent encoding shift.
+    it('requests exactly the visible month, not the padded grid', () => {
+      mockUseCalendarSummary.mockReturnValue(activeSummary);
+
+      render(<CalendarView />);
+
+      const [start, end] = mockUseCalendarSummary.mock.calls[0];
+      expect(start).toBe('2026-07-01');
+      expect(end).toBe('2026-07-31');
+    });
+
+    it('renders adjacent-month cells without activity encoding', () => {
+      mockUseCalendarSummary.mockReturnValue(activeSummary);
+
+      const { container } = render(<CalendarView />);
+
+      // 1 Aug 2026 is rendered as a trailing outside day of the July grid.
+      const outside = container.querySelector(
+        'button[data-day="2026-08-01"]'
+      ) as HTMLElement;
+      expect(outside).toBeTruthy();
+      expect(outside.getAttribute('data-has-activity')).toBeNull();
+      expect(outside.querySelector('[data-testid="income-bar"]')).toBeNull();
+      expect(outside.querySelector('[data-testid="expense-bar"]')).toBeNull();
+    });
+  });
+
+  it('keeps month navigation usable when the range fetch fails', () => {
+    mockUseCalendarSummary.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: 'Failed to fetch calendar summary',
+    });
+
+    render(<CalendarView />);
+
+    expect(screen.getByText("Couldn't load the calendar")).toBeTruthy();
+    // The grid - and therefore the month nav - must survive the error, or a failed
+    // month strands the user with no way to navigate away or retry.
+    expect(screen.getByRole('button', { name: /Go to the Next Month/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Go to the Previous Month/i })).toBeTruthy();
+  });
+
+  it('clears the selected day when the month changes', () => {
+    mockUseCalendarSummary.mockReturnValue(activeSummary);
+
+    const { container } = render(<CalendarView />);
+
+    fireEvent.click(container.querySelector('button[data-day="2026-07-15"]') as HTMLElement);
+    expect(mockUseCalendarDay).toHaveBeenLastCalledWith('2026-07-15');
+
+    fireEvent.click(screen.getByRole('button', { name: /Go to the Next Month/i }));
+
+    // Otherwise the day panel keeps describing a day that is no longer on the grid.
+    expect(mockUseCalendarDay).toHaveBeenLastCalledWith(null);
   });
 });

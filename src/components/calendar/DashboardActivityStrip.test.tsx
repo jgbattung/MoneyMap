@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { DashboardActivityStrip } from './DashboardActivityStrip';
 import { useCalendarSummary } from '@/hooks/useCalendarSummary';
 
@@ -101,5 +101,55 @@ describe('DashboardActivityStrip', () => {
     render(<DashboardActivityStrip />);
 
     expect(screen.getByTestId('dashboard-strip-net').textContent).toBe('+₱1,500');
+  });
+
+  // The strip is a link into the calendar, not an expandable surface, so its
+  // cells intentionally carry no selection behaviour. They are still rendered by
+  // the shared CalendarDayCell, which is a <button> - these pin the resulting
+  // shape so a change in either direction (wiring the cells up, or making them
+  // non-interactive) shows up as a deliberate test change.
+  describe('cell interactivity', () => {
+    beforeEach(() => {
+      mockUseCalendarSummary.mockReturnValue(activeSummary);
+    });
+
+    it('routes all navigation through the single "Open calendar" link', () => {
+      render(<DashboardActivityStrip />);
+
+      expect(screen.getAllByRole('link')).toHaveLength(1);
+    });
+
+    it('does nothing when a day cell is clicked', () => {
+      const { container } = render(<DashboardActivityStrip />);
+
+      const cells = container.querySelectorAll('button[data-slot="calendar-day-cell"]');
+      expect(cells).toHaveLength(7);
+
+      fireEvent.click(cells[0]);
+
+      // No selection state, no drawer, no navigation - the markup is unchanged.
+      expect(container.querySelectorAll('button[data-slot="calendar-day-cell"]')).toHaveLength(7);
+      expect(container.querySelector('[data-selected]')).toBeNull();
+      expect(screen.queryByTestId('calendar-day-detail')).toBeNull();
+    });
+
+    it('keeps its day cells in the tab order even though they have no action', () => {
+      const { container } = render(<DashboardActivityStrip />);
+
+      const cells = Array.from(
+        container.querySelectorAll('button[data-slot="calendar-day-cell"]')
+      );
+
+      // KNOWN FALSE AFFORDANCE, pinned deliberately rather than fixed: every cell
+      // is a focusable, hover-highlighted <button> with no behaviour, so the strip
+      // adds seven dead tab stops to the dashboard. Raised to the user as a
+      // non-blocking suggestion; asserted here so the current state is explicit
+      // and a future fix has to update this test rather than pass silently.
+      expect(cells).toHaveLength(7);
+      for (const cell of cells) {
+        expect(cell.getAttribute('tabindex')).toBeNull();
+        expect(cell.hasAttribute('disabled')).toBe(false);
+      }
+    });
   });
 });
