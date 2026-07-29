@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
 // ---------------------------------------------------------------------------
@@ -18,6 +18,15 @@ vi.mock('@/components/transactions/TransactionsDesktopView', () => ({
   default: () => React.createElement('div', { 'data-testid': 'desktop-view' }),
 }));
 
+vi.mock('@/components/calendar/CalendarView', () => ({
+  CalendarView: () => React.createElement('div', { 'data-testid': 'calendar-view-mock' }),
+}));
+
+let mockSearchParams = new URLSearchParams();
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => mockSearchParams,
+}));
+
 // ---------------------------------------------------------------------------
 // Import after mocks
 // ---------------------------------------------------------------------------
@@ -27,6 +36,11 @@ import Transactions from './page';
 // Tests
 // ---------------------------------------------------------------------------
 describe('Transactions page', () => {
+  beforeEach(() => {
+    // Reset the shared searchParams mock before each test.
+    mockSearchParams = new URLSearchParams();
+  });
+
   describe('PageHeader integration', () => {
     it('renders the "Transactions" heading', () => {
       render(React.createElement(Transactions));
@@ -70,7 +84,7 @@ describe('Transactions page', () => {
     });
   });
 
-  describe('mobile/desktop view rendering', () => {
+  describe('mobile/desktop view rendering (list view, the default)', () => {
     it('renders the mobile view container', () => {
       render(React.createElement(Transactions));
       expect(screen.getByTestId('mobile-view')).toBeTruthy();
@@ -79,6 +93,11 @@ describe('Transactions page', () => {
     it('renders the desktop view container', () => {
       render(React.createElement(Transactions));
       expect(screen.getByTestId('desktop-view')).toBeTruthy();
+    });
+
+    it('does not render the calendar view', () => {
+      render(React.createElement(Transactions));
+      expect(screen.queryByTestId('calendar-view-mock')).toBeNull();
     });
 
     it('outer page container has max-w-7xl class', () => {
@@ -92,6 +111,49 @@ describe('Transactions page', () => {
       const pageContainer = container.querySelector('.max-w-7xl') as HTMLElement;
       expect(pageContainer.className).toContain('flex');
       expect(pageContainer.className).toContain('flex-col');
+    });
+  });
+
+  describe('List | Calendar view toggle', () => {
+    it('renders both toggle options', () => {
+      render(React.createElement(Transactions));
+      expect(screen.getByRole('radio', { name: 'List' })).toBeTruthy();
+      expect(screen.getByRole('radio', { name: 'Calendar' })).toBeTruthy();
+    });
+
+    it('defaults to the list view when no ?view param is present', () => {
+      render(React.createElement(Transactions));
+      expect(screen.getByTestId('mobile-view')).toBeTruthy();
+      expect(screen.queryByTestId('calendar-view-mock')).toBeNull();
+    });
+
+    it('lands directly on the calendar view when ?view=calendar is present', () => {
+      mockSearchParams = new URLSearchParams('view=calendar');
+      render(React.createElement(Transactions));
+      expect(screen.getByTestId('calendar-view-mock')).toBeTruthy();
+      expect(screen.queryByTestId('mobile-view')).toBeNull();
+      expect(screen.queryByTestId('desktop-view')).toBeNull();
+    });
+
+    it('swaps to the calendar view when the toggle is clicked', () => {
+      render(React.createElement(Transactions));
+
+      fireEvent.click(screen.getByRole('radio', { name: 'Calendar' }));
+
+      expect(screen.getByTestId('calendar-view-mock')).toBeTruthy();
+      expect(screen.queryByTestId('mobile-view')).toBeNull();
+      expect(screen.queryByTestId('desktop-view')).toBeNull();
+    });
+
+    it('swaps back to the list view when the List toggle is clicked', () => {
+      mockSearchParams = new URLSearchParams('view=calendar');
+      render(React.createElement(Transactions));
+
+      fireEvent.click(screen.getByRole('radio', { name: 'List' }));
+
+      expect(screen.getByTestId('mobile-view')).toBeTruthy();
+      expect(screen.getByTestId('desktop-view')).toBeTruthy();
+      expect(screen.queryByTestId('calendar-view-mock')).toBeNull();
     });
   });
 });
