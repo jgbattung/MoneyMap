@@ -6,7 +6,9 @@ import { endOfMonth, format, startOfMonth } from "date-fns"
 import { CalendarX2 } from "lucide-react"
 import type { DayButton } from "react-day-picker"
 import { Calendar } from "@/components/ui/calendar"
+import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/shared/EmptyState"
+import { cn } from "@/lib/utils"
 import { useCalendarSummary } from "@/hooks/useCalendarSummary"
 import { useEarliestTransaction } from "@/hooks/useEarliestTransaction"
 import { CalendarDayCell } from "./CalendarDayCell"
@@ -189,6 +191,33 @@ export function CalendarView() {
     [summaryByDate, max, isLoading]
   )
 
+  const monthFigures = useMemo(
+    () => [
+      {
+        key: "income",
+        label: "Income",
+        value: `+${formatPeso(totals.income)}`,
+        tone: "text-text-success",
+        testId: undefined,
+      },
+      {
+        key: "expenses",
+        label: "Expenses",
+        value: `-${formatPeso(totals.expense)}`,
+        tone: "text-text-error",
+        testId: undefined,
+      },
+      {
+        key: "net",
+        label: "Net",
+        value: formatSignedPeso(totals.net),
+        tone: totals.net >= 0 ? "text-text-success" : "text-text-error",
+        testId: "calendar-month-net",
+      },
+    ],
+    [totals.income, totals.expense, totals.net]
+  )
+
   const handleDrawerOpenChange = useCallback((open: boolean) => {
     if (!open) setSelectedDate(null)
   }, [])
@@ -197,42 +226,41 @@ export function CalendarView() {
     <div data-testid="calendar-view">
       <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-6 items-start">
         <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-medium text-foreground">{format(month, "MMMM yyyy")}</h2>
-            {!isLoading && !error && (
-              <div className="flex flex-wrap items-center gap-4" data-testid="calendar-month-totals">
-                <div className="flex flex-col">
-                  <span className="text-xxs uppercase tracking-[0.08em] text-muted-foreground">
-                    Income
-                  </span>
-                  <span className="text-numeric text-xs font-medium text-text-success">
-                    +{formatPeso(totals.income)}
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xxs uppercase tracking-[0.08em] text-muted-foreground">
-                    Expenses
-                  </span>
-                  <span className="text-numeric text-xs font-medium text-text-error">
-                    -{formatPeso(totals.expense)}
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xxs uppercase tracking-[0.08em] text-muted-foreground">
-                    Net
-                  </span>
+          {/* No month heading here on purpose. react-day-picker already renders
+              the month caption, and it is bound to the prev/next chevrons as a
+              single control (`rdp-nav` spans the grid, caption centred between
+              them). A heading here duplicated that text verbatim; removing the
+              caption instead would leave two chevrons with a gap between them
+              and would mean reimplementing the `startMonth` bounds logic by
+              hand. The totals below carry their own labels and re-read against
+              whichever month the caption shows. */}
+          <div
+            className="flex flex-wrap items-center gap-4"
+            data-testid="calendar-month-totals"
+          >
+            {monthFigures.map((figure) => (
+              <div key={figure.key} className="flex flex-col">
+                <span className="text-xxs uppercase tracking-[0.08em] text-muted-foreground">
+                  {figure.label}
+                </span>
+                {/* Rendered in every state so the header keeps its height - it
+                    is the only thing above the grid, so collapsing it would
+                    shove the whole calendar upward mid-fetch. */}
+                {isLoading ? (
+                  <Skeleton
+                    data-testid={`month-total-skeleton-${figure.key}`}
+                    className="mt-0.5 h-3.5 w-20 rounded"
+                  />
+                ) : (
                   <span
-                    data-testid="calendar-month-net"
-                    className={
-                      "text-numeric text-xs font-medium " +
-                      (totals.net >= 0 ? "text-text-success" : "text-text-error")
-                    }
+                    data-testid={figure.testId}
+                    className={cn("text-numeric text-xs font-medium", !error && figure.tone)}
                   >
-                    {formatSignedPeso(totals.net)}
+                    {error ? "—" : figure.value}
                   </span>
-                </div>
+                )}
               </div>
-            )}
+            ))}
           </div>
 
           {/* The grid stays mounted while LOADING as well as on error. Swapping

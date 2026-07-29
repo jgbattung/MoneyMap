@@ -195,6 +195,33 @@ describe('CalendarView', () => {
     expect(totals.getByText('Net')).toBeTruthy();
   });
 
+  it('states the month exactly once', () => {
+    // The view used to render its own "MMMM yyyy" heading above the grid while
+    // react-day-picker rendered the same string in its own caption, so the
+    // month appeared twice. The caption is the one to keep: it is bound to the
+    // prev/next chevrons as a single control.
+    mockUseCalendarSummary.mockReturnValue(activeSummary);
+
+    render(<CalendarView />);
+
+    expect(screen.getAllByText('July 2026')).toHaveLength(1);
+  });
+
+  it('keeps the month-header figures in place while loading so the grid does not jump', () => {
+    mockUseCalendarSummary.mockReturnValue({ data: undefined, isLoading: true, error: null });
+
+    render(<CalendarView />);
+
+    // Labels persist; only the values become placeholders. The header is the
+    // only thing above the grid, so collapsing it would shove the calendar up.
+    const totals = within(screen.getByTestId('calendar-month-totals'));
+    expect(totals.getByText('Income')).toBeTruthy();
+    expect(totals.getByText('Expenses')).toBeTruthy();
+    expect(totals.getByText('Net')).toBeTruthy();
+    expect(screen.getByTestId('month-total-skeleton-income')).toBeTruthy();
+    expect(screen.getByTestId('month-total-skeleton-net')).toBeTruthy();
+  });
+
   describe('cell height binding', () => {
     beforeEach(() => {
       mockUseCalendarSummary.mockReturnValue(activeSummary);

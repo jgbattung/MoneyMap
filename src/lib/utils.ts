@@ -16,7 +16,10 @@ import { extendTailwindMerge } from "tailwind-merge"
  * gets its own group so it conflicts with nothing - it sets font-family and
  * font-variant-numeric, never a colour or a size.
  */
-const twMerge = extendTailwindMerge({
+// The type parameter registers "text-numeric" as an ADDITIONAL class group id.
+// Without it `extend.classGroups` only accepts tailwind-merge's own group ids
+// and the config fails to type-check.
+const twMerge = extendTailwindMerge<"text-numeric">({
   extend: {
     classGroups: {
       "font-size": [{ text: ["xxs", "xxxs"] }],
