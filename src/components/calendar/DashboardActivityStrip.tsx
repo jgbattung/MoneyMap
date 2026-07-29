@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useMemo } from "react"
 import { format, subDays } from "date-fns"
 import { CalendarX2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { useCalendarSummary } from "@/hooks/useCalendarSummary"
@@ -58,20 +59,33 @@ export function DashboardActivityStrip() {
 
   return (
     <div className="flex flex-col gap-4" data-testid="dashboard-activity-strip">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-foreground">This week</h2>
-        <Link
-          href="/transactions?view=calendar"
-          className="text-xs text-primary hover:text-primary/80 hover:underline"
-        >
-          Open calendar
-        </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-foreground tracking-tight">Weekly Activity</h2>
+        {!isLoading && !error && (
+          <div className="flex flex-col items-end">
+            <span className="text-xxs uppercase tracking-[0.08em] text-muted-foreground">
+              Net this week
+            </span>
+            <span
+              data-testid="dashboard-strip-net"
+              className={
+                "text-numeric text-xs font-medium " +
+                (totals.net >= 0 ? "text-text-success" : "text-text-error")
+              }
+            >
+              {formatSignedPeso(totals.net)}
+            </span>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-7 gap-1" data-testid="dashboard-strip-skeleton">
+        <div
+          className="grid grid-cols-7 gap-1 [--cell-size:--spacing(11)]"
+          data-testid="dashboard-strip-skeleton"
+        >
           {Array.from({ length: 7 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-square rounded-lg" />
+            <Skeleton key={i} className="min-h-(--cell-size) rounded-lg" />
           ))}
         </div>
       ) : error ? (
@@ -89,8 +103,18 @@ export function DashboardActivityStrip() {
           variant="widget"
         />
       ) : (
-        <>
-          <div className="grid grid-cols-7 gap-1">
+        <div className="[--cell-size:--spacing(11)]">
+          <div className="grid grid-cols-7 gap-1" data-testid="dashboard-strip-weekdays">
+            {days.map((day) => (
+              <span
+                key={`weekday-${toLocalDayKey(day)}`}
+                className="text-center text-xxs uppercase tracking-[0.06em] text-muted-foreground"
+              >
+                {format(day, "EEEEE")}
+              </span>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1 mt-1">
             {days.map((day) => {
               const key = toLocalDayKey(day)
               return (
@@ -100,21 +124,20 @@ export function DashboardActivityStrip() {
                   bucket={summaryByDate.get(key)}
                   max={max}
                   isToday={key === todayKey}
+                  interactive={false}
+                  className="min-h-(--cell-size)"
                 />
               )
             })}
           </div>
-          <span
-            data-testid="dashboard-strip-net"
-            className={
-              "text-numeric text-xs font-semibold self-end " +
-              (totals.net >= 0 ? "text-text-success" : "text-text-error")
-            }
-          >
-            {formatSignedPeso(totals.net)}
-          </span>
-        </>
+        </div>
       )}
+
+      <Link href="/transactions?view=calendar">
+        <Button variant="outline" className="w-full">
+          Open Calendar
+        </Button>
+      </Link>
     </div>
   )
 }
