@@ -61,6 +61,58 @@ function formatPeso(amount: number): string {
   return `₱${Math.abs(Math.round(amount)).toLocaleString("en-PH")}`
 }
 
+/**
+ * Per-render grid data for the day buttons. Passed by context rather than by
+ * closing over it in an inline component, so the `DayButton` identity handed
+ * to react-day-picker stays stable across refetches - an unstable component
+ * type would remount all 42 day buttons (and drop DOM focus) every time the
+ * summary changes.
+ */
+const CalendarGridDataContext = React.createContext<{
+  summaryByDate: Map<string, CalendarDayBucket>
+  max: { expense: number; income: number }
+}>({ summaryByDate: new Map(), max: { expense: 0, income: 0 } })
+
+/**
+ * The custom react-day-picker `DayButton`.
+ *
+ * CRITICAL: `...buttonProps` must be forwarded to `CalendarDayCell`. react-day-picker
+ * supplies `tabIndex` (roving: 0 on the focus target, -1 elsewhere), `aria-label`,
+ * `onClick`, `onKeyDown`, `onFocus`, `onBlur` and `disabled` here (see DayPicker's
+ * `components.DayButton` call site). Dropping them breaks arrow-key navigation
+ * outright, makes every day a tab stop, and leaves the button's accessible name as
+ * the bare cell text. The `modifiers.focused` -> `focus()` effect is the other half:
+ * it is how react-day-picker moves real DOM focus as the arrow keys change the
+ * focused day. Both mirror the repo's own `CalendarDayButton` in `ui/calendar.tsx`.
+ */
+function CalendarGridDayButton({
+  day,
+  modifiers,
+  className,
+  ...buttonProps
+}: React.ComponentProps<typeof DayButton>) {
+  const { summaryByDate, max } = React.useContext(CalendarGridDataContext)
+  const ref = React.useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (modifiers.focused) ref.current?.focus()
+  }, [modifiers.focused])
+
+  return (
+    <CalendarDayCell
+      {...buttonProps}
+      ref={ref}
+      day={day.date}
+      bucket={summaryByDate.get(toLocalDayKey(day.date))}
+      max={max}
+      isToday={modifiers.today}
+      isSelected={modifiers.selected}
+      isOutside={modifiers.outside}
+      className={className}
+    />
+  )
+}
+
 export function CalendarView() {
   const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()))
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -121,25 +173,7 @@ export function CalendarView() {
     setSelectedDate(toLocalDayKey(date))
   }, [])
 
-  const DayButtonAdapter = useCallback(
-    ({ day, modifiers, className }: React.ComponentProps<typeof DayButton>) => {
-      const key = toLocalDayKey(day.date)
-      return (
-        <CalendarDayCell
-          day={day.date}
-          bucket={summaryByDate.get(key)}
-          max={max}
-          isToday={modifiers.today}
-          isSelected={modifiers.selected}
-          isOutside={modifiers.outside}
-          disabled={modifiers.disabled}
-          onClick={() => handleSelect(day.date)}
-          className={className}
-        />
-      )
-    },
-    [summaryByDate, max, handleSelect]
-  )
+  const gridData = useMemo(() => ({ summaryByDate, max }), [summaryByDate, max])
 
   const handleDrawerOpenChange = useCallback((open: boolean) => {
     if (!open) setSelectedDate(null)
@@ -187,20 +221,22 @@ export function CalendarView() {
             />
           ) : (
             <>
-              <Calendar
-                mode="single"
-                selected={selected}
-                onSelect={handleSelect}
-                month={month}
-                onMonthChange={setMonth}
-                startMonth={startMonth}
-                showOutsideDays
-                className="[--cell-size:--spacing(11)] md:[--cell-size:--spacing(20)] w-full"
-                classNames={{
-                  day: "relative w-full h-full p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md group/day select-none",
-                }}
-                components={{ DayButton: DayButtonAdapter }}
-              />
+              <CalendarGridDataContext.Provider value={gridData}>
+                <Calendar
+                  mode="single"
+                  selected={selected}
+                  onSelect={handleSelect}
+                  month={month}
+                  onMonthChange={setMonth}
+                  startMonth={startMonth}
+                  showOutsideDays
+                  className="[--cell-size:--spacing(11)] md:[--cell-size:--spacing(20)] w-full"
+                  classNames={{
+                    day: "relative w-full h-full p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md group/day select-none",
+                  }}
+                  components={{ DayButton: CalendarGridDayButton }}
+                />
+              </CalendarGridDataContext.Provider>
 
               {!hasActivity && (
                 <EmptyState

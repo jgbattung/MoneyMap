@@ -4,7 +4,15 @@ import * as React from "react"
 import { CalendarDayBucket } from "@/types/calendar"
 import { cn } from "@/lib/utils"
 
-export interface CalendarDayCellProps {
+/**
+ * Extends the full set of native button props so react-day-picker's own
+ * `DayButton` props (`tabIndex`, `aria-label`, `onKeyDown`, `onFocus`,
+ * `onBlur`, `disabled`, `ref`, ...) can be forwarded straight through. Those
+ * props are what make the grid keyboard-navigable and screen-reader legible;
+ * dropping them silently reduces the cell to a mouse-only control.
+ */
+export interface CalendarDayCellProps
+  extends Omit<React.ComponentProps<"button">, "children"> {
   /** The calendar day this cell represents. */
   day: Date
   /** This day's activity bucket, or undefined for a day with no activity. */
@@ -14,9 +22,6 @@ export interface CalendarDayCellProps {
   isToday?: boolean
   isSelected?: boolean
   isOutside?: boolean
-  disabled?: boolean
-  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void
-  className?: string
 }
 
 /**
@@ -61,9 +66,8 @@ export function CalendarDayCell({
   isToday,
   isSelected,
   isOutside,
-  disabled,
-  onClick,
   className,
+  ...buttonProps
 }: CalendarDayCellProps) {
   const hasActivity =
     !!bucket && bucket.expenseCount + bucket.incomeCount + bucket.transferCount > 0
@@ -75,14 +79,13 @@ export function CalendarDayCell({
 
   return (
     <button
+      {...buttonProps}
       type="button"
       data-slot="calendar-day-cell"
       data-day={toLocalDateKey(day)}
       data-selected={isSelected || undefined}
       data-today={isToday || undefined}
       data-has-activity={hasActivity || undefined}
-      disabled={disabled}
-      onClick={onClick}
       className={cn(
         "group/day-cell relative flex h-full w-full flex-col items-start gap-1 rounded-lg p-1.5 text-left transition-colors",
         "hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
