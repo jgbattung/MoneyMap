@@ -73,25 +73,31 @@ export function CalendarDayDetail({
         />
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2 bg-muted rounded-md p-3">
             <div className="flex flex-col gap-0.5">
-              <span className="text-xs text-muted-foreground">Income</span>
-              <span className="text-numeric text-sm font-semibold text-text-success">
+              <span className="text-xxs uppercase tracking-[0.08em] text-muted-foreground">
+                Income
+              </span>
+              <span className="text-numeric text-xs font-medium text-text-success">
                 +₱{Math.round(data.totals.income).toLocaleString("en-PH")}
               </span>
             </div>
             <div className="flex flex-col gap-0.5">
-              <span className="text-xs text-muted-foreground">Expenses</span>
-              <span className="text-numeric text-sm font-semibold text-text-error">
+              <span className="text-xxs uppercase tracking-[0.08em] text-muted-foreground">
+                Expenses
+              </span>
+              <span className="text-numeric text-xs font-medium text-text-error">
                 -₱{Math.round(data.totals.expense).toLocaleString("en-PH")}
               </span>
             </div>
             <div className="flex flex-col gap-0.5">
-              <span className="text-xs text-muted-foreground">Net</span>
+              <span className="text-xxs uppercase tracking-[0.08em] text-muted-foreground">
+                Net
+              </span>
               <span
                 data-testid="calendar-day-net"
                 className={
-                  "text-numeric text-sm font-semibold " +
+                  "text-numeric text-xs font-medium " +
                   (data.totals.net >= 0 ? "text-text-success" : "text-text-error")
                 }
               >

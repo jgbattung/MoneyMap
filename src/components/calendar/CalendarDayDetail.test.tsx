@@ -104,6 +104,28 @@ describe('CalendarDayDetail', () => {
     expect(screen.getByTestId('calendar-day-net').textContent).toBe('+₱49,880');
   });
 
+  it('labels each figure and recesses the summary block in a tonal step behind the rows', () => {
+    const { container } = render(
+      <CalendarDayDetail date="2026-07-15" isLoading={false} data={baseData} onTransactionClick={() => {}} />
+    );
+
+    expect(screen.getByText('Income')).toBeTruthy();
+    expect(screen.getByText('Expenses')).toBeTruthy();
+    expect(screen.getByText('Net')).toBeTruthy();
+
+    const netValue = screen.getByTestId('calendar-day-net');
+    // Values are quiet (text-xs font-medium), not shouting over the rows.
+    expect(netValue.className).toContain('text-xs');
+    expect(netValue.className).toContain('font-medium');
+    expect(netValue.className).not.toContain('text-sm');
+    expect(netValue.className).not.toContain('font-semibold');
+
+    // Grouping is carried by a recessed tonal block, not by weight.
+    const summaryBlock = netValue.closest('.bg-muted');
+    expect(summaryBlock).toBeTruthy();
+    expect(container.querySelector('.bg-muted.rounded-md')).toBeTruthy();
+  });
+
   it('shows the full date heading', () => {
     render(
       <CalendarDayDetail date="2026-07-15" isLoading={false} data={baseData} onTransactionClick={() => {}} />
