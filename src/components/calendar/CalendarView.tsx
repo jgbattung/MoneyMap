@@ -173,6 +173,16 @@ export function CalendarView() {
     setSelectedDate(toLocalDayKey(date))
   }, [])
 
+  /**
+   * Clearing the selection on month change keeps the day panel honest: without
+   * it, navigating away leaves the panel describing a day that is no longer
+   * anywhere on the grid.
+   */
+  const handleMonthChange = useCallback((next: Date) => {
+    setMonth(next)
+    setSelectedDate(null)
+  }, [])
+
   const gridData = useMemo(() => ({ summaryByDate, max }), [summaryByDate, max])
 
   const handleDrawerOpenChange = useCallback((open: boolean) => {
@@ -212,22 +222,18 @@ export function CalendarView() {
                 <Skeleton key={i} className="aspect-square rounded-lg" />
               ))}
             </div>
-          ) : error ? (
-            <EmptyState
-              icon={CalendarX2}
-              title="Couldn't load the calendar"
-              description="Something went wrong fetching this month's activity. Try again shortly."
-              variant="widget"
-            />
           ) : (
             <>
+              {/* The grid stays mounted on error so its month nav remains usable -
+                  a failed range must not strand the user on a dead month with no
+                  way to navigate away or retry short of a page reload. */}
               <CalendarGridDataContext.Provider value={gridData}>
                 <Calendar
                   mode="single"
                   selected={selected}
                   onSelect={handleSelect}
                   month={month}
-                  onMonthChange={setMonth}
+                  onMonthChange={handleMonthChange}
                   startMonth={startMonth}
                   showOutsideDays
                   className="[--cell-size:--spacing(11)] md:[--cell-size:--spacing(20)] w-full"
@@ -238,13 +244,22 @@ export function CalendarView() {
                 />
               </CalendarGridDataContext.Provider>
 
-              {!hasActivity && (
+              {error ? (
                 <EmptyState
                   icon={CalendarX2}
-                  title="No activity this month"
-                  description="Transactions for this month will show up here once you add some."
+                  title="Couldn't load the calendar"
+                  description="Something went wrong fetching this month's activity. Try again shortly."
                   variant="widget"
                 />
+              ) : (
+                !hasActivity && (
+                  <EmptyState
+                    icon={CalendarX2}
+                    title="No activity this month"
+                    description="Transactions for this month will show up here once you add some."
+                    variant="widget"
+                  />
+                )
               )}
 
               <p className="text-xs text-muted-foreground">
