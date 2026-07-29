@@ -196,30 +196,48 @@ export function CalendarView() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-sm font-medium text-foreground">{format(month, "MMMM yyyy")}</h2>
             {!isLoading && !error && (
-              <div className="flex items-center gap-4">
-                <span className="text-numeric text-xs text-text-success">
-                  +{formatPeso(totals.income)}
-                </span>
-                <span className="text-numeric text-xs text-text-error">
-                  -{formatPeso(totals.expense)}
-                </span>
-                <span
-                  data-testid="calendar-month-net"
-                  className={
-                    "text-numeric text-xs font-semibold " +
-                    (totals.net >= 0 ? "text-text-success" : "text-text-error")
-                  }
-                >
-                  {formatSignedPeso(totals.net)}
-                </span>
+              <div className="flex flex-wrap items-center gap-4" data-testid="calendar-month-totals">
+                <div className="flex flex-col">
+                  <span className="text-xxs uppercase tracking-[0.08em] text-muted-foreground">
+                    Income
+                  </span>
+                  <span className="text-numeric text-xs font-medium text-text-success">
+                    +{formatPeso(totals.income)}
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xxs uppercase tracking-[0.08em] text-muted-foreground">
+                    Expenses
+                  </span>
+                  <span className="text-numeric text-xs font-medium text-text-error">
+                    -{formatPeso(totals.expense)}
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xxs uppercase tracking-[0.08em] text-muted-foreground">
+                    Net
+                  </span>
+                  <span
+                    data-testid="calendar-month-net"
+                    className={
+                      "text-numeric text-xs font-medium " +
+                      (totals.net >= 0 ? "text-text-success" : "text-text-error")
+                    }
+                  >
+                    {formatSignedPeso(totals.net)}
+                  </span>
+                </div>
               </div>
             )}
           </div>
 
           {isLoading ? (
-            <div className="grid grid-cols-7 gap-1" data-testid="calendar-skeleton">
+            <div
+              className="grid grid-cols-7 gap-1 [--cell-size:--spacing(11)] md:[--cell-size:--spacing(20)]"
+              data-testid="calendar-skeleton"
+            >
               {Array.from({ length: 35 }).map((_, i) => (
-                <Skeleton key={i} className="aspect-square rounded-lg" />
+                <Skeleton key={i} className="min-h-(--cell-size) rounded-lg" />
               ))}
             </div>
           ) : (
@@ -238,7 +256,7 @@ export function CalendarView() {
                   showOutsideDays
                   className="[--cell-size:--spacing(11)] md:[--cell-size:--spacing(20)] w-full"
                   classNames={{
-                    day: "relative w-full h-full p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md group/day select-none",
+                    day: "relative w-full h-full min-h-(--cell-size) p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md group/day select-none",
                   }}
                   components={{ DayButton: CalendarGridDayButton }}
                 />
@@ -262,10 +280,24 @@ export function CalendarView() {
                 )
               )}
 
-              <p className="text-xs text-muted-foreground">
-                Income (mint) stacks above expenses (coral); a slate dot marks a transfer. Bars
-                are scaled per channel against the heaviest day in view.
-              </p>
+              <div
+                className="flex flex-wrap items-center gap-3 text-xxs text-muted-foreground"
+                data-testid="calendar-legend"
+              >
+                <span className="flex items-center gap-1.5">
+                  <span className="h-[3px] w-3 rounded-full bg-text-success" aria-hidden="true" />
+                  Income
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-[3px] w-3 rounded-full bg-text-error" aria-hidden="true" />
+                  Expenses
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-1 w-1 rounded-full bg-secondary-400" aria-hidden="true" />
+                  Transfer
+                </span>
+                <span>scaled per channel against the heaviest day in view</span>
+              </div>
             </>
           )}
         </div>

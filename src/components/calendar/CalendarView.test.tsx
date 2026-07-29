@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import { CalendarView } from './CalendarView';
 import { useCalendarSummary } from '@/hooks/useCalendarSummary';
 import { useEarliestTransaction } from '@/hooks/useEarliestTransaction';
@@ -182,6 +182,74 @@ describe('CalendarView', () => {
     expect(screen.getByText('+₱2,000')).toBeTruthy();
     expect(screen.getByText('-₱500')).toBeTruthy();
     expect(screen.getByTestId('calendar-month-net').textContent).toBe('+₱1,500');
+  });
+
+  it('labels each month-header figure so the reading never depends on hue alone', () => {
+    mockUseCalendarSummary.mockReturnValue(activeSummary);
+
+    render(<CalendarView />);
+
+    const totals = within(screen.getByTestId('calendar-month-totals'));
+    expect(totals.getByText('Income')).toBeTruthy();
+    expect(totals.getByText('Expenses')).toBeTruthy();
+    expect(totals.getByText('Net')).toBeTruthy();
+  });
+
+  describe('cell height binding', () => {
+    beforeEach(() => {
+      mockUseCalendarSummary.mockReturnValue(activeSummary);
+    });
+
+    it('gives every day cell the same height-governing class regardless of activity', () => {
+      const { container } = render(<CalendarView />);
+
+      // 2026-07-15 has a bucket (activeSummary); 2026-07-16 does not.
+      const activeTd = container.querySelector('td[data-day="2026-07-15"]') as HTMLElement;
+      const emptyTd = container.querySelector('td[data-day="2026-07-16"]') as HTMLElement;
+      expect(activeTd).toBeTruthy();
+      expect(emptyTd).toBeTruthy();
+
+      expect(activeTd.className).toContain('min-h-(--cell-size)');
+      expect(emptyTd.className).toContain('min-h-(--cell-size)');
+    });
+
+    it('binds the loading skeleton to the same --cell-size custom property as the real grid', () => {
+      mockUseCalendarSummary.mockReturnValue({ data: undefined, isLoading: true, error: null });
+
+      const { container } = render(<CalendarView />);
+
+      const skeletonGrid = screen.getByTestId('calendar-skeleton');
+      expect(skeletonGrid.className).toContain('--cell-size:--spacing(11)');
+
+      const skeletonCells = container.querySelectorAll('[data-slot="skeleton"]');
+      expect(skeletonCells.length).toBeGreaterThan(0);
+      for (const cell of Array.from(skeletonCells)) {
+        expect(cell.className).toContain('min-h-(--cell-size)');
+        expect(cell.className).not.toContain('aspect-square');
+      }
+    });
+  });
+
+  it('demotes the legend to caption scale with inline swatches instead of prose', () => {
+    mockUseCalendarSummary.mockReturnValue(activeSummary);
+
+    render(<CalendarView />);
+
+    const legend = screen.getByTestId('calendar-legend');
+    const withinLegend = within(legend);
+
+    expect(withinLegend.getByText('scaled per channel against the heaviest day in view')).toBeTruthy();
+    expect(withinLegend.getByText('Income')).toBeTruthy();
+    expect(withinLegend.getByText('Expenses')).toBeTruthy();
+    expect(withinLegend.getByText('Transfer')).toBeTruthy();
+
+    expect(legend.className).toContain('text-xxs');
+    expect(legend.className).not.toContain('text-xs ');
+
+    // Swatches, not prose describing colours.
+    expect(legend.querySelector('.bg-text-success.rounded-full')).toBeTruthy();
+    expect(legend.querySelector('.bg-text-error.rounded-full')).toBeTruthy();
+    expect(legend.querySelector('.bg-secondary-400.rounded-full')).toBeTruthy();
   });
 
   it('selecting a day passes that date to the day panel', () => {
