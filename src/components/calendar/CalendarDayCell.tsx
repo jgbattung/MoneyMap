@@ -88,7 +88,15 @@ export function CalendarDayCell({
   const expenseWidth = bucket ? barWidthPercent(bucket.expense, max.expense) : 0
 
   const sharedClassName = cn(
-    "group/day-cell relative flex h-full w-full flex-col items-start gap-1 rounded-lg p-1.5 text-left transition-colors",
+    // `min-h-(--cell-size)` must live on the cell itself, not only on the
+    // grid slot around it. `h-full` is `height: 100%`, which resolves against
+    // the PARENT's height - and the parent only carries a min-height, so the
+    // cell would fall back to content height and a day with no activity would
+    // render about half as tall as one with bars. Owning the min-height here
+    // makes every cell uniform in both the month grid and the dashboard strip,
+    // and keeps it driven by the `--cell-size` custom property (which each
+    // surface sets for its own breakpoints) rather than a hardcoded pixel value.
+    "group/day-cell relative flex h-full min-h-(--cell-size) w-full flex-col items-start gap-1 rounded-lg p-1.5 text-left transition-colors",
     interactive && "hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
     hasActivity ? "bg-card/40 border border-border/40" : "border border-transparent",
     isSelected && "ring-2 ring-primary/60",
@@ -114,6 +122,9 @@ export function CalendarDayCell({
       {hasActivity && (
         <span
           className={cn(
+            // `text-xxs` (10px), one step below the day number so the number
+            // stays the cell's primary wayfinding element. `text-xxxs` (8px)
+            // was tried and is too small to read a peso figure at.
             "hidden md:block text-numeric text-xxs leading-none",
             net >= 0 ? "text-text-success" : "text-text-error"
           )}

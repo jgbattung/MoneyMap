@@ -103,7 +103,11 @@ export function DashboardActivityStrip() {
           variant="widget"
         />
       ) : (
-        <div className="[--cell-size:--spacing(11)]">
+        <div className="[--cell-size:--spacing(11)] md:[--cell-size:--spacing(16)]">
+          {/* The desktop-only net figure inside each cell needs headroom: at the
+              44px mobile size its content would overflow once it appears. The
+              cell reads `--cell-size` itself, so this wrapper is the only place
+              the strip's cell height is declared. */}
           <div className="grid grid-cols-7 gap-1" data-testid="dashboard-strip-weekdays">
             {days.map((day) => (
               <span
@@ -125,7 +129,6 @@ export function DashboardActivityStrip() {
                   max={max}
                   isToday={key === todayKey}
                   interactive={false}
-                  className="min-h-(--cell-size)"
                 />
               )
             })}

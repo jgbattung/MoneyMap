@@ -281,7 +281,7 @@ export function CalendarView() {
               )}
 
               <div
-                className="flex flex-wrap items-center gap-3 text-xxs text-muted-foreground"
+                className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground"
                 data-testid="calendar-legend"
               >
                 <span className="flex items-center gap-1.5">

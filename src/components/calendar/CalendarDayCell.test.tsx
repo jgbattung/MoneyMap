@@ -106,6 +106,63 @@ describe('CalendarDayCell', () => {
     expect(dayNumber.className).toContain('text-muted-foreground/50');
   });
 
+  describe('type scale', () => {
+    // The cell is the densest surface in the app. These pin both figures to
+    // documented DESIGN.md steps and, more importantly, to their relative
+    // order: the day number is the cell's primary wayfinding element and must
+    // stay a step above the net annotation.
+    //
+    // Whether either class reaches the DOM at all depends on `cn` knowing the
+    // custom `text-*` utilities - see src/lib/__tests__/utils.test.ts. Without
+    // that config tailwind-merge drops them as text-colour conflicts and both
+    // figures silently render at inherited body size.
+    const activeBucket = makeBucket({ expense: 500, income: 2500, expenseCount: 1, incomeCount: 1 });
+
+    it('sets the day number at the xs step', () => {
+      render(
+        <CalendarDayCell day={new Date('2026-07-15T00:00:00.000Z')} bucket={activeBucket} max={max} />
+      );
+
+      const dayNumber = screen.getByText('15');
+      expect(dayNumber.className).toContain('text-xs');
+      expect(dayNumber.className).not.toContain('text-sm');
+    });
+
+    it('sets the net figure one step below the day number, at the xxs step', () => {
+      render(
+        <CalendarDayCell day={new Date('2026-07-15T00:00:00.000Z')} bucket={activeBucket} max={max} />
+      );
+
+      const net = screen.getByText(/₱/);
+      expect(net.className).toContain('text-xxs');
+      expect(net.className).not.toContain('text-xxxs');
+      // The mono/tabular treatment must survive the conditional-colour merge.
+      expect(net.className).toContain('text-numeric');
+    });
+  });
+
+  it('binds its own min-height to --cell-size so empty and active days match', () => {
+    // `h-full` alone resolves against the parent's height; when the parent only
+    // carries a min-height the cell collapses to content height, which made
+    // zero-activity days render about half as tall as active ones.
+    const { container: activeC } = render(
+      <CalendarDayCell
+        day={new Date('2026-07-15T00:00:00.000Z')}
+        bucket={makeBucket({ expense: 500, expenseCount: 1 })}
+        max={max}
+      />
+    );
+    const { container: emptyC } = render(
+      <CalendarDayCell day={new Date('2026-07-16T00:00:00.000Z')} max={max} />
+    );
+
+    const active = activeC.querySelector('[data-slot="calendar-day-cell"]') as HTMLElement;
+    const empty = emptyC.querySelector('[data-slot="calendar-day-cell"]') as HTMLElement;
+
+    expect(active.className).toContain('min-h-(--cell-size)');
+    expect(empty.className).toContain('min-h-(--cell-size)');
+  });
+
   it('fires onClick when clicked', () => {
     let clicked = false;
     render(

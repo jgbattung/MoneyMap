@@ -213,6 +213,34 @@ describe('CalendarView', () => {
       expect(emptyTd.className).toContain('min-h-(--cell-size)');
     });
 
+    it('puts the min-height on the cell itself, not only on the grid slot around it', () => {
+      // Regression guard. The grid slot (<td>) carrying `min-h-(--cell-size)`
+      // is NOT enough: the cell inside it uses `h-full`, i.e. `height: 100%`,
+      // which resolves against the PARENT's height. A parent with only a
+      // min-height leaves that percentage resolving to `auto`, so the cell
+      // falls back to content height - and a day with no activity renders
+      // roughly half as tall as one with a net figure and bars. The visible
+      // box (background + border) is the cell, not the slot, so the height
+      // must be bound on the cell for the two to actually match.
+      const { container } = render(<CalendarView />);
+
+      const activeCell = container.querySelector(
+        'td[data-day="2026-07-15"] [data-slot="calendar-day-cell"]'
+      ) as HTMLElement;
+      const emptyCell = container.querySelector(
+        'td[data-day="2026-07-16"] [data-slot="calendar-day-cell"]'
+      ) as HTMLElement;
+
+      expect(activeCell).toBeTruthy();
+      expect(emptyCell).toBeTruthy();
+
+      expect(activeCell.className).toContain('min-h-(--cell-size)');
+      expect(emptyCell.className).toContain('min-h-(--cell-size)');
+      // Both must also resolve identically - same height source, no divergence.
+      expect(activeCell.className).toContain('h-full');
+      expect(emptyCell.className).toContain('h-full');
+    });
+
     it('binds the loading skeleton to the same --cell-size custom property as the real grid', () => {
       mockUseCalendarSummary.mockReturnValue({ data: undefined, isLoading: true, error: null });
 
@@ -243,8 +271,10 @@ describe('CalendarView', () => {
     expect(withinLegend.getByText('Expenses')).toBeTruthy();
     expect(withinLegend.getByText('Transfer')).toBeTruthy();
 
-    expect(legend.className).toContain('text-xxs');
-    expect(legend.className).not.toContain('text-xs ');
+    // Caption scale, not body scale. `text-xxs` (10px) was tried and read as
+    // too small for a line the user is meant to actually read.
+    expect(legend.className).toContain('text-xs');
+    expect(legend.className).not.toContain('text-sm');
 
     // Swatches, not prose describing colours.
     expect(legend.querySelector('.bg-text-success.rounded-full')).toBeTruthy();
