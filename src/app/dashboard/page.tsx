@@ -7,6 +7,7 @@ import { AccountsSummary } from '@/components/dashboard/AccountsSummary'
 import { MobileHeroSummary } from '@/components/dashboard/MobileHeroSummary'
 import { BudgetStatus } from '@/components/shared/BudgetStatus'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { DashboardActivityStrip } from '@/components/calendar/DashboardActivityStrip'
 
 const Dashboard = () => {
   return (
@@ -15,6 +16,10 @@ const Dashboard = () => {
       <MobileHeroSummary />
 
       <NetWorthSection />
+
+      <div className="money-map-card">
+        <DashboardActivityStrip />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3 money-map-card">
