@@ -121,4 +121,82 @@ describe('CalendarDayCell', () => {
     screen.getByRole('button').click();
     expect(clicked).toBe(true);
   });
+
+  describe('interactive prop', () => {
+    it('renders a button by default', () => {
+      const { container } = render(
+        <CalendarDayCell day={new Date('2026-07-16T00:00:00.000Z')} max={max} />
+      );
+
+      expect(container.querySelector('button[data-slot="calendar-day-cell"]')).toBeTruthy();
+      expect(container.querySelector('div[data-slot="calendar-day-cell"]')).toBeNull();
+    });
+
+    it('renders a plain div with no button semantics when interactive is false', () => {
+      const { container } = render(
+        <CalendarDayCell day={new Date('2026-07-16T00:00:00.000Z')} max={max} interactive={false} />
+      );
+
+      expect(container.querySelector('button[data-slot="calendar-day-cell"]')).toBeNull();
+      const cell = container.querySelector('div[data-slot="calendar-day-cell"]') as HTMLElement;
+      expect(cell).toBeTruthy();
+      expect(cell.hasAttribute('type')).toBe(false);
+      expect(cell.hasAttribute('tabindex')).toBe(false);
+      expect(cell.hasAttribute('disabled')).toBe(false);
+    });
+
+    it('drops hover/focus-affordance classes when interactive is false', () => {
+      const { container } = render(
+        <CalendarDayCell day={new Date('2026-07-16T00:00:00.000Z')} max={max} interactive={false} />
+      );
+
+      const cell = container.querySelector('[data-slot="calendar-day-cell"]') as HTMLElement;
+      expect(cell.className).not.toContain('hover:bg-accent/60');
+      expect(cell.className).not.toContain('focus-visible:ring-2');
+    });
+
+    it('still renders its content (day number, bars, dot) when non-interactive', () => {
+      const bucket = makeBucket({
+        expense: 500,
+        income: 2500,
+        transfer: 100,
+        expenseCount: 1,
+        incomeCount: 1,
+        transferCount: 1,
+      });
+
+      render(
+        <CalendarDayCell
+          day={new Date('2026-07-15T00:00:00.000Z')}
+          bucket={bucket}
+          max={max}
+          interactive={false}
+        />
+      );
+
+      expect(screen.getByText('15')).toBeTruthy();
+      expect(screen.getByTestId('income-bar')).toBeTruthy();
+      expect(screen.getByTestId('expense-bar')).toBeTruthy();
+      expect(screen.getByTestId('transfer-dot')).toBeTruthy();
+    });
+
+    it('does not forward onClick-adjacent button props onto the div', () => {
+      let clicked = false;
+      const { container } = render(
+        <CalendarDayCell
+          day={new Date('2026-07-16T00:00:00.000Z')}
+          max={max}
+          interactive={false}
+          onClick={() => {
+            clicked = true;
+          }}
+        />
+      );
+
+      const cell = container.querySelector('[data-slot="calendar-day-cell"]') as HTMLElement;
+      cell.click();
+      // Non-interactive cells intentionally do not wire up onClick even if passed.
+      expect(clicked).toBe(false);
+    });
+  });
 });

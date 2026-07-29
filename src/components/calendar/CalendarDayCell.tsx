@@ -22,6 +22,15 @@ export interface CalendarDayCellProps
   isToday?: boolean
   isSelected?: boolean
   isOutside?: boolean
+  /**
+   * Whether this cell is a real control. Defaults to `true` (the calendar
+   * grid). Pass `false` for read-only surfaces like the dashboard strip,
+   * which have no click handler to give a cell - rendering a `<button>`
+   * there ships a false affordance (hover highlight, focus ring, tab stop)
+   * for a control that does nothing. When `false`, renders a plain `<div>`
+   * with no button semantics and no hover/focus styling.
+   */
+  interactive?: boolean
 }
 
 /**
@@ -66,6 +75,7 @@ export function CalendarDayCell({
   isToday,
   isSelected,
   isOutside,
+  interactive = true,
   className,
   ...buttonProps
 }: CalendarDayCellProps) {
@@ -77,24 +87,17 @@ export function CalendarDayCell({
   const incomeWidth = bucket ? barWidthPercent(bucket.income, max.income) : 0
   const expenseWidth = bucket ? barWidthPercent(bucket.expense, max.expense) : 0
 
-  return (
-    <button
-      {...buttonProps}
-      type="button"
-      data-slot="calendar-day-cell"
-      data-day={toLocalDateKey(day)}
-      data-selected={isSelected || undefined}
-      data-today={isToday || undefined}
-      data-has-activity={hasActivity || undefined}
-      className={cn(
-        "group/day-cell relative flex h-full w-full flex-col items-start gap-1 rounded-lg p-1.5 text-left transition-colors",
-        "hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-        hasActivity ? "bg-card/40 border border-border/40" : "border border-transparent",
-        isSelected && "ring-2 ring-primary/60",
-        isOutside && "opacity-40",
-        className
-      )}
-    >
+  const sharedClassName = cn(
+    "group/day-cell relative flex h-full w-full flex-col items-start gap-1 rounded-lg p-1.5 text-left transition-colors",
+    interactive && "hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+    hasActivity ? "bg-card/40 border border-border/40" : "border border-transparent",
+    isSelected && "ring-2 ring-primary/60",
+    isOutside && "opacity-40",
+    className
+  )
+
+  const content = (
+    <>
       <span
         className={cn(
           "text-xs font-medium leading-[1.2]",
@@ -148,6 +151,36 @@ export function CalendarDayCell({
           )}
         </div>
       </div>
+    </>
+  )
+
+  if (!interactive) {
+    return (
+      <div
+        data-slot="calendar-day-cell"
+        data-day={toLocalDateKey(day)}
+        data-selected={isSelected || undefined}
+        data-today={isToday || undefined}
+        data-has-activity={hasActivity || undefined}
+        className={sharedClassName}
+      >
+        {content}
+      </div>
+    )
+  }
+
+  return (
+    <button
+      {...buttonProps}
+      type="button"
+      data-slot="calendar-day-cell"
+      data-day={toLocalDateKey(day)}
+      data-selected={isSelected || undefined}
+      data-today={isToday || undefined}
+      data-has-activity={hasActivity || undefined}
+      className={sharedClassName}
+    >
+      {content}
     </button>
   )
 }
