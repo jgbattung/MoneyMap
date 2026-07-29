@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { CalendarDayBucket } from "@/types/calendar"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
 /**
@@ -31,6 +32,14 @@ export interface CalendarDayCellProps
    * with no button semantics and no hover/focus styling.
    */
   interactive?: boolean
+  /**
+   * Whether this month's activity is still being fetched. The day number is
+   * known without the data, so it keeps rendering; only the figures that
+   * depend on the response are replaced with placeholders. This lets the
+   * calendar stay mounted while loading - see CalendarView - so the month
+   * caption and prev/next nav never disappear and the grid never reflows.
+   */
+  isLoading?: boolean
 }
 
 /**
@@ -76,11 +85,14 @@ export function CalendarDayCell({
   isSelected,
   isOutside,
   interactive = true,
+  isLoading = false,
   className,
   ...buttonProps
 }: CalendarDayCellProps) {
   const hasActivity =
-    !!bucket && bucket.expenseCount + bucket.incomeCount + bucket.transferCount > 0
+    !isLoading &&
+    !!bucket &&
+    bucket.expenseCount + bucket.incomeCount + bucket.transferCount > 0
   const hasTransfer = !!bucket && bucket.transferCount > 0
   const net = bucket ? bucket.income - bucket.expense : 0
 
@@ -119,13 +131,22 @@ export function CalendarDayCell({
         {day.getDate()}
       </span>
 
+      {isLoading && !isOutside && (
+        <Skeleton
+          data-testid="cell-net-skeleton"
+          className="hidden md:block h-3 w-12 rounded"
+        />
+      )}
+
       {hasActivity && (
         <span
           className={cn(
-            // `text-xxs` (10px), one step below the day number so the number
-            // stays the cell's primary wayfinding element. `text-xxxs` (8px)
-            // was tried and is too small to read a peso figure at.
-            "hidden md:block text-numeric text-xxs leading-none",
+            // `text-xs` (12px). It shares the day number's size rather than
+            // sitting a step below it; they stay distinguishable by family
+            // (mono vs sans) and by the gain/loss colour. `text-xxs` and
+            // `text-xxxs` were both tried and read as too small for a peso
+            // figure at this density.
+            "hidden md:block text-numeric text-xs leading-none",
             net >= 0 ? "text-text-success" : "text-text-error"
           )}
         >
@@ -135,6 +156,12 @@ export function CalendarDayCell({
 
       <div className="mt-auto flex w-full items-end gap-1">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          {isLoading && !isOutside && (
+            <Skeleton
+              data-testid="cell-bar-skeleton"
+              className="h-[3px] w-2/3 rounded-full"
+            />
+          )}
           {incomeWidth > 0 && (
             <span
               data-testid="income-bar"

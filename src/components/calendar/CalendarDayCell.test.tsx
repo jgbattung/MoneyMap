@@ -128,13 +128,14 @@ describe('CalendarDayCell', () => {
       expect(dayNumber.className).not.toContain('text-sm');
     });
 
-    it('sets the net figure one step below the day number, at the xxs step', () => {
+    it('sets the net figure at the xs step, matching the day number', () => {
       render(
         <CalendarDayCell day={new Date('2026-07-15T00:00:00.000Z')} bucket={activeBucket} max={max} />
       );
 
       const net = screen.getByText(/₱/);
-      expect(net.className).toContain('text-xxs');
+      expect(net.className).toContain('text-xs');
+      expect(net.className).not.toContain('text-xxs');
       expect(net.className).not.toContain('text-xxxs');
       // The mono/tabular treatment must survive the conditional-colour merge.
       expect(net.className).toContain('text-numeric');

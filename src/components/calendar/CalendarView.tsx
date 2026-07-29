@@ -6,7 +6,6 @@ import { endOfMonth, format, startOfMonth } from "date-fns"
 import { CalendarX2 } from "lucide-react"
 import type { DayButton } from "react-day-picker"
 import { Calendar } from "@/components/ui/calendar"
-import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { useCalendarSummary } from "@/hooks/useCalendarSummary"
 import { useEarliestTransaction } from "@/hooks/useEarliestTransaction"
@@ -71,7 +70,8 @@ function formatPeso(amount: number): string {
 const CalendarGridDataContext = React.createContext<{
   summaryByDate: Map<string, CalendarDayBucket>
   max: { expense: number; income: number }
-}>({ summaryByDate: new Map(), max: { expense: 0, income: 0 } })
+  isLoading: boolean
+}>({ summaryByDate: new Map(), max: { expense: 0, income: 0 }, isLoading: false })
 
 /**
  * The custom react-day-picker `DayButton`.
@@ -91,7 +91,7 @@ function CalendarGridDayButton({
   className,
   ...buttonProps
 }: React.ComponentProps<typeof DayButton>) {
-  const { summaryByDate, max } = React.useContext(CalendarGridDataContext)
+  const { summaryByDate, max, isLoading } = React.useContext(CalendarGridDataContext)
   const ref = React.useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -108,6 +108,7 @@ function CalendarGridDayButton({
       isToday={modifiers.today}
       isSelected={modifiers.selected}
       isOutside={modifiers.outside}
+      isLoading={isLoading}
       className={className}
     />
   )
@@ -183,7 +184,10 @@ export function CalendarView() {
     setSelectedDate(null)
   }, [])
 
-  const gridData = useMemo(() => ({ summaryByDate, max }), [summaryByDate, max])
+  const gridData = useMemo(
+    () => ({ summaryByDate, max, isLoading }),
+    [summaryByDate, max, isLoading]
+  )
 
   const handleDrawerOpenChange = useCallback((open: boolean) => {
     if (!open) setSelectedDate(null)
@@ -231,75 +235,72 @@ export function CalendarView() {
             )}
           </div>
 
-          {isLoading ? (
-            <div
-              className="grid grid-cols-7 gap-1 [--cell-size:--spacing(11)] md:[--cell-size:--spacing(20)]"
-              data-testid="calendar-skeleton"
-            >
-              {Array.from({ length: 35 }).map((_, i) => (
-                <Skeleton key={i} className="min-h-(--cell-size) rounded-lg" />
-              ))}
-            </div>
-          ) : (
-            <>
-              {/* The grid stays mounted on error so its month nav remains usable -
-                  a failed range must not strand the user on a dead month with no
-                  way to navigate away or retry short of a page reload. */}
-              <CalendarGridDataContext.Provider value={gridData}>
-                <Calendar
-                  mode="single"
-                  selected={selected}
-                  onSelect={handleSelect}
-                  month={month}
-                  onMonthChange={handleMonthChange}
-                  startMonth={startMonth}
-                  showOutsideDays
-                  className="[--cell-size:--spacing(11)] md:[--cell-size:--spacing(20)] w-full"
-                  classNames={{
-                    day: "relative w-full h-full min-h-(--cell-size) p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md group/day select-none",
-                  }}
-                  components={{ DayButton: CalendarGridDayButton }}
-                />
-              </CalendarGridDataContext.Provider>
+          {/* The grid stays mounted while LOADING as well as on error. Swapping
+              it for a standalone skeleton grid unmounted the whole DayPicker,
+              which took its `rdp-nav` (month caption + prev/next chevrons) with
+              it - so the month heading vanished and the user could not navigate
+              while a fetch was in flight, and the grid reflowed on every settle.
+              Loading is expressed inside the cells instead: the day numbers are
+              known without the response, so only the figures that depend on it
+              become placeholders. */}
+          <div data-testid={isLoading ? "calendar-skeleton" : undefined}>
+            <CalendarGridDataContext.Provider value={gridData}>
+              <Calendar
+                mode="single"
+                selected={selected}
+                onSelect={handleSelect}
+                month={month}
+                onMonthChange={handleMonthChange}
+                startMonth={startMonth}
+                showOutsideDays
+                className="[--cell-size:--spacing(11)] md:[--cell-size:--spacing(20)] w-full"
+                classNames={{
+                  day: "relative w-full h-full min-h-(--cell-size) p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md group/day select-none",
+                }}
+                components={{ DayButton: CalendarGridDayButton }}
+              />
+            </CalendarGridDataContext.Provider>
+          </div>
 
-              {error ? (
+          {!isLoading &&
+            (error ? (
+              <EmptyState
+                icon={CalendarX2}
+                title="Couldn't load the calendar"
+                description="Something went wrong fetching this month's activity. Try again shortly."
+                variant="widget"
+              />
+            ) : (
+              !hasActivity && (
                 <EmptyState
                   icon={CalendarX2}
-                  title="Couldn't load the calendar"
-                  description="Something went wrong fetching this month's activity. Try again shortly."
+                  title="No activity this month"
+                  description="Transactions for this month will show up here once you add some."
                   variant="widget"
                 />
-              ) : (
-                !hasActivity && (
-                  <EmptyState
-                    icon={CalendarX2}
-                    title="No activity this month"
-                    description="Transactions for this month will show up here once you add some."
-                    variant="widget"
-                  />
-                )
-              )}
+              )
+            ))}
 
-              <div
-                className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground"
-                data-testid="calendar-legend"
-              >
-                <span className="flex items-center gap-1.5">
-                  <span className="h-[3px] w-3 rounded-full bg-text-success" aria-hidden="true" />
-                  Income
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-[3px] w-3 rounded-full bg-text-error" aria-hidden="true" />
-                  Expenses
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-1 w-1 rounded-full bg-secondary-400" aria-hidden="true" />
-                  Transfer
-                </span>
-                <span>scaled per channel against the heaviest day in view</span>
-              </div>
-            </>
-          )}
+          {/* Static content, so it stays put through a fetch rather than
+              popping in on settle. */}
+          <div
+            className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground"
+            data-testid="calendar-legend"
+          >
+            <span className="flex items-center gap-1.5">
+              <span className="h-[3px] w-3 rounded-full bg-text-success" aria-hidden="true" />
+              Income
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-[3px] w-3 rounded-full bg-text-error" aria-hidden="true" />
+              Expenses
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-1 w-1 rounded-full bg-secondary-400" aria-hidden="true" />
+              Transfer
+            </span>
+            <span>scaled per channel against the heaviest day in view</span>
+          </div>
         </div>
 
         <CalendarDayPanel

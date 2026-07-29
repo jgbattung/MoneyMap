@@ -241,20 +241,41 @@ describe('CalendarView', () => {
       expect(emptyCell.className).toContain('h-full');
     });
 
-    it('binds the loading skeleton to the same --cell-size custom property as the real grid', () => {
+    it('keeps the real grid mounted while loading so the month nav never disappears', () => {
+      // Regression guard. Loading used to swap the whole <Calendar> out for a
+      // standalone skeleton grid, which unmounted react-day-picker along with
+      // its `rdp-nav` - the month caption and the prev/next chevrons - so the
+      // heading vanished and months could not be changed mid-fetch. Loading is
+      // now expressed inside the cells, which also keeps the grid from
+      // reflowing when the response settles.
       mockUseCalendarSummary.mockReturnValue({ data: undefined, isLoading: true, error: null });
 
       const { container } = render(<CalendarView />);
 
-      const skeletonGrid = screen.getByTestId('calendar-skeleton');
-      expect(skeletonGrid.className).toContain('--cell-size:--spacing(11)');
+      expect(container.querySelector('.rdp-nav')).toBeTruthy();
+      // The month caption react-day-picker renders alongside its nav, not the
+      // view's own heading above the grid (both read "July 2026").
+      expect(container.querySelector('.rdp-month_caption')?.textContent).toContain('July 2026');
+      expect(container.querySelectorAll('td[data-day]').length).toBeGreaterThan(0);
+    });
 
-      const skeletonCells = container.querySelectorAll('[data-slot="skeleton"]');
-      expect(skeletonCells.length).toBeGreaterThan(0);
-      for (const cell of Array.from(skeletonCells)) {
-        expect(cell.className).toContain('min-h-(--cell-size)');
-        expect(cell.className).not.toContain('aspect-square');
-      }
+    it('shows placeholders inside the cells while loading, keeping real day numbers', () => {
+      mockUseCalendarSummary.mockReturnValue({ data: undefined, isLoading: true, error: null });
+
+      const { container } = render(<CalendarView />);
+
+      // Day numbers are known without the response, so they render for real.
+      const cell = container.querySelector(
+        'td[data-day="2026-07-15"] [data-slot="calendar-day-cell"]'
+      ) as HTMLElement;
+      expect(cell).toBeTruthy();
+      expect(cell.textContent).toContain('15');
+
+      // Only the data-dependent figures are placeholders.
+      expect(container.querySelectorAll('[data-testid="cell-bar-skeleton"]').length)
+        .toBeGreaterThan(0);
+      expect(container.querySelector('[data-testid="income-bar"]')).toBeNull();
+      expect(container.querySelector('[data-testid="expense-bar"]')).toBeNull();
     });
   });
 
