@@ -34,6 +34,21 @@ function formatWholePeso(amount: number): string {
 }
 
 /**
+ * Local calendar-day key ("YYYY-MM-DD") for the `data-day` attribute.
+ * Deliberately NOT `toISOString()` - `day` is a local-midnight Date built by
+ * react-day-picker, and `.toISOString()` converts to UTC first, which rolls
+ * the date back a day for any positive-UTC-offset viewer (e.g. the app's
+ * assumed UTC+8). Must stay local to match CalendarView's own bucket-key
+ * matching (see CalendarView.tsx's `toLocalDayKey`).
+ */
+function toLocalDateKey(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+/**
  * The custom react-day-picker DayButton for the Activity Calendar. Renders
  * the day number, an optional desktop-only net figure, and a footer with
  * income/expense bars plus a permanently-reserved transfer-dot gutter so bar
@@ -62,7 +77,7 @@ export function CalendarDayCell({
     <button
       type="button"
       data-slot="calendar-day-cell"
-      data-day={day.toISOString().slice(0, 10)}
+      data-day={toLocalDateKey(day)}
       data-selected={isSelected || undefined}
       data-today={isToday || undefined}
       data-has-activity={hasActivity || undefined}

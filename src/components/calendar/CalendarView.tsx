@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { endOfMonth, format, startOfMonth } from "date-fns"
 import { CalendarX2 } from "lucide-react"
 import type { DayButton } from "react-day-picker"
@@ -11,7 +11,34 @@ import { EmptyState } from "@/components/shared/EmptyState"
 import { useCalendarSummary } from "@/hooks/useCalendarSummary"
 import { useEarliestTransaction } from "@/hooks/useEarliestTransaction"
 import { CalendarDayCell } from "./CalendarDayCell"
-import { CalendarDayBucket } from "@/types/calendar"
+import { CalendarDayPanel } from "./CalendarDayPanel"
+import { CalendarDayDrawer } from "./CalendarDayDrawer"
+import EditExpenseDrawer from "@/components/forms/EditExpenseDrawer"
+import EditIncomeDrawer from "@/components/forms/EditIncomeDrawer"
+import EditTransferDrawer from "@/components/forms/EditTransferDrawer"
+import { CalendarDayBucket, CalendarDayTransaction } from "@/types/calendar"
+
+/**
+ * `md` breakpoint (768px), matching the rest of the app's responsive
+ * convention. Drives whether a day selection opens the sticky desktop panel
+ * (always in the DOM, just updates its content) or pops the mobile bottom
+ * Drawer (a real vaul dialog that must not also appear on desktop).
+ */
+const DESKTOP_MEDIA_QUERY = "(min-width: 768px)"
+
+function useIsDesktop(): boolean {
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    const mql = window.matchMedia(DESKTOP_MEDIA_QUERY)
+    const update = () => setIsDesktop(mql.matches)
+    update()
+    mql.addEventListener("change", update)
+    return () => mql.removeEventListener("change", update)
+  }, [])
+
+  return isDesktop
+}
 
 /**
  * The app assumes a UTC+8 viewer (see project-context.md "Date Storage
@@ -37,6 +64,22 @@ function formatPeso(amount: number): string {
 export function CalendarView() {
   const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()))
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const isDesktop = useIsDesktop()
+
+  const [selectedTransactionId, setSelectedTransactionId] = useState<string>("")
+  const [editExpenseOpen, setEditExpenseOpen] = useState(false)
+  const [editIncomeOpen, setEditIncomeOpen] = useState(false)
+  const [editTransferOpen, setEditTransferOpen] = useState(false)
+
+  const handleTransactionClick = useCallback(
+    (id: string, type: CalendarDayTransaction["type"]) => {
+      setSelectedTransactionId(id)
+      if (type === "EXPENSE") setEditExpenseOpen(true)
+      else if (type === "INCOME") setEditIncomeOpen(true)
+      else setEditTransferOpen(true)
+    },
+    []
+  )
 
   const {
     earliestMonth,
@@ -98,76 +141,119 @@ export function CalendarView() {
     [summaryByDate, max, handleSelect]
   )
 
+  const handleDrawerOpenChange = useCallback((open: boolean) => {
+    if (!open) setSelectedDate(null)
+  }, [])
+
   return (
-    <div className="flex flex-col gap-4" data-testid="calendar-view">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-medium text-foreground">{format(month, "MMMM yyyy")}</h2>
-        {!isLoading && !error && (
-          <div className="flex items-center gap-4">
-            <span className="text-numeric text-xs text-text-success">
-              +{formatPeso(totals.income)}
-            </span>
-            <span className="text-numeric text-xs text-text-error">
-              -{formatPeso(totals.expense)}
-            </span>
-            <span
-              data-testid="calendar-month-net"
-              className={
-                "text-numeric text-xs font-semibold " +
-                (totals.net >= 0 ? "text-text-success" : "text-text-error")
-              }
-            >
-              {formatSignedPeso(totals.net)}
-            </span>
+    <div data-testid="calendar-view">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-6 items-start">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-medium text-foreground">{format(month, "MMMM yyyy")}</h2>
+            {!isLoading && !error && (
+              <div className="flex items-center gap-4">
+                <span className="text-numeric text-xs text-text-success">
+                  +{formatPeso(totals.income)}
+                </span>
+                <span className="text-numeric text-xs text-text-error">
+                  -{formatPeso(totals.expense)}
+                </span>
+                <span
+                  data-testid="calendar-month-net"
+                  className={
+                    "text-numeric text-xs font-semibold " +
+                    (totals.net >= 0 ? "text-text-success" : "text-text-error")
+                  }
+                >
+                  {formatSignedPeso(totals.net)}
+                </span>
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-7 gap-1" data-testid="calendar-skeleton">
-          {Array.from({ length: 35 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-square rounded-lg" />
-          ))}
-        </div>
-      ) : error ? (
-        <EmptyState
-          icon={CalendarX2}
-          title="Couldn't load the calendar"
-          description="Something went wrong fetching this month's activity. Try again shortly."
-          variant="widget"
-        />
-      ) : (
-        <>
-          <Calendar
-            mode="single"
-            selected={selected}
-            onSelect={handleSelect}
-            month={month}
-            onMonthChange={setMonth}
-            startMonth={startMonth}
-            showOutsideDays
-            className="[--cell-size:--spacing(11)] md:[--cell-size:--spacing(20)] w-full"
-            classNames={{
-              day: "relative w-full h-full p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md group/day select-none",
-            }}
-            components={{ DayButton: DayButtonAdapter }}
-          />
-
-          {!hasActivity && (
+          {isLoading ? (
+            <div className="grid grid-cols-7 gap-1" data-testid="calendar-skeleton">
+              {Array.from({ length: 35 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-square rounded-lg" />
+              ))}
+            </div>
+          ) : error ? (
             <EmptyState
               icon={CalendarX2}
-              title="No activity this month"
-              description="Transactions for this month will show up here once you add some."
+              title="Couldn't load the calendar"
+              description="Something went wrong fetching this month's activity. Try again shortly."
               variant="widget"
             />
-          )}
+          ) : (
+            <>
+              <Calendar
+                mode="single"
+                selected={selected}
+                onSelect={handleSelect}
+                month={month}
+                onMonthChange={setMonth}
+                startMonth={startMonth}
+                showOutsideDays
+                className="[--cell-size:--spacing(11)] md:[--cell-size:--spacing(20)] w-full"
+                classNames={{
+                  day: "relative w-full h-full p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md group/day select-none",
+                }}
+                components={{ DayButton: DayButtonAdapter }}
+              />
 
-          <p className="text-xs text-muted-foreground">
-            Income (mint) stacks above expenses (coral); a slate dot marks a transfer. Bars are
-            scaled per channel against the heaviest day in view.
-          </p>
-        </>
-      )}
+              {!hasActivity && (
+                <EmptyState
+                  icon={CalendarX2}
+                  title="No activity this month"
+                  description="Transactions for this month will show up here once you add some."
+                  variant="widget"
+                />
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                Income (mint) stacks above expenses (coral); a slate dot marks a transfer. Bars
+                are scaled per channel against the heaviest day in view.
+              </p>
+            </>
+          )}
+        </div>
+
+        <CalendarDayPanel
+          date={selectedDate}
+          onTransactionClick={handleTransactionClick}
+          className="hidden md:block"
+        />
+      </div>
+
+      <CalendarDayDrawer
+        date={selectedDate}
+        open={!isDesktop && !!selectedDate}
+        onOpenChange={handleDrawerOpenChange}
+        onTransactionClick={handleTransactionClick}
+      />
+
+      {/* Edit drawers — same components TransactionsMobileView wires (lines ~500-518), reused as-is.
+          Unlike that page, CalendarView has no separate desktop table with inline editing, so these
+          are the calendar's only edit surface regardless of viewport; EditTransferDrawer's className
+          is intentionally left unrestricted here (TransactionsMobileView passes "block md:hidden"
+          because desktop there uses a different, inline-editable table). */}
+      <EditExpenseDrawer
+        open={editExpenseOpen}
+        onOpenChange={setEditExpenseOpen}
+        expenseId={selectedTransactionId}
+      />
+      <EditIncomeDrawer
+        open={editIncomeOpen}
+        onOpenChange={setEditIncomeOpen}
+        incomeTransactionId={selectedTransactionId}
+      />
+      <EditTransferDrawer
+        open={editTransferOpen}
+        onOpenChange={setEditTransferOpen}
+        className=""
+        transferId={selectedTransactionId}
+      />
     </div>
   )
 }
