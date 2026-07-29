@@ -13,6 +13,8 @@ export const EAGER_KEYS = [
   ['monthlySummary'],
   ['budgetStatus'],
   ['netWorth'],
+  ['calendarSummary'],
+  ['calendarDay'],
 ] as const;
 
 /**
