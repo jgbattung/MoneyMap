@@ -13,7 +13,6 @@ import { useCalendarSummary } from "@/hooks/useCalendarSummary"
 import { useEarliestTransaction } from "@/hooks/useEarliestTransaction"
 import { CalendarDayCell } from "./CalendarDayCell"
 import { CalendarDayPanel } from "./CalendarDayPanel"
-import { CalendarDayDrawer } from "./CalendarDayDrawer"
 import EditExpenseDrawer from "@/components/forms/EditExpenseDrawer"
 import EditIncomeDrawer from "@/components/forms/EditIncomeDrawer"
 import EditTransferDrawer from "@/components/forms/EditTransferDrawer"
@@ -21,25 +20,12 @@ import { CalendarDayBucket, CalendarDayTransaction } from "@/types/calendar"
 
 /**
  * `md` breakpoint (768px), matching the rest of the app's responsive
- * convention. Drives whether a day selection opens the sticky desktop panel
- * (always in the DOM, just updates its content) or pops the mobile bottom
- * Drawer (a real vaul dialog that must not also appear on desktop).
+ * convention. Read imperatively inside the scroll effect rather than held in
+ * state: it only decides whether to scroll, never what to render, so putting
+ * it in state would re-render the whole grid on every viewport change for no
+ * visual difference.
  */
 const DESKTOP_MEDIA_QUERY = "(min-width: 768px)"
-
-function useIsDesktop(): boolean {
-  const [isDesktop, setIsDesktop] = useState(false)
-
-  useEffect(() => {
-    const mql = window.matchMedia(DESKTOP_MEDIA_QUERY)
-    const update = () => setIsDesktop(mql.matches)
-    update()
-    mql.addEventListener("change", update)
-    return () => mql.removeEventListener("change", update)
-  }, [])
-
-  return isDesktop
-}
 
 /**
  * The app assumes a UTC+8 viewer (see project-context.md "Date Storage
@@ -119,7 +105,25 @@ function CalendarGridDayButton({
 export function CalendarView() {
   const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()))
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const isDesktop = useIsDesktop()
+  const dayPanelRef = React.useRef<HTMLDivElement>(null)
+
+  /**
+   * On mobile the day panel sits below the grid, so a selection would
+   * otherwise land off-screen and read as "nothing happened". Desktop renders
+   * it beside the grid and needs no scroll. Honours `prefers-reduced-motion`
+   * like the rest of the app.
+   */
+  useEffect(() => {
+    if (!selectedDate) return
+    if (typeof window === "undefined" || !window.matchMedia) return
+    if (window.matchMedia(DESKTOP_MEDIA_QUERY).matches) return
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    dayPanelRef.current?.scrollIntoView?.({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "start",
+    })
+  }, [selectedDate])
 
   const [selectedTransactionId, setSelectedTransactionId] = useState<string>("")
   const [editExpenseOpen, setEditExpenseOpen] = useState(false)
@@ -217,10 +221,6 @@ export function CalendarView() {
     ],
     [totals.income, totals.expense, totals.net]
   )
-
-  const handleDrawerOpenChange = useCallback((open: boolean) => {
-    if (!open) setSelectedDate(null)
-  }, [])
 
   return (
     <div data-testid="calendar-view">
@@ -331,19 +331,19 @@ export function CalendarView() {
           </div>
         </div>
 
+        {/* One panel for both breakpoints: beside the grid on desktop, stacked
+            beneath it on mobile. It used to be a vaul Drawer on mobile, which
+            meant the day detail covered the calendar you were browsing, and an
+            edit drawer opened as a second modal on top of the first - the only
+            place in the app where that happened. Inline keeps the grid visible
+            while reading a day, and lets the edit drawer open over the page
+            exactly like every other list. */}
         <CalendarDayPanel
+          ref={dayPanelRef}
           date={selectedDate}
           onTransactionClick={handleTransactionClick}
-          className="hidden md:block"
         />
       </div>
-
-      <CalendarDayDrawer
-        date={selectedDate}
-        open={!isDesktop && !!selectedDate}
-        onOpenChange={handleDrawerOpenChange}
-        onTransactionClick={handleTransactionClick}
-      />
 
       {/* Edit drawers — same components TransactionsMobileView wires (lines ~500-518), reused as-is.
           Unlike that page, CalendarView has no separate desktop table with inline editing, so these

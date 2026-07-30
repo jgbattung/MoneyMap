@@ -306,6 +306,66 @@ describe('CalendarView', () => {
     });
   });
 
+  describe('day detail placement', () => {
+    beforeEach(() => {
+      mockUseCalendarSummary.mockReturnValue(activeSummary);
+    });
+
+    it('renders one inline panel at every breakpoint, never a modal drawer', () => {
+      // The day detail used to be a vaul Drawer on mobile. That covered the
+      // calendar being browsed, and an edit drawer then opened as a second
+      // modal on top of the first - the only place in the app where an edit
+      // drawer did not open over an ordinary page.
+      const { container } = render(<CalendarView />);
+
+      const panel = screen.getByTestId('calendar-day-panel');
+      expect(panel).toBeTruthy();
+      // Not hidden below md any more - it is the mobile surface too.
+      expect(panel.className).not.toContain('hidden');
+      // Sticky only from md up; pinning it on mobile would re-create the
+      // occlusion the drawer had.
+      expect(panel.className).toContain('md:sticky');
+
+      expect(container.querySelector('[data-testid="calendar-day-drawer"]')).toBeNull();
+      expect(container.querySelector('[role="dialog"]')).toBeNull();
+    });
+
+    it('shows a resting state prompting the user to pick a day', () => {
+      render(<CalendarView />);
+
+      // The panel is always on screen on mobile now, so its empty state is the
+      // affordance that explains what tapping a cell does.
+      const panel = within(screen.getByTestId('calendar-day-panel'));
+      expect(panel.getByText('No day selected')).toBeTruthy();
+    });
+
+    it('marks the picked day as selected and keeps it selected', () => {
+      // The drawer cleared `selectedDate` on dismiss, so the calendar lost its
+      // selected-day ring and an interrupted user lost their place. With the
+      // panel inline there is no dismiss, so the selection simply persists.
+      const { container } = render(<CalendarView />);
+
+      const dayCell = container.querySelector('button[data-day="2026-07-15"]') as HTMLElement;
+      fireEvent.click(dayCell);
+
+      expect(
+        container.querySelector('button[data-day="2026-07-15"][data-selected="true"]')
+      ).toBeTruthy();
+      expect(mockUseCalendarDay).toHaveBeenLastCalledWith('2026-07-15');
+
+      // Picking a second day moves the selection rather than needing a dismiss.
+      const otherCell = container.querySelector('button[data-day="2026-07-16"]') as HTMLElement;
+      fireEvent.click(otherCell);
+
+      expect(
+        container.querySelector('button[data-day="2026-07-16"][data-selected="true"]')
+      ).toBeTruthy();
+      expect(
+        container.querySelector('button[data-day="2026-07-15"][data-selected="true"]')
+      ).toBeNull();
+    });
+  });
+
   it('demotes the legend to caption scale with inline swatches instead of prose', () => {
     mockUseCalendarSummary.mockReturnValue(activeSummary);
 

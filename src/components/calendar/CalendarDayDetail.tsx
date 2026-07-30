@@ -22,10 +22,9 @@ function formatSignedPeso(amount: number): string {
 }
 
 /**
- * The shared body rendered by both CalendarDayPanel (desktop) and
- * CalendarDayDrawer (mobile) - full date heading, the three figures, and
- * the day's transactions via the existing CompactTransactionCard. Neither
- * container duplicates this markup.
+ * The body rendered by CalendarDayPanel at every breakpoint - full date
+ * heading, the three figures, and the day's transactions via the existing
+ * CompactTransactionCard.
  */
 export function CalendarDayDetail({
   date,
