@@ -1,5 +1,32 @@
 import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { extendTailwindMerge } from "tailwind-merge"
+
+/**
+ * tailwind-merge only knows Tailwind's stock scales. Any unrecognised `text-*`
+ * class falls through to its text-COLOR group, so our project-specific ones
+ * silently conflict with real colours and the earlier class is dropped:
+ *
+ *   cn("text-numeric", isNegative && "text-text-error")
+ *     -> "text-text-error"        // Monospace Money Rule silently lost
+ *   cn("text-xxs ...", "text-primary")
+ *     -> "text-primary"           // font size silently lost
+ *
+ * Both custom font-size steps (`--text-xxs` 10px, `--text-xxxs` 8px, declared
+ * in globals.css `@theme`) are registered as real font sizes, and `text-numeric`
+ * gets its own group so it conflicts with nothing - it sets font-family and
+ * font-variant-numeric, never a colour or a size.
+ */
+// The type parameter registers "text-numeric" as an ADDITIONAL class group id.
+// Without it `extend.classGroups` only accepts tailwind-merge's own group ids
+// and the config fails to type-check.
+const twMerge = extendTailwindMerge<"text-numeric">({
+  extend: {
+    classGroups: {
+      "font-size": [{ text: ["xxs", "xxxs"] }],
+      "text-numeric": ["text-numeric"],
+    },
+  },
+})
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

@@ -322,12 +322,6 @@ export async function PATCH(
   }
 }
 
-export const INSTALLMENT_STATUS = {
-  active: "ACTIVE",
-  cancelled: "CANCELLED",
-  completed: "COMPLETED",
-}
-
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

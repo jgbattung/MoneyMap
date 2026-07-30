@@ -62,6 +62,18 @@ describe('invalidateAfterTransactionWrite', () => {
     }
   });
 
+  it('invalidates the calendar keys eagerly after a transaction write', () => {
+    invalidateAfterTransactionWrite(queryClient, ['expenseTransactions']);
+
+    for (const key of [['calendarSummary'], ['calendarDay']]) {
+      const matchingCall = vi.mocked(queryClient.invalidateQueries).mock.calls.find(
+        ([arg]) => JSON.stringify((arg as { queryKey: unknown }).queryKey) === JSON.stringify(key)
+      );
+      expect(matchingCall).toBeDefined();
+      expect((matchingCall![0] as { refetchType?: string }).refetchType).toBeUndefined();
+    }
+  });
+
   it('invalidates extra eager keys without refetchType restriction', () => {
     invalidateAfterTransactionWrite(queryClient, ['transfers'], [['expenseTransactions']]);
 

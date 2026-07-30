@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'crypto';
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { INSTALLMENT_STATUS } from "../../expense-transactions/[id]/route";
+import { INSTALLMENT_STATUS } from "@/lib/installments";
 
 export async function POST(request: NextRequest) {
   try {

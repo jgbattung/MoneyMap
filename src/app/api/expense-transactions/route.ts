@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { INSTALLMENT_STATUS } from "./[id]/route";
+import { INSTALLMENT_STATUS } from "@/lib/installments";
 import { Prisma, PrismaPromise } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { onExpenseTransactionChange } from "@/lib/statement-recalculator";
