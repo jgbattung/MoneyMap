@@ -32,20 +32,14 @@ import { PrismaClient } from "@prisma/client";
 /**
  * The local Docker Postgres from `docker-compose.yml` (host port 5433), database
  * `money_map_demo`. This is a second database inside the same container as the
- * Playwright E2E database `money_map_dev`, so `clearDatabase()` in the E2E global
- * setup can never reach the demo dataset.
+ * Playwright E2E database `money_map_dev`, so the wholesale wipe the E2E global setup
+ * performs on every run can never reach the demo dataset.
  */
 export const DEMO_DB_URL =
   "postgresql://postgres:local_dev_password@localhost:5433/money_map_demo";
 
 /** The single user every demo record belongs to. Every delete is scoped to this id. */
 export const DEMO_USER_ID = "demo-user-money-map";
-
-/** Stable session token for the demo user, reused by the screenshot pipeline. */
-export const DEMO_SESSION_TOKEN = "demo-session-token-money-map";
-
-/** Where the seed writes the signed session cookie for the screenshot script. */
-export const DEMO_COOKIE_FILE = "scripts/demo/.demo-session.json";
 
 /**
  * The only sanctioned way to build a Prisma client in demo tooling.
