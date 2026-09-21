@@ -16,6 +16,7 @@ A single-user personal finance tracker built for one person's actual money: net 
 ## Table of Contents
 
 - [What it does](#what-it-does)
+- [Screenshots](#screenshots)
 - [What it deliberately does not do](#what-it-deliberately-does-not-do)
 - [What is different about it](#what-is-different-about-it)
 - [How it works](#how-it-works)
@@ -50,6 +51,23 @@ Concretely, it tracks:
 - **Reports**: category breakdowns, annual summaries, a filterable transaction analyzer, and a tag-based event ledger.
 
 Currency is Philippine peso (`₱`), formatted with the `en-PH` locale.
+
+## Screenshots
+
+Captured from the synthetic demo dataset, not from real financial records. Regenerate
+them with `npm run screenshots` against a seeded `dev:demo` server, as described under
+[Demo data](#demo-data).
+
+| | |
+| --- | --- |
+| ![Dashboard](public/screenshots/dashboard.png) | ![Reports](public/screenshots/reports.png) |
+| **Dashboard.** Net worth, the change since last month, account balances and recent activity in one view. | **Reports.** Net worth over time against a target, category breakdowns, and the tag-based event ledger. |
+| ![Accounts](public/screenshots/accounts.png) | ![Cards](public/screenshots/cards.png) |
+| **Accounts.** Balances across checking, savings, cash, e-wallet, investment and retirement accounts, with the net-worth flag per account. | **Cards.** Credit cards with their real statement cycles, statement balances and due dates, grouped by issuer. |
+| ![Transactions](public/screenshots/transactions.png) | ![Calendar](public/screenshots/calendar.png) |
+| **Transactions.** Expenses, income and transfers in one filterable table with inline editing. | **Activity calendar.** The same history by day, so spending patterns are visible as shape rather than as rows. |
+| ![Budgets](public/screenshots/budgets.png) | |
+| **Budgets.** A monthly limit per category, updating as expenses are recorded. | |
 
 ## What it deliberately does not do
 
