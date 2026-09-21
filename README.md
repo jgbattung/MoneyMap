@@ -25,6 +25,7 @@ A single-user personal finance tracker built for one person's actual money: net 
 - [Tech stack](#tech-stack)
 - [Project structure](#project-structure)
 - [Running it locally](#running-it-locally)
+- [Demo data](#demo-data)
 - [Testing and CI](#testing-and-ci)
 - [Scheduled jobs](#scheduled-jobs)
 - [Design system](#design-system)
@@ -269,6 +270,63 @@ npm run lint       # ESLint
 npx vitest run     # unit and component tests
 npm run test:e2e   # Playwright, needs docker compose up first
 ```
+
+## Demo data
+
+There is a second, entirely separate local database, `money_map_demo`, holding a synthetic
+twelve-month financial history. It exists so the app can be shown fully populated without
+touching real records, and it is what the screenshots in this README are captured from.
+
+**Safety.** No script in this repository runs `prisma migrate`, `db push`, or `db seed`, in
+any form, ever. Schema changes are applied by hand. The commands in step 2 below are yours
+to run, once, deliberately, with the connection string typed inline on the command line and
+never read from a file.
+
+The demo tooling under `scripts/demo/` is protected by three independent layers, any one of
+which alone prevents data loss:
+
+1. **No environment resolution.** The connection string is a hardcoded literal in
+   `scripts/demo/connection.ts`, passed via `new PrismaClient({ datasourceUrl })`. Demo
+   scripts never read an environment variable and never load an env file, so there is no
+   input to get wrong.
+2. **A marker table.** `__demo_db_marker` exists only on the demo database and is asserted
+   before any write. That is a property of the database actually reached rather than of the
+   configuration intended, so it holds even if layer 1 fails completely.
+3. **Scoped deletes only.** Every delete carries `where: { userId: "demo-user-money-map" }`.
+   There is no unscoped `deleteMany()` anywhere in the demo tooling, and it deliberately
+   does not reuse `clearDatabase()` from the Playwright helpers, which deletes unscoped.
+
+### One-time setup
+
+```bash
+# 1. Start the local Postgres and create the demo database inside it
+docker compose up -d
+docker exec money_map_postgres psql -U postgres -c "CREATE DATABASE money_map_demo;"
+
+# 2. Apply migrations to it, with the URL inline. Run this yourself; no script does it.
+npx cross-env \
+  DATABASE_URL=postgresql://postgres:local_dev_password@localhost:5433/money_map_demo \
+  DIRECT_URL=postgresql://postgres:local_dev_password@localhost:5433/money_map_demo \
+  npx prisma migrate deploy
+
+# 3. Stamp the marker table, so the seed is willing to write
+npm run demo:marker
+```
+
+### Everyday use
+
+```bash
+npm run seed:demo     # populate (or repopulate) the demo dataset, idempotent
+npm run dev:demo      # dev server on the demo database, never on .env
+npm run screenshots   # capture public/screenshots/*.png from a running dev:demo
+```
+
+`docker-compose.yml` uses a named volume, so the seeded data survives container restarts,
+`docker compose down`, and reboots. Only `docker compose down -v` destroys it. Reseeding is
+idempotent, so `npm run seed:demo` is always safe to re-run.
+
+The Playwright suite targets a different database in the same container (`money_map_dev`)
+and wipes it on every run, which is exactly why the demo lives in its own database.
 
 ## Testing and CI
 
