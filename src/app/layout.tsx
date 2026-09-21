@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import Providers from "./providers";
-import ConditionalLayout from "@/components/layouts/ConditionalLayout";
 import NextTopLoader from 'nextjs-toploader';
 
 const geistSans = Geist({
@@ -39,11 +38,9 @@ export default function RootLayout({
           shadow="0 0 10px #178A86,0 0 5px #178A86"
         />
         <Providers>
-          <main className="flex h-screen overflow-hidden">
-            <ConditionalLayout>
-              {children}
-            </ConditionalLayout>
-          </main>
+          {/* The app shell lives in src/app/(app)/layout.tsx, not here, so that the
+              public marketing routes and the auth routes can opt out of it. */}
+          {children}
           <Toaster position="bottom-right"/>
         </Providers>
       </body>
