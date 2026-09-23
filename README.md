@@ -54,20 +54,26 @@ Currency is Philippine peso (`₱`), formatted with the `en-PH` locale.
 
 ## Screenshots
 
-Captured from the synthetic demo dataset, not from real financial records. Regenerate
-them with `npm run screenshots` against a seeded `dev:demo` server, as described under
+Captured from the synthetic demo dataset, not from real financial records, against a
+production build (`npm run build && npm run start:demo`) so there is no dev-mode
+indicator in frame. Regenerate them with `npm run screenshots`, as described under
 [Demo data](#demo-data).
 
 | | |
 | --- | --- |
-| ![Dashboard](public/screenshots/dashboard.png) | ![Reports](public/screenshots/reports.png) |
-| **Dashboard.** Net worth, the change since last month, account balances and recent activity in one view. | **Reports.** Net worth over time against a target, category breakdowns, and the tag-based event ledger. |
-| ![Accounts](public/screenshots/accounts.png) | ![Cards](public/screenshots/cards.png) |
-| **Accounts.** Balances across checking, savings, cash, e-wallet, investment and retirement accounts, with the net-worth flag per account. | **Cards.** Credit cards with their real statement cycles, statement balances and due dates, grouped by issuer. |
-| ![Transactions](public/screenshots/transactions.png) | ![Calendar](public/screenshots/calendar.png) |
-| **Transactions.** Expenses, income and transfers in one filterable table with inline editing. | **Activity calendar.** The same history by day, so spending patterns are visible as shape rather than as rows. |
-| ![Budgets](public/screenshots/budgets.png) | |
-| **Budgets.** A monthly limit per category, updating as expenses are recorded. | |
+| ![Dashboard](public/screenshots/desktop/dashboard.png) | ![Net worth](public/screenshots/desktop/net-worth.png) |
+| **Dashboard.** Net worth, the change since last month, account balances and recent activity in one view. | **Net worth.** Total net worth over time against a target, with the 1-year period selected. |
+| ![Accounts](public/screenshots/desktop/accounts.png) | ![Card detail](public/screenshots/desktop/card-detail.png) |
+| **Accounts.** Balances across checking, savings, cash, e-wallet, investment and retirement accounts, with the net-worth flag per account. | **Card detail.** A single credit card's statement balance, statement date and transactions. |
+| ![Transactions](public/screenshots/desktop/transactions.png) | ![Calendar](public/screenshots/desktop/calendar.png) |
+| **Transactions.** Expenses, income and transfers in one filterable table with inline editing. | **Activity calendar.** A day with activity selected, showing its transactions in the detail panel. |
+| ![Budgets](public/screenshots/desktop/budgets.png) | ![Reports](public/screenshots/desktop/reports.png) |
+| **Budgets.** A monthly limit per category, updating as expenses are recorded. | **Reports.** Category breakdown and the annual summary. |
+| ![Event ledger](public/screenshots/desktop/event-ledger.png) | |
+| **Event ledger.** Expenses and income merged under one tag, so a trip's real cost includes whatever came back. | |
+
+A matching mobile set, captured on a real device profile (390x844) rather than a narrow
+desktop viewport, lives under `public/screenshots/mobile/` with the same file names.
 
 ## What it deliberately does not do
 
@@ -336,12 +342,28 @@ npm run demo:marker
 ```bash
 npm run seed:demo     # populate (or repopulate) the demo dataset, idempotent
 npm run dev:demo      # dev server on the demo database, never on .env
-npm run screenshots   # capture public/screenshots/*.png from a running dev:demo
 ```
 
 `docker-compose.yml` uses a named volume, so the seeded data survives container restarts,
 `docker compose down`, and reboots. Only `docker compose down -v` destroys it. Reseeding is
 idempotent, so `npm run seed:demo` is always safe to re-run.
+
+### Capturing screenshots
+
+```bash
+npm run build          # a production build - no dev-mode indicator badge in the capture
+npm run start:demo     # serves it on the demo database, port 3000
+npm run screenshots    # in a second terminal: captures desktop + mobile sets
+```
+
+`npm run screenshots` drives each surface into the exact state it is supposed to show
+(the 1-year net-worth period, a populated calendar day, an individual card's detail
+page, the event ledger filtered to a real tag) rather than just navigating to it, and
+asserts that state actually took effect before capturing. It writes two full sets -
+desktop (1440x900) and a real mobile device profile (390x844, so the app's separate
+mobile layout with its bottom nav renders) - to `public/screenshots/desktop/` and
+`public/screenshots/mobile/`. Pass `--base-url=http://localhost:PORT` if `start:demo` is
+running on a non-default port (for example, because something else already holds 3000).
 
 The Playwright suite targets a different database in the same container (`money_map_dev`)
 and wipes it on every run, which is exactly why the demo lives in its own database.
