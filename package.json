@@ -7,6 +7,7 @@
     "dev:demo": "cross-env DATABASE_URL=postgresql://postgres:local_dev_password@localhost:5433/money_map_demo DIRECT_URL=postgresql://postgres:local_dev_password@localhost:5433/money_map_demo next dev",
     "build": "next build",
     "start": "next start",
+    "start:demo": "cross-env DATABASE_URL=postgresql://postgres:local_dev_password@localhost:5433/money_map_demo DIRECT_URL=postgresql://postgres:local_dev_password@localhost:5433/money_map_demo next start",
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
