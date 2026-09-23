@@ -107,7 +107,7 @@ describe('Hero', () => {
   it('uses the dashboard screenshot as the hero image, with real alt text', () => {
     render(<Hero />)
     const img = screen.getByRole('img')
-    expect(img.getAttribute('src')).toBe('/screenshots/dashboard.png')
+    expect(img.getAttribute('src')).toBe('/screenshots/desktop/dashboard.png')
     expect((img.getAttribute('alt') ?? '').length).toBeGreaterThan(10)
   })
 })
@@ -118,25 +118,25 @@ describe('feature sections', () => {
       name: 'net worth',
       Component: FeatureNetWorth,
       heading: /see your net worth move/i,
-      images: ['/screenshots/reports.png'],
+      images: ['/screenshots/desktop/net-worth.png'],
     },
     {
       name: 'accounts and cards',
       Component: FeatureAccounts,
       heading: /cards that follow their real cycles/i,
-      images: ['/screenshots/cards.png', '/screenshots/accounts.png'],
+      images: ['/screenshots/desktop/card-detail.png', '/screenshots/desktop/accounts.png'],
     },
     {
       name: 'budgets',
       Component: FeatureBudgets,
       heading: /budgets that move as you spend/i,
-      images: ['/screenshots/budgets.png', '/screenshots/calendar.png'],
+      images: ['/screenshots/desktop/budgets.png', '/screenshots/desktop/calendar.png'],
     },
     {
       name: 'event ledger',
       Component: FeatureLedger,
       heading: /tag a trip, then read what it cost/i,
-      images: ['/screenshots/transactions.png'],
+      images: ['/screenshots/desktop/transactions.png'],
     },
   ]
 
