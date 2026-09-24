@@ -1,17 +1,17 @@
 import Link from 'next/link'
-import { Icons } from '@/components/icons'
 import { GITHUB_URL } from './constants'
 
 const LICENSE_URL = `${GITHUB_URL}/blob/main/LICENSE`
 
 export function MarketingFooter() {
   return (
-    <footer className="py-16">
+    <footer className="bg-background py-16">
       <div className="mx-auto max-w-6xl px-4 md:px-8">
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
-          <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
-            <Icons.logo className="size-5 text-primary" />
-            <span className="text-sm font-semibold tracking-tight">MoneyMap</span>
+          <div className="col-span-2 flex items-center sm:col-span-1">
+            <span className="text-sm font-semibold tracking-tight text-foreground">
+              Money<span className="text-primary">Map</span>
+            </span>
           </div>
 
           <nav aria-label="Project">
