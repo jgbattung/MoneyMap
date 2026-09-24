@@ -139,6 +139,8 @@ A restrained dark palette: a teal-tinted near-black base, a single deepened-teal
 ### Named Rules
 **The Rationed Accent Rule.** Gold and full-strength teal are earned, not defaulted. If teal or gold is covering large neutral surface just to look "designed," it's wrong — the canvas stays neutral and color marks meaning.
 
+*Exception:* the public landing page's closing CTA (`src/components/marketing/ClosingCta.tsx`) fills its full section on `bg-primary`. Approved as a deliberate, one-off exception for the page's final beat, not a precedent for the app shell.
+
 **The Two-Reds Rule.** Ordinary negative money uses the calm **Loss Coral**; only genuinely destructive actions and errors use **Destructive Red**. Never use the alarm red for a routine negative balance.
 
 ## 3. Typography

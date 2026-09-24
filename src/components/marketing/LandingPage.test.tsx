@@ -282,6 +282,17 @@ describe('ClosingCta', () => {
     const cta = screen.getByRole('link', { name: /^start tracking$/i })
     expect(cta.getAttribute('href')).toBe('/sign-up')
   })
+
+  it('sits on a teal field with an inverted CTA, a deliberate Rationed Accent exception', () => {
+    const { container } = render(<ClosingCta />)
+    const section = container.querySelector('section')
+    expect(section?.className).toMatch(/\bbg-primary\b/)
+    const heading = screen.getByRole('heading', { level: 2 })
+    expect(heading.className).toMatch(/\btext-primary-foreground\b/)
+    const cta = screen.getByRole('link', { name: /^start tracking$/i })
+    expect(cta.className).toMatch(/\bbg-foreground\b/)
+    expect(cta.className).toMatch(/\btext-primary\b/)
+  })
 })
 
 describe('MarketingFooter', () => {
