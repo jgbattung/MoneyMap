@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, within, fireEvent } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import React from 'react'
 
 // ---------------------------------------------------------------------------
@@ -73,10 +73,10 @@ import { FeatureBudgets } from './FeatureBudgets'
 import { FeatureCards } from './FeatureCards'
 import { FeatureLedger } from './FeatureLedger'
 import { ReportsBento } from './ReportsBento'
+import { FeatureDevices } from './FeatureDevices'
 import { TechStrip } from './TechStrip'
 import { ClosingCta } from './ClosingCta'
 import { MarketingFooter } from './MarketingFooter'
-import { DeviceShot } from './DeviceShot'
 import { GITHUB_URL } from './constants'
 
 // ---------------------------------------------------------------------------
@@ -95,6 +95,23 @@ describe('MarketingNav', () => {
     expect(github.getAttribute('href')).toBe(GITHUB_URL)
     // Icon-only: no visible "GitHub" text node, only the accessible name.
     expect(github.textContent?.trim()).toBe('')
+  })
+
+  it('spans the content width with brand left and controls right, not a content-hugging pill', () => {
+    render(<MarketingNav />)
+    const nav = screen.getByRole('navigation')
+    expect(nav.className).toMatch(/\bmax-w-6xl\b/)
+    expect(nav.className).toMatch(/\bjustify-between\b/)
+  })
+
+  it('renders the MoneyMap wordmark, not an icon, with "Map" in the primary token', () => {
+    render(<MarketingNav />)
+    const nav = screen.getByRole('navigation')
+    const brand = within(nav).getByRole('link', { name: /^moneymap home$/i })
+    expect(brand.textContent).toBe('MoneyMap')
+    expect(brand.querySelector('svg')).toBeNull()
+    const mapSpan = within(brand).getByText('Map')
+    expect(mapSpan.className).toMatch(/\btext-primary\b/)
   })
 })
 
@@ -178,13 +195,12 @@ describe('feature sections', () => {
     expect(screen.getByText(sub)).toBeTruthy()
   })
 
-  it.each(cases)('$name carries a device toggle defaulting to Mobile', ({ Component }) => {
+  it.each(cases)('$name renders a single mobile capture, no device toggle', ({ Component }) => {
     render(<Component />)
-    const mobileButton = screen.getByRole('button', { name: /mobile/i })
-    const desktopButton = screen.getByRole('button', { name: /desktop/i })
-    expect(mobileButton.getAttribute('aria-pressed')).toBe('true')
-    expect(desktopButton.getAttribute('aria-pressed')).toBe('false')
-    expect(screen.getAllByRole('img')).toHaveLength(1)
+    expect(screen.queryByRole('button')).toBeNull()
+    const images = screen.getAllByRole('img')
+    expect(images).toHaveLength(1)
+    expect(images[0].getAttribute('src')).toMatch(/^\/screenshots\/mobile\//)
   })
 })
 
@@ -197,10 +213,35 @@ describe('ReportsBento', () => {
     ).toBeTruthy()
   })
 
-  it('renders a grid of screenshot tiles', () => {
+  it('renders exactly one desktop Category Breakdown capture', () => {
     render(<ReportsBento />)
     const images = screen.getAllByRole('img')
-    expect(images.length).toBeGreaterThanOrEqual(3)
+    expect(images).toHaveLength(1)
+    expect(images[0].getAttribute('src')).toBe('/screenshots/desktop/category-breakdown.png')
+  })
+})
+
+describe('FeatureDevices', () => {
+  it('renders the locked headline and subhead verbatim', () => {
+    render(<FeatureDevices />)
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe(
+      'Capture on your phone. Study it on your desktop.',
+    )
+    expect(
+      screen.getByText(/catch it in the moment on your phone/i),
+    ).toBeTruthy()
+  })
+
+  it('shows the Accounts page on both devices, statically, as two real captures', () => {
+    render(<FeatureDevices />)
+    const images = screen.getAllByRole('img')
+    expect(images.map((i) => i.getAttribute('src'))).toEqual(
+      expect.arrayContaining([
+        '/screenshots/desktop/accounts.png',
+        '/screenshots/mobile/accounts.png',
+      ]),
+    )
+    expect(screen.queryByRole('button')).toBeNull()
   })
 })
 
@@ -256,40 +297,6 @@ describe('MarketingFooter', () => {
   })
 })
 
-describe('DeviceShot', () => {
-  const props = {
-    desktopSrc: '/screenshots/desktop/net-worth.png',
-    mobileSrc: '/screenshots/mobile/net-worth.png',
-    desktopAlt: 'Desktop capture',
-    mobileAlt: 'Mobile capture',
-  }
-
-  it('defaults to the mobile capture', () => {
-    render(<DeviceShot {...props} />)
-    const img = screen.getByRole('img')
-    expect(img.getAttribute('src')).toBe(props.mobileSrc)
-    expect(screen.getByRole('button', { name: /mobile/i }).getAttribute('aria-pressed')).toBe(
-      'true',
-    )
-  })
-
-  it('is a real capture swap, not a CSS-scaled substitute, and is keyboard operable', () => {
-    render(<DeviceShot {...props} />)
-    const desktopButton = screen.getByRole('button', { name: /desktop/i })
-    fireEvent.click(desktopButton)
-
-    const img = screen.getByRole('img')
-    expect(img.getAttribute('src')).toBe(props.desktopSrc)
-    expect(desktopButton.getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getByRole('button', { name: /mobile/i }).getAttribute('aria-pressed')).toBe(
-      'false',
-    )
-    // A native <button> is tabbable and activates on click/Enter/Space by default -
-    // no custom key handling was needed for keyboard operability.
-    expect(desktopButton.tagName).toBe('BUTTON')
-  })
-})
-
 describe('landing page copy discipline', () => {
   const sections = [
     Hero,
@@ -299,6 +306,7 @@ describe('landing page copy discipline', () => {
     FeatureCards,
     FeatureLedger,
     ReportsBento,
+    FeatureDevices,
     TechStrip,
     ClosingCta,
     MarketingNav,
