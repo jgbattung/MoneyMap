@@ -61,15 +61,17 @@ export function Hero() {
           </div>
 
           {/* Overlaps the lower right corner, kept inside the section's own padding
-              so nothing clips. Sized by HEIGHT, not width: the desktop shot's aspect
-              ratio (2880x1800) is much wider and shorter than the mobile capture's
-              (1170x2532), so a percentage-of-width phone renders taller than the
-              desktop image it overlaps. These height steps stay comfortably below the
-              desktop image's rendered height at every breakpoint (roughly 214px to
-              510px as the viewport grows), and the phone's width is derived from that
-              fixed height via its own aspect ratio. */}
+              so nothing clips. Sized by a RATIO of the desktop image's rendered
+              height, not a guessed pixel value (Amendment 4: this has now been wrong
+              in both directions - too tall at w-[30%], too small at a flat lg:h-60).
+              The desktop shot renders roughly 213px at 375px viewport, 429px at
+              768px, and a flat ~509px from 1024px up (capped by this section's own
+              max-w-4xl container). These height steps land the phone at 160/320/384px
+              at those same breakpoints, which measures out to 70-80% of the desktop
+              image's height at every one of them. Width is derived from that fixed
+              height via the mobile capture's own aspect ratio. */}
           <div
-            className="absolute -bottom-8 right-2 h-36 overflow-hidden rounded-[1.25rem] border-4 border-border bg-card shadow-xl sm:right-6 md:-bottom-12 md:right-8 md:h-48 lg:h-60"
+            className="absolute -bottom-8 right-2 h-40 overflow-hidden rounded-[1.25rem] border-4 border-border bg-card shadow-xl sm:right-6 md:-bottom-12 md:right-8 md:h-80 lg:h-96"
             style={{ aspectRatio: `${SHOT_WIDTH_MOBILE} / ${SHOT_HEIGHT_MOBILE}` }}
           >
             <Image
