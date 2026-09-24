@@ -1,12 +1,12 @@
-import { DeviceShot } from './DeviceShot'
+import { PhoneShot } from './PhoneShot'
 import { Reveal } from './Reveal'
-import { SHOTS_DESKTOP, SHOTS_MOBILE } from './constants'
+import { SHOTS_MOBILE } from './constants'
 
 /** Layout family: two-column split, copy left, shot right - same family as the net
  *  worth section, closing the zig-zag rhythm the budgets section opened. */
 export function FeatureLedger() {
   return (
-    <section className="border-b border-border/60 py-20 md:py-28">
+    <section className="border-b border-border/60 bg-card py-20 md:py-28">
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-4 md:px-8 lg:grid-cols-2 lg:gap-16">
         <Reveal>
           <div>
@@ -21,11 +21,9 @@ export function FeatureLedger() {
         </Reveal>
 
         <Reveal delay={0.08}>
-          <DeviceShot
-            desktopSrc={SHOTS_DESKTOP['event-ledger']}
-            mobileSrc={SHOTS_MOBILE['event-ledger']}
-            desktopAlt="The event ledger filtered to the Japan Trip tag, showing combined expense and income totals, on desktop"
-            mobileAlt="The event ledger filtered to the Japan Trip tag, showing combined expense and income totals, on mobile"
+          <PhoneShot
+            src={SHOTS_MOBILE['event-ledger']}
+            alt="The event ledger filtered to the Japan Trip tag, showing combined expense and income totals, on mobile"
           />
         </Reveal>
       </div>

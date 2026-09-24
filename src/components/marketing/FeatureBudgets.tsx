@@ -1,19 +1,17 @@
-import { DeviceShot } from './DeviceShot'
+import { PhoneShot } from './PhoneShot'
 import { Reveal } from './Reveal'
-import { SHOTS_DESKTOP, SHOTS_MOBILE } from './constants'
+import { SHOTS_MOBILE } from './constants'
 
 /** Layout family: two-column split, mirrored from the net worth section - shot left,
  *  copy right. */
 export function FeatureBudgets() {
   return (
-    <section className="border-b border-border/60 py-20 md:py-28">
+    <section className="border-b border-border/60 bg-card py-20 md:py-28">
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-4 md:px-8 lg:grid-cols-2 lg:gap-16">
         <Reveal className="order-2 lg:order-1">
-          <DeviceShot
-            desktopSrc={SHOTS_DESKTOP.budgets}
-            mobileSrc={SHOTS_MOBILE.budgets}
-            desktopAlt="Monthly budgets per category with one category over its limit, on desktop"
-            mobileAlt="Monthly budgets per category with one category over its limit, on mobile"
+          <PhoneShot
+            src={SHOTS_MOBILE.budgets}
+            alt="Monthly budgets per category with one category over its limit, on mobile"
           />
         </Reveal>
 

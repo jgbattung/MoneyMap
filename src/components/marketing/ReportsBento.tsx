@@ -1,77 +1,45 @@
 import Image from 'next/image'
 import { Reveal } from './Reveal'
-import {
-  SHOTS_DESKTOP,
-  SHOTS_MOBILE,
-  SHOT_WIDTH,
-  SHOT_HEIGHT,
-  SHOT_WIDTH_MOBILE,
-  SHOT_HEIGHT_MOBILE,
-} from './constants'
+import { SHOTS_DESKTOP, SHOT_WIDTH, SHOT_HEIGHT } from './constants'
 
 /**
- * Layout family: bento grid, the one section on the page that isn't a two-image or
- * copy/shot pairing. One wide desktop tile (the breakdown charts and annual summary)
- * beside two tall mobile tiles (transactions, accounts), breaking the zig-zag rhythm the
- * five feature sections above it settle into, right before the closing CTA.
+ * Layout family: full-width stack, headline and sub centred above a single desktop
+ * capture.
+ *
+ * Amendment 3 replaced the earlier three-image bento (which pulled in the mobile
+ * transactions and accounts screenshots, neither of which this section's copy is
+ * actually about) with one Category Breakdown capture, desktop only, its own heading
+ * in frame and clear of the app's sticky page header.
  */
 export function ReportsBento() {
   return (
-    <section className="border-b border-border/60 py-20 md:py-28">
-      <div className="mx-auto max-w-6xl px-4 md:px-8">
+    <section className="border-b border-border/60 bg-background py-20 md:py-28">
+      <div className="mx-auto max-w-3xl px-4 text-center md:px-8">
         <Reveal>
-          <h2 className="max-w-[24ch] text-3xl font-semibold tracking-tight md:text-4xl">
+          <h2 className="max-w-[24ch] mx-auto text-3xl font-semibold tracking-tight md:text-4xl">
             Every number, every angle.
           </h2>
-          <p className="mt-5 max-w-[56ch] text-base leading-relaxed text-muted-foreground">
+          <p className="mx-auto mt-5 max-w-[56ch] text-base leading-relaxed text-muted-foreground">
             Break down any month or year by category, compare against last year, and
             filter every transaction you&apos;ve ever logged.
           </p>
         </Reveal>
+      </div>
 
-        <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Reveal delay={0.06} className="md:col-span-2">
-            <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
-              <Image
-                src={SHOTS_DESKTOP.reports}
-                alt="Category breakdown chart and the annual summary table"
-                width={SHOT_WIDTH}
-                height={SHOT_HEIGHT}
-                sizes="(max-width: 768px) 100vw, 65vw"
-                className="h-auto w-full"
-              />
-            </div>
-          </Reveal>
-
-          <div className="grid grid-cols-2 gap-4 md:col-span-1 md:grid-cols-1">
-            <Reveal delay={0.12}>
-              <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
-                <Image
-                  src={SHOTS_MOBILE.transactions}
-                  alt="Every logged expense, income and transfer, filterable in one table"
-                  width={SHOT_WIDTH_MOBILE}
-                  height={SHOT_HEIGHT_MOBILE}
-                  sizes="(max-width: 768px) 50vw, 20vw"
-                  className="h-auto w-full"
-                />
-              </div>
-            </Reveal>
-
-            <Reveal delay={0.18}>
-              <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
-                <Image
-                  src={SHOTS_MOBILE.accounts}
-                  alt="Balances across every account, broken down by type"
-                  width={SHOT_WIDTH_MOBILE}
-                  height={SHOT_HEIGHT_MOBILE}
-                  sizes="(max-width: 768px) 50vw, 20vw"
-                  className="h-auto w-full"
-                />
-              </div>
-            </Reveal>
+      <Reveal delay={0.1}>
+        <div className="mx-auto mt-12 max-w-5xl px-4 md:px-8">
+          <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
+            <Image
+              src={SHOTS_DESKTOP['category-breakdown']}
+              alt="Category breakdown chart and per-category totals for the selected period"
+              width={SHOT_WIDTH}
+              height={SHOT_HEIGHT}
+              sizes="(max-width: 768px) 100vw, 900px"
+              className="h-auto w-full"
+            />
           </div>
         </div>
-      </div>
+      </Reveal>
     </section>
   )
 }
