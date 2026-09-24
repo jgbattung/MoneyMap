@@ -81,7 +81,7 @@ import { GITHUB_URL } from './constants'
 // ---------------------------------------------------------------------------
 
 describe('MarketingNav', () => {
-  it('is a capsule carrying only sign in, a GitHub icon button, and the CTA', () => {
+  it('is a capsule carrying GitHub, sign in, and the CTA', () => {
     render(<MarketingNav />)
     const nav = screen.getByRole('navigation')
     expect(within(nav).getByRole('link', { name: /^sign in$/i }).getAttribute('href')).toBe(
@@ -90,10 +90,23 @@ describe('MarketingNav', () => {
     expect(
       within(nav).getByRole('link', { name: /^start tracking$/i }).getAttribute('href'),
     ).toBe('/sign-up')
-    const github = within(nav).getByRole('link', { name: /^github$/i })
+    const github = within(nav).getByRole('link', { name: /github/i })
     expect(github.getAttribute('href')).toBe(GITHUB_URL)
-    // Icon-only: no visible "GitHub" text node, only the accessible name.
-    expect(github.textContent?.trim()).toBe('')
+    // Amendment 4: GitHub gets a visible label, not an icon to decode.
+    expect(github.textContent?.trim()).toBe('GitHub')
+  })
+
+  it('orders the desktop controls GitHub, Sign in, Start tracking left to right', () => {
+    render(<MarketingNav />)
+    const nav = screen.getByRole('navigation')
+    const controls = within(nav)
+      .getAllByRole('link')
+      .filter((link) => link !== within(nav).getByRole('link', { name: /moneymap home/i }))
+    expect(controls.map((link) => link.textContent?.trim())).toEqual([
+      'GitHub',
+      'Sign in',
+      'Start tracking',
+    ])
   })
 
   it('spans the content width with brand left and controls right, not a content-hugging pill', () => {

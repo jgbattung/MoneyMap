@@ -7,9 +7,13 @@ import { GITHUB_URL } from './constants'
  * Direction A's capsule nav, spanning the page's content width rather than hugging its
  * own controls (Amendment 3: the earlier build rendered a ~356px pill on a large
  * monitor, reading as cramped against the `max-w-6xl` sections below it). Brand on the
- * left, controls on the right - Sign in, an icon-only GitHub link, and the Start
- * tracking CTA. "Features" and "Reports" links were cut as clutter with nowhere better
- * to send a visitor than the sections already below them.
+ * left, controls on the right. "Features" and "Reports" links were cut as clutter with
+ * nowhere better to send a visitor than the sections already below them.
+ *
+ * Amendment 4 reorders the desktop controls to GitHub, Sign in, Start tracking and
+ * gives GitHub a visible label rather than an icon to decode: it is now the bridge to
+ * the technical-interviewer audience, so it leads the row. The mobile row is untouched
+ * - GitHub stays hidden below `sm` and reachable via the footer, exactly as before.
  *
  * The brand mark is a wordmark, not an icon: there is no MoneyMap logo asset in
  * `public/`, and the icon this section used to render there was never a real brand
@@ -24,30 +28,30 @@ export function MarketingNav() {
       >
         <Link
           href="/"
-          className="text-sm font-semibold tracking-tight text-foreground"
+          className="text-lg font-bold tracking-tight text-foreground"
           aria-label="MoneyMap home"
         >
           Money<span className="text-primary">Map</span>
         </Link>
 
         <div className="flex items-center gap-1">
-          <Button asChild variant="ghost" size="sm" className="rounded-full">
-            <Link href="/sign-in">Sign in</Link>
-          </Button>
-
-          {/* Hidden below sm to keep the capsule on one line at 375px - the same fix
-              already needed once before this section carried a text "GitHub" link.
-              GitHub stays reachable via the footer at every width. */}
+          {/* Hidden below sm to keep the capsule on one line at 375px - the mobile row
+              is unchanged by Amendment 4. GitHub stays reachable via the footer at
+              every width. */}
           <Button
             asChild
             variant="ghost"
-            size="icon"
+            size="sm"
             className="hidden rounded-full sm:inline-flex"
-            aria-label="GitHub"
           >
             <a href={GITHUB_URL} target="_blank" rel="noreferrer noopener">
               <IconBrandGithub className="size-4" />
+              GitHub
             </a>
+          </Button>
+
+          <Button asChild variant="ghost" size="sm" className="rounded-full">
+            <Link href="/sign-in">Sign in</Link>
           </Button>
 
           <Button asChild size="sm" className="rounded-full">

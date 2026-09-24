@@ -9,7 +9,7 @@ export function MarketingFooter() {
       <div className="mx-auto max-w-6xl px-4 md:px-8">
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
           <div className="col-span-2 flex items-center sm:col-span-1">
-            <span className="text-sm font-semibold tracking-tight text-foreground">
+            <span className="text-2xl font-bold tracking-tight text-foreground">
               Money<span className="text-primary">Map</span>
             </span>
           </div>
