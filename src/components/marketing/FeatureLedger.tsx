@@ -1,31 +1,31 @@
-import { Shot } from './Shot'
+import { DeviceShot } from './DeviceShot'
 import { Reveal } from './Reveal'
-import { SHOTS } from './constants'
+import { SHOTS_DESKTOP, SHOTS_MOBILE } from './constants'
 
-/** Layout family: full-width stack, narrow copy column over a wide image. */
+/** Layout family: two-column split, copy left, shot right - same family as the net
+ *  worth section, closing the zig-zag rhythm the budgets section opened. */
 export function FeatureLedger() {
   return (
     <section className="border-b border-border/60 py-20 md:py-28">
-      <div className="mx-auto max-w-7xl px-4 md:px-8">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-4 md:px-8 lg:grid-cols-2 lg:gap-16">
         <Reveal>
-          <div className="max-w-[54ch]">
+          <div>
             <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
-              Tag a trip, then read what it cost
+              How much did that vacation actually cost?
             </h2>
-            <p className="mt-5 text-base leading-relaxed text-muted-foreground">
-              Tags span expenses and income, so a holiday, a move or a hospital week
-              becomes one ledger with both sides of the story on it. Filter, search and
-              analyse the full history whenever a number looks wrong.
+            <p className="mt-5 max-w-[52ch] text-base leading-relaxed text-muted-foreground">
+              Tag anything, a trip, a move, a medical bill, and get one total, minus
+              whatever came back.
             </p>
           </div>
         </Reveal>
 
         <Reveal delay={0.08}>
-          <Shot
-            src={SHOTS.transactions}
-            alt="The transactions page, showing a filterable table of expenses, income and transfers"
-            className="mt-12"
-            sizes="(max-width: 768px) 100vw, 90vw"
+          <DeviceShot
+            desktopSrc={SHOTS_DESKTOP['event-ledger']}
+            mobileSrc={SHOTS_MOBILE['event-ledger']}
+            desktopAlt="The event ledger filtered to the Japan Trip tag, showing combined expense and income totals, on desktop"
+            mobileAlt="The event ledger filtered to the Japan Trip tag, showing combined expense and income totals, on mobile"
           />
         </Reveal>
       </div>

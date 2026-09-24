@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "MoneyMap - Stay on top of your money",
   description:
-    "A personal finance app that keeps your net worth, accounts, credit card statements and budgets correct as a consequence of what you actually spend.",
+    "Every account, card and budget in one place, so you always know what's safe to spend.",
 };
 
 /**

@@ -38,25 +38,7 @@ function shotsFor(device: 'desktop' | 'mobile'): Record<Slug, string> {
   ) as Record<Slug, string>
 }
 
-/** Full nine-surface set, one path per device, for the landing page rebuild to consume
- *  with its desktop/mobile toggle (Amendment 1). */
+/** Full nine-surface set, one path per device, consumed by `DeviceShot` and the hero's
+ *  desktop/phone composition (Amendment 1 and 2). */
 export const SHOTS_DESKTOP = shotsFor('desktop')
 export const SHOTS_MOBILE = shotsFor('mobile')
-
-/**
- * Backward-compatible alias for the current (pre-rebuild) landing page sections, which
- * predate the desktop/mobile toggle and the reworked surface list. Points at the
- * desktop set. `cards` now resolves to the individual card detail capture (`card-detail`)
- * and `reports` to the net-worth overview capture (`net-worth`), since those are the
- * correct content replacements for what those keys used to mean - the section-to-image
- * mapping itself is left untouched, pending the design-review rebuild.
- */
-export const SHOTS = {
-  dashboard: SHOTS_DESKTOP.dashboard,
-  accounts: SHOTS_DESKTOP.accounts,
-  cards: SHOTS_DESKTOP['card-detail'],
-  transactions: SHOTS_DESKTOP.transactions,
-  budgets: SHOTS_DESKTOP.budgets,
-  calendar: SHOTS_DESKTOP.calendar,
-  reports: SHOTS_DESKTOP['net-worth'],
-} as const

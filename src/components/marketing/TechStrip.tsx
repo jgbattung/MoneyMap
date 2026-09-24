@@ -1,11 +1,12 @@
 import { Reveal } from './Reveal'
+import { GITHUB_URL } from './constants'
 
 /**
- * Layout family: a two-by-two specification grid.
+ * Layout family: a two-by-two specification grid under the locked headline and sub.
  *
- * Part of this page's audience reads code for a living, so the credibility argument is
- * made with the actual engineering decisions rather than a logo wall. Four items only,
- * each a claim that can be checked in the repository.
+ * Part of this page's audience reads code for a living, so the credibility argument
+ * under the headline is made with the actual engineering decisions rather than a logo
+ * wall. Four items only, each a claim that can be checked in the repository.
  */
 const STACK = [
   {
@@ -29,11 +30,23 @@ const STACK = [
 export function TechStrip() {
   return (
     <section className="border-b border-border/60 py-20 md:py-28">
-      <div className="mx-auto max-w-7xl px-4 md:px-8">
+      <div className="mx-auto max-w-6xl px-4 md:px-8">
         <Reveal>
-          <h2 className="max-w-[24ch] text-3xl font-semibold tracking-tight md:text-4xl">
-            Built to be correct, not just to look correct
+          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+            Curious how it&apos;s built?
           </h2>
+          <p className="mt-5 max-w-[52ch] text-base leading-relaxed text-muted-foreground">
+            Built by one person, in the open. The code is on{' '}
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="font-medium text-foreground underline underline-offset-4 hover:text-primary"
+            >
+              GitHub
+            </a>
+            .
+          </p>
         </Reveal>
 
         <div className="mt-12 grid grid-cols-1 gap-x-12 gap-y-10 sm:grid-cols-2">
