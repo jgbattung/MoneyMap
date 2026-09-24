@@ -29,7 +29,7 @@ const STACK = [
 
 export function TechStrip() {
   return (
-    <section className="border-b border-border/60 bg-background py-20 md:py-28">
+    <section className="border-b border-border/60 bg-card py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-4 md:px-8">
         <Reveal>
           <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">

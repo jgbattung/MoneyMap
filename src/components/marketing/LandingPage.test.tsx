@@ -70,7 +70,6 @@ import { Hero } from './Hero'
 import { FeatureNetWorth } from './FeatureNetWorth'
 import { FeatureEverydayTracking } from './FeatureEverydayTracking'
 import { FeatureBudgets } from './FeatureBudgets'
-import { FeatureCards } from './FeatureCards'
 import { FeatureLedger } from './FeatureLedger'
 import { ReportsBento } from './ReportsBento'
 import { FeatureDevices } from './FeatureDevices'
@@ -174,12 +173,6 @@ describe('feature sections', () => {
       Component: FeatureBudgets,
       heading: 'Stop a bad month before it happens.',
       sub: /set a limit for each category/i,
-    },
-    {
-      name: 'cards',
-      Component: FeatureCards,
-      heading: 'Always know what you owe.',
-      sub: /every card's balance and due date/i,
     },
     {
       name: 'event ledger',
@@ -303,7 +296,6 @@ describe('landing page copy discipline', () => {
     FeatureNetWorth,
     FeatureEverydayTracking,
     FeatureBudgets,
-    FeatureCards,
     FeatureLedger,
     ReportsBento,
     FeatureDevices,

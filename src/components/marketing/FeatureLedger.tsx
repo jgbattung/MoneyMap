@@ -6,7 +6,7 @@ import { SHOTS_MOBILE } from './constants'
  *  worth section, closing the zig-zag rhythm the budgets section opened. */
 export function FeatureLedger() {
   return (
-    <section className="border-b border-border/60 bg-card py-20 md:py-28">
+    <section className="border-b border-border/60 bg-background py-20 md:py-28">
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-4 md:px-8 lg:grid-cols-2 lg:gap-16">
         <Reveal>
           <div>

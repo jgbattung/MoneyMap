@@ -15,7 +15,7 @@ import { SHOTS_DESKTOP, SHOTS_MOBILE, SHOT_WIDTH, SHOT_HEIGHT } from './constant
  */
 export function FeatureDevices() {
   return (
-    <section className="border-b border-border/60 bg-card py-20 md:py-28">
+    <section className="border-b border-border/60 bg-background py-20 md:py-28">
       <div className="mx-auto max-w-3xl px-4 text-center md:px-8">
         <Reveal>
           <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
