@@ -246,6 +246,12 @@ async function prepareEventLedger(page: Page, base: string): Promise<void> {
   await goto(page, `${base}/reports`);
   const ledgerTitle = page.locator('[data-slot="card-title"]', { hasText: "Event Ledger" });
   await ledgerTitle.waitFor({ state: "visible", timeout: 30000 });
+
+  // The net worth card and breakdown charts above this one are still interpolating
+  // their SVG geometry at this point, which changes their rendered height and shifts
+  // everything below - settle those first so nothing moves out from under the scroll
+  // position this function is about to compute further down.
+  await waitForVisualSettle(page);
   await ledgerTitle.scrollIntoViewIfNeeded();
 
   // The Transaction Analyzer directly above this card has its own "Select tags"
@@ -284,10 +290,70 @@ async function prepareEventLedger(page: Page, base: string): Promise<void> {
     20000,
   );
 
-  // Center the results sentence rather than re-scrolling to the card title: the title
-  // sits above the tag picker and the summary cards, so scrolling back to it would push
-  // the actual merged results - the entire point of this capture - below the fold.
-  await summarySentence.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  // The section copy promises a TAGGED total ("Tag anything ... and get one total"), so
+  // the selected "Japan Trip" chip must be in frame together with the totals - a capture
+  // of the totals alone shows an untagged total, which is what got this capture rejected
+  // the first time round. The chip renders at the top of the tag field, well above the
+  // summary tiles, so pin it to the top edge of the viewport (rather than centering on
+  // the results) and let the tiles and the first rows fall into the remaining space below.
+  const tagChip = ledgerCard
+    .locator(".flex.flex-wrap.gap-1")
+    .getByText("Japan Trip", { exact: true });
+  await tagChip.waitFor({ state: "visible", timeout: 10000 });
+
+  // The "Hotel overcharge refund" row is what makes "minus whatever came back" literally
+  // true, so it must stay in frame too, not just any transaction row.
+  const refundRow = ledgerCard.getByText("Hotel overcharge refund", { exact: false });
+  await refundRow.waitFor({ state: "visible", timeout: 10000 });
+
+  // Re-scrolls on every check rather than once: other widgets on /reports (the net
+  // worth chart, breakdown charts) are still settling geometry at this point, and a
+  // height change above the ledger card shifts everything below it, silently
+  // invalidating a one-shot scroll. Re-issuing the scroll each iteration converges once
+  // the page actually stops moving, instead of racing it.
+  //
+  // `el.scrollIntoView` (not `window.scrollBy`) because the app's own scroll container
+  // is a nested div, not the window - `body` is `overflow-hidden` in globals.css, so a
+  // window-level scroll is a silent no-op here. `scrollIntoView({block:"start"})` alone
+  // puts the chip at scroll-position 0, which is mathematically "in viewport" but is
+  // actually hidden UNDER `PageHeader`'s `sticky top-0 z-10 bg-background` title bar,
+  // which occupies that same visual region and paints over it - so nudge the scroll
+  // back up by the sticky header's own height afterward, revealing the chip below it.
+  await assertEventually(
+    page,
+    "the Japan Trip chip and the refund row were not both in frame (and clear of the sticky page header) after scrolling",
+    async () => {
+      const headerHeight = await tagChip.evaluate((el) => {
+        el.scrollIntoView({ block: "start" });
+        const header = document.querySelector<HTMLElement>(".sticky.top-0.z-10");
+        const height = header?.getBoundingClientRect().height ?? 0;
+        let ancestor: HTMLElement | null = el.parentElement;
+        while (ancestor) {
+          const style = getComputedStyle(ancestor);
+          if (/(auto|scroll)/.test(style.overflowY) && ancestor.scrollHeight > ancestor.clientHeight) {
+            ancestor.scrollTop -= height;
+            break;
+          }
+          ancestor = ancestor.parentElement;
+        }
+        return height;
+      });
+      const viewport = page.viewportSize();
+      const chipBox = await tagChip.boundingBox();
+      const refundBox = await refundRow.boundingBox();
+      if (!viewport || !chipBox || !refundBox) return false;
+      // The chip must clear the sticky header, not merely have a non-negative y -
+      // y >= 0 alone would also be true while it sits underneath the header, painted over.
+      const inView = (box: { y: number; height: number }, minY = 0) =>
+        box.y >= minY && box.y + box.height <= viewport.height;
+      return inView(chipBox, headerHeight) && inView(refundBox);
+    },
+  );
+
+  // Confirm the page has genuinely stopped moving before returning control to the
+  // capture loop, so the settle wait it runs next has nothing left to invalidate this
+  // scroll position.
+  await waitForVisualSettle(page);
 }
 
 /** The breakdown charts and annual summary, scrolled past net worth. */
@@ -306,7 +372,7 @@ async function prepareReports(page: Page, base: string): Promise<void> {
   await breakdownHeading.evaluate((el) => el.scrollIntoView({ block: "start" }));
 }
 
-const SURFACES: Surface[] = [
+const ALL_SURFACES: Surface[] = [
   { slug: "net-worth", prepare: prepareNetWorth },
   { slug: "calendar", prepare: prepareCalendar },
   { slug: "card-detail", prepare: prepareCardDetail },
@@ -317,6 +383,21 @@ const SURFACES: Surface[] = [
   { slug: "budgets", prepare: navOnly("/budgets", "main") },
   { slug: "accounts", prepare: navOnly("/accounts", "main") },
 ];
+
+/** `--only=slug1,slug2` restricts capture to a subset, for iterating on one surface's
+ *  `prepare` step without re-running the full ~9-surface x 2-device pass every time. */
+function selectedSurfaces(): Surface[] {
+  const flag = process.argv.find((a) => a.startsWith("--only="));
+  if (!flag) return ALL_SURFACES;
+  const slugs = new Set(flag.slice("--only=".length).split(","));
+  const selected = ALL_SURFACES.filter((s) => slugs.has(s.slug));
+  if (selected.length === 0) {
+    throw new Error(`--only= matched no surface (have: ${ALL_SURFACES.map((s) => s.slug).join(", ")})`);
+  }
+  return selected;
+}
+
+const SURFACES: Surface[] = selectedSurfaces();
 
 async function captureDevice(
   browser: import("@playwright/test").Browser,
