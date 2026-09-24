@@ -28,23 +28,31 @@ export function FeatureDevices() {
         </Reveal>
       </div>
 
+      {/* Amendment 4: the desktop image used to be width-driven (md:flex-1, h-auto)
+          against a width-driven phone, which rendered the phone 1.65x the desktop
+          image's height - the desktop capture read as an afterthought in the one
+          section whose whole claim is that both devices matter. Both images now
+          render at the same fixed height from lg up (1024px), each width derived
+          from its own aspect ratio: 420px tall puts the desktop shot at ~672px wide
+          and the phone at ~194px, totalling ~906px, which fits inside max-w-5xl.
+          Below lg they stay width-driven and stack. */}
       <Reveal delay={0.1}>
-        <div className="mx-auto mt-12 flex max-w-5xl flex-col items-center gap-8 px-4 md:flex-row md:items-end md:justify-center md:gap-10 md:px-8">
-          <div className="w-full max-w-md overflow-hidden rounded-xl border border-border/60 bg-card md:flex-1">
+        <div className="mx-auto mt-12 flex max-w-5xl flex-col items-center gap-8 px-4 md:px-8 lg:flex-row lg:items-end lg:justify-center lg:gap-10">
+          <div className="w-full max-w-md overflow-hidden rounded-xl border border-border/60 bg-card lg:w-auto lg:max-w-none lg:shrink-0">
             <Image
               src={SHOTS_DESKTOP.accounts}
               alt="Every account's balance, laid out on desktop"
               width={SHOT_WIDTH}
               height={SHOT_HEIGHT}
-              sizes="(max-width: 768px) 100vw, 60vw"
-              className="h-auto w-full"
+              sizes="(max-width: 1024px) 100vw, 672px"
+              className="h-auto w-full object-cover lg:h-[420px] lg:w-auto"
             />
           </div>
 
           <PhoneShot
             src={SHOTS_MOBILE.accounts}
             alt="Every account's balance, laid out on mobile"
-            className="max-w-[220px] shrink-0"
+            className="max-w-[220px] shrink-0 lg:h-[420px] lg:w-auto lg:max-w-none"
           />
         </div>
       </Reveal>
