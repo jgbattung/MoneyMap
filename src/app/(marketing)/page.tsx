@@ -6,20 +6,20 @@ import { FeatureBudgets } from '@/components/marketing/FeatureBudgets'
 import { FeatureCards } from '@/components/marketing/FeatureCards'
 import { FeatureLedger } from '@/components/marketing/FeatureLedger'
 import { ReportsBento } from '@/components/marketing/ReportsBento'
+import { FeatureDevices } from '@/components/marketing/FeatureDevices'
 import { TechStrip } from '@/components/marketing/TechStrip'
 import { ClosingCta } from '@/components/marketing/ClosingCta'
 import { MarketingFooter } from '@/components/marketing/MarketingFooter'
 
 /**
- * The public landing page at `/`, built to the approved eleven-section design
- * (`.gsd/landing-and-demo-spec.md` Amendment 1 and 2): capsule nav, centred hero, net
- * worth, everyday tracking, budgets, cards, event ledger, reports bento, tech strip,
- * closing CTA, grouped-column footer.
+ * The public landing page at `/`, built to the approved twelve-section design
+ * (`.gsd/landing-and-demo-spec.md` Amendment 1, 2 and 3): capsule nav, centred hero,
+ * net worth, everyday tracking, budgets, cards, event ledger, reports, capture/study
+ * device section, tech strip, closing CTA, grouped-column footer.
  *
  * This is the one route in the app that has to work with no session at all, so nothing
  * here calls an authenticated API route or reads a session. Every section is a Server
- * Component; the only client code is the `Reveal` motion leaf and the `DeviceShot`
- * toggle.
+ * Component; the only client code is the `Reveal` motion leaf.
  */
 export default function LandingPage() {
   return (
@@ -32,6 +32,7 @@ export default function LandingPage() {
       <FeatureCards />
       <FeatureLedger />
       <ReportsBento />
+      <FeatureDevices />
       <TechStrip />
       <ClosingCta />
       <MarketingFooter />
