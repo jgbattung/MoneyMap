@@ -7,13 +7,13 @@ import { GITHUB_URL, SHOTS_DESKTOP, SHOTS_MOBILE, SHOT_WIDTH, SHOT_HEIGHT, SHOT_
 
 /**
  * Centred hero (Direction B): headline and CTAs stacked above a large dashboard capture,
- * with a phone capture overlapping its lower right corner at roughly 30% width - the
- * page's first hint, before the device toggle even shows up, that the product has two
+ * with a phone capture overlapping its lower right corner, sized so it stays shorter
+ * than the desktop shot behind it - the page's first hint that the product has two
  * real layouts.
  */
 export function Hero() {
   return (
-    <section className="border-b border-border/60 pt-14 pb-24 md:pt-20 md:pb-32">
+    <section className="border-b border-border/60 bg-background pt-14 pb-24 md:pt-20 md:pb-32">
       <div className="mx-auto max-w-3xl px-4 text-center md:px-8">
         <Reveal>
           <h1 className="mx-auto max-w-[18ch] text-4xl font-semibold tracking-tight text-foreground md:text-6xl">
@@ -60,16 +60,24 @@ export function Hero() {
             />
           </div>
 
-          {/* Overlaps the lower right corner at roughly 30% of the desktop shot's
-              width, kept inside the section's own padding so nothing clips. */}
-          <div className="absolute -bottom-8 right-2 w-[30%] min-w-[96px] overflow-hidden rounded-[1.25rem] border-4 border-border bg-card shadow-xl sm:right-6 md:-bottom-12 md:right-8">
+          {/* Overlaps the lower right corner, kept inside the section's own padding
+              so nothing clips. Sized by HEIGHT, not width: the desktop shot's aspect
+              ratio (2880x1800) is much wider and shorter than the mobile capture's
+              (1170x2532), so a percentage-of-width phone renders taller than the
+              desktop image it overlaps. These height steps stay comfortably below the
+              desktop image's rendered height at every breakpoint (roughly 214px to
+              510px as the viewport grows), and the phone's width is derived from that
+              fixed height via its own aspect ratio. */}
+          <div
+            className="absolute -bottom-8 right-2 h-36 overflow-hidden rounded-[1.25rem] border-4 border-border bg-card shadow-xl sm:right-6 md:-bottom-12 md:right-8 md:h-48 lg:h-60"
+            style={{ aspectRatio: `${SHOT_WIDTH_MOBILE} / ${SHOT_HEIGHT_MOBILE}` }}
+          >
             <Image
               src={SHOTS_MOBILE.dashboard}
               alt="The same dashboard on the app's separate mobile layout"
-              width={SHOT_WIDTH_MOBILE}
-              height={SHOT_HEIGHT_MOBILE}
-              sizes="(max-width: 768px) 30vw, 270px"
-              className="h-auto w-full"
+              fill
+              sizes="(max-width: 768px) 20vw, 120px"
+              className="object-cover"
             />
           </div>
         </div>
