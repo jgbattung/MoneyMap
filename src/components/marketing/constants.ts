@@ -38,7 +38,17 @@ function shotsFor(device: 'desktop' | 'mobile'): Record<Slug, string> {
   ) as Record<Slug, string>
 }
 
-/** Full nine-surface set, one path per device, consumed by `DeviceShot` and the hero's
- *  desktop/phone composition (Amendment 1 and 2). */
-export const SHOTS_DESKTOP = shotsFor('desktop')
+/** Full nine-surface set, one path per device, consumed by the feature sections' phone
+ *  frames and the hero's desktop/phone composition. */
 export const SHOTS_MOBILE = shotsFor('mobile')
+
+/**
+ * Category Breakdown is captured desktop only (Amendment 3: the Reports section
+ * dropped its three-image bento in favour of a single desktop capture), so it is
+ * added directly to the desktop set rather than the shared per-device `SLUGS` loop,
+ * which has no mobile counterpart for it.
+ */
+export const SHOTS_DESKTOP: Record<Slug, string> & { 'category-breakdown': string } = {
+  ...shotsFor('desktop'),
+  'category-breakdown': '/screenshots/desktop/category-breakdown.png',
+}

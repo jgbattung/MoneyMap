@@ -75,6 +75,8 @@ interface Surface {
    * exists to prevent.
    */
   prepare: (page: Page, base: string) => Promise<void>;
+  /** Restricts capture to a subset of devices. Omit to capture on every device. */
+  devices?: Array<DeviceProfile["slug"]>;
 }
 
 /** `--base-url=...` overrides the default. argv, not an environment read. */
@@ -372,6 +374,55 @@ async function prepareReports(page: Page, base: string): Promise<void> {
   await breakdownHeading.evaluate((el) => el.scrollIntoView({ block: "start" }));
 }
 
+/**
+ * The Category Breakdown widget, desktop only, with its own heading clear of the
+ * sticky page header (Phase 8 / Amendment 3).
+ *
+ * This is a second, independent instance of the same fix `prepareEventLedger` needed:
+ * `PageHeader` renders `sticky top-0 z-10 bg-background` and paints over whatever sits
+ * at scroll-position 0, so "the heading's bounding box has y >= 0" is not sufficient -
+ * it must clear the header's own height. Kept as a separate, self-contained
+ * implementation rather than extracted into a shared helper, so the working, already
+ * verified `prepareEventLedger` is not touched by this change.
+ */
+async function prepareCategoryBreakdown(page: Page, base: string): Promise<void> {
+  await goto(page, `${base}/reports`);
+  await page.waitForSelector("main", { timeout: 30000 });
+  await waitForSkeletonsGone(page);
+
+  const breakdownHeading = page.getByText("Category Breakdown", { exact: true });
+  await breakdownHeading.waitFor({ state: "visible", timeout: 20000 });
+  await waitForVisualSettle(page);
+
+  await assertEventually(
+    page,
+    "the Category Breakdown heading was not clear of the sticky page header after scrolling",
+    async () => {
+      const headerHeight = await breakdownHeading.evaluate((el) => {
+        el.scrollIntoView({ block: "start" });
+        const header = document.querySelector<HTMLElement>(".sticky.top-0.z-10");
+        const height = header?.getBoundingClientRect().height ?? 0;
+        let ancestor: HTMLElement | null = el.parentElement;
+        while (ancestor) {
+          const style = getComputedStyle(ancestor);
+          if (/(auto|scroll)/.test(style.overflowY) && ancestor.scrollHeight > ancestor.clientHeight) {
+            ancestor.scrollTop -= height;
+            break;
+          }
+          ancestor = ancestor.parentElement;
+        }
+        return height;
+      });
+      const viewport = page.viewportSize();
+      const headingBox = await breakdownHeading.boundingBox();
+      if (!viewport || !headingBox) return false;
+      return headingBox.y >= headerHeight && headingBox.y + headingBox.height <= viewport.height;
+    },
+  );
+
+  await waitForVisualSettle(page);
+}
+
 const ALL_SURFACES: Surface[] = [
   { slug: "net-worth", prepare: prepareNetWorth },
   { slug: "calendar", prepare: prepareCalendar },
@@ -382,6 +433,7 @@ const ALL_SURFACES: Surface[] = [
   { slug: "transactions", prepare: navOnly("/transactions", "main") },
   { slug: "budgets", prepare: navOnly("/budgets", "main") },
   { slug: "accounts", prepare: navOnly("/accounts", "main") },
+  { slug: "category-breakdown", prepare: prepareCategoryBreakdown, devices: ["desktop"] },
 ];
 
 /** `--only=slug1,slug2` restricts capture to a subset, for iterating on one surface's
@@ -414,7 +466,11 @@ async function captureDevice(
     console.log(`\n  [${device.slug}] signing in\n`);
     await signIn(page, base);
 
-    for (const surface of SURFACES) {
+    const surfacesForDevice = SURFACES.filter(
+      (s) => !s.devices || s.devices.includes(device.slug),
+    );
+
+    for (const surface of surfacesForDevice) {
       console.log(`  [${device.slug}] ${surface.slug}`);
       await surface.prepare(page, base);
       await waitForSkeletonsGone(page);
