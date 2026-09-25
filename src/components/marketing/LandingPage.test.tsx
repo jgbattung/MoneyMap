@@ -243,7 +243,7 @@ describe('FeatureDevices', () => {
     const images = screen.getAllByRole('img')
     expect(images.map((i) => i.getAttribute('src'))).toEqual(
       expect.arrayContaining([
-        '/screenshots/desktop/accounts.png',
+        '/screenshots/desktop/accounts-compact.png',
         '/screenshots/mobile/accounts.png',
       ]),
     )
