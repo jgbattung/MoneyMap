@@ -32,7 +32,12 @@ import { DEMO_EMAIL, DEMO_PASSWORD } from "./seed";
 const OUT_ROOT = join(process.cwd(), "public", "screenshots");
 
 interface DeviceProfile {
-  slug: "desktop" | "mobile";
+  slug: "desktop" | "mobile" | "desktop-compact";
+  /** Directory under public/screenshots/ this profile's captures are written to.
+   *  Defaults to `slug` - only set where it differs, which today is just
+   *  `desktop-compact`: its captures still belong in `public/screenshots/desktop/`,
+   *  since that is where `FeatureDevices` and every other desktop consumer looks. */
+  outSlug?: "desktop" | "mobile";
   contextOptions: BrowserContextOptions;
 }
 
@@ -64,7 +69,29 @@ const MOBILE: DeviceProfile = {
   },
 };
 
-const DEVICES: DeviceProfile[] = [DESKTOP, MOBILE];
+/**
+ * Amendment 5: `FeatureDevices` fixes both its frames at 420px tall so the desktop and
+ * phone captures sit at equal height, which shrinks the standard 1440-wide desktop
+ * capture to a 672px-wide frame - 47% scale, with body text landing near 7px. That is a
+ * scale problem, not a resolution one, so more pixels cannot fix it. This profile
+ * instead captures the same page at a narrower 1120x700 viewport (preserving the
+ * section's 1.6 aspect ratio, so the equal-height layout needs no change): at 672px
+ * wide that is 60% scale, with less content competing for the space. Desktop-only,
+ * and used for the Accounts surface alone - the existing 1440x900 `accounts` capture
+ * stays untouched for the README gallery.
+ */
+const DESKTOP_COMPACT: DeviceProfile = {
+  slug: "desktop-compact",
+  outSlug: "desktop",
+  contextOptions: {
+    viewport: { width: 1120, height: 700 },
+    deviceScaleFactor: 2,
+    colorScheme: "dark",
+    reducedMotion: "reduce",
+  },
+};
+
+const DEVICES: DeviceProfile[] = [DESKTOP, MOBILE, DESKTOP_COMPACT];
 
 interface Surface {
   slug: string;
@@ -423,17 +450,25 @@ async function prepareCategoryBreakdown(page: Page, base: string): Promise<void>
   await waitForVisualSettle(page);
 }
 
+/** Every surface predating Amendment 5 was captured on both devices by omitting
+ *  `devices` entirely, which meant "no restriction" - but that default would now also
+ *  pull each of them into the new `desktop-compact` profile, overwriting the real
+ *  1440x900 desktop captures with 1120x700 ones. Listed explicitly instead so adding a
+ *  device profile can never silently widen which surfaces it captures. */
+const STANDARD_DEVICES: Array<DeviceProfile["slug"]> = ["desktop", "mobile"];
+
 const ALL_SURFACES: Surface[] = [
-  { slug: "net-worth", prepare: prepareNetWorth },
-  { slug: "calendar", prepare: prepareCalendar },
-  { slug: "card-detail", prepare: prepareCardDetail },
-  { slug: "event-ledger", prepare: prepareEventLedger },
-  { slug: "reports", prepare: prepareReports },
-  { slug: "dashboard", prepare: navOnly("/dashboard", "main, [data-slot='card']") },
-  { slug: "transactions", prepare: navOnly("/transactions", "main") },
-  { slug: "budgets", prepare: navOnly("/budgets", "main") },
-  { slug: "accounts", prepare: navOnly("/accounts", "main") },
+  { slug: "net-worth", prepare: prepareNetWorth, devices: STANDARD_DEVICES },
+  { slug: "calendar", prepare: prepareCalendar, devices: STANDARD_DEVICES },
+  { slug: "card-detail", prepare: prepareCardDetail, devices: STANDARD_DEVICES },
+  { slug: "event-ledger", prepare: prepareEventLedger, devices: STANDARD_DEVICES },
+  { slug: "reports", prepare: prepareReports, devices: STANDARD_DEVICES },
+  { slug: "dashboard", prepare: navOnly("/dashboard", "main, [data-slot='card']"), devices: STANDARD_DEVICES },
+  { slug: "transactions", prepare: navOnly("/transactions", "main"), devices: STANDARD_DEVICES },
+  { slug: "budgets", prepare: navOnly("/budgets", "main"), devices: STANDARD_DEVICES },
+  { slug: "accounts", prepare: navOnly("/accounts", "main"), devices: STANDARD_DEVICES },
   { slug: "category-breakdown", prepare: prepareCategoryBreakdown, devices: ["desktop"] },
+  { slug: "accounts-compact", prepare: navOnly("/accounts", "main"), devices: ["desktop-compact"] },
 ];
 
 /** `--only=slug1,slug2` restricts capture to a subset, for iterating on one surface's
@@ -456,7 +491,8 @@ async function captureDevice(
   device: DeviceProfile,
   base: string,
 ): Promise<void> {
-  const outDir = join(OUT_ROOT, device.slug);
+  const outSlug = device.outSlug ?? device.slug;
+  const outDir = join(OUT_ROOT, outSlug);
   mkdirSync(outDir, { recursive: true });
 
   const context = await browser.newContext(device.contextOptions);
@@ -478,7 +514,7 @@ async function captureDevice(
 
       const file = join(outDir, `${surface.slug}.png`);
       await page.screenshot({ path: file, animations: "disabled" });
-      console.log(`    -> public/screenshots/${device.slug}/${surface.slug}.png`);
+      console.log(`    -> public/screenshots/${outSlug}/${surface.slug}.png`);
     }
   } finally {
     await context.close();

@@ -48,7 +48,18 @@ export const SHOTS_MOBILE = shotsFor('mobile')
  * added directly to the desktop set rather than the shared per-device `SLUGS` loop,
  * which has no mobile counterpart for it.
  */
-export const SHOTS_DESKTOP: Record<Slug, string> & { 'category-breakdown': string } = {
+export const SHOTS_DESKTOP: Record<Slug, string> & {
+  'category-breakdown': string
+  'accounts-compact': string
+} = {
   ...shotsFor('desktop'),
   'category-breakdown': '/screenshots/desktop/category-breakdown.png',
+  /**
+   * Amendment 5: `FeatureDevices` fixes both its frames at 420px tall, which shrinks
+   * the standard 1440-wide `accounts` capture to 672px wide - 47% scale, with body
+   * text near 7px. This is a separate, narrower capture (1120x700, same 1.6 aspect)
+   * used only in that section, so 672px is 60% scale instead. The 1440x900 `accounts`
+   * capture above is untouched and still used by the README gallery.
+   */
+  'accounts-compact': '/screenshots/desktop/accounts-compact.png',
 }
