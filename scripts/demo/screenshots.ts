@@ -421,11 +421,19 @@ async function prepareCategoryBreakdown(page: Page, base: string): Promise<void>
   await breakdownHeading.waitFor({ state: "visible", timeout: 20000 });
   await waitForVisualSettle(page);
 
+  // Amendment 5: the original capture cleared the sticky header by exactly its own
+  // height, which left the heading sitting flush against it - "too close to the top
+  // edge." This adds a fixed extra margin on top of that clearance so there is visible
+  // breathing room above the heading. The chart and legend have fixed height regardless
+  // of scroll position, so the only cost is a few rows trimmed off the bottom of the
+  // ranked list, which still shows several ranked rows after the change.
+  const EXTRA_HEADROOM = 56;
+
   await assertEventually(
     page,
-    "the Category Breakdown heading was not clear of the sticky page header after scrolling",
+    "the Category Breakdown heading did not have clear headroom above it after scrolling",
     async () => {
-      const headerHeight = await breakdownHeading.evaluate((el) => {
+      const headerHeight = await breakdownHeading.evaluate((el, extra) => {
         el.scrollIntoView({ block: "start" });
         const header = document.querySelector<HTMLElement>(".sticky.top-0.z-10");
         const height = header?.getBoundingClientRect().height ?? 0;
@@ -433,17 +441,20 @@ async function prepareCategoryBreakdown(page: Page, base: string): Promise<void>
         while (ancestor) {
           const style = getComputedStyle(ancestor);
           if (/(auto|scroll)/.test(style.overflowY) && ancestor.scrollHeight > ancestor.clientHeight) {
-            ancestor.scrollTop -= height;
+            ancestor.scrollTop -= height + extra;
             break;
           }
           ancestor = ancestor.parentElement;
         }
         return height;
-      });
+      }, EXTRA_HEADROOM);
       const viewport = page.viewportSize();
       const headingBox = await breakdownHeading.boundingBox();
       if (!viewport || !headingBox) return false;
-      return headingBox.y >= headerHeight && headingBox.y + headingBox.height <= viewport.height;
+      return (
+        headingBox.y >= headerHeight + EXTRA_HEADROOM - 2 &&
+        headingBox.y + headingBox.height <= viewport.height
+      );
     },
   );
 
