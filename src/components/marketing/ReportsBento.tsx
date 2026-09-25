@@ -34,7 +34,7 @@ export function ReportsBento() {
               alt="Category breakdown chart and per-category totals for the selected period"
               width={SHOT_WIDTH}
               height={SHOT_HEIGHT}
-              sizes="(max-width: 768px) 100vw, 900px"
+              sizes="(max-width: 768px) 100vw, 960px"
               className="h-auto w-full"
             />
           </div>

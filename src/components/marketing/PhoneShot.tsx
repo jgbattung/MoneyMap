@@ -36,7 +36,7 @@ export function PhoneShot({
           alt={alt}
           fill
           priority={priority}
-          sizes="(max-width: 640px) 55vw, 300px"
+          sizes="300px"
           className="object-cover"
         />
       </div>

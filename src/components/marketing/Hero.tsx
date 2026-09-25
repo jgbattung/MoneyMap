@@ -78,7 +78,7 @@ export function Hero() {
               src={SHOTS_MOBILE.dashboard}
               alt="The same dashboard on the app's separate mobile layout"
               fill
-              sizes="(max-width: 768px) 20vw, 120px"
+              sizes="(max-width: 767px) 80px, (max-width: 1023px) 150px, 180px"
               className="object-cover"
             />
           </div>
