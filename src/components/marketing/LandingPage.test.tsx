@@ -361,3 +361,206 @@ describe('landing page copy discipline', () => {
     }
   })
 })
+
+// ---------------------------------------------------------------------------
+// Page composition (Amendment 4: ten sections, Cards retired)
+// ---------------------------------------------------------------------------
+
+import LandingPage from '@/app/(marketing)/page'
+import { metadata } from '@/app/(marketing)/layout'
+import { SHOTS_DESKTOP, SHOTS_MOBILE } from './constants'
+
+describe('landing page composition', () => {
+  it('renders the approved sections in the locked order', () => {
+    // The section list is locked copy (Amendment 1, revised by 3 and 4). Every section
+    // is unit-tested in isolation above, which leaves ORDER and PRESENCE untested: a
+    // section could be dropped, duplicated or reordered without a single failure.
+    render(<LandingPage />)
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+    expect(headings).toEqual([
+      'Watch it go up.',
+      'Where did it all go?',
+      'Stop a bad month before it happens.',
+      'How much did that vacation actually cost?',
+      'Every number, every angle.',
+      'Capture on your phone. Study it on your desktop.',
+      "Curious how it's built?",
+      'Still guessing?',
+    ])
+  })
+
+  it('does not reintroduce the Cards section retired in Amendment 4', () => {
+    // Its captures deliberately stay on disk for the README gallery, so the only thing
+    // stopping the section coming back is that nothing renders it.
+    const { container } = render(<LandingPage />)
+    const text = container.textContent ?? ''
+    expect(text).not.toContain('Always know what you owe')
+    expect(text).not.toContain("Every card's balance and due date")
+    const srcs = screen.getAllByRole('img').map((i) => i.getAttribute('src'))
+    expect(srcs).not.toContain(SHOTS_DESKTOP['card-detail'])
+    expect(srcs).not.toContain(SHOTS_MOBILE['card-detail'])
+  })
+
+  it('has exactly one h1, and it is the hero headline', () => {
+    render(<LandingPage />)
+    const h1s = screen.getAllByRole('heading', { level: 1 })
+    expect(h1s).toHaveLength(1)
+    expect(h1s[0].textContent).toBe('The whole picture of your money.')
+  })
+
+  it('opens with the nav and closes with the footer', () => {
+    render(<LandingPage />)
+    expect(screen.getByRole('navigation', { name: /primary/i })).toBeTruthy()
+    expect(screen.getByRole('contentinfo')).toBeTruthy()
+  })
+})
+
+describe('landing page accessibility', () => {
+  it('gives every image a descriptive alt, never an empty or filename-shaped one', () => {
+    // Only the hero's two images were checked before. The product screenshots carry
+    // the page's entire evidence, so an unlabelled one is the whole argument lost for
+    // a screen reader user.
+    render(<LandingPage />)
+    const images = screen.getAllByRole('img')
+    expect(images.length).toBeGreaterThan(5)
+    for (const img of images) {
+      const alt = img.getAttribute('alt') ?? ''
+      const src = img.getAttribute('src')
+      expect(alt.length, `${src} has no alt text`).toBeGreaterThan(10)
+      expect(alt, `${src} alt looks like a filename, not a description`).not.toMatch(
+        /\.png$|^screenshot/i,
+      )
+    }
+  })
+
+  it('gives every link an accessible name', () => {
+    render(<LandingPage />)
+    const links = screen.getAllByRole('link')
+    expect(links.length).toBeGreaterThan(5)
+    for (const link of links) {
+      const name = link.getAttribute('aria-label') ?? link.textContent ?? ''
+      expect(name.trim().length, `a link has no accessible name`).toBeGreaterThan(0)
+    }
+  })
+
+  it('opens every external link safely', () => {
+    render(<LandingPage />)
+    const external = screen
+      .getAllByRole('link')
+      .filter((l) => (l.getAttribute('href') ?? '').startsWith('http'))
+    expect(external.length).toBeGreaterThan(0)
+    for (const link of external) {
+      expect(link.getAttribute('target')).toBe('_blank')
+      expect(link.getAttribute('rel')).toContain('noopener')
+    }
+  })
+})
+
+describe('marketing route metadata', () => {
+  it('sets the title and description that render in a shared link preview', () => {
+    // This page exists to be linked from a resume, so its metadata is user-facing
+    // output, not configuration. A default "Create Next App" title here would be the
+    // first thing a reviewer saw.
+    expect(metadata.title).toBe('MoneyMap - Stay on top of your money')
+    expect(metadata.description).toBe(
+      "Every account, card and budget in one place, so you always know what's safe to spend.",
+    )
+  })
+
+  it('keeps the metadata free of the banned dash characters', () => {
+    expect(`${metadata.title} ${metadata.description}`).not.toMatch(/[–—]/)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// next/image `sizes` tripwire
+// ---------------------------------------------------------------------------
+
+describe('landing page image sizes', () => {
+  /**
+   * WHAT THIS IS, AND WHAT IT IS NOT.
+   *
+   * It is NOT a proof that each image's declared `sizes` is greater than or equal to
+   * its rendered width. happy-dom has no layout engine: it does not resolve Tailwind
+   * classes, compute box widths, or evaluate media queries, so the real invariant is
+   * unverifiable in this environment. Verifying it properly needs a real browser
+   * measuring `img.getBoundingClientRect().width` at each breakpoint, which is what
+   * was done by hand in Phase 10 and is not automated anywhere.
+   *
+   * It IS a tripwire. A stale `sizes` degrades an image silently - Next serves a
+   * variant sized for the old element and the browser upscales it - while breaking no
+   * test at all. That exact bug shipped twice on this branch. These assertions pin the
+   * size-driving class to the `sizes` value that was measured against it, so changing
+   * one without the other fails loudly and names the reason.
+   *
+   * If one of these fails: you resized an image. Re-measure the element's actual
+   * rendered width in a real browser at 375/768/1024/1440 and update BOTH the class
+   * and the `sizes` string, then update the expectation here. Do not simply widen the
+   * expectation to match.
+   */
+  const RESIZE_HINT =
+    'This image was resized without updating its `sizes` (or vice versa). ' +
+    'Next will serve a variant sized for the wrong element and the browser will ' +
+    'upscale it, which looks degraded and breaks no other test. Re-measure the ' +
+    'rendered width in a real browser and update both together.'
+
+  const imageBySrc = (container: HTMLElement, src: string): HTMLImageElement => {
+    const img = container.querySelector<HTMLImageElement>(`img[src="${src}"]`)
+    expect(img, `no image rendered with src ${src}`).toBeTruthy()
+    return img as HTMLImageElement
+  }
+
+  it('pins the hero phone height steps to the sizes measured against them', () => {
+    const { container } = render(<Hero />)
+    const img = imageBySrc(container, SHOTS_MOBILE.dashboard)
+    const frame = img.closest('div[style]')
+    expect(frame?.className, RESIZE_HINT).toMatch(/\bh-40\b/)
+    expect(frame?.className, RESIZE_HINT).toMatch(/\bmd:h-80\b/)
+    expect(frame?.className, RESIZE_HINT).toMatch(/\blg:h-96\b/)
+    expect(img.getAttribute('sizes'), RESIZE_HINT).toBe(
+      '(max-width: 767px) 80px, (max-width: 1023px) 150px, 180px',
+    )
+  })
+
+  it('pins the hero desktop capture to its max-w-4xl container', () => {
+    const { container } = render(<Hero />)
+    const img = imageBySrc(container, SHOTS_DESKTOP.dashboard)
+    expect(container.innerHTML, RESIZE_HINT).toContain('max-w-4xl')
+    expect(img.getAttribute('sizes'), RESIZE_HINT).toBe('(max-width: 768px) 100vw, 900px')
+  })
+
+  it('pins the device section to its equal-height frame width', () => {
+    const { container } = render(<FeatureDevices />)
+    const img = imageBySrc(container, SHOTS_DESKTOP['accounts-compact'])
+    expect(img.className, RESIZE_HINT).toMatch(/lg:h-\[420px\]/)
+    expect(img.getAttribute('sizes'), RESIZE_HINT).toBe('(max-width: 1024px) 100vw, 672px')
+  })
+
+  it('pins the reports capture to its max-w-5xl container', () => {
+    const { container } = render(<ReportsBento />)
+    const img = imageBySrc(container, SHOTS_DESKTOP['category-breakdown'])
+    expect(container.innerHTML, RESIZE_HINT).toContain('max-w-5xl')
+    expect(img.getAttribute('sizes'), RESIZE_HINT).toBe('(max-width: 768px) 100vw, 960px')
+  })
+
+  it('pins the shared phone frame cap to its flat sizes value', () => {
+    // PhoneShot backs five call sites. Its `max-w-[300px]` cap is what makes a single
+    // flat `sizes` honest for all of them; widening the cap invalidates that.
+    const { container } = render(<FeatureNetWorth />)
+    const img = imageBySrc(container, SHOTS_MOBILE['net-worth'])
+    expect(container.innerHTML, RESIZE_HINT).toContain('max-w-[300px]')
+    expect(img.getAttribute('sizes'), RESIZE_HINT).toBe('300px')
+  })
+
+  it('declares a non-empty sizes on every image on the page', () => {
+    // A `fill` or responsive image with no `sizes` makes Next fall back to 100vw and
+    // download the largest variant on every viewport.
+    render(<LandingPage />)
+    for (const img of screen.getAllByRole('img')) {
+      const sizes = img.getAttribute('sizes') ?? ''
+      expect(sizes.trim().length, `${img.getAttribute('src')} declares no sizes`).toBeGreaterThan(
+        0,
+      )
+    }
+  })
+})
