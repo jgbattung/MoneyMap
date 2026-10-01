@@ -54,7 +54,7 @@ export async function assertDemoDatabase(prisma: PrismaClient): Promise<void> {
 /**
  * Creates the marker table if it is absent.
  *
- * Only ever called from the explicit setup path (`npm run setup:demo-marker`), which the
+ * Only ever called from the explicit setup path (`npm run demo:marker`), which the
  * user runs once against the demo database they created by hand. Never called from the
  * seed, so the seed can never self-authorise a database it is not supposed to touch.
  */
