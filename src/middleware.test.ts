@@ -117,13 +117,14 @@ describe('middleware', () => {
 
   // -------------------------------------------------------------------------
   describe('unauthenticated user redirects', () => {
-    it('redirects unauthenticated user on "/" to /sign-in', async () => {
+    it('allows unauthenticated user to reach "/" without redirect', async () => {
+      // "/" is the public landing page. It used to redirect to /sign-in, which made
+      // the root route unreachable for every signed-out visitor.
       mockSession(null)
       await middleware(makeRequest('/'))
 
-      expect(NextResponse.redirect).toHaveBeenCalledTimes(1)
-      const redirectArg = vi.mocked(NextResponse.redirect).mock.calls[0][0] as URL
-      expect(redirectArg.toString()).toContain('/sign-in')
+      expect(NextResponse.redirect).not.toHaveBeenCalled()
+      expect(NextResponse.next).toHaveBeenCalledTimes(1)
     })
 
     it('redirects unauthenticated user on /dashboard to /sign-in', async () => {
@@ -159,6 +160,20 @@ describe('middleware', () => {
       expect(NextResponse.redirect).not.toHaveBeenCalled()
       expect(NextResponse.next).toHaveBeenCalledTimes(1)
     })
+
+    it.each(['/budgets', '/reports', '/cards', '/settings', '/accounts/abc'])(
+      'still guards %s for an unauthenticated user',
+      async (path) => {
+        // Guards the exact regression the public-path allow-list could introduce:
+        // exempting "/" must not exempt anything else.
+        mockSession(null)
+        await middleware(makeRequest(path))
+
+        expect(NextResponse.redirect).toHaveBeenCalledTimes(1)
+        const redirectArg = vi.mocked(NextResponse.redirect).mock.calls[0][0] as URL
+        expect(redirectArg.toString()).toContain('/sign-in')
+      },
+    )
   })
 
   // -------------------------------------------------------------------------
@@ -204,6 +219,25 @@ describe('middleware', () => {
       const pattern = config.matcher[0]
       expect(pattern).toContain('_next/static')
       expect(pattern).toContain('favicon.ico')
+    })
+
+    it('excludes the public screenshots directory from the matcher', async () => {
+      // Without this the middleware guards everything under public/, so the landing
+      // page's product images 307 to /sign-in for a signed-out visitor and the Next
+      // image optimizer fails with "unable to fallback to upstream image".
+      const { config } = await import('./middleware')
+      expect(config.matcher[0]).toContain('screenshots')
+    })
+
+    it('still matches application routes', async () => {
+      const { config } = await import('./middleware')
+      const pattern = new RegExp(`^${config.matcher[0]}$`)
+      for (const path of ['/dashboard', '/budgets', '/accounts/abc', '/settings']) {
+        expect(pattern.test(path), `${path} must still be guarded`).toBe(true)
+      }
+      for (const path of ['/screenshots/dashboard.png', '/api/accounts', '/favicon.ico']) {
+        expect(pattern.test(path), `${path} must be exempt`).toBe(false)
+      }
     })
   })
 })

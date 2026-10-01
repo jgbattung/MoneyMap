@@ -45,7 +45,7 @@ export default function LoginPage() {
 
 
   return (
-    <section className="flex w-full min-h-screen items-center justify-center bg-zinc-50 px-4 dark:bg-transparent">
+    <section className="flex w-full min-h-screen items-center justify-center px-4">
       <form
         className="bg-card m-auto h-fit w-full max-w-sm rounded-[calc(var(--radius)+.125rem)] border p-0.5 shadow-md dark:[--color-muted:var(--color-zinc-900)]"
         onSubmit={handleEmailSignUp}
@@ -63,11 +63,13 @@ export default function LoginPage() {
             <p className="text-sm">Welcome! Create an account to get started</p>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-3">
+          {/* Same reason as the sign-in page: Google is the only configured provider.
+              A Microsoft button used to sit beside it with no onClick. */}
+          <div className="mt-6">
             <Button
               type="button"
               variant="outline"
-              className='hover:text-primary-foreground'
+              className="w-full hover:text-primary-foreground"
               onClick={() => signIn.social({
                 provider: "google",
                 callbackURL: "/dashboard"
@@ -92,31 +94,6 @@ export default function LoginPage() {
                   d="M130.55 50.479c24.514 0 41.05 10.589 50.479 19.438l36.844-35.974C195.245 12.91 165.798 0 130.55 0C79.49 0 35.393 29.301 13.925 71.947l42.211 32.783c10.59-31.477 39.891-54.251 74.414-54.251"></path>
               </svg>
               <span>Google</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className='hover:text-primary-foreground'  
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="1em"
-                height="1em"
-                viewBox="0 0 256 256">
-                <path
-                  fill="#f1511b"
-                  d="M121.666 121.666H0V0h121.666z"></path>
-                <path
-                  fill="#80cc28"
-                  d="M256 121.666H134.335V0H256z"></path>
-                <path
-                  fill="#00adef"
-                  d="M121.663 256.002H0V134.336h121.663z"></path>
-                <path
-                  fill="#fbbc09"
-                  d="M256 256.002H134.335V134.336H256z"></path>
-              </svg>
-              <span>Microsoft</span>
             </Button>
           </div>
 

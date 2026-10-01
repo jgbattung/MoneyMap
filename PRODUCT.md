@@ -8,6 +8,21 @@ product
 
 A single primary user: the person who built money-map to manage their own money. This is a personal finance tool, not a multi-tenant SaaS. The user checks in daily-to-weekly to see where they stand — net worth, account balances, credit cards, recent transactions, budgets, income, and reports. Because it's one known operator rather than an anonymous audience, the design can assume familiarity and reward return visits: no hand-holding onboarding, no marketing surface, no lowest-common-denominator simplification. The user is comfortable with the vocabulary of personal finance (net worth, assets vs. liabilities, budgets, transfers), so density and precision are assets, not liabilities — as long as the screen stays calm.
 
+## Public landing page
+
+The "no marketing surface" stance above describes the *app*, and it still holds: there is
+no onboarding tour, no upsell, no marketing sheen on any authenticated screen.
+
+One deliberate exception sits outside that boundary. The route at `/` is a public product
+landing page, added so the deployed site can be shown to someone who does not have an
+account, which previously was impossible: every unauthenticated path redirected to the
+sign-in form. It uses a product-first, benefit-led voice rather than the "personal
+instrument" framing used here and in the README, because it addresses a reader who has
+not met the product yet. It is built from the same `@theme` tokens as the app and
+introduces no new colours.
+
+This is recorded so the documents do not silently contradict the deployed site.
+
 ## Product Purpose
 
 money-map is a personal net-worth and money-tracking dashboard. It aggregates accounts, credit cards, transactions, expenses, income, transfers, budgets, and reports into one place so the user can answer, at a glance, "where do I stand right now, and which way am I trending?" Success is a tool the user *wants* to open — one that makes the state of their money feel legible and under control, and that surfaces the net-worth trend and recent activity without effort. It is a private instrument, not a product to be sold; craft here is for the user's own daily experience.
