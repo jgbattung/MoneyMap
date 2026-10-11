@@ -141,6 +141,31 @@ describe('useCardsQuery', () => {
   });
 
   describe('updateCard mutation', () => {
+    it.each([['-2000'], ['300']])('sends initialBalance %s unchanged', async (balance) => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [mockCard],
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockCard,
+      });
+
+      const { result } = renderHook(() => useCardsQuery(), {
+        wrapper: createWrapper(),
+      });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(async () => {
+        await result.current.updateCard({ id: 'card-1', name: 'Renamed', initialBalance: balance });
+      });
+
+      const patchCall = mockFetch.mock.calls[1];
+      expect(patchCall[0]).toBe('/api/cards/card-1');
+      expect(patchCall[1].method).toBe('PATCH');
+      expect(JSON.parse(patchCall[1].body).initialBalance).toBe(balance);
+    });
+
     it('invalidates cards, accounts, netWorth, and netWorthHistory on success', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,

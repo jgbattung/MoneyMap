@@ -43,15 +43,10 @@ const createCard = async (cardData: Record<string, unknown>): Promise<Card> => {
 }
 
 const updateCard = async ({ id, ...cardData }: { id: string; [key: string]: unknown }): Promise<Card> => {
-  const transformedData = {
-    ...cardData,
-    initialBalance: cardData.initialBalance ? (-Math.abs(parseFloat(cardData.initialBalance as string))).toString() : cardData.initialBalance
-  };
-
   const response = await fetch(`/api/cards/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(transformedData),
+    body: JSON.stringify(cardData),
   });
   if (!response.ok) throw new Error('Failed to update card');
   return response.json();

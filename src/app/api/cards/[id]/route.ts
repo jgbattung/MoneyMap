@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import { CardValidation } from "@/lib/validations/account";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = 'force-dynamic';
 
@@ -85,22 +86,52 @@ export async function PATCH(
 
     const { name, initialBalance, statementDate, dueDate, cardGroup } = result.data;
 
-    const updatedCard = await db.financialAccount.update({
+    const existing = await db.financialAccount.findUnique({
       where: {
         id: id,
         userId: session.user.id,
       },
-      data: {
-        name,
-        accountType: 'CREDIT_CARD',
-        initialBalance: parseFloat(initialBalance),
-        statementDate: statementDate ?? null,
-        dueDate: dueDate ?? null,
-        cardGroup: cardGroup || null,
-      }
+      select: { initialBalance: true },
     });
 
-    return NextResponse.json(updatedCard, { status: 201 });
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'Credit card not found' },
+        { status: 404 }
+      );
+    }
+
+    const newInitialBalance = new Prisma.Decimal(initialBalance);
+    const delta = newInitialBalance.minus(existing.initialBalance);
+
+    try {
+      const updatedCard = await db.financialAccount.update({
+        where: {
+          id: id,
+          userId: session.user.id,
+          initialBalance: existing.initialBalance,
+        },
+        data: {
+          name,
+          accountType: 'CREDIT_CARD',
+          initialBalance: newInitialBalance,
+          ...(delta.isZero() ? {} : { currentBalance: { increment: delta } }),
+          statementDate: statementDate ?? null,
+          dueDate: dueDate ?? null,
+          cardGroup: cardGroup || null,
+        }
+      });
+
+      return NextResponse.json(updatedCard, { status: 200 });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return NextResponse.json(
+          { error: 'Credit card was changed by another request. Reload and try again.' },
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
 
   } catch (error) {
     console.error('Error updating credit card: ', error);
