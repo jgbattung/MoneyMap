@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import { AccountValidation } from "@/lib/validations/account";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = 'force-dynamic';
 
@@ -80,23 +81,52 @@ export async function PATCH(
 
     const { name, accountType, initialBalance, addToNetWorth, statementDate, dueDate } = result.data;
 
-    const updatedAccount = await db.financialAccount.update({
+    const existing = await db.financialAccount.findUnique({
       where: {
         id: id,
         userId: session.user.id,
       },
-      data: {
-        name,
-        accountType,
-        initialBalance: parseFloat(initialBalance),
-        currentBalance: parseFloat(initialBalance),
-        addToNetWorth: addToNetWorth ?? true,
-        statementDate: statementDate ?? null,
-        dueDate: dueDate ?? null,
-      },
-    })
+      select: { initialBalance: true },
+    });
 
-    return NextResponse.json(updatedAccount, { status: 201 });
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'Account not found' },
+        { status: 404 }
+      );
+    }
+
+    const newInitialBalance = new Prisma.Decimal(initialBalance);
+    const delta = newInitialBalance.minus(existing.initialBalance);
+
+    try {
+      const updatedAccount = await db.financialAccount.update({
+        where: {
+          id: id,
+          userId: session.user.id,
+          initialBalance: existing.initialBalance,
+        },
+        data: {
+          name,
+          accountType,
+          initialBalance: newInitialBalance,
+          ...(delta.isZero() ? {} : { currentBalance: { increment: delta } }),
+          addToNetWorth: addToNetWorth ?? true,
+          statementDate: statementDate ?? null,
+          dueDate: dueDate ?? null,
+        },
+      });
+
+      return NextResponse.json(updatedAccount, { status: 200 });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return NextResponse.json(
+          { error: 'Account was changed by another request. Reload and try again.' },
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
 
   } catch (error) {
     console.error('Error updating account: ', error);

@@ -141,6 +141,69 @@ describe('useCardsQuery', () => {
   });
 
   describe('updateCard mutation', () => {
+    it('rejects with the server error message on a 409', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [mockCard] });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 409,
+        json: async () => ({ error: 'Card was changed by another request. Reload and try again.' }),
+      });
+
+      const { result } = renderHook(() => useCardsQuery(), { wrapper: createWrapper() });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await expect(
+        act(async () => {
+          await result.current.updateCard({ id: 'card-1', name: 'Renamed' });
+        })
+      ).rejects.toThrow('Card was changed by another request. Reload and try again.');
+    });
+
+    it('rejects with the fallback message when the error body is not JSON', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [mockCard] });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => {
+          throw new SyntaxError('Unexpected token < in JSON');
+        },
+      });
+
+      const { result } = renderHook(() => useCardsQuery(), { wrapper: createWrapper() });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await expect(
+        act(async () => {
+          await result.current.updateCard({ id: 'card-1', name: 'Renamed' });
+        })
+      ).rejects.toThrow('Failed to update card');
+    });
+
+    it.each([['-2000'], ['300']])('sends initialBalance %s unchanged', async (balance) => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [mockCard],
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockCard,
+      });
+
+      const { result } = renderHook(() => useCardsQuery(), {
+        wrapper: createWrapper(),
+      });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(async () => {
+        await result.current.updateCard({ id: 'card-1', name: 'Renamed', initialBalance: balance });
+      });
+
+      const patchCall = mockFetch.mock.calls[1];
+      expect(patchCall[0]).toBe('/api/cards/card-1');
+      expect(patchCall[1].method).toBe('PATCH');
+      expect(JSON.parse(patchCall[1].body).initialBalance).toBe(balance);
+    });
+
     it('invalidates cards, accounts, netWorth, and netWorthHistory on success', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
+import { Prisma } from '@prisma/client';
 
 vi.mock('next/headers', () => ({
   headers: vi.fn(() => Promise.resolve(new Headers())),
@@ -145,15 +146,97 @@ describe('PATCH /api/accounts/[id]', () => {
     expect(data.error).toBe('Unauthorized');
   });
 
-  it('returns 201 with updated account on valid input', async () => {
+  it('scopes the read step to the session user', async () => {
+    vi.mocked(db.financialAccount.findUnique).mockResolvedValue({ initialBalance: new Prisma.Decimal('1000.00') } as any);
+    vi.mocked(db.financialAccount.update).mockResolvedValue(mockAccount as any);
+
+    await PATCH(makePatchRequest(validBody), makeParams());
+
+    const args = vi.mocked(db.financialAccount.findUnique).mock.calls[0][0] as any;
+    expect(args.where).toEqual({ id: 'acc-1', userId: 'user-123' });
+  });
+
+  it('returns 200 with updated account on valid input', async () => {
     const updatedAccount = { ...mockAccount, name: 'Updated Checking' };
+    vi.mocked(db.financialAccount.findUnique).mockResolvedValue({ initialBalance: new Prisma.Decimal('1000.00') } as any);
     vi.mocked(db.financialAccount.update).mockResolvedValue(updatedAccount as any);
 
     const response = await PATCH(makePatchRequest(validBody), makeParams());
     const data = await response.json();
 
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(200);
     expect(data.name).toBe('Updated Checking');
+  });
+
+  it('does not send currentBalance when the opening balance is unchanged', async () => {
+    vi.mocked(db.financialAccount.findUnique).mockResolvedValue({ initialBalance: new Prisma.Decimal('5000.00') } as any);
+    vi.mocked(db.financialAccount.update).mockResolvedValue(mockAccount as any);
+
+    await PATCH(makePatchRequest({ ...validBody, initialBalance: '5000.00' }), makeParams());
+
+    const args = vi.mocked(db.financialAccount.update).mock.calls[0][0] as any;
+    expect(args.data).not.toHaveProperty('currentBalance');
+    expect(args.data.name).toBe('Updated Checking');
+    expect(args.data.initialBalance.toString()).toBe('5000');
+    expect(args.where.id).toBe('acc-1');
+    expect(args.where.userId).toBe('user-123');
+    expect(args.where.initialBalance.toString()).toBe('5000');
+  });
+
+  it('treats "5000" and a stored 5000.00 as a zero delta', async () => {
+    vi.mocked(db.financialAccount.findUnique).mockResolvedValue({ initialBalance: new Prisma.Decimal('5000.00') } as any);
+    vi.mocked(db.financialAccount.update).mockResolvedValue(mockAccount as any);
+
+    await PATCH(makePatchRequest({ ...validBody, initialBalance: '5000' }), makeParams());
+
+    const args = vi.mocked(db.financialAccount.update).mock.calls[0][0] as any;
+    expect(args.data).not.toHaveProperty('currentBalance');
+  });
+
+  it('increments currentBalance by the delta when the opening balance increases', async () => {
+    vi.mocked(db.financialAccount.findUnique).mockResolvedValue({ initialBalance: new Prisma.Decimal('5000.00') } as any);
+    vi.mocked(db.financialAccount.update).mockResolvedValue(mockAccount as any);
+
+    await PATCH(makePatchRequest({ ...validBody, initialBalance: '5250.50' }), makeParams());
+
+    const args = vi.mocked(db.financialAccount.update).mock.calls[0][0] as any;
+    expect(args.data.currentBalance.increment.toString()).toBe('250.5');
+    expect(args.data.initialBalance.toString()).toBe('5250.5');
+    expect(args.where.initialBalance.toString()).toBe('5000');
+  });
+
+  it('increments currentBalance by a negative delta when the opening balance decreases', async () => {
+    vi.mocked(db.financialAccount.findUnique).mockResolvedValue({ initialBalance: new Prisma.Decimal('5000.00') } as any);
+    vi.mocked(db.financialAccount.update).mockResolvedValue(mockAccount as any);
+
+    await PATCH(makePatchRequest({ ...validBody, initialBalance: '4000.25' }), makeParams());
+
+    const args = vi.mocked(db.financialAccount.update).mock.calls[0][0] as any;
+    expect(args.data.currentBalance.increment.toString()).toBe('-999.75');
+  });
+
+  it('returns 404 and does not update when the account does not exist', async () => {
+    vi.mocked(db.financialAccount.findUnique).mockResolvedValue(null);
+
+    const response = await PATCH(makePatchRequest(validBody), makeParams());
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe('Account not found');
+    expect(db.financialAccount.update).not.toHaveBeenCalled();
+  });
+
+  it('returns 409 when the conditional update loses a race (P2025)', async () => {
+    vi.mocked(db.financialAccount.findUnique).mockResolvedValue({ initialBalance: new Prisma.Decimal('1000.00') } as any);
+    vi.mocked(db.financialAccount.update).mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Record not found', { code: 'P2025', clientVersion: 'test' })
+    );
+
+    const response = await PATCH(makePatchRequest(validBody), makeParams());
+    const data = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(data.error).toMatch(/changed by another request/);
   });
 
   it('returns 400 when name is empty', async () => {
@@ -198,6 +281,7 @@ describe('PATCH /api/accounts/[id]', () => {
   });
 
   it('returns 500 when database throws', async () => {
+    vi.mocked(db.financialAccount.findUnique).mockResolvedValue({ initialBalance: new Prisma.Decimal('1000.00') } as any);
     vi.mocked(db.financialAccount.update).mockRejectedValue(new Error('DB error'));
 
     const response = await PATCH(makePatchRequest(validBody), makeParams());

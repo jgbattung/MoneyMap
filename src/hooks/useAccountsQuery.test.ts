@@ -147,6 +147,44 @@ describe('useAccountsQuery', () => {
   });
 
   describe('updateAccount mutation', () => {
+    it('rejects with the server error message on a 409', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [mockAccount] });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 409,
+        json: async () => ({ error: 'Account was changed by another request. Reload and try again.' }),
+      });
+
+      const { result } = renderHook(() => useAccountsQuery(), { wrapper: createWrapper() });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await expect(
+        act(async () => {
+          await result.current.updateAccount({ id: 'acc-1', name: 'Renamed' });
+        })
+      ).rejects.toThrow('Account was changed by another request. Reload and try again.');
+    });
+
+    it('rejects with the fallback message when the error body is not JSON', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [mockAccount] });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => {
+          throw new SyntaxError('Unexpected token < in JSON');
+        },
+      });
+
+      const { result } = renderHook(() => useAccountsQuery(), { wrapper: createWrapper() });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await expect(
+        act(async () => {
+          await result.current.updateAccount({ id: 'acc-1', name: 'Renamed' });
+        })
+      ).rejects.toThrow('Failed to update account');
+    });
+
     it('invalidates accounts, cards, netWorth, and netWorthHistory on success', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
