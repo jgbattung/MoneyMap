@@ -269,4 +269,154 @@ test.describe.serial("Balance integrity (MM-030 and MM-031)", () => {
     expect(check[savingsId].diff.toString()).toBe("-1000");
     expectAllZero(check, [checkingId, cardId]);
   });
+
+  // QA remediation: real-Postgres concurrency, multi-row repair, undo guards
+
+  // Shifts current_balance directly, bypassing the API, to simulate the old bug.
+  async function corrupt(id: string, delta: string) {
+    const row = await prisma.financialAccount.findUniqueOrThrow({ where: { id } });
+    await prisma.financialAccount.update({
+      where: { id },
+      data: { currentBalance: row.currentBalance.plus(delta) },
+    });
+    return row.currentBalance.toString();
+  }
+
+  async function setCurrent(id: string, value: string) {
+    await prisma.financialAccount.update({ where: { id }, data: { currentBalance: new Prisma.Decimal(value) } });
+  }
+
+  test("reset: heal the savings account left corrupted by the previous test", async () => {
+    const check = await runCheck();
+    await setCurrent(savingsId, check[savingsId].expected_balance.toString());
+    expectAllZero(await runCheck(), allIds);
+  });
+
+  test("the conditional update rejects a stale opening balance on real Postgres", async ({ request }) => {
+    const stored = (await prisma.financialAccount.findUniqueOrThrow({ where: { id: checkingId } })).initialBalance;
+
+    const change = await request.patch(`/api/accounts/${checkingId}`, {
+      data: { name: "Checking Renamed", accountType: "CHECKING", initialBalance: stored.plus(100).toString(), addToNetWorth: true },
+    });
+    expect(change.status()).toBe(200);
+
+    const before = await balances(checkingId);
+    let code: string | undefined;
+    try {
+      await prisma.financialAccount.update({
+        where: { id: checkingId, userId: "test-user-id", initialBalance: stored },
+        data: { name: "should-not-apply" },
+      });
+    } catch (e) {
+      code = (e as { code?: string }).code;
+    }
+    expect(code).toBe("P2025");
+
+    const row = await prisma.financialAccount.findUniqueOrThrow({ where: { id: checkingId } });
+    expect(row.name).toBe("Checking Renamed");
+    expect(await balances(checkingId)).toEqual(before);
+    expectAllZero(await runCheck(), allIds);
+  });
+
+  test("five concurrent opening-balance edits never corrupt the balance", async ({ request }) => {
+    const base = (await prisma.financialAccount.findUniqueOrThrow({ where: { id: checkingId } })).initialBalance;
+    const values = [1, 2, 3, 4, 5].map((n) => base.plus(n * 111).toString());
+
+    const responses = await Promise.all(
+      values.map((initialBalance) =>
+        request.patch(`/api/accounts/${checkingId}`, {
+          data: { name: "Checking Renamed", accountType: "CHECKING", initialBalance, addToNetWorth: true },
+        })
+      )
+    );
+
+    const statuses = responses.map((r) => r.status());
+    for (const status of statuses) expect([200, 409]).toContain(status);
+    expect(statuses.filter((st) => st === 200).length).toBeGreaterThanOrEqual(1);
+
+    const won = new Set<string>();
+    for (const r of responses) {
+      if (r.status() === 200) won.add(new Prisma.Decimal((await r.json()).initialBalance).toString());
+    }
+
+    const row = await prisma.financialAccount.findUniqueOrThrow({ where: { id: checkingId } });
+    expect(won.has(row.initialBalance.toString()), `stored ${row.initialBalance} is not one of ${[...won]}`).toBe(true);
+    expectAllZero(await runCheck(), allIds);
+  });
+
+  test("a multi-row repair including a card works, then the undo restores both exactly", async () => {
+    const originals = {
+      [checkingId]: await corrupt(checkingId, "250"),
+      [cardId]: await corrupt(cardId, "-400"),
+    };
+
+    try {
+      const check = await runCheck();
+      expect(check[checkingId].diff.toString()).toBe("250");
+      expect(check[cardId].diff.toString()).toBe("-400");
+      expectAllZero(check, [savingsId]);
+
+      const rows: Array<[string, string]> = [
+        [checkingId, check[checkingId].diff.toString()],
+        [cardId, check[cardId].diff.toString()],
+      ];
+      const beforeChecking = await balances(checkingId);
+      const beforeCard = await balances(cardId);
+
+      await prisma.$executeRawUnsafe(withAccounts(REPAIR_SQL, rows));
+
+      const repairedChecking = await balances(checkingId);
+      const repairedCard = await balances(cardId);
+      expect(repairedChecking.current).toBe(beforeChecking.current);
+      expect(repairedCard.current).toBe(beforeCard.current);
+      expect(new Prisma.Decimal(repairedChecking.initial).minus(beforeChecking.initial).toString()).toBe("250");
+      expect(new Prisma.Decimal(repairedCard.initial).minus(beforeCard.initial).toString()).toBe("-400");
+      expectAllZero(await runCheck(), allIds);
+
+      await prisma.$executeRawUnsafe(withAccounts(UNDO_SQL, rows));
+
+      expect(await balances(checkingId)).toEqual(beforeChecking);
+      expect(await balances(cardId)).toEqual(beforeCard);
+      const after = await runCheck();
+      expect(after[checkingId].diff.toString()).toBe("250");
+      expect(after[cardId].diff.toString()).toBe("-400");
+    } finally {
+      await setCurrent(checkingId, originals[checkingId]);
+      await setCurrent(cardId, originals[cardId]);
+    }
+    expectAllZero(await runCheck(), allIds);
+  });
+
+  test("the undo rejects an account that was never repaired", async () => {
+    const original = await corrupt(checkingId, "250");
+    try {
+      const before = await balances(checkingId);
+      await expect(
+        prisma.$executeRawUnsafe(withAccounts(UNDO_SQL, [[checkingId, "250"]]))
+      ).rejects.toThrow(/live diff/);
+      expect(await balances(checkingId)).toEqual(before);
+    } finally {
+      await setCurrent(checkingId, original);
+    }
+    expectAllZero(await runCheck(), allIds);
+  });
+
+  test("a second undo after a successful undo is rejected and changes nothing", async () => {
+    const original = await corrupt(checkingId, "250");
+    try {
+      const start = await balances(checkingId);
+      const rows: Array<[string, string]> = [[checkingId, "250"]];
+
+      await prisma.$executeRawUnsafe(withAccounts(REPAIR_SQL, rows));
+      await prisma.$executeRawUnsafe(withAccounts(UNDO_SQL, rows));
+      const afterUndo = await balances(checkingId);
+      expect(afterUndo).toEqual(start);
+
+      await expect(prisma.$executeRawUnsafe(withAccounts(UNDO_SQL, rows))).rejects.toThrow(/live diff/);
+      expect(await balances(checkingId)).toEqual(afterUndo);
+    } finally {
+      await setCurrent(checkingId, original);
+    }
+    expectAllZero(await runCheck(), allIds);
+  });
 });

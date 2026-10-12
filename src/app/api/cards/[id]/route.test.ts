@@ -107,6 +107,16 @@ describe('PATCH /api/cards/[id]', () => {
     expect(data.error).toBe('Validation failed');
   });
 
+  it('scopes the read step to the session user', async () => {
+    mockStored('-2000.00');
+    vi.mocked(db.financialAccount.update).mockResolvedValue(mockCard as any);
+
+    await PATCH(makePatchRequest(validBody), makeParams());
+
+    const args = vi.mocked(db.financialAccount.findUnique).mock.calls[0][0] as any;
+    expect(args.where).toEqual({ id: 'card-1', userId: 'user-123' });
+  });
+
   it('returns 200 with the updated card on valid input', async () => {
     mockStored('-2000.00');
     vi.mocked(db.financialAccount.update).mockResolvedValue({ ...mockCard, name: 'Renamed Visa' } as any);

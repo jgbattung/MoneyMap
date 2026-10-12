@@ -146,6 +146,16 @@ describe('PATCH /api/accounts/[id]', () => {
     expect(data.error).toBe('Unauthorized');
   });
 
+  it('scopes the read step to the session user', async () => {
+    vi.mocked(db.financialAccount.findUnique).mockResolvedValue({ initialBalance: new Prisma.Decimal('1000.00') } as any);
+    vi.mocked(db.financialAccount.update).mockResolvedValue(mockAccount as any);
+
+    await PATCH(makePatchRequest(validBody), makeParams());
+
+    const args = vi.mocked(db.financialAccount.findUnique).mock.calls[0][0] as any;
+    expect(args.where).toEqual({ id: 'acc-1', userId: 'user-123' });
+  });
+
   it('returns 200 with updated account on valid input', async () => {
     const updatedAccount = { ...mockAccount, name: 'Updated Checking' };
     vi.mocked(db.financialAccount.findUnique).mockResolvedValue({ initialBalance: new Prisma.Decimal('1000.00') } as any);
