@@ -44,7 +44,10 @@ const updateAccount = async ({ id, ...accountData }: { id: string; [key: string]
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(accountData),
   });
-  if (!response.ok) throw new Error('Failed to update account');
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.error ?? 'Failed to update account');
+  }
   return response.json();
 };
 

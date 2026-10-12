@@ -48,7 +48,10 @@ const updateCard = async ({ id, ...cardData }: { id: string; [key: string]: unkn
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(cardData),
   });
-  if (!response.ok) throw new Error('Failed to update card');
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.error ?? 'Failed to update card');
+  }
   return response.json();
 }
 
