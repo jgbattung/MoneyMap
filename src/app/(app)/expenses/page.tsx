@@ -32,7 +32,7 @@ const Expenses = () => {
   const { preset, filters, queryDates, isActive } = filterState;
   const filterOptions = useExpenseFilterOptions();
 
-  // Pass search and dateFilter to the hook
+  // Pass search, date range and filters to the hook
   const { expenseTransactions, hasMore, isLoading, isFetchingMore, error, total, totalAmount } = useExpenseTransactionsQuery({
     skip: 0,
     take: displayCount,

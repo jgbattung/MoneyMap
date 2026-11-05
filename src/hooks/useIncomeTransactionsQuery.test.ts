@@ -214,7 +214,7 @@ describe('useIncomeTransactionsQuery', () => {
     it('prepends optimistic transaction to list cache before API responds', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
 
-      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, accountId: undefined }];
       queryClient.setQueryData(listKey, {
         transactions: [mockIncome],
         total: 1,
@@ -252,7 +252,7 @@ describe('useIncomeTransactionsQuery', () => {
     it('does NOT prepend to pages with skip > 0', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
 
-      const page2Key = ['incomeTransactions', { skip: 10, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+      const page2Key = ['incomeTransactions', { skip: 10, take: 10, search: undefined, accountId: undefined }];
       queryClient.setQueryData(page2Key, {
         transactions: [mockIncome],
         total: 1,
@@ -280,7 +280,7 @@ describe('useIncomeTransactionsQuery', () => {
     it('does NOT prepend when search filter is active', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
 
-      const searchKey = ['incomeTransactions', { skip: 0, take: 10, search: 'salary', dateFilter: undefined, accountId: undefined }];
+      const searchKey = ['incomeTransactions', { skip: 0, take: 10, search: 'salary', accountId: undefined }];
       queryClient.setQueryData(searchKey, {
         transactions: [mockIncome],
         total: 1,
@@ -308,7 +308,7 @@ describe('useIncomeTransactionsQuery', () => {
     it('does NOT prepend into a list cache with active panel filters', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
 
-      const searchKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, filters: { ...EMPTY_FILTERS, tagIds: ['t1'] }, dateFilter: undefined, accountId: undefined }];
+      const searchKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, filters: { ...EMPTY_FILTERS, tagIds: ['t1'] }, accountId: undefined }];
       queryClient.setQueryData(searchKey, {
         transactions: [mockIncome],
         total: 1,
@@ -336,7 +336,7 @@ describe('useIncomeTransactionsQuery', () => {
     it('does NOT prepend when the new row is outside the cached date range', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
 
-      const searchKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, startDate: '2026-01-01', endDate: '2026-01-31', dateFilter: undefined, accountId: undefined }];
+      const searchKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, startDate: '2026-01-01', endDate: '2026-01-31', accountId: undefined }];
       queryClient.setQueryData(searchKey, {
         transactions: [mockIncome],
         total: 1,
@@ -364,7 +364,7 @@ describe('useIncomeTransactionsQuery', () => {
     it('prepends when the new row is inside the cached date range', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
 
-      const searchKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, startDate: '2026-02-01', endDate: '2026-02-28', dateFilter: undefined, accountId: undefined }];
+      const searchKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, startDate: '2026-02-01', endDate: '2026-02-28', accountId: undefined }];
       queryClient.setQueryData(searchKey, {
         transactions: [mockIncome],
         total: 1,
@@ -392,7 +392,7 @@ describe('useIncomeTransactionsQuery', () => {
     it('rolls back optimistic create on API error', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
 
-      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, accountId: undefined }];
       queryClient.setQueryData(listKey, {
         transactions: [mockIncome],
         total: 1,
@@ -500,7 +500,7 @@ describe('useIncomeTransactionsQuery', () => {
     it('removes the transaction from list cache optimistically', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
 
-      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, accountId: undefined }];
       queryClient.setQueryData(listKey, {
         transactions: [mockIncome],
         total: 1,
@@ -534,7 +534,7 @@ describe('useIncomeTransactionsQuery', () => {
     it('rolls back optimistic delete on API error', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
 
-      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, accountId: undefined }];
       queryClient.setQueryData(listKey, {
         transactions: [mockIncome],
         total: 1,
@@ -683,7 +683,7 @@ describe('useIncomeTransactionsQuery', () => {
   describe('balance optimism', () => {
     const accountsKey = ['accounts', { includeCards: true }];
     const netWorthKey = ['netWorth'];
-    const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+    const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, accountId: undefined }];
 
     function seedBalanceCaches(queryClient: QueryClient) {
       queryClient.setQueryData(accountsKey, [
