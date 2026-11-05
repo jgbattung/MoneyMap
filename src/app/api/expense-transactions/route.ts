@@ -3,8 +3,9 @@ import { headers } from "next/headers";
 import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import { buildExpenseWhere, parseListParams } from "@/lib/transaction-where";
 import { INSTALLMENT_STATUS } from "@/lib/installments";
-import { Prisma, PrismaPromise } from "@prisma/client";
+import { PrismaPromise } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { onExpenseTransactionChange } from "@/lib/statement-recalculator";
 import { z } from "zod";
@@ -44,103 +45,18 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const skip = searchParams.get('skip');
-    const take = searchParams.get('take');
-    const search = searchParams.get('search');
-    const dateFilter = searchParams.get('dateFilter');
-    const accountId = searchParams.get('accountId');
-
-    const skipNumber = skip ? Math.min(parseInt(skip), 10000) : undefined;
-    const takeNumber = take ? Math.min(parseInt(take), 100) : undefined;
-
-    const whereClause: Prisma.ExpenseTransactionWhereInput = {
-      userId: session.user.id,
-      isInstallment: false,
-    };
-
-    if (search && search.trim().length > 0) {
-      whereClause.OR = [
-        {
-          name: {
-            contains: search,
-            mode: 'insensitive' as Prisma.QueryMode,
-          },
-        },
-        {
-          description: {
-            contains: search,
-            mode: 'insensitive' as Prisma.QueryMode,
-          },
-        },
-        {
-          account: {
-            name: {
-              contains: search,
-              mode: 'insensitive' as Prisma.QueryMode,
-            },
-          },
-        },
-        {
-          expenseType: {
-            name: {
-              contains: search,
-              mode: 'insensitive' as Prisma.QueryMode,
-            },
-          },
-        },
-        {
-          expenseSubcategory: {
-            name: {
-              contains: search,
-              mode: 'insensitive' as Prisma.QueryMode,
-            },
-          },
-        },
-        {
-          tags: {
-            some: {
-              name: {
-                contains: search,
-                mode: 'insensitive' as Prisma.QueryMode,
-              },
-            },
-          },
-        },
-      ];
+    const parsed = parseListParams(searchParams, 'expense');
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten() },
+        { status: 400 }
+      );
     }
 
-    if (dateFilter && dateFilter !== 'view-all') {
-      const now = new Date();
-      
-      if (dateFilter === 'this-month') {
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-        
-        whereClause.date = {
-          gte: startOfMonth,
-          lte: endOfMonth,
-        };
-      } else if (dateFilter === 'this-year') {
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-        
-        whereClause.date = {
-          gte: startOfYear,
-          lte: endOfYear,
-        };
-      }
-    }
+    const { skip, take } = parsed.data;
+    const whereClause = buildExpenseWhere(session.user.id, parsed.data);
 
-    if (accountId) {
-      whereClause.accountId = accountId;
-    }
-
-    let effectiveTake = takeNumber;
-    if (search && search.trim().length > 0) {
-      effectiveTake = 100;
-    }
-
-    const [total, expenseTransactions] = await Promise.all([
+    const [total, expenseTransactions, aggregate] = await Promise.all([
       db.expenseTransaction.count({
         where: whereClause,
       }),
@@ -155,18 +71,23 @@ export async function GET(request: NextRequest) {
         orderBy: {
           date: 'desc',
         },
-        ...(skipNumber !== undefined && { skip: skipNumber }),
-        ...(effectiveTake !== undefined && { take: effectiveTake }),
+        ...(skip !== undefined && { skip }),
+        ...(take !== undefined && { take }),
+      }),
+      db.expenseTransaction.aggregate({
+        where: whereClause,
+        _sum: { amount: true },
       }),
     ]);
 
     // Calculate hasMore
-    const currentCount = (skipNumber || 0) + expenseTransactions.length;
+    const currentCount = (skip || 0) + expenseTransactions.length;
     const hasMore = currentCount < total;
 
     return NextResponse.json({
       transactions: expenseTransactions,
       total,
+      totalAmount: aggregate._sum.amount?.toString() ?? '0',
       hasMore,
     }, { status: 200 });
   } catch (error) {
