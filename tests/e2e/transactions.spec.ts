@@ -823,3 +823,105 @@ test.describe("Transaction updates — extended", () => {
     expect(newBalanceA).toBe(balanceA - 800);
   });
 });
+
+// ---------------------------------------------------------------------------
+// MM-022: advanced table filtering (desktop)
+//
+// Seeds its own accounts and expenses straight into the isolated Docker DB
+// (no balance changes) and removes them afterwards so earlier and later specs
+// in this file are unaffected.
+// ---------------------------------------------------------------------------
+test.describe("Expense table filtering", () => {
+  const userId = "test-user-id";
+  const accountA = "ft-account-a";
+  const accountB = "ft-account-b";
+  const expenseIds = ["ft-exp-groceries-a", "ft-exp-dining-a", "ft-exp-groceries-b"];
+
+  test.beforeAll(async () => {
+    for (const [id, name] of [
+      [accountA, "FT Account A"],
+      [accountB, "FT Account B"],
+    ]) {
+      await prisma.financialAccount.upsert({
+        where: { id },
+        create: {
+          id,
+          userId,
+          name,
+          accountType: "SAVINGS",
+          initialBalance: 100000,
+          currentBalance: 100000,
+        },
+        update: {},
+      });
+    }
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const rows = [
+      { id: expenseIds[0], name: "FT Groceries A", amount: 500, accountId: accountA, expenseTypeId: "expense-type-groceries" },
+      { id: expenseIds[1], name: "FT Dining A", amount: 1500, accountId: accountA, expenseTypeId: "expense-type-dining" },
+      { id: expenseIds[2], name: "FT Groceries B", amount: 2500, accountId: accountB, expenseTypeId: "expense-type-groceries" },
+    ];
+    for (const row of rows) {
+      await prisma.expenseTransaction.upsert({
+        where: { id: row.id },
+        create: { ...row, userId, date: today, isInstallment: false },
+        update: {},
+      });
+    }
+  });
+
+  test.afterAll(async () => {
+    await prisma.expenseTransaction.deleteMany({ where: { id: { in: expenseIds } } });
+    await prisma.financialAccount.deleteMany({ where: { id: { in: [accountA, accountB] } } });
+    await prisma.$disconnect();
+  });
+
+  test("filters by account and min amount, chip removal and Clear all update the list", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/expenses");
+    await page.waitForLoadState("networkidle");
+
+    const rows = page.locator("tbody tr");
+    const summary = page.locator("div.inline-flex").filter({ hasText: /across [0-9]+ transactions?/ });
+    await expect(rows.filter({ hasText: "FT Groceries A" })).toBeVisible({ timeout: 15000 });
+    await expect(rows.filter({ hasText: "FT Dining A" })).toBeVisible();
+    await expect(rows.filter({ hasText: "FT Groceries B" })).toBeVisible();
+
+    // Open the panel, pick account A and a minimum amount, then Apply
+    await page.getByRole("button", { name: "Filters" }).click();
+    await page.getByRole("button", { name: "Any account" }).click();
+    await page.getByRole("option", { name: "FT Account A" }).click();
+    await page.keyboard.press("Escape"); // close the account dropdown, keep the panel
+    await page.getByLabel("Minimum amount").fill("1000");
+
+    // Nothing applies until Apply is pressed
+    await expect(rows.filter({ hasText: "FT Groceries B" })).toBeVisible();
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
+
+    // Only account A rows of at least 1,000 remain
+    await expect(rows.filter({ hasText: "FT Dining A" })).toBeVisible();
+    await expect(rows.filter({ hasText: "FT Groceries A" })).toHaveCount(0);
+    await expect(rows.filter({ hasText: "FT Groceries B" })).toHaveCount(0);
+
+    // Total line equals the sum of the matching rows
+    await expect(summary).toContainText("₱1,500.00");
+    await expect(summary).toContainText("across 1 transaction");
+
+    // Removing the amount chip updates immediately
+    await page.getByRole("button", { name: /Remove filter Amount/ }).click();
+    await expect(rows.filter({ hasText: "FT Groceries A" })).toBeVisible();
+    await expect(rows.filter({ hasText: "FT Dining A" })).toBeVisible();
+    await expect(rows.filter({ hasText: "FT Groceries B" })).toHaveCount(0);
+    await expect(summary).toContainText("₱2,000.00");
+    await expect(summary).toContainText("across 2 transactions");
+
+    // Clear all restores every row and hides the chips and total line
+    await page.getByRole("button", { name: "Clear all" }).click();
+    await expect(rows.filter({ hasText: "FT Groceries B" })).toBeVisible();
+    await expect(rows.filter({ hasText: "FT Groceries A" })).toBeVisible();
+    await expect(rows.filter({ hasText: "FT Dining A" })).toBeVisible();
+    await expect(page.getByText(/across \d+ transactions?/)).toHaveCount(0);
+  });
+});
