@@ -160,6 +160,75 @@ describe('GET /api/transfer-transactions', () => {
     expect(data.hasMore).toBe(false);
   });
 
+  it('passes from/to/category/tag/amount filters to Prisma', async () => {
+    vi.mocked(db.transferTransaction.count).mockResolvedValue(0);
+    vi.mocked(db.transferTransaction.findMany).mockResolvedValue([]);
+
+    await GET(
+      makeRequest(
+        'http://localhost/api/transfer-transactions?fromAccountIds=f1&toAccountIds=t1&categoryIds=ty&amountMax=99'
+      )
+    );
+
+    const where = vi.mocked(db.transferTransaction.findMany).mock.calls[0][0]!.where as any;
+    expect(where.userId).toBe('user-123');
+    expect(where.AND).toEqual([
+      { fromAccountId: { in: ['f1'] } },
+      { toAccountId: { in: ['t1'] } },
+      { transferTypeId: { in: ['ty'] } },
+      { amount: { lte: 99 } },
+    ]);
+  });
+
+  it('ANDs search with account scope instead of OR-ing them (regression)', async () => {
+    vi.mocked(db.transferTransaction.count).mockResolvedValue(0);
+    vi.mocked(db.transferTransaction.findMany).mockResolvedValue([]);
+
+    await GET(makeRequest('http://localhost/api/transfer-transactions?search=rent&accountId=acc-9'));
+
+    const where = vi.mocked(db.transferTransaction.findMany).mock.calls[0][0]!.where as any;
+    expect(where.OR).toBeUndefined();
+    expect(where.AND).toHaveLength(2);
+    expect(where.AND[0].OR).toHaveLength(6);
+    expect(where.AND[1]).toEqual({ OR: [{ fromAccountId: 'acc-9' }, { toAccountId: 'acc-9' }] });
+  });
+
+  it('does not return totalAmount', async () => {
+    vi.mocked(db.transferTransaction.count).mockResolvedValue(0);
+    vi.mocked(db.transferTransaction.findMany).mockResolvedValue([]);
+
+    const response = await GET(makeRequest());
+    const data = await response.json();
+
+    expect(data).not.toHaveProperty('totalAmount');
+  });
+
+  it('returns 400 on a malformed filter param', async () => {
+    const response = await GET(makeRequest('http://localhost/api/transfer-transactions?amountMin=abc'));
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBe('Validation failed');
+    expect(db.transferTransaction.findMany).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 on reversed date range', async () => {
+    const response = await GET(
+      makeRequest('http://localhost/api/transfer-transactions?startDate=2026-02-02&endDate=2026-02-01')
+    );
+
+    expect(response.status).toBe(400);
+  });
+
+  it('no longer caps take at 100 when searching', async () => {
+    vi.mocked(db.transferTransaction.count).mockResolvedValue(0);
+    vi.mocked(db.transferTransaction.findMany).mockResolvedValue([]);
+
+    await GET(makeRequest('http://localhost/api/transfer-transactions?search=abc&take=15'));
+
+    expect(db.transferTransaction.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 15 }));
+  });
+
   it('returns 500 when database throws', async () => {
     vi.mocked(db.transferTransaction.count).mockRejectedValue(new Error('DB error'));
 
