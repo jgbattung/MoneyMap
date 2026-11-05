@@ -5,9 +5,11 @@ import { Badge } from "@/components/ui/badge";
 interface FilterBadgeProps {
   children: React.ReactNode;
   onRemove?: () => void;
+  /** Accessible name for the remove button. */
+  removeLabel?: string;
 }
 
-export function FilterBadge({ children, onRemove }: FilterBadgeProps) {
+export function FilterBadge({ children, onRemove, removeLabel }: FilterBadgeProps) {
   return (
     <Badge
       variant="secondary"
@@ -17,6 +19,7 @@ export function FilterBadge({ children, onRemove }: FilterBadgeProps) {
       {onRemove && (
         <button
           type="button"
+          aria-label={removeLabel}
           className="ml-1 rounded-full p-0.5 hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-150 active:scale-95 cursor-pointer"
           onClick={onRemove}
         >
