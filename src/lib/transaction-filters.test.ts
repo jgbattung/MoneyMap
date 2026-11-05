@@ -3,6 +3,8 @@ import {
   EMPTY_FILTERS,
   countActiveFilters,
   filtersToSearchParams,
+  normalizeAmountInput,
+  normalizeFilters,
   resolveDatePreset,
   shouldInsertOptimisticRow,
   validateFilters,
@@ -201,5 +203,23 @@ describe("shouldInsertOptimisticRow", () => {
     expect(shouldInsertOptimisticRow(p, "2026-02-01")).toBe(false);
     expect(shouldInsertOptimisticRow(p, "2025-12-31")).toBe(false);
     expect(shouldInsertOptimisticRow(p, "2026-01-15T00:00:00.000Z")).toBe(true);
+  });
+});
+
+describe("normalizeAmountInput", () => {
+  it("cleans partial and over-precise input", () => {
+    expect(normalizeAmountInput("")).toBe("");
+    expect(normalizeAmountInput(".")).toBe("");
+    expect(normalizeAmountInput("10.")).toBe("10");
+    expect(normalizeAmountInput(".5")).toBe("0.5");
+    expect(normalizeAmountInput("10.456")).toBe("10.45");
+    expect(normalizeAmountInput("1200")).toBe("1200");
+  });
+
+  it("normalizeFilters only touches amounts", () => {
+    const out = normalizeFilters({ ...EMPTY_FILTERS, amountMin: "5.", amountMax: ".", tagIds: ["t"] });
+    expect(out.amountMin).toBe("5");
+    expect(out.amountMax).toBe("");
+    expect(out.tagIds).toEqual(["t"]);
   });
 });

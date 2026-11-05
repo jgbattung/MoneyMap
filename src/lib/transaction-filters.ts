@@ -141,3 +141,23 @@ export function shouldInsertOptimisticRow(
   if (params.endDate && day > params.endDate) return false;
   return true;
 }
+
+/**
+ * The list API only accepts ^\d+(\.\d{1,2})?$ for amounts, so drop a dangling
+ * "." and any extra decimals from what the user typed.
+ */
+export function normalizeAmountInput(raw: string): string {
+  if (raw === "" || raw === ".") return "";
+  const [whole, decimals] = raw.split(".");
+  if (decimals === undefined) return whole;
+  if (decimals === "") return whole;
+  return `${whole || "0"}.${decimals.slice(0, 2)}`;
+}
+
+export function normalizeFilters(filters: TransactionFilters): TransactionFilters {
+  return {
+    ...filters,
+    amountMin: normalizeAmountInput(filters.amountMin),
+    amountMax: normalizeAmountInput(filters.amountMax),
+  };
+}
