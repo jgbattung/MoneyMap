@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TransactionsMobileView from './TransactionsMobileView';
@@ -37,6 +38,20 @@ vi.mock('@/hooks/useTagsQuery', () => ({
   useTagsQuery: vi.fn(),
 }));
 
+// Option lists for the filter sheet come from real query hooks in production.
+vi.mock('@/hooks/useTransactionFilterOptions', () => {
+  const options = {
+    accounts: [{ id: 'acc-1', name: 'BDO Savings' }],
+    categories: [{ id: 'type-1', name: 'Food' }],
+    tags: [{ id: 'tag-1', name: 'Housing' }],
+  };
+  return {
+    useExpenseFilterOptions: () => options,
+    useIncomeFilterOptions: () => options,
+    useTransferFilterOptions: () => options,
+  };
+});
+
 // ---------------------------------------------------------------------------
 // Mock: drawers — render nothing (portal-heavy)
 // ---------------------------------------------------------------------------
@@ -73,51 +88,44 @@ vi.mock('./CompactTransactionCard', () => ({
 // ---------------------------------------------------------------------------
 // Mock: UI primitives
 // ---------------------------------------------------------------------------
-vi.mock('@/components/ui/toggle-group', () => ({
-  ToggleGroup: ({
-    children,
-    onValueChange,
-    value,
-  }: {
-    children: React.ReactNode;
-    onValueChange?: (v: string) => void;
-    value?: string;
-    disabled?: boolean;
-  }) =>
-    React.createElement(
-      'div',
-      {
-        'data-testid': 'toggle-group',
-        'data-value': value,
-      },
+vi.mock('@/components/ui/toggle-group', () => {
+  const Ctx = React.createContext<((v: string) => void) | undefined>(undefined);
+  return {
+    ToggleGroup: ({
       children,
+      onValueChange,
+      value,
+    }: {
+      children: React.ReactNode;
+      onValueChange?: (v: string) => void;
+      value?: string;
+      disabled?: boolean;
+    }) =>
       React.createElement(
+        Ctx.Provider,
+        { value: onValueChange },
+        React.createElement(
+          'div',
+          { 'data-testid': 'toggle-group', 'data-value': value },
+          children
+        )
+      ),
+    ToggleGroupItem: ({
+      children,
+      value,
+    }: {
+      children: React.ReactNode;
+      value: string;
+    }) => {
+      const onValueChange = React.useContext(Ctx);
+      return React.createElement(
         'button',
-        {
-          'data-testid': 'switch-tab',
-          onClick: () => onValueChange?.('income'),
-        },
-        'switch to income'
-      )
-    ),
-  ToggleGroupItem: ({
-    children,
-    value,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    value: string;
-    onClick?: () => void;
-  }) =>
-    React.createElement(
-      'button',
-      {
-        'data-testid': `tab-${value}`,
-        onClick,
-      },
-      children
-    ),
-}));
+        { 'data-testid': `tab-${value}`, onClick: () => onValueChange?.(value) },
+        children
+      );
+    },
+  };
+});
 
 vi.mock('@/components/ui/input-group', () => ({
   InputGroup: ({ children }: { children: React.ReactNode }) =>
@@ -226,6 +234,7 @@ function setupAllMocks(overrides: {
   expenses?: ExpenseTransaction[];
   income?: IncomeTransaction[];
   transfers?: TransferTransaction[];
+  hasMore?: boolean;
 } = {}) {
   const {
     expensesLoading = false,
@@ -234,12 +243,14 @@ function setupAllMocks(overrides: {
     expenses = mockExpenses,
     income = mockIncome,
     transfers = mockTransfers,
+    hasMore = false,
   } = overrides;
 
   vi.mocked(useExpenseTransactionsQuery).mockReturnValue({
     expenseTransactions: expenses,
     total: expenses.length,
-    hasMore: false,
+    totalAmount: '200.00',
+    hasMore,
     isLoading: expensesLoading,
     isFetchingMore: false,
     error: null,
@@ -254,7 +265,8 @@ function setupAllMocks(overrides: {
   vi.mocked(useIncomeTransactionsQuery).mockReturnValue({
     incomeTransactions: income,
     total: income.length,
-    hasMore: false,
+    totalAmount: '10000.00',
+    hasMore,
     isLoading: incomeLoading,
     isFetchingMore: false,
     error: null,
@@ -269,7 +281,7 @@ function setupAllMocks(overrides: {
   vi.mocked(useTransfersQuery).mockReturnValue({
     transfers,
     total: transfers.length,
-    hasMore: false,
+    hasMore,
     isLoading: transfersLoading,
     isFetchingMore: false,
     error: null,
@@ -330,7 +342,7 @@ describe('TransactionsMobileView', () => {
     it('shows empty state when no expenses exist', () => {
       setupAllMocks({ expenses: [] });
       renderMobileView();
-      expect(screen.getByText('No results found')).toBeTruthy();
+      expect(screen.getByText('No transactions match your filters.')).toBeTruthy();
     });
   });
 
@@ -371,6 +383,143 @@ describe('TransactionsMobileView', () => {
       expect(cards.length).toBeGreaterThan(0);
       // Clicking should not throw
       expect(() => fireEvent.click(cards[0])).not.toThrow();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('server-side filters', () => {
+    const lastExpenseParams = () => {
+      const calls = vi.mocked(useExpenseTransactionsQuery).mock.calls;
+      return calls[calls.length - 1][0] as any;
+    };
+    const lastIncomeParams = () => {
+      const calls = vi.mocked(useIncomeTransactionsQuery).mock.calls;
+      return calls[calls.length - 1][0] as any;
+    };
+    const lastTransferParams = () => {
+      const calls = vi.mocked(useTransfersQuery).mock.calls;
+      return calls[calls.length - 1][0] as any;
+    };
+
+    beforeAll(() => {
+      globalThis.ResizeObserver ??= class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      } as unknown as typeof ResizeObserver;
+      Element.prototype.scrollIntoView ??= () => {};
+      window.matchMedia ??= ((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+        dispatchEvent: () => false,
+      })) as unknown as typeof window.matchMedia;
+    });
+
+    it('queries with no dates or filters by default and shows no summary', () => {
+      renderMobileView();
+      const params = lastExpenseParams();
+      expect(params.startDate).toBeUndefined();
+      expect(params.endDate).toBeUndefined();
+      expect(params.filters.accountIds).toEqual([]);
+      expect(params.dateFilter).toBeUndefined();
+      expect(screen.queryByText(/across 2 transactions/)).toBeNull();
+    });
+
+    it('offers all four date presets including This Week', () => {
+      renderMobileView();
+      const group = screen.getAllByTestId('toggle-group').find((g) => g.getAttribute('data-value') === 'view-all') as HTMLElement;
+      expect(within(group).getByTestId('tab-view-all')).toBeTruthy();
+      expect(within(group).getByTestId('tab-this-week')).toBeTruthy();
+      expect(within(group).getByTestId('tab-this-month')).toBeTruthy();
+      expect(within(group).getByTestId('tab-this-year')).toBeTruthy();
+    });
+
+    it('This Week sends a Sunday-Saturday range and shows the summary', () => {
+      renderMobileView();
+      fireEvent.click(screen.getByTestId('tab-this-week'));
+      const params = lastExpenseParams();
+      expect(params.startDate).toMatch(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/);
+      expect(params.endDate).toMatch(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/);
+      expect(new Date(params.startDate + 'T00:00:00').getDay()).toBe(0);
+      expect(new Date(params.endDate + 'T00:00:00').getDay()).toBe(6);
+      expect(screen.getByText('across 2 transactions')).toBeTruthy();
+    });
+
+    it('Load More stays visible while a preset is active', () => {
+      setupAllMocks({ hasMore: true });
+      renderMobileView();
+      expect(screen.getByText('Load More')).toBeTruthy();
+      fireEvent.click(screen.getByTestId('tab-this-month'));
+      expect(screen.getByText('Load More')).toBeTruthy();
+    });
+
+    it('applying a filter in the drawer re-queries, shows a chip and the total line', () => {
+      renderMobileView();
+      fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+      fireEvent.change(screen.getByLabelText('Minimum amount'), { target: { value: '50' } });
+      expect(lastExpenseParams().filters.amountMin).toBe('');
+      fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+      expect(lastExpenseParams().filters.amountMin).toBe('50');
+      expect(screen.getByText('Amount: ≥ ₱50')).toBeTruthy();
+      expect(screen.getByText('₱200.00')).toBeTruthy();
+      expect(screen.getByText('across 2 transactions')).toBeTruthy();
+    });
+
+    it('removing the chip immediately drops the filter', () => {
+      renderMobileView();
+      fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+      fireEvent.change(screen.getByLabelText('Minimum amount'), { target: { value: '50' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+      fireEvent.click(screen.getByRole('button', { name: /Remove filter Amount/, hidden: true }));
+      expect(lastExpenseParams().filters.amountMin).toBe('');
+      expect(screen.queryByText('Amount: ≥ ₱50')).toBeNull();
+    });
+
+    it('Clear all resets filters and presets', () => {
+      renderMobileView();
+      fireEvent.click(screen.getByTestId('tab-this-year'));
+      fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+      fireEvent.change(screen.getByLabelText('Minimum amount'), { target: { value: '50' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Clear all', hidden: true }));
+      const params = lastExpenseParams();
+      expect(params.filters.amountMin).toBe('');
+      expect(params.startDate).toBeUndefined();
+    });
+
+    it('shows the Account filter on the full list but hides it on detail pages', () => {
+      const { unmount } = renderMobileView();
+      fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+      expect(screen.getByRole('button', { name: /any account/i })).toBeTruthy();
+      unmount();
+
+      renderMobileView({ accountId: 'acc-1' });
+      expect(lastExpenseParams().accountId).toBe('acc-1');
+      fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+      expect(screen.queryByRole('button', { name: /any account/i })).toBeNull();
+    });
+
+    it('keeps filter state per tab and uses From/To for transfers', () => {
+      renderMobileView({ accountId: 'acc-1' });
+      fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+      fireEvent.change(screen.getByLabelText('Minimum amount'), { target: { value: '75' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+      fireEvent.click(screen.getByTestId('tab-transfers'));
+      expect(lastTransferParams().filters.amountMin).toBe('');
+      expect(lastTransferParams().accountId).toBe('acc-1');
+      fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+      expect(screen.getByText('From account')).toBeTruthy();
+      expect(screen.getByText('To account')).toBeTruthy();
+
+      fireEvent.click(screen.getByTestId('tab-income'));
+      expect(lastIncomeParams().filters.amountMin).toBe('');
+      expect(lastExpenseParams().filters.amountMin).toBe('75');
     });
   });
 });
