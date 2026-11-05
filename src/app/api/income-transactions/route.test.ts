@@ -26,6 +26,7 @@ vi.mock('@/lib/prisma', () => ({
   db: {
     incomeTransaction: {
       count: vi.fn(),
+      aggregate: vi.fn(),
       findMany: vi.fn(),
       create: vi.fn(),
     },
@@ -89,6 +90,10 @@ beforeEach(() => {
 // GET /api/income-transactions
 // -----------------------------------------------------------------------
 describe('GET /api/income-transactions', () => {
+  beforeEach(() => {
+    vi.mocked(db.incomeTransaction.aggregate).mockResolvedValue({ _sum: { amount: null } } as any);
+  });
+
   it('returns 401 when no session exists', async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(null);
 
@@ -156,6 +161,76 @@ describe('GET /api/income-transactions', () => {
     const data = await response.json();
 
     expect(data.hasMore).toBe(false);
+  });
+
+  it('passes parsed filters to count and findMany with userId', async () => {
+    vi.mocked(db.incomeTransaction.count).mockResolvedValue(0);
+    vi.mocked(db.incomeTransaction.findMany).mockResolvedValue([]);
+
+    await GET(
+      makeRequest(
+        'http://localhost/api/income-transactions?accountIds=a1,a2&categoryIds=c1&tagIds=t1&amountMin=10&startDate=2026-01-01&endDate=2026-01-31'
+      )
+    );
+
+    const where = vi.mocked(db.incomeTransaction.findMany).mock.calls[0][0]!.where as any;
+    expect(where.userId).toBe('user-123');
+    expect(where.AND).toEqual(
+      expect.arrayContaining([
+        { accountId: { in: ['a1', 'a2'] } },
+        expect.objectContaining({ incomeTypeId: { in: ['c1'] } }),
+        { tags: { some: { id: { in: ['t1'] } } } },
+      ])
+    );
+    expect(vi.mocked(db.incomeTransaction.count).mock.calls[0][0]!.where).toEqual(where);
+    expect(vi.mocked(db.incomeTransaction.aggregate).mock.calls[0][0]!.where).toEqual(where);
+  });
+
+  it('returns totalAmount as the aggregate sum string', async () => {
+    vi.mocked(db.incomeTransaction.count).mockResolvedValue(2);
+    vi.mocked(db.incomeTransaction.findMany).mockResolvedValue([]);
+    vi.mocked(db.incomeTransaction.aggregate).mockResolvedValue({ _sum: { amount: { toString: () => '12480.50' } } } as any);
+
+    const response = await GET(makeRequest());
+    const data = await response.json();
+
+    expect(data.totalAmount).toBe('12480.50');
+  });
+
+  it('returns totalAmount "0" when there are no rows', async () => {
+    vi.mocked(db.incomeTransaction.count).mockResolvedValue(0);
+    vi.mocked(db.incomeTransaction.findMany).mockResolvedValue([]);
+
+    const response = await GET(makeRequest());
+    const data = await response.json();
+
+    expect(data.totalAmount).toBe('0');
+  });
+
+  it('returns 400 on a malformed filter param', async () => {
+    const response = await GET(makeRequest('http://localhost/api/income-transactions?amountMin=abc'));
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBe('Validation failed');
+    expect(db.incomeTransaction.findMany).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 on reversed date range', async () => {
+    const response = await GET(
+      makeRequest('http://localhost/api/income-transactions?startDate=2026-02-02&endDate=2026-02-01')
+    );
+
+    expect(response.status).toBe(400);
+  });
+
+  it('no longer caps take at 100 when searching', async () => {
+    vi.mocked(db.incomeTransaction.count).mockResolvedValue(0);
+    vi.mocked(db.incomeTransaction.findMany).mockResolvedValue([]);
+
+    await GET(makeRequest('http://localhost/api/income-transactions?search=abc&take=15'));
+
+    expect(db.incomeTransaction.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 15 }));
   });
 
   it('returns 500 when database throws', async () => {
