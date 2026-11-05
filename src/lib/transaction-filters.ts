@@ -108,3 +108,36 @@ export function validateFilters(filters: TransactionFilters): {
   }
   return errors;
 }
+
+/**
+ * Whether a freshly created row may be optimistically prepended to a cached
+ * list query. Only unfiltered, unsearched first pages whose date range (if
+ * any) contains the row qualify; everything else relies on the refetch.
+ */
+export function shouldInsertOptimisticRow(
+  params:
+    | {
+        skip?: number;
+        search?: string;
+        startDate?: string;
+        endDate?: string;
+        filters?: TransactionFilters;
+      }
+    | undefined,
+  rowDate?: string
+): boolean {
+  if (!params) return true;
+  const isFirstPage = !params.skip || params.skip === 0;
+  if (!isFirstPage || params.search) return false;
+  if (countActiveFilters(params.filters ?? EMPTY_FILTERS) > 0) return false;
+  if (!params.startDate && !params.endDate) return true;
+
+  const day = rowDate
+    ? /^\d{4}-\d{2}-\d{2}/.test(rowDate)
+      ? rowDate.slice(0, 10)
+      : formatDateForAPI(new Date(rowDate))
+    : formatDateForAPI(new Date());
+  if (params.startDate && day < params.startDate) return false;
+  if (params.endDate && day > params.endDate) return false;
+  return true;
+}

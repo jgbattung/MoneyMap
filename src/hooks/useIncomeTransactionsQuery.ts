@@ -1,6 +1,11 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { RECENT_TRANSACTION_QUERY_KEYS, type RecentTransaction } from "./useRecentTransactions";
+import {
+  filtersToSearchParams,
+  shouldInsertOptimisticRow,
+  type TransactionFilters,
+} from "@/lib/transaction-filters";
 import { invalidateAfterTransactionWrite } from "./transactionInvalidations";
 import {
   applyAccountDelta,
@@ -37,6 +42,7 @@ export type IncomeTransaction = {
 type IncomeTransactionsResponse = {
   transactions: IncomeTransaction[];
   total: number;
+  totalAmount: string;
   hasMore: boolean;
 }
 
@@ -44,8 +50,10 @@ interface UseIncomeTransactionsOptions {
   skip?: number;
   take?: number;
   search?: string;
-  dateFilter?: string;
+  startDate?: string;
+  endDate?: string;
   accountId?: string;
+  filters?: TransactionFilters;
 }
 
 type CreateIncomeVariables = {
@@ -107,18 +115,16 @@ function buildOptimisticRecentIncome(
 }
 
 const fetchIncomeTransactions = async (
-  skip?: number,
-  take?: number,
-  search?: string,
-  dateFilter?: string,
-  accountId?: string
+  { skip, take, search, startDate, endDate, accountId, filters }: UseIncomeTransactionsOptions
 ): Promise<IncomeTransactionsResponse> => {
   const params = new URLSearchParams();
   if (skip !== undefined) params.append('skip', skip.toString());
   if (take !== undefined) params.append('take', take.toString());
   if (search) params.append('search', search);
-  if (dateFilter && dateFilter !== 'view-all') params.append('dateFilter', dateFilter);
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
   if (accountId) params.append('accountId', accountId);
+  if (filters) filtersToSearchParams(filters, params);
 
   const url = `/api/income-transactions${params.toString() ? `?${params.toString()}` : ''}`;
   const response = await fetch(url);
@@ -158,7 +164,7 @@ const deleteIncomeTransaction = async (id: string): Promise<void> => {
 }
 
 export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions = {}) => {
-  const { skip, take, search, dateFilter, accountId } = options;
+  const { skip, take, search, startDate, endDate, accountId, filters } = options;
   const queryClient = useQueryClient();
 
   const {
@@ -170,9 +176,9 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
   } = useQuery({
     queryKey: [
       ...QUERY_KEYS.incomeTransactions,
-      { skip, take, search, dateFilter, accountId }
+      { skip, take, search, startDate, endDate, accountId, filters }
     ],
-    queryFn: () => fetchIncomeTransactions(skip, take, search, dateFilter, accountId),
+    queryFn: () => fetchIncomeTransactions(options),
     staleTime: 5 * 60 * 1000,
     placeholderData: keepPreviousData,
   });
@@ -199,11 +205,7 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
             if (!isListQuery(query)) return false;
             const params = query.queryKey[1] as UseIncomeTransactionsOptions | undefined;
             if (!params) return true;
-            const isFirstPage = !params.skip || params.skip === 0;
-            const noSearch = !params.search;
-            const dateOk = !params.dateFilter || params.dateFilter === 'view-all'
-              || params.dateFilter === 'this-month' || params.dateFilter === 'this-year';
-            return isFirstPage && noSearch && dateOk;
+            return shouldInsertOptimisticRow(params, variables.payload.date as string | undefined);
           },
         },
         (old) => {
@@ -438,6 +440,7 @@ export const useIncomeTransactionsQuery = (options: UseIncomeTransactionsOptions
   return {
     incomeTransactions: data?.transactions || [],
     total: data?.total || 0,
+    totalAmount: data?.totalAmount ?? '0',
     hasMore: data?.hasMore || false,
     isLoading: isPending,
     isFetchingMore: isFetching && isPlaceholderData,

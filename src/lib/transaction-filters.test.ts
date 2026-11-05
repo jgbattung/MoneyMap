@@ -4,6 +4,7 @@ import {
   countActiveFilters,
   filtersToSearchParams,
   resolveDatePreset,
+  shouldInsertOptimisticRow,
   validateFilters,
 } from "./transaction-filters";
 
@@ -172,5 +173,33 @@ describe("validateFilters", () => {
     expect(
       validateFilters({ ...EMPTY_FILTERS, startDate: "2026-02-01", endDate: "2026-02-01" })
     ).toEqual({});
+  });
+});
+
+describe("shouldInsertOptimisticRow", () => {
+  it("accepts missing params and plain first pages", () => {
+    expect(shouldInsertOptimisticRow(undefined, "2026-01-01")).toBe(true);
+    expect(shouldInsertOptimisticRow({}, "2026-01-01")).toBe(true);
+    expect(shouldInsertOptimisticRow({ skip: 0, filters: EMPTY_FILTERS }, "2026-01-01")).toBe(true);
+  });
+
+  it("rejects later pages and searches", () => {
+    expect(shouldInsertOptimisticRow({ skip: 15 }, "2026-01-01")).toBe(false);
+    expect(shouldInsertOptimisticRow({ search: "x" }, "2026-01-01")).toBe(false);
+  });
+
+  it("rejects lists with active panel filters", () => {
+    expect(
+      shouldInsertOptimisticRow({ filters: { ...EMPTY_FILTERS, tagIds: ["t"] } }, "2026-01-01")
+    ).toBe(false);
+  });
+
+  it("requires the row date to be inside the date range (inclusive)", () => {
+    const p = { startDate: "2026-01-01", endDate: "2026-01-31" };
+    expect(shouldInsertOptimisticRow(p, "2026-01-01")).toBe(true);
+    expect(shouldInsertOptimisticRow(p, "2026-01-31")).toBe(true);
+    expect(shouldInsertOptimisticRow(p, "2026-02-01")).toBe(false);
+    expect(shouldInsertOptimisticRow(p, "2025-12-31")).toBe(false);
+    expect(shouldInsertOptimisticRow(p, "2026-01-15T00:00:00.000Z")).toBe(true);
   });
 });

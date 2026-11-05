@@ -1,6 +1,11 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { RECENT_TRANSACTION_QUERY_KEYS, type RecentTransaction } from "./useRecentTransactions";
+import {
+  filtersToSearchParams,
+  shouldInsertOptimisticRow,
+  type TransactionFilters,
+} from "@/lib/transaction-filters";
 import { invalidateAfterTransactionWrite } from "./transactionInvalidations";
 import {
   applyAccountDelta,
@@ -60,8 +65,10 @@ interface UseTransfersOptions {
   skip?: number;
   take?: number;
   search?: string;
-  dateFilter?: string;
+  startDate?: string;
+  endDate?: string;
   accountId?: string;
+  filters?: TransactionFilters;
 }
 
 type CreateTransferVariables = {
@@ -131,18 +138,16 @@ function buildOptimisticRecentTransfer(
 }
 
 const fetchTransfers = async (
-  skip?: number,
-  take?: number,
-  search?: string,
-  dateFilter?: string,
-  accountId?: string
+  { skip, take, search, startDate, endDate, accountId, filters }: UseTransfersOptions
 ): Promise<TransferTransactionsResponse> => {
   const params = new URLSearchParams();
   if (skip !== undefined) params.append('skip', skip.toString());
   if (take !== undefined) params.append('take', take.toString());
   if (search) params.append('search', search);
-  if (dateFilter && dateFilter !== 'view-all') params.append('dateFilter', dateFilter);
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
   if (accountId) params.append('accountId', accountId);
+  if (filters) filtersToSearchParams(filters, params);
 
   const url = `/api/transfer-transactions${params.toString() ? `?${params.toString()}` : ''}`;
   const response = await fetch(url);
@@ -184,7 +189,7 @@ const deleteTransfer = async (id: string): Promise<void> => {
 };
 
 export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
-  const { skip, take, search, dateFilter, accountId } = options;
+  const { skip, take, search, startDate, endDate, accountId, filters } = options;
   const queryClient = useQueryClient();
 
   const {
@@ -196,9 +201,9 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
   } = useQuery({
     queryKey: [
       ...QUERY_KEYS.transfers,
-      { skip, take, search, dateFilter, accountId }
+      { skip, take, search, startDate, endDate, accountId, filters }
     ],
-    queryFn: () => fetchTransfers(skip, take, search, dateFilter, accountId),
+    queryFn: () => fetchTransfers(options),
     staleTime: 5 * 60 * 1000,
     placeholderData: keepPreviousData,
   });
@@ -225,11 +230,7 @@ export const useTransfersQuery = (options: UseTransfersOptions = {}) => {
             if (!isListQuery(query)) return false;
             const params = query.queryKey[1] as UseTransfersOptions | undefined;
             if (!params) return true;
-            const isFirstPage = !params.skip || params.skip === 0;
-            const noSearch = !params.search;
-            const dateOk = !params.dateFilter || params.dateFilter === 'view-all'
-              || params.dateFilter === 'this-month' || params.dateFilter === 'this-year';
-            return isFirstPage && noSearch && dateOk;
+            return shouldInsertOptimisticRow(params, variables.payload.date as string | undefined);
           },
         },
         (old) => {
