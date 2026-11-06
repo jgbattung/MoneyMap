@@ -293,7 +293,10 @@ npm run build      # production build, and the project's type check
 npm run lint       # ESLint
 npx vitest run     # unit and component tests
 npm run test:e2e   # Playwright, needs docker compose up first
+npm run build && npm run test:e2e:prod   # same suite against a production build
 ```
+
+The E2E suite only ever runs against `localhost:5433/money_map_dev` and aborts before starting the server if `DATABASE_URL` is anything else.
 
 ## Demo data
 
