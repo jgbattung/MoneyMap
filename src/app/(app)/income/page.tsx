@@ -14,20 +14,15 @@ import SkeletonIncomeTypeCard from '@/components/shared/SkeletonIncomeTypeCard';
 import { SkeletonIncomeCard } from '@/components/shared/SkeletonIncomeCard';
 import IncomeTable from '@/components/tables/income/IncomeTable';
 import { Button } from '@/components/ui/button';
-import { InputGroup, InputGroupInput, InputGroupAddon } from '@/components/ui/input-group';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { HandCoins, SearchIcon } from 'lucide-react';
+import { MobileFilterBar } from "@/components/transactions/filters/MobileFilterBar";
+import { useTransactionFilters } from "@/hooks/useTransactionFilters";
+import { useIncomeFilterOptions } from "@/hooks/useTransactionFilterOptions";
+import { HandCoins } from 'lucide-react';
 import { IncomeTransaction, useIncomeTransactionsQuery } from '@/hooks/useIncomeTransactionsQuery';
 import { useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery'
 import React, { useState, useEffect } from 'react'
 
 const ITEMS_PER_LOAD = 15;
-
-const dateFilterOptions = {
-  viewAll: "view-all",
-  thisMonth: "this-month",
-  thisYear: "this-year",
-};
 
 const calculateMonthlyEarned = (
   transactions: IncomeTransaction[],
@@ -57,13 +52,16 @@ const Income = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
+  const filterState = useTransactionFilters();
+  const { preset, filters, queryDates } = filterState;
+  const filterOptions = useIncomeFilterOptions();
 
-  const { incomeTransactions, hasMore, isLoading, isFetchingMore } = useIncomeTransactionsQuery({
+  const { incomeTransactions, hasMore, isLoading, isFetchingMore, total, totalAmount } = useIncomeTransactionsQuery({
     skip: 0,
     take: displayCount,
     search: debouncedSearchTerm,
-    dateFilter,
+    ...queryDates,
+    filters,
   });
   
   const [createIncomeTypeSheetOpen, setCreateIncomeTypeSheetOpen] = useState(false);
@@ -85,10 +83,8 @@ const Income = () => {
   }, [searchTerm]);
 
   useEffect(() => {
-    if (debouncedSearchTerm || dateFilter !== dateFilterOptions.viewAll) {
-      setDisplayCount(ITEMS_PER_LOAD);
-    }
-  }, [debouncedSearchTerm, dateFilter]);
+    setDisplayCount(ITEMS_PER_LOAD);
+  }, [debouncedSearchTerm, preset, filters]);
 
   const sortedIncomeTypes = [...incomeTypes].sort((a, b) => {
     if (a.monthlyTarget && b.monthlyTarget) {
@@ -122,7 +118,6 @@ const Income = () => {
     setDisplayCount(prev => prev + ITEMS_PER_LOAD);
   };
 
-  const isFiltering = debouncedSearchTerm.length > 0 || dateFilter !== dateFilterOptions.viewAll;
 
   return (
     <div className="max-w-7xl mx-auto px-4 pt-0 pb-36 md:pb-6 flex flex-col">
@@ -252,50 +247,18 @@ const Income = () => {
         </div>
 
         <div className="md:hidden space-y-4">
-          <InputGroup>
-            <InputGroupInput
-              placeholder="Search income..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="text-sm h-8 py-1"
-              disabled={isLoading}
-            />
-            <InputGroupAddon>
-              <SearchIcon className="h-4 w-4" />
-            </InputGroupAddon>
-          </InputGroup>
-
-          <ToggleGroup
-            type="single"
-            value={dateFilter}
-            variant="outline"
-            size="sm"
-            onValueChange={(value) => !isLoading && value && setDateFilter(value)}
-            className="justify-start"
-            disabled={isLoading}
-          >
-            <ToggleGroupItem
-              value={dateFilterOptions.viewAll}
-              disabled={isLoading}
-              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              View All
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value={dateFilterOptions.thisMonth}
-              disabled={isLoading}
-              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              This Month
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value={dateFilterOptions.thisYear}
-              disabled={isLoading}
-              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              This Year
-            </ToggleGroupItem>
-          </ToggleGroup>
+          <MobileFilterBar
+            kind="income"
+            filterState={filterState}
+            options={filterOptions}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Search income..."
+            isLoading={isLoading}
+            isSearching={debouncedSearchTerm.length > 0}
+            total={total}
+            totalAmount={totalAmount}
+          />
 
           {isLoading ? (
             <div className='grid grid-cols-1 gap-4'>
@@ -305,7 +268,7 @@ const Income = () => {
             </div>
           ) : incomeTransactions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8">
-              <p className="text-muted-foreground">No results found for your search.</p>
+              <p className="text-muted-foreground">No transactions match your filters.</p>
             </div>
           ) : (
             <>
@@ -332,7 +295,7 @@ const Income = () => {
                 </div>
               )}
 
-              {!isFiltering && hasMore && !isFetchingMore && (
+              {hasMore && !isFetchingMore && (
                 <Button
                   variant="outline"
                   className="w-full mt-4"

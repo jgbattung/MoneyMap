@@ -3,8 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
-import { InputGroup, InputGroupInput, InputGroupAddon } from '@/components/ui/input-group';
-import { SearchIcon, SearchX } from 'lucide-react';
+import { SearchX } from 'lucide-react';
+import { MobileFilterBar } from './filters/MobileFilterBar';
+import { useTransactionFilters } from '@/hooks/useTransactionFilters';
+import {
+  useExpenseFilterOptions,
+  useIncomeFilterOptions,
+  useTransferFilterOptions,
+} from '@/hooks/useTransactionFilterOptions';
 import { EmptyState } from '@/components/shared/EmptyState';
 import CompactTransactionCard from './CompactTransactionCard';
 import { SkeletonCompactTransactionCard } from './SkeletonCompactTransactionCard';
@@ -19,12 +25,6 @@ import { format } from 'date-fns';
 type TabType = 'expenses' | 'income' | 'transfers';
 
 const ITEMS_PER_LOAD = 15;
-
-const dateFilterOptions = {
-  viewAll: "view-all",
-  thisMonth: "this-month",
-  thisYear: "this-year",
-};
 
 interface TransactionsMobileViewProps {
   accountId?: string;
@@ -45,9 +45,12 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
   const [debouncedIncomeSearch, setDebouncedIncomeSearch] = useState('');
   const [debouncedTransferSearch, setDebouncedTransferSearch] = useState('');
 
-  const [expenseDateFilter, setExpenseDateFilter] = useState(dateFilterOptions.viewAll);
-  const [incomeDateFilter, setIncomeDateFilter] = useState(dateFilterOptions.viewAll);
-  const [transferDateFilter, setTransferDateFilter] = useState(dateFilterOptions.viewAll);
+  const expenseFilters = useTransactionFilters();
+  const incomeFilters = useTransactionFilters();
+  const transferFilters = useTransactionFilters();
+  const expenseFilterOptions = useExpenseFilterOptions();
+  const incomeFilterOptions = useIncomeFilterOptions();
+  const transferFilterOptions = useTransferFilterOptions();
 
   const [editExpenseDrawerOpen, setEditExpenseDrawerOpen] = useState(false);
   const [editIncomeDrawerOpen, setEditIncomeDrawerOpen] = useState(false);
@@ -59,11 +62,14 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
     hasMore: expensesHasMore,
     isLoading: expensesLoading,
     isFetchingMore: expensesFetchingMore,
+    total: expensesTotal,
+    totalAmount: expensesTotalAmount,
   } = useExpenseTransactionsQuery({
     skip: 0,
     take: expensesDisplayCount,
     search: debouncedExpenseSearch,
-    dateFilter: expenseDateFilter,
+    ...expenseFilters.queryDates,
+    filters: expenseFilters.filters,
     accountId,
   });
 
@@ -72,11 +78,14 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
     hasMore: incomeHasMore,
     isLoading: incomeLoading,
     isFetchingMore: incomeFetchingMore,
+    total: incomeTotal,
+    totalAmount: incomeTotalAmount,
   } = useIncomeTransactionsQuery({
     skip: 0,
     take: incomeDisplayCount,
     search: debouncedIncomeSearch,
-    dateFilter: incomeDateFilter,
+    ...incomeFilters.queryDates,
+    filters: incomeFilters.filters,
     accountId,
   });
 
@@ -85,11 +94,13 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
     hasMore: transfersHasMore,
     isLoading: transfersLoading,
     isFetchingMore: transfersFetchingMore,
+    total: transfersTotal,
   } = useTransfersQuery({
     skip: 0,
     take: transfersDisplayCount,
     search: debouncedTransferSearch,
-    dateFilter: transferDateFilter,
+    ...transferFilters.queryDates,
+    filters: transferFilters.filters,
     accountId,
   });
 
@@ -115,22 +126,16 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
   }, [transferSearchTerm]);
 
   useEffect(() => {
-    if (debouncedExpenseSearch || expenseDateFilter !== dateFilterOptions.viewAll) {
-      setExpensesDisplayCount(ITEMS_PER_LOAD);
-    }
-  }, [debouncedExpenseSearch, expenseDateFilter]);
+    setExpensesDisplayCount(ITEMS_PER_LOAD);
+  }, [debouncedExpenseSearch, expenseFilters.preset, expenseFilters.filters]);
 
   useEffect(() => {
-    if (debouncedIncomeSearch || incomeDateFilter !== dateFilterOptions.viewAll) {
-      setIncomeDisplayCount(ITEMS_PER_LOAD);
-    }
-  }, [debouncedIncomeSearch, incomeDateFilter]);
+    setIncomeDisplayCount(ITEMS_PER_LOAD);
+  }, [debouncedIncomeSearch, incomeFilters.preset, incomeFilters.filters]);
 
   useEffect(() => {
-    if (debouncedTransferSearch || transferDateFilter !== dateFilterOptions.viewAll) {
-      setTransfersDisplayCount(ITEMS_PER_LOAD);
-    }
-  }, [debouncedTransferSearch, transferDateFilter]);
+    setTransfersDisplayCount(ITEMS_PER_LOAD);
+  }, [debouncedTransferSearch, transferFilters.preset, transferFilters.filters]);
 
   const handleLoadMoreExpenses = () => {
     setExpensesDisplayCount(prev => prev + ITEMS_PER_LOAD);
@@ -194,50 +199,19 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
         {/* Expenses Tab */}
         {activeTab === 'expenses' && (
           <div className="space-y-4">
-            <InputGroup>
-              <InputGroupInput
-                placeholder="Search expenses..."
-                value={expenseSearchTerm}
-                onChange={(e) => setExpenseSearchTerm(e.target.value)}
-                className="text-sm h-8 py-1"
-                disabled={expensesLoading}
-              />
-              <InputGroupAddon>
-                <SearchIcon className="h-4 w-4" />
-              </InputGroupAddon>
-            </InputGroup>
-
-            <ToggleGroup
-              type="single"
-              value={expenseDateFilter}
-              variant="outline"
-              size="sm"
-              onValueChange={(value) => !expensesLoading && value && setExpenseDateFilter(value)}
-              className="justify-start"
-              disabled={expensesLoading}
-            >
-              <ToggleGroupItem
-                value={dateFilterOptions.viewAll}
-                disabled={expensesLoading}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                View All
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value={dateFilterOptions.thisMonth}
-                disabled={expensesLoading}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                This Month
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value={dateFilterOptions.thisYear}
-                disabled={expensesLoading}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                This Year
-              </ToggleGroupItem>
-            </ToggleGroup>
+            <MobileFilterBar
+              kind="expense"
+              filterState={expenseFilters}
+              options={expenseFilterOptions}
+              hideAccount={!!accountId}
+              searchTerm={expenseSearchTerm}
+              onSearchChange={setExpenseSearchTerm}
+              searchPlaceholder="Search expenses..."
+              isLoading={expensesLoading}
+              isSearching={debouncedExpenseSearch.length > 0}
+              total={expensesTotal}
+              totalAmount={expensesTotalAmount}
+            />
 
             {/* Transaction Cards */}
             <div className="space-y-2">
@@ -250,7 +224,7 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
               ) : expenseTransactions.length === 0 ? (
                 <EmptyState
                   icon={SearchX}
-                  title="No results found"
+                  title="No transactions match your filters."
                   description="Try adjusting your search or filters."
                   variant="table"
                 />
@@ -296,50 +270,19 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
         {/* Income Tab */}
         {activeTab === 'income' && (
           <div className="space-y-4">
-            <InputGroup>
-              <InputGroupInput
-                placeholder="Search income..."
-                value={incomeSearchTerm}
-                onChange={(e) => setIncomeSearchTerm(e.target.value)}
-                className="text-sm h-8 py-1"
-                disabled={incomeLoading}
-              />
-              <InputGroupAddon>
-                <SearchIcon className="h-4 w-4" />
-              </InputGroupAddon>
-            </InputGroup>
-
-            <ToggleGroup
-              type="single"
-              value={incomeDateFilter}
-              variant="outline"
-              size="sm"
-              onValueChange={(value) => !incomeLoading && value && setIncomeDateFilter(value)}
-              className="justify-start"
-              disabled={incomeLoading}
-            >
-              <ToggleGroupItem
-                value={dateFilterOptions.viewAll}
-                disabled={incomeLoading}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                View All
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value={dateFilterOptions.thisMonth}
-                disabled={incomeLoading}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                This Month
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value={dateFilterOptions.thisYear}
-                disabled={incomeLoading}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                This Year
-              </ToggleGroupItem>
-            </ToggleGroup>
+            <MobileFilterBar
+              kind="income"
+              filterState={incomeFilters}
+              options={incomeFilterOptions}
+              hideAccount={!!accountId}
+              searchTerm={incomeSearchTerm}
+              onSearchChange={setIncomeSearchTerm}
+              searchPlaceholder="Search income..."
+              isLoading={incomeLoading}
+              isSearching={debouncedIncomeSearch.length > 0}
+              total={incomeTotal}
+              totalAmount={incomeTotalAmount}
+            />
 
             {/* Transaction Cards */}
             <div className="space-y-2">
@@ -352,7 +295,7 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
               ) : incomeTransactions.length === 0 ? (
                 <EmptyState
                   icon={SearchX}
-                  title="No results found"
+                  title="No transactions match your filters."
                   description="Try adjusting your search or filters."
                   variant="table"
                 />
@@ -397,50 +340,17 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
         {/* Transfers Tab */}
         {activeTab === 'transfers' && (
           <div className="space-y-4">
-            <InputGroup>
-              <InputGroupInput
-                placeholder="Search transfers..."
-                value={transferSearchTerm}
-                onChange={(e) => setTransferSearchTerm(e.target.value)}
-                className="text-sm h-8 py-1"
-                disabled={transfersLoading}
-              />
-              <InputGroupAddon>
-                <SearchIcon className="h-4 w-4" />
-              </InputGroupAddon>
-            </InputGroup>
-
-            <ToggleGroup
-              type="single"
-              value={transferDateFilter}
-              variant="outline"
-              size="sm"
-              onValueChange={(value) => !transfersLoading && value && setTransferDateFilter(value)}
-              className="justify-start"
-              disabled={transfersLoading}
-            >
-              <ToggleGroupItem
-                value={dateFilterOptions.viewAll}
-                disabled={transfersLoading}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                View All
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value={dateFilterOptions.thisMonth}
-                disabled={transfersLoading}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                This Month
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value={dateFilterOptions.thisYear}
-                disabled={transfersLoading}
-                className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                This Year
-              </ToggleGroupItem>
-            </ToggleGroup>
+            <MobileFilterBar
+              kind="transfer"
+              filterState={transferFilters}
+              options={transferFilterOptions}
+              searchTerm={transferSearchTerm}
+              onSearchChange={setTransferSearchTerm}
+              searchPlaceholder="Search transfers..."
+              isLoading={transfersLoading}
+              isSearching={debouncedTransferSearch.length > 0}
+              total={transfersTotal}
+            />
 
             {/* Transaction Cards */}
             <div className="space-y-2">
@@ -453,7 +363,7 @@ const TransactionsMobileView = ({ accountId }: TransactionsMobileViewProps = {})
               ) : transfers.length === 0 ? (
                 <EmptyState
                   icon={SearchX}
-                  title="No results found"
+                  title="No transactions match your filters."
                   description="Try adjusting your search or filters."
                   variant="table"
                 />

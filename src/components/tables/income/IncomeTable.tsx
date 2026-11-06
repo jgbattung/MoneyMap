@@ -14,6 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Spinner } from '@/components/ui/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { ActiveFilterChips } from '@/components/transactions/filters/ActiveFilterChips';
+import { FilterSummary } from '@/components/transactions/filters/FilterSummary';
+import { TransactionFilterControl } from '@/components/transactions/filters/TransactionFilterControl';
+import { useTransactionFilters } from '@/hooks/useTransactionFilters';
+import type { DatePreset } from '@/lib/transaction-filters';
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 import { useEditableTable } from '@/hooks/useEditableTable';
 import { IncomeTransaction, useIncomeTransactionsQuery } from '@/hooks/useIncomeTransactionsQuery';
@@ -307,7 +312,19 @@ const EditCell = ({ row, table }: any) => {
 }
 
 const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
-  const { incomeTransactions, updateIncomeTransaction, isUpdating, deleteIncomeTransaction, isDeleting } = useIncomeTransactionsQuery({ accountId });
+  const { preset, setPreset, filters, applyFilters, removeFilter, clearAll, queryDates, activeCount, isActive } = useTransactionFilters();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const { incomeTransactions, updateIncomeTransaction, isUpdating, deleteIncomeTransaction, isDeleting, total, totalAmount } = useIncomeTransactionsQuery({ accountId, search: debouncedSearchTerm, ...queryDates, filters });
   const { accounts, isLoading: accountsLoading } = useAccountsQuery({ includeCards: true });
   const { incomeTypes, isLoading: incomeTypesLoading } = useIncomeTypesQuery();
 
@@ -317,21 +334,8 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
     allTags: tags,
   });
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-
-  const [dateFilter, setDateFilter] = useState<string>("view-all");
-
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<{ id: string; name: string } | null>(null);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
 
   // Memoize the options arrays
   const accountOptions = useMemo(() => 
@@ -350,45 +354,10 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
     [incomeTypes]
   );
 
-  const dateFilterOptions = {
-    viewAll: "view-all",
-    thisWeek: "this-week",
-    thisMonth: "this-month",
-    thisYear: "this-year",
-  }
-
-  const filteredData = useMemo(() => {
-    return mergedData.filter((row) => {
-      if (dateFilter !== dateFilterOptions.viewAll) {
-        const incomeDate = new Date(row.date);
-        const now = new Date();
-
-        if (dateFilter === dateFilterOptions.thisWeek) {
-          const weekStart = new Date(now);
-          weekStart.setDate(now.getDate() - now.getDay());
-          weekStart.setHours(0, 0, 0, 0);
-          if (incomeDate < weekStart) return false;
-        } else if (dateFilter === dateFilterOptions.thisMonth) {
-          if (incomeDate.getMonth() !== now.getMonth() || 
-              incomeDate.getFullYear() !== now.getFullYear()) return false;
-        } else if (dateFilter === dateFilterOptions.thisYear) {
-          if (incomeDate.getFullYear() !== now.getFullYear()) return false;
-        }
-      }
-
-      // Search filter
-      if (!debouncedSearchTerm) return true;
-
-      const searchLower = debouncedSearchTerm.toLowerCase();
-      return (
-        row.name.toLowerCase().includes(searchLower) ||
-        row.description?.toLowerCase().includes(searchLower) ||
-        row.incomeType.name.toLowerCase().includes(searchLower) ||
-        row.account.name.toLowerCase().includes(searchLower) ||
-        row.tags?.some(tag => tag.name?.toLowerCase().includes(searchLower))
-      );
-    });
-  }, [mergedData, dateFilter, dateFilterOptions.viewAll, dateFilterOptions.thisWeek, dateFilterOptions.thisMonth, dateFilterOptions.thisYear, debouncedSearchTerm]);
+  const filterOptions = useMemo(
+    () => ({ accounts: accounts, categories: incomeTypes, tags }),
+    [accounts, incomeTypes, tags]
+  );
 
   // Memoize the columns with proper dependencies
   const columns = useMemo(() => [
@@ -476,7 +445,7 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
   }), [editedRows, setEditedRows, updateData, revertData, clearPendingEdits, updateIncomeTransaction, isUpdating, deleteIncomeTransaction, isDeleting]);
 
   const table = useReactTable({
-    data: filteredData,
+    data: mergedData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -496,7 +465,7 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
     if (pageCount > 0 && currentPage >= pageCount) {
       table.setPageIndex(pageCount - 1);
     }
-  }, [filteredData.length, table]);
+  }, [mergedData.length, table]);
 
   const isLoadingData = accountsLoading || incomeTypesLoading;
 
@@ -551,28 +520,29 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
               type="single"
               variant="outline"
               size="sm"
-              onValueChange={(value) =>  value && setDateFilter(value)}
+              value={preset ?? ''}
+              onValueChange={(value) => value && setPreset(value as DatePreset)}
             >
               <ToggleGroupItem
-                value={dateFilterOptions.viewAll}
+                value="view-all"
                 className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
               >
                 View all
               </ToggleGroupItem>
               <ToggleGroupItem
-                value={dateFilterOptions.thisWeek}
+                value="this-week"
                 className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
               >
                 This week
               </ToggleGroupItem>
               <ToggleGroupItem
-                value={dateFilterOptions.thisMonth}
+                value="this-month"
                 className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
               >
                 This month
               </ToggleGroupItem>
               <ToggleGroupItem
-                value={dateFilterOptions.thisYear}
+                value="this-year"
                 className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-5"
               >
                 This year
@@ -582,6 +552,15 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
 
           {/* Search */}
           <div className="flex items-start gap-2 justify-end">
+            <TransactionFilterControl
+              kind="income"
+              variant="desktop"
+              filters={filters}
+              activeCount={activeCount}
+              onApply={applyFilters}
+              options={filterOptions}
+              hideAccount={!!accountId}
+            />
             <div className="w-full max-w-xs">
               <InputGroup>
                 <InputGroupInput
@@ -597,6 +576,17 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
           </div>
 
         </div>
+
+        <ActiveFilterChips
+          kind="income"
+          filters={filters}
+          options={filterOptions}
+          onRemove={removeFilter}
+          onClearAll={clearAll}
+        />
+        {(isActive || debouncedSearchTerm) && (
+          <FilterSummary kind="income" total={total} totalAmount={totalAmount} />
+        )}
 
         {/* Table */}
         <div className="overflow-hidden rounded-md border">
@@ -648,7 +638,7 @@ const IncomeTable = ({ accountId }: IncomeTableProps = {}) => {
           <div className="flex items-center justify-between space-x-2 py-4 px-4 border border-border border-t-2">
             <div>
               <p className='text-sm text-muted-foreground'>
-                {`Showing ${table.getRowModel().rows.length} out of ${filteredData.length}`}
+                {`Showing ${table.getRowModel().rows.length} out of ${mergedData.length}`}
                 {debouncedSearchTerm && <span className="text-primary-600"> (filtered)</span>}
               </p>
             </div>

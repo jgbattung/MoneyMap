@@ -12,20 +12,15 @@ import SkeletonTable from "@/components/shared/SkeletonTable";
 import ExpenseTable from "@/components/tables/expenses/ExpenseTable";
 import InstallmentsTabContent from "@/components/installments/InstallmentsTabContent";
 import { Button } from "@/components/ui/button";
-import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { MobileFilterBar } from "@/components/transactions/filters/MobileFilterBar";
+import { useTransactionFilters } from "@/hooks/useTransactionFilters";
+import { useExpenseFilterOptions } from "@/hooks/useTransactionFilterOptions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Receipt, SearchIcon } from "lucide-react";
+import { Receipt } from "lucide-react";
 import { useExpenseTransactionsQuery } from "@/hooks/useExpenseTransactionsQuery";
 import { useState, useEffect } from "react";
 
 const ITEMS_PER_LOAD = 15;
-
-const dateFilterOptions = {
-  viewAll: "view-all",
-  thisMonth: "this-month",
-  thisYear: "this-year",
-};
 
 const Expenses = () => {
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_LOAD);
@@ -33,14 +28,17 @@ const Expenses = () => {
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
+  const filterState = useTransactionFilters();
+  const { preset, filters, queryDates, isActive } = filterState;
+  const filterOptions = useExpenseFilterOptions();
 
-  // Pass search and dateFilter to the hook
-  const { expenseTransactions, hasMore, isLoading, isFetchingMore, error } = useExpenseTransactionsQuery({
+  // Pass search, date range and filters to the hook
+  const { expenseTransactions, hasMore, isLoading, isFetchingMore, error, total, totalAmount } = useExpenseTransactionsQuery({
     skip: 0,
     take: displayCount,
     search: debouncedSearchTerm,
-    dateFilter,
+    ...queryDates,
+    filters,
   });
 
   // Drawer/Sheet states
@@ -61,10 +59,8 @@ const Expenses = () => {
 
   // Reset displayCount when search or filter changes
   useEffect(() => {
-    if (debouncedSearchTerm || dateFilter !== dateFilterOptions.viewAll) {
-      setDisplayCount(ITEMS_PER_LOAD);
-    }
-  }, [debouncedSearchTerm, dateFilter]);
+    setDisplayCount(ITEMS_PER_LOAD);
+  }, [debouncedSearchTerm, preset, filters]);
 
   const handleExpenseClick = (expenseId: string) => {
     setSelectedExpenseId(expenseId);
@@ -76,7 +72,7 @@ const Expenses = () => {
   };
 
   // Determine if we're currently searching/filtering
-  const isFiltering = debouncedSearchTerm.length > 0 || dateFilter !== dateFilterOptions.viewAll;
+  const isFiltering = debouncedSearchTerm.length > 0 || isActive;
 
   return (
     <div className="max-w-7xl mx-auto px-4 pt-0 pb-36 md:pb-6 flex flex-col">
@@ -162,50 +158,18 @@ const Expenses = () => {
           ) : (
             <div className="mt-2">
               <div className='md:hidden space-y-4'>
-                <InputGroup>
-                  <InputGroupInput
-                    placeholder="Search expenses..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="text-sm h-8 py-1"
-                    disabled={isLoading}
-                  />
-                  <InputGroupAddon>
-                    <SearchIcon className="h-4 w-4" />
-                  </InputGroupAddon>
-                </InputGroup>
-
-                <ToggleGroup
-                  type="single"
-                  value={dateFilter}
-                  variant="outline"
-                  size="sm"
-                  onValueChange={(value) => !isLoading && value && setDateFilter(value)}
-                  className="justify-start"
-                  disabled={isLoading}
-                >
-                  <ToggleGroupItem
-                    value={dateFilterOptions.viewAll}
-                    disabled={isLoading}
-                    className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    View All
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    value={dateFilterOptions.thisMonth}
-                    disabled={isLoading}
-                    className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    This Month
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    value={dateFilterOptions.thisYear}
-                    disabled={isLoading}
-                    className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    This Year
-                  </ToggleGroupItem>
-                </ToggleGroup>
+                <MobileFilterBar
+                  kind="expense"
+                  filterState={filterState}
+                  options={filterOptions}
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  searchPlaceholder="Search expenses..."
+                  isLoading={isLoading}
+                  isSearching={debouncedSearchTerm.length > 0}
+                  total={total}
+                  totalAmount={totalAmount}
+                />
 
                 {isLoading ? (
                   <div className='grid grid-cols-1 gap-4'>
@@ -215,7 +179,7 @@ const Expenses = () => {
                   </div>
                 ) : expenseTransactions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8">
-                    <p className="text-muted-foreground">No results found for your search.</p>
+                    <p className="text-muted-foreground">No transactions match your filters.</p>
                   </div>
                 ) : (
                   <>
@@ -254,7 +218,7 @@ const Expenses = () => {
                       </div>
                     )}
 
-                    {!isFiltering && hasMore && !isFetchingMore && (
+                    {hasMore && !isFetchingMore && (
                       <Button
                         variant="outline"
                         className="w-full mt-4"

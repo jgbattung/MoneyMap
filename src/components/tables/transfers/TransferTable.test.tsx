@@ -58,22 +58,35 @@ vi.mock('@/components/shared/TagInput', () => ({
     }),
 }));
 
-vi.mock('@/components/ui/toggle-group', () => ({
-  ToggleGroup: ({
-    children,
-    onValueChange,
-  }: {
-    children: React.ReactNode;
-    onValueChange?: (v: string) => void;
-  }) =>
-    React.createElement(
-      'div',
-      { 'data-testid': 'toggle-group', onClick: () => onValueChange?.('view-all') },
-      children
-    ),
-  ToggleGroupItem: ({ children, value }: { children: React.ReactNode; value: string }) =>
-    React.createElement('button', { 'data-testid': `toggle-item-${value}` }, children),
-}));
+// Forwards item clicks to onValueChange and exposes the controlled value, so
+// preset selection and "a custom range deselects the preset" are observable.
+vi.mock('@/components/ui/toggle-group', () => {
+  const Ctx = React.createContext<((v: string) => void) | undefined>(undefined);
+  return {
+    ToggleGroup: ({
+      children,
+      onValueChange,
+      value,
+    }: {
+      children: React.ReactNode;
+      onValueChange?: (v: string) => void;
+      value?: string;
+    }) =>
+      React.createElement(
+        Ctx.Provider,
+        { value: onValueChange },
+        React.createElement('div', { 'data-testid': 'toggle-group', 'data-value': value }, children)
+      ),
+    ToggleGroupItem: ({ children, value }: { children: React.ReactNode; value: string }) => {
+      const onValueChange = React.useContext(Ctx);
+      return React.createElement(
+        'button',
+        { 'data-testid': `toggle-item-${value}`, onClick: () => onValueChange?.(value) },
+        children
+      );
+    },
+  };
+});
 
 vi.mock('@/components/ui/popover', () => ({
   Popover: ({ children }: { children: React.ReactNode }) =>
@@ -82,6 +95,74 @@ vi.mock('@/components/ui/popover', () => ({
     React.createElement('div', null, children),
   PopoverContent: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
+}));
+
+// The filter UI has its own tests; here the stubs forward the callbacks so the
+// table's wiring (params sent to the hook, chip removal, summary) is exercised.
+vi.mock('@/components/transactions/filters/TransactionFilterControl', () => ({
+  TransactionFilterControl: ({ onApply, activeCount, hideAccount, kind }: any) =>
+    React.createElement(
+      React.Fragment,
+      null,
+      React.createElement(
+        'button',
+        {
+          'data-testid': 'filter-control',
+          'data-kind': kind,
+          'data-hide-account': String(!!hideAccount),
+          'data-active-count': activeCount,
+          onClick: () =>
+            onApply({
+              accountIds: [],
+              fromAccountIds: ['acc-1'],
+              toAccountIds: ['acc-2'],
+              categoryIds: [],
+              tagIds: [],
+              amountMin: '100',
+              amountMax: '',
+              startDate: '',
+              endDate: '',
+            }),
+        },
+        'Filters'
+      ),
+      React.createElement(
+        'button',
+        {
+          'data-testid': 'filter-control-range',
+          onClick: () =>
+            onApply({
+              accountIds: [],
+              fromAccountIds: [],
+              toAccountIds: [],
+              categoryIds: [],
+              tagIds: [],
+              amountMin: '',
+              amountMax: '',
+              startDate: '2026-01-01',
+              endDate: '2026-01-31',
+            }),
+        },
+        'Apply range'
+      )
+    ),
+}));
+
+vi.mock('@/components/transactions/filters/ActiveFilterChips', () => ({
+  ActiveFilterChips: ({ filters, onRemove, onClearAll }: any) =>
+    filters.amountMin || filters.accountIds.length > 0 || filters.startDate
+      ? React.createElement(
+          'div',
+          { 'data-testid': 'filter-chips' },
+          React.createElement('button', { 'data-testid': 'remove-amount-chip', onClick: () => onRemove('amount') }, 'x'),
+          React.createElement('button', { 'data-testid': 'clear-all-chips', onClick: onClearAll }, 'Clear all')
+        )
+      : null,
+}));
+
+vi.mock('@/components/transactions/filters/FilterSummary', () => ({
+  FilterSummary: ({ total, totalAmount }: any) =>
+    React.createElement('div', { 'data-testid': 'filter-summary' }, `${total}|${totalAmount ?? ''}`),
 }));
 
 vi.mock('@/components/ui/calendar', () => ({
@@ -106,6 +187,7 @@ vi.mock('@/lib/utils', () => ({
 // Imports after mocks
 // ---------------------------------------------------------------------------
 import { useTransfersQuery } from '@/hooks/useTransferTransactionsQuery';
+import { resolveDatePreset } from '@/lib/transaction-filters';
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 import { useTransferTypesQuery } from '@/hooks/useTransferTypesQuery';
 import { useTagsQuery } from '@/hooks/useTagsQuery';
@@ -149,9 +231,18 @@ const mockTransfers: TransferTransaction[] = [
 // ---------------------------------------------------------------------------
 // Setup helpers
 // ---------------------------------------------------------------------------
+// Emulates the server-side search that the real hook now delegates to the API.
+function matchesSearch(row: TransferTransaction, search?: string): boolean {
+  if (!search) return true;
+  const s = search.toLowerCase();
+  return Boolean(
+    row.name.toLowerCase().includes(s) || row.notes?.toLowerCase().includes(s) || row.transferType.name.toLowerCase().includes(s) || row.toAccount.name.toLowerCase().includes(s) || row.fromAccount.name.toLowerCase().includes(s) || row.tags?.some((tag) => tag.name?.toLowerCase().includes(s))
+  );
+}
+
 function setupAllMocks(transfers: TransferTransaction[] = mockTransfers, accountsLoading = false) {
-  vi.mocked(useTransfersQuery).mockReturnValue({
-    transfers,
+  vi.mocked(useTransfersQuery).mockImplementation((opts?: any) => ({
+    transfers: transfers.filter((row) => matchesSearch(row, opts?.search)),
     total: transfers.length,
     hasMore: false,
     isLoading: false,
@@ -162,7 +253,7 @@ function setupAllMocks(transfers: TransferTransaction[] = mockTransfers, account
     isCreating: false,
     isUpdating: false,
     isDeleting: false,
-  });
+  }));
 
   vi.mocked(useAccountsQuery).mockReturnValue({
     accounts: accountsLoading
@@ -211,13 +302,13 @@ function setupAllMocks(transfers: TransferTransaction[] = mockTransfers, account
   });
 }
 
-function renderTransferTable() {
+function renderTransferTable(accountId?: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     React.createElement(
       QueryClientProvider,
       { client: qc },
-      React.createElement(TransferTable)
+      accountId ? React.createElement(TransferTable, { accountId }) : React.createElement(TransferTable)
     )
   );
 }
@@ -382,3 +473,154 @@ describe('TransferTable', () => {
 
 });
 
+// -----------------------------------------------------------------------
+// Server-side filtering wiring
+// -----------------------------------------------------------------------
+describe('TransferTable server-side filtering', () => {
+  const lastParams = () => (vi.mocked(useTransfersQuery).mock.calls.at(-1)?.[0] ?? {}) as any;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupAllMocks();
+  });
+
+  it('queries with no search, dates or panel filters by default', () => {
+    renderTransferTable();
+    const params = lastParams();
+    expect(params.search).toBe('');
+    expect(params.startDate).toBeUndefined();
+    expect(params.endDate).toBeUndefined();
+    expect(params.filters.accountIds).toEqual([]);
+    expect(params.filters.amountMin).toBe('');
+  });
+
+  it('renders the filter control for the transfer kind and no summary or chips yet', () => {
+    renderTransferTable();
+    expect(screen.getByTestId('filter-control').getAttribute('data-kind')).toBe('transfer');
+    expect(screen.queryByTestId('filter-chips')).toBeNull();
+    expect(screen.queryByTestId('filter-summary')).toBeNull();
+  });
+
+  it('sends the applied filters to the hook, then shows chips and the summary', () => {
+    renderTransferTable();
+    fireEvent.click(screen.getByTestId('filter-control'));
+    const params = lastParams();
+    expect(params.filters.amountMin).toBe('100');
+    expect(screen.getByTestId('filter-chips')).toBeTruthy();
+    expect(screen.getByTestId('filter-summary').textContent).toMatch(/^[0-9]+\|$/);
+  });
+
+  it('removing a chip re-queries immediately without that filter', () => {
+    renderTransferTable();
+    fireEvent.click(screen.getByTestId('filter-control'));
+    fireEvent.click(screen.getByTestId('remove-amount-chip'));
+    expect(lastParams().filters.amountMin).toBe('');
+  });
+
+  it('Clear all resets the filters and hides the chips and summary', () => {
+    renderTransferTable();
+    fireEvent.click(screen.getByTestId('filter-control'));
+    fireEvent.click(screen.getByTestId('clear-all-chips'));
+    expect(lastParams().filters.amountMin).toBe('');
+    expect(lastParams().filters.accountIds).toEqual([]);
+    expect(screen.queryByTestId('filter-chips')).toBeNull();
+    expect(screen.queryByTestId('filter-summary')).toBeNull();
+  });
+
+  it('passes the debounced search to the hook and shows the summary', async () => {
+    renderTransferTable();
+    fireEvent.change(screen.getByTestId('search-input'), { target: { value: 'abc' } });
+    await waitFor(() => expect(lastParams().search).toBe('abc'));
+    expect(screen.getByTestId('filter-summary')).toBeTruthy();
+  });
+
+  it('keeps From/To available on an account detail page and scopes the query', () => {
+    renderTransferTable('acc-9');
+    expect(lastParams().accountId).toBe('acc-9');
+    expect(screen.getByTestId('filter-control').getAttribute('data-hide-account')).toBe('false');
+  });
+
+  it('shows the Account filter on the full list', () => {
+    renderTransferTable();
+    expect(screen.getByTestId('filter-control').getAttribute('data-hide-account')).toBe('false');
+  });
+});
+
+// -----------------------------------------------------------------------
+// Date presets and custom range
+// -----------------------------------------------------------------------
+describe('TransferTable date presets and custom range', () => {
+  const lastParams = () => (vi.mocked(useTransfersQuery).mock.calls.at(-1)?.[0] ?? {}) as any;
+  const toggleValue = () => screen.getByTestId('toggle-group').getAttribute('data-value');
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupAllMocks();
+  });
+
+  it('starts on View all with no dates', () => {
+    renderTransferTable();
+    expect(toggleValue()).toBe('view-all');
+    expect(lastParams().startDate).toBeUndefined();
+  });
+
+  it.each(['this-week', 'this-month', 'this-year'] as const)(
+    'selecting %s sends its resolved range, selects it and shows the summary',
+    (preset) => {
+      renderTransferTable();
+      fireEvent.click(screen.getByTestId(`toggle-item-${preset}`));
+      const range = resolveDatePreset(preset)!;
+      expect(lastParams().startDate).toBe(range.startDate);
+      expect(lastParams().endDate).toBe(range.endDate);
+      expect(toggleValue()).toBe(preset);
+      expect(screen.getByTestId('filter-summary')).toBeTruthy();
+    }
+  );
+
+  it('going back to View all drops the dates and hides the summary', () => {
+    renderTransferTable();
+    fireEvent.click(screen.getByTestId('toggle-item-this-month'));
+    fireEvent.click(screen.getByTestId('toggle-item-view-all'));
+    expect(lastParams().startDate).toBeUndefined();
+    expect(lastParams().endDate).toBeUndefined();
+    expect(screen.queryByTestId('filter-summary')).toBeNull();
+  });
+
+  it('applying a custom range deselects the preset and sends the custom dates', () => {
+    renderTransferTable();
+    fireEvent.click(screen.getByTestId('toggle-item-this-year'));
+    fireEvent.click(screen.getByTestId('filter-control-range'));
+    expect(toggleValue()).toBe('');
+    expect(lastParams().startDate).toBe('2026-01-01');
+    expect(lastParams().endDate).toBe('2026-01-31');
+    expect(screen.getByTestId('filter-summary')).toBeTruthy();
+  });
+
+  it('selecting a preset after a custom range clears the custom range', () => {
+    renderTransferTable();
+    fireEvent.click(screen.getByTestId('filter-control-range'));
+    fireEvent.click(screen.getByTestId('toggle-item-this-month'));
+    const range = resolveDatePreset('this-month')!;
+    expect(lastParams().startDate).toBe(range.startDate);
+    expect(lastParams().endDate).toBe(range.endDate);
+    expect(lastParams().filters.startDate).toBe('');
+    expect(lastParams().filters.endDate).toBe('');
+    expect(toggleValue()).toBe('this-month');
+  });
+
+  it('Clear all after a custom range restores View all', () => {
+    renderTransferTable();
+    fireEvent.click(screen.getByTestId('filter-control-range'));
+    fireEvent.click(screen.getByTestId('clear-all-chips'));
+    expect(toggleValue()).toBe('view-all');
+    expect(lastParams().startDate).toBeUndefined();
+  });
+
+  it('sends separate From and To account filters', () => {
+    renderTransferTable();
+    fireEvent.click(screen.getByTestId('filter-control'));
+    expect(lastParams().filters.fromAccountIds).toEqual(['acc-1']);
+    expect(lastParams().filters.toAccountIds).toEqual(['acc-2']);
+    expect(lastParams().filters.accountIds).toEqual([]);
+  });
+});

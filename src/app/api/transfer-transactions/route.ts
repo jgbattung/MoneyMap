@@ -3,7 +3,8 @@ import { headers } from "next/headers";
 import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { Prisma, PrismaPromise } from "@prisma/client";
+import { buildTransferWhere, parseListParams } from "@/lib/transaction-where";
+import { PrismaPromise } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { onTransferTransactionChange } from "@/lib/statement-recalculator";
 import { z } from "zod";
@@ -46,104 +47,16 @@ export async function GET(request: NextRequest) {
 
     // Get params from URL
     const { searchParams } = new URL(request.url);
-    const skip = searchParams.get('skip');
-    const take = searchParams.get('take');
-    const search = searchParams.get('search');
-    const dateFilter = searchParams.get('dateFilter');
-    const accountId = searchParams.get('accountId');
-
-    const skipNumber = skip ? Math.min(parseInt(skip), 10000) : undefined;
-    const takeNumber = take ? Math.min(parseInt(take), 100) : undefined;
-
-    const whereClause: Prisma.TransferTransactionWhereInput = {
-      userId: session.user.id,
-    };
-
-    if (search && search.trim().length > 0) {
-      whereClause.OR = [
-        {
-          name: {
-            contains: search,
-            mode: 'insensitive' as Prisma.QueryMode,
-          },
-        },
-        {
-          notes: {
-            contains: search,
-            mode: 'insensitive' as Prisma.QueryMode,
-          },
-        },
-        {
-          fromAccount: {
-            name: {
-              contains: search,
-              mode: 'insensitive' as Prisma.QueryMode,
-            },
-          },
-        },
-        {
-          toAccount: {
-            name: {
-              contains: search,
-              mode: 'insensitive' as Prisma.QueryMode,
-            },
-          },
-        },
-        {
-          transferType: {
-            name: {
-              contains: search,
-              mode: 'insensitive' as Prisma.QueryMode,
-            },
-          },
-        },
-        {
-          tags: {
-            some: {
-              name: {
-                contains: search,
-                mode: 'insensitive' as Prisma.QueryMode,
-              },
-            },
-          },
-        },
-      ];
+    const parsed = parseListParams(searchParams, 'transfer');
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten() },
+        { status: 400 }
+      );
     }
 
-    if (dateFilter && dateFilter !== 'view-all') {
-      const now = new Date();
-      
-      if (dateFilter === 'this-month') {
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-        
-        whereClause.date = {
-          gte: startOfMonth,
-          lte: endOfMonth,
-        };
-      } else if (dateFilter === 'this-year') {
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-        
-        whereClause.date = {
-          gte: startOfYear,
-          lte: endOfYear,
-        };
-      }
-    }
-
-    if (accountId) {
-      whereClause.OR = [
-        ...(whereClause.OR || []),
-        { fromAccountId: accountId },
-        { toAccountId: accountId },
-      ];
-    }
-
-    let effectiveTake = takeNumber;
-    if (search && search.trim().length > 0) {
-      effectiveTake = 100;
-    }
+    const { skip, take } = parsed.data;
+    const whereClause = buildTransferWhere(session.user.id, parsed.data);
 
     const [total, transferTransactions] = await Promise.all([
       db.transferTransaction.count({
@@ -158,15 +71,15 @@ export async function GET(request: NextRequest) {
           tags: true,
         },
         orderBy: {
-          date: 'desc'
+          date: 'desc',
         },
-        ...(skipNumber !== undefined && { skip: skipNumber }),
-        ...(effectiveTake !== undefined && { take: effectiveTake }),
+        ...(skip !== undefined && { skip }),
+        ...(take !== undefined && { take }),
       }),
     ]);
 
     // Calculate hasMore
-    const currentCount = (skipNumber || 0) + transferTransactions.length;
+    const currentCount = (skip || 0) + transferTransactions.length;
     const hasMore = currentCount < total;
 
     return NextResponse.json({

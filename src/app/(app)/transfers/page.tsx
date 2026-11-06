@@ -9,31 +9,29 @@ import { SkeletonTransferCard } from '@/components/shared/SkeletonTransferCard';
 import TransferTable from '@/components/tables/transfers/TransferTable';
 import { useTransfersQuery } from '@/hooks/useTransferTransactionsQuery';
 import { Button } from '@/components/ui/button';
-import { InputGroup, InputGroupInput, InputGroupAddon } from '@/components/ui/input-group';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { SearchIcon, SearchX } from 'lucide-react';
+import { MobileFilterBar } from "@/components/transactions/filters/MobileFilterBar";
+import { useTransactionFilters } from "@/hooks/useTransactionFilters";
+import { useTransferFilterOptions } from "@/hooks/useTransactionFilterOptions";
+import { SearchX } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const ITEMS_PER_LOAD = 15;
-
-const dateFilterOptions = {
-  viewAll: "view-all",
-  thisMonth: "this-month",
-  thisYear: "this-year",
-};
 
 const Transactions = () => {
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_LOAD);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState(dateFilterOptions.viewAll);
+  const filterState = useTransactionFilters();
+  const { preset, filters, queryDates } = filterState;
+  const filterOptions = useTransferFilterOptions();
 
-  const { transfers, hasMore, isLoading, isFetchingMore } = useTransfersQuery({
+  const { transfers, hasMore, isLoading, isFetchingMore, total } = useTransfersQuery({
     skip: 0,
     take: displayCount,
     search: debouncedSearchTerm,
-    dateFilter,
+    ...queryDates,
+    filters,
   });
   
   const [selectedTransferId, setSelectedTransferId] = useState<string>('');
@@ -50,10 +48,8 @@ const Transactions = () => {
   }, [searchTerm]);
 
   useEffect(() => {
-    if (debouncedSearchTerm || dateFilter !== dateFilterOptions.viewAll) {
-      setDisplayCount(ITEMS_PER_LOAD);
-    }
-  }, [debouncedSearchTerm, dateFilter]);
+    setDisplayCount(ITEMS_PER_LOAD);
+  }, [debouncedSearchTerm, preset, filters]);
 
   const handleTransferCardClick = (transferId: string) => {
     setSelectedTransferId(transferId);
@@ -64,7 +60,6 @@ const Transactions = () => {
     setDisplayCount(prev => prev + ITEMS_PER_LOAD);
   };
 
-  const isFiltering = debouncedSearchTerm.length > 0 || dateFilter !== dateFilterOptions.viewAll;
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 pt-0 pb-36 md:pb-6 flex flex-col">
@@ -93,50 +88,17 @@ const Transactions = () => {
         </div>
 
         <div className="md:hidden space-y-4">
-          <InputGroup>
-            <InputGroupInput
-              placeholder="Search transfers..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="text-sm h-8 py-1"
-              disabled={isLoading}
-            />
-            <InputGroupAddon>
-              <SearchIcon className="h-4 w-4" />
-            </InputGroupAddon>
-          </InputGroup>
-
-          <ToggleGroup
-            type="single"
-            value={dateFilter}
-            variant="outline"
-            size="sm"
-            onValueChange={(value) => !isLoading && value && setDateFilter(value)}
-            className="justify-start"
-            disabled={isLoading}
-          >
-            <ToggleGroupItem
-              value={dateFilterOptions.viewAll}
-              disabled={isLoading}
-              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              View All
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value={dateFilterOptions.thisMonth}
-              disabled={isLoading}
-              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              This Month
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value={dateFilterOptions.thisYear}
-              disabled={isLoading}
-              className="hover:bg-secondary-800 hover:text-white data-[state=on]:bg-secondary-700 data-[state=on]:text-white data-[state=on]:font-semibold px-4 py-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              This Year
-            </ToggleGroupItem>
-          </ToggleGroup>
+          <MobileFilterBar
+            kind="transfer"
+            filterState={filterState}
+            options={filterOptions}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Search transfers..."
+            isLoading={isLoading}
+            isSearching={debouncedSearchTerm.length > 0}
+            total={total}
+          />
 
           {isLoading ? (
             <div className='grid grid-cols-1 gap-4'>
@@ -147,7 +109,7 @@ const Transactions = () => {
           ) : transfers.length === 0 ? (
             <EmptyState
               icon={SearchX}
-              title="No results found"
+              title="No transactions match your filters."
               description="Try adjusting your search or filters."
               variant="table"
             />
@@ -176,7 +138,7 @@ const Transactions = () => {
                 </div>
               )}
 
-              {!isFiltering && hasMore && !isFetchingMore && (
+              {hasMore && !isFetchingMore && (
                 <Button
                   variant="outline"
                   className="w-full mt-4"

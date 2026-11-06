@@ -5,6 +5,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { useIncomeTransactionsQuery, useIncomeTransactionQuery } from './useIncomeTransactionsQuery';
+import { EMPTY_FILTERS } from '@/lib/transaction-filters';
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -139,7 +140,7 @@ describe('useIncomeTransactionsQuery', () => {
       });
 
       renderHook(
-        () => useIncomeTransactionsQuery({ skip: 10, take: 5, search: 'salary', dateFilter: '2025-01', accountId: 'acc-1' }),
+        () => useIncomeTransactionsQuery({ skip: 10, take: 5, search: 'salary', startDate: '2025-01-01', endDate: '2025-01-31', accountId: 'acc-1', filters: { ...EMPTY_FILTERS, tagIds: ['t1', 't2'], amountMin: '5' } }),
         { wrapper: createWrapper() }
       );
 
@@ -149,18 +150,22 @@ describe('useIncomeTransactionsQuery', () => {
       expect(calledUrl).toContain('skip=10');
       expect(calledUrl).toContain('take=5');
       expect(calledUrl).toContain('search=salary');
-      expect(calledUrl).toContain('dateFilter=2025-01');
+      expect(calledUrl).toContain('startDate=2025-01-01');
+      expect(calledUrl).toContain('endDate=2025-01-31');
+      expect(calledUrl).toContain('tagIds=t1%2Ct2');
+      expect(calledUrl).toContain('amountMin=5');
+      expect(calledUrl).not.toContain('dateFilter');
       expect(calledUrl).toContain('accountId=acc-1');
     });
 
-    it('omits dateFilter param when value is "view-all"', async () => {
+    it('omits date and filter params when unset', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ transactions: [], total: 0, hasMore: false }),
       });
 
       renderHook(
-        () => useIncomeTransactionsQuery({ dateFilter: 'view-all' }),
+        () => useIncomeTransactionsQuery({ filters: EMPTY_FILTERS }),
         { wrapper: createWrapper() }
       );
 
@@ -168,6 +173,8 @@ describe('useIncomeTransactionsQuery', () => {
 
       const calledUrl = mockFetch.mock.calls[0][0] as string;
       expect(calledUrl).not.toContain('dateFilter');
+      expect(calledUrl).not.toContain('startDate');
+      expect(calledUrl).not.toContain('tagIds');
     });
 
     it('uses base URL when no params provided', async () => {
@@ -207,7 +214,7 @@ describe('useIncomeTransactionsQuery', () => {
     it('prepends optimistic transaction to list cache before API responds', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
 
-      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, accountId: undefined }];
       queryClient.setQueryData(listKey, {
         transactions: [mockIncome],
         total: 1,
@@ -245,7 +252,7 @@ describe('useIncomeTransactionsQuery', () => {
     it('does NOT prepend to pages with skip > 0', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
 
-      const page2Key = ['incomeTransactions', { skip: 10, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+      const page2Key = ['incomeTransactions', { skip: 10, take: 10, search: undefined, accountId: undefined }];
       queryClient.setQueryData(page2Key, {
         transactions: [mockIncome],
         total: 1,
@@ -273,7 +280,7 @@ describe('useIncomeTransactionsQuery', () => {
     it('does NOT prepend when search filter is active', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
 
-      const searchKey = ['incomeTransactions', { skip: 0, take: 10, search: 'salary', dateFilter: undefined, accountId: undefined }];
+      const searchKey = ['incomeTransactions', { skip: 0, take: 10, search: 'salary', accountId: undefined }];
       queryClient.setQueryData(searchKey, {
         transactions: [mockIncome],
         total: 1,
@@ -298,10 +305,94 @@ describe('useIncomeTransactionsQuery', () => {
       expect(cached.transactions).toHaveLength(1);
     });
 
+    it('does NOT prepend into a list cache with active panel filters', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+
+      const searchKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, filters: { ...EMPTY_FILTERS, tagIds: ['t1'] }, accountId: undefined }];
+      queryClient.setQueryData(searchKey, {
+        transactions: [mockIncome],
+        total: 1,
+        hasMore: false,
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => mockIncome });
+
+      const { result } = renderHook(() => useIncomeTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(async () => {
+        await result.current.createIncomeTransactionAsync({
+          payload: { name: 'Bonus', amount: '10000', accountId: 'acc-1', incomeTypeId: 'itype-1', date: '2026-02-01' },
+          meta: { accountName: 'BDO Savings', incomeTypeName: 'Salary' },
+        });
+      });
+
+      const cached = queryClient.getQueryData<any>(searchKey);
+      expect(cached.transactions).toHaveLength(1);
+    });
+
+    it('does NOT prepend when the new row is outside the cached date range', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+
+      const searchKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, startDate: '2026-01-01', endDate: '2026-01-31', accountId: undefined }];
+      queryClient.setQueryData(searchKey, {
+        transactions: [mockIncome],
+        total: 1,
+        hasMore: false,
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => mockIncome });
+
+      const { result } = renderHook(() => useIncomeTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(async () => {
+        await result.current.createIncomeTransactionAsync({
+          payload: { name: 'Bonus', amount: '10000', accountId: 'acc-1', incomeTypeId: 'itype-1', date: '2026-02-01' },
+          meta: { accountName: 'BDO Savings', incomeTypeName: 'Salary' },
+        });
+      });
+
+      const cached = queryClient.getQueryData<any>(searchKey);
+      expect(cached.transactions).toHaveLength(1);
+    });
+
+    it('prepends when the new row is inside the cached date range', async () => {
+      const { queryClient, wrapper } = createWrapperWithClient();
+
+      const searchKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, startDate: '2026-02-01', endDate: '2026-02-28', accountId: undefined }];
+      queryClient.setQueryData(searchKey, {
+        transactions: [mockIncome],
+        total: 1,
+        hasMore: false,
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ transactions: [], total: 0, hasMore: false }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => mockIncome });
+
+      const { result } = renderHook(() => useIncomeTransactionsQuery(), { wrapper });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(async () => {
+        await result.current.createIncomeTransactionAsync({
+          payload: { name: 'Bonus', amount: '10000', accountId: 'acc-1', incomeTypeId: 'itype-1', date: '2026-02-01' },
+          meta: { accountName: 'BDO Savings', incomeTypeName: 'Salary' },
+        });
+      });
+
+      const cached = queryClient.getQueryData<any>(searchKey);
+      expect(cached.transactions).toHaveLength(2);
+    });
+
     it('rolls back optimistic create on API error', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
 
-      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, accountId: undefined }];
       queryClient.setQueryData(listKey, {
         transactions: [mockIncome],
         total: 1,
@@ -409,7 +500,7 @@ describe('useIncomeTransactionsQuery', () => {
     it('removes the transaction from list cache optimistically', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
 
-      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, accountId: undefined }];
       queryClient.setQueryData(listKey, {
         transactions: [mockIncome],
         total: 1,
@@ -443,7 +534,7 @@ describe('useIncomeTransactionsQuery', () => {
     it('rolls back optimistic delete on API error', async () => {
       const { queryClient, wrapper } = createWrapperWithClient();
 
-      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+      const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, accountId: undefined }];
       queryClient.setQueryData(listKey, {
         transactions: [mockIncome],
         total: 1,
@@ -592,7 +683,7 @@ describe('useIncomeTransactionsQuery', () => {
   describe('balance optimism', () => {
     const accountsKey = ['accounts', { includeCards: true }];
     const netWorthKey = ['netWorth'];
-    const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, dateFilter: undefined, accountId: undefined }];
+    const listKey = ['incomeTransactions', { skip: 0, take: 10, search: undefined, accountId: undefined }];
 
     function seedBalanceCaches(queryClient: QueryClient) {
       queryClient.setQueryData(accountsKey, [
