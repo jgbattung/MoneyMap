@@ -12,9 +12,14 @@ export const E2E_DATABASE = {
 
 const HOSTED_MARKERS = ["supabase", "pooler", "amazonaws"];
 
-// Replace userinfo (user:password) so a credential can never reach logs.
+// Connection-string query parameters that override the host, port or database
+// in the URL authority/path (Prisma honours ?host=), so they must be absent.
+const TARGET_OVERRIDE_PARAMS = ["host", "hostaddr", "port", "dbname"];
+
+// Replace everything up to the last "@" so a credential can never reach logs,
+// even an unencoded password containing "/" or "@". Over-redacting is fine.
 function redact(url: string): string {
-  return url.replace(/\/\/[^/]*@/, "//***@");
+  return url.replace(/^([a-z][a-z0-9+.-]*:\/\/)?[\s\S]*@/i, "$1***@");
 }
 
 function fail(check: string, url: string): never {
@@ -61,6 +66,12 @@ export function assertE2eDatabaseUrl(url: string | undefined): string {
 
   if (parsed.pathname !== `/${E2E_DATABASE.database}`) {
     fail(`database "${parsed.pathname.slice(1)}" is not ${E2E_DATABASE.database}`, url);
+  }
+
+  for (const key of parsed.searchParams.keys()) {
+    if (TARGET_OVERRIDE_PARAMS.includes(key.toLowerCase())) {
+      fail(`query parameter "${key}" would override the asserted host, port or database`, url);
+    }
   }
 
   return url;
