@@ -14,6 +14,7 @@ MoneyMap: single-user personal finance tracker (net worth, accounts, cards, tran
 npm run dev / lint / build            # build is the type check
 npx vitest run [file] [-t "name"]     # unit tests; use npx (vitest not on PATH on Windows)
 docker compose up -d && npm run test:e2e
+npm run build && npm run test:e2e:prod  # same E2E suite against next start
 ```
 
 - **Never install `@vitejs/plugin-react`** - its vite@7 brings a second postcss that breaks Tailwind in the dev server. JSX comes from `esbuild: { jsx: 'automatic' }` in `vitest.config.mts`; fix that config if tests say "React is not defined".

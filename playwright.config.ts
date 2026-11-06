@@ -1,18 +1,20 @@
 import { defineConfig, devices } from "@playwright/test";
 import dotenv from "dotenv";
 import path from "path";
+import { assertE2eDatabaseUrl } from "./playwright/utils/db-guard";
 
 // Load the app's .env.local first (for BETTER_AUTH_SECRET, etc.),
 // then override with .env.test (for DATABASE_URL, DIRECT_URL).
 // .env.test takes precedence because dotenv does NOT overwrite existing vars.
 dotenv.config({ path: path.resolve(__dirname, ".env.local") });
-// In CI, DATABASE_URL and DIRECT_URL are set by the workflow's services block
-// and must not be overridden by the local .env.test (which uses a different port).
-// Locally, .env.test overrides .env.local so tests use the isolated Docker DB.
+// CI and local share the same database URL (localhost:5433/money_map_dev), so
+// .env.test is authoritative everywhere and always overrides.
 dotenv.config({
   path: path.resolve(__dirname, "playwright/.env.test"),
-  override: !process.env.CI,
+  override: true,
 });
+// Abort here, before webServer starts, if the URL is not the E2E database.
+assertE2eDatabaseUrl(process.env.DATABASE_URL);
 
 const E2E_PORT = 3001;
 
@@ -40,7 +42,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: process.env.CI
+    // E2E_PROD=1 serves a production build (run `npm run build` first). It only
+    // picks the server and has no effect on which database is used.
+    command: process.env.E2E_PROD
       ? `npx next start --port ${E2E_PORT}`
       : `npx next dev --port ${E2E_PORT}`,
     url: `http://localhost:${E2E_PORT}`,

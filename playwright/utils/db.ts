@@ -1,17 +1,12 @@
 import { PrismaClient } from "@prisma/client";
+import { assertE2eDatabaseUrl } from "./db-guard";
 
-// SAFETY GUARDRAIL: Abort immediately if DATABASE_URL points to a non-local database.
-// This prevents accidental data wipes against production.
-const dbUrl = process.env.DATABASE_URL ?? "";
-if (!dbUrl.includes("localhost") && !dbUrl.includes("127.0.0.1")) {
-  console.error(
-    "FATAL: DATABASE_URL does not point to localhost. Aborting to prevent production data loss."
-  );
-  console.error(`Current DATABASE_URL: ${dbUrl.replace(/\/\/.*@/, "//***@")}`);
-  process.exit(1);
-}
+// SAFETY GUARDRAIL: throws unless DATABASE_URL is exactly the local E2E database.
+// clearDatabase() below deletes unscoped, so this must hold before anything connects.
+const dbUrl = assertE2eDatabaseUrl(process.env.DATABASE_URL);
 
-const prisma = new PrismaClient();
+// Bound to the asserted URL so the check and the connection cannot diverge.
+const prisma = new PrismaClient({ datasourceUrl: dbUrl });
 
 /**
  * Deletes all records from all tables in the correct order
