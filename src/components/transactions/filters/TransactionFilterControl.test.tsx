@@ -144,3 +144,40 @@ describe("TransactionFilterControl layout specifics", () => {
     expect(screen.queryByRole("button", { name: /any account/i })).toBeNull();
   });
 });
+
+describe("TransactionFilterControl date range and transfers", () => {
+  it("blocks Apply while the custom range is reversed, then applies a valid range", () => {
+    const { onApply } = setup("desktop", { ...EMPTY_FILTERS, startDate: "2026-03-20", endDate: "2026-03-10" }, { activeCount: 1 });
+    open("desktop");
+    expect(screen.getByRole("alert").textContent).toBe("Start date must be on or before end date");
+    const apply = screen.getByRole("button", { name: "Apply" }) as HTMLButtonElement;
+    expect(apply.disabled).toBe(true);
+    fireEvent.click(apply);
+    expect(onApply).not.toHaveBeenCalled();
+
+    // Move the start before the end with the form date picker
+    fireEvent.click(screen.getByLabelText("From date"));
+    fireEvent.click(screen.getByRole("button", { name: /March 5th, 2026/ }));
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect(onApply).toHaveBeenCalledWith(
+      expect.objectContaining({ startDate: "2026-03-05", endDate: "2026-03-10" })
+    );
+  });
+
+  it("applies separate From and To account selections for transfers", () => {
+    const { onApply } = setup("desktop", EMPTY_FILTERS, { kind: "transfer" });
+    open("desktop");
+    const [fromTrigger, toTrigger] = screen.getAllByRole("button", { name: /any account/i });
+    fireEvent.click(fromTrigger);
+    fireEvent.click(screen.getByText("BPI Savings"));
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    fireEvent.click(toTrigger);
+    fireEvent.click(screen.getAllByText("BDO").at(-1)!);
+    // the open account dropdown leaves the panel aria-hidden behind it
+    fireEvent.click(screen.getByRole("button", { name: "Apply", hidden: true }));
+    expect(onApply).toHaveBeenCalledWith(
+      expect.objectContaining({ fromAccountIds: ["a1"], toAccountIds: ["a2"], accountIds: [] })
+    );
+  });
+});

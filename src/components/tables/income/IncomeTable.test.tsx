@@ -59,22 +59,35 @@ vi.mock('@/components/shared/TagInput', () => ({
     }),
 }));
 
-vi.mock('@/components/ui/toggle-group', () => ({
-  ToggleGroup: ({
-    children,
-    onValueChange,
-  }: {
-    children: React.ReactNode;
-    onValueChange?: (v: string) => void;
-  }) =>
-    React.createElement(
-      'div',
-      { 'data-testid': 'toggle-group', onClick: () => onValueChange?.('view-all') },
-      children
-    ),
-  ToggleGroupItem: ({ children, value }: { children: React.ReactNode; value: string }) =>
-    React.createElement('button', { 'data-testid': `toggle-item-${value}` }, children),
-}));
+// Forwards item clicks to onValueChange and exposes the controlled value, so
+// preset selection and "a custom range deselects the preset" are observable.
+vi.mock('@/components/ui/toggle-group', () => {
+  const Ctx = React.createContext<((v: string) => void) | undefined>(undefined);
+  return {
+    ToggleGroup: ({
+      children,
+      onValueChange,
+      value,
+    }: {
+      children: React.ReactNode;
+      onValueChange?: (v: string) => void;
+      value?: string;
+    }) =>
+      React.createElement(
+        Ctx.Provider,
+        { value: onValueChange },
+        React.createElement('div', { 'data-testid': 'toggle-group', 'data-value': value }, children)
+      ),
+    ToggleGroupItem: ({ children, value }: { children: React.ReactNode; value: string }) => {
+      const onValueChange = React.useContext(Ctx);
+      return React.createElement(
+        'button',
+        { 'data-testid': `toggle-item-${value}`, onClick: () => onValueChange?.(value) },
+        children
+      );
+    },
+  };
+});
 
 vi.mock('@/components/ui/popover', () => ({
   Popover: ({ children }: { children: React.ReactNode }) =>
@@ -90,32 +103,55 @@ vi.mock('@/components/ui/popover', () => ({
 vi.mock('@/components/transactions/filters/TransactionFilterControl', () => ({
   TransactionFilterControl: ({ onApply, activeCount, hideAccount, kind }: any) =>
     React.createElement(
-      'button',
-      {
-        'data-testid': 'filter-control',
-        'data-kind': kind,
-        'data-hide-account': String(!!hideAccount),
-        'data-active-count': activeCount,
-        onClick: () =>
-          onApply({
-            accountIds: ['acc-1'],
-            fromAccountIds: [],
-            toAccountIds: [],
-            categoryIds: [],
-            tagIds: [],
-            amountMin: '100',
-            amountMax: '',
-            startDate: '',
-            endDate: '',
-          }),
-      },
-      'Filters'
+      React.Fragment,
+      null,
+      React.createElement(
+        'button',
+        {
+          'data-testid': 'filter-control',
+          'data-kind': kind,
+          'data-hide-account': String(!!hideAccount),
+          'data-active-count': activeCount,
+          onClick: () =>
+            onApply({
+              accountIds: ['acc-1'],
+              fromAccountIds: [],
+              toAccountIds: [],
+              categoryIds: [],
+              tagIds: [],
+              amountMin: '100',
+              amountMax: '',
+              startDate: '',
+              endDate: '',
+            }),
+        },
+        'Filters'
+      ),
+      React.createElement(
+        'button',
+        {
+          'data-testid': 'filter-control-range',
+          onClick: () =>
+            onApply({
+              accountIds: [],
+              fromAccountIds: [],
+              toAccountIds: [],
+              categoryIds: [],
+              tagIds: [],
+              amountMin: '',
+              amountMax: '',
+              startDate: '2026-01-01',
+              endDate: '2026-01-31',
+            }),
+        },
+        'Apply range'
+      )
     ),
 }));
 
 vi.mock('@/components/transactions/filters/ActiveFilterChips', () => ({
   ActiveFilterChips: ({ filters, onRemove, onClearAll }: any) =>
-    filters.amountMin || filters.accountIds.length > 0
+    filters.amountMin || filters.accountIds.length > 0 || filters.startDate
       ? React.createElement(
           'div',
           { 'data-testid': 'filter-chips' },
@@ -152,6 +188,7 @@ vi.mock('@/lib/utils', () => ({
 // Imports after mocks
 // ---------------------------------------------------------------------------
 import { useIncomeTransactionsQuery } from '@/hooks/useIncomeTransactionsQuery';
+import { resolveDatePreset } from '@/lib/transaction-filters';
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 import { useIncomeTypesQuery } from '@/hooks/useIncomeTypesQuery';
 import { useTagsQuery } from '@/hooks/useTagsQuery';
@@ -496,5 +533,76 @@ describe('IncomeTable server-side filtering', () => {
   it('shows the Account filter on the full list', () => {
     renderIncomeTable();
     expect(screen.getByTestId('filter-control').getAttribute('data-hide-account')).toBe('false');
+  });
+});
+
+// -----------------------------------------------------------------------
+// Date presets and custom range
+// -----------------------------------------------------------------------
+describe('IncomeTable date presets and custom range', () => {
+  const lastParams = () => (vi.mocked(useIncomeTransactionsQuery).mock.calls.at(-1)?.[0] ?? {}) as any;
+  const toggleValue = () => screen.getByTestId('toggle-group').getAttribute('data-value');
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupAllMocks();
+  });
+
+  it('starts on View all with no dates', () => {
+    renderIncomeTable();
+    expect(toggleValue()).toBe('view-all');
+    expect(lastParams().startDate).toBeUndefined();
+  });
+
+  it.each(['this-week', 'this-month', 'this-year'] as const)(
+    'selecting %s sends its resolved range, selects it and shows the summary',
+    (preset) => {
+      renderIncomeTable();
+      fireEvent.click(screen.getByTestId(`toggle-item-${preset}`));
+      const range = resolveDatePreset(preset)!;
+      expect(lastParams().startDate).toBe(range.startDate);
+      expect(lastParams().endDate).toBe(range.endDate);
+      expect(toggleValue()).toBe(preset);
+      expect(screen.getByTestId('filter-summary')).toBeTruthy();
+    }
+  );
+
+  it('going back to View all drops the dates and hides the summary', () => {
+    renderIncomeTable();
+    fireEvent.click(screen.getByTestId('toggle-item-this-month'));
+    fireEvent.click(screen.getByTestId('toggle-item-view-all'));
+    expect(lastParams().startDate).toBeUndefined();
+    expect(lastParams().endDate).toBeUndefined();
+    expect(screen.queryByTestId('filter-summary')).toBeNull();
+  });
+
+  it('applying a custom range deselects the preset and sends the custom dates', () => {
+    renderIncomeTable();
+    fireEvent.click(screen.getByTestId('toggle-item-this-year'));
+    fireEvent.click(screen.getByTestId('filter-control-range'));
+    expect(toggleValue()).toBe('');
+    expect(lastParams().startDate).toBe('2026-01-01');
+    expect(lastParams().endDate).toBe('2026-01-31');
+    expect(screen.getByTestId('filter-summary')).toBeTruthy();
+  });
+
+  it('selecting a preset after a custom range clears the custom range', () => {
+    renderIncomeTable();
+    fireEvent.click(screen.getByTestId('filter-control-range'));
+    fireEvent.click(screen.getByTestId('toggle-item-this-month'));
+    const range = resolveDatePreset('this-month')!;
+    expect(lastParams().startDate).toBe(range.startDate);
+    expect(lastParams().endDate).toBe(range.endDate);
+    expect(lastParams().filters.startDate).toBe('');
+    expect(lastParams().filters.endDate).toBe('');
+    expect(toggleValue()).toBe('this-month');
+  });
+
+  it('Clear all after a custom range restores View all', () => {
+    renderIncomeTable();
+    fireEvent.click(screen.getByTestId('filter-control-range'));
+    fireEvent.click(screen.getByTestId('clear-all-chips'));
+    expect(toggleValue()).toBe('view-all');
+    expect(lastParams().startDate).toBeUndefined();
   });
 });
