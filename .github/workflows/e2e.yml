@@ -18,7 +18,7 @@ jobs:
           POSTGRES_PASSWORD: local_dev_password
           POSTGRES_DB: money_map_dev
         ports:
-          - 5432:5432
+          - 5433:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -26,10 +26,11 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://postgres:local_dev_password@localhost:5432/money_map_dev
-      DIRECT_URL: postgresql://postgres:local_dev_password@localhost:5432/money_map_dev
+      DATABASE_URL: postgresql://postgres:local_dev_password@localhost:5433/money_map_dev
+      DIRECT_URL: postgresql://postgres:local_dev_password@localhost:5433/money_map_dev
       BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
       CI: true
+      E2E_PROD: 1
 
     steps:
       - name: Checkout
