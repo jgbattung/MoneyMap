@@ -925,3 +925,274 @@ test.describe("Expense table filtering", () => {
     await expect(page.getByText(/across \d+ transactions?/)).toHaveCount(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Advanced filtering against the real Postgres: every filter alone and combined
+// on all three list APIs (Decimal sums, tag any-of, inclusive bounds, AND with
+// search/account scope), plus the transfer table and the mobile filter sheet.
+// Seeds its own rows (no balance changes) and removes them afterwards.
+// ---------------------------------------------------------------------------
+test.describe("Advanced transaction filtering", () => {
+  const userId = "test-user-id";
+  const acc = { a: "qa-acc-a", b: "qa-acc-b", c: "qa-acc-c" };
+  const tag = { trip: "qa-tag-trip", gift: "qa-tag-gift" };
+  const expenseIds = ["qa-exp-lunch", "qa-exp-market", "qa-exp-bus", "qa-exp-snack"];
+  const incomeIds = ["qa-inc-salary", "qa-inc-gig"];
+  const transferIds = ["qa-trf-ab", "qa-trf-bc", "qa-trf-ca"];
+
+  type ListResponse = { transactions: { name: string }[]; total: number; totalAmount?: string; hasMore: boolean };
+
+  async function list(page: Page, path: string, query: string) {
+    const res = await page.request.get(`/api/${path}?${query}`);
+    return { status: res.status(), body: res.ok() ? ((await res.json()) as ListResponse) : null };
+  }
+  const names = (body: ListResponse | null) => (body?.transactions ?? []).map((t) => t.name).sort();
+
+  test.beforeAll(async () => {
+    for (const [id, name] of [
+      [acc.a, "QA Account A"],
+      [acc.b, "QA Account B"],
+      [acc.c, "QA Account C"],
+    ]) {
+      await prisma.financialAccount.upsert({
+        where: { id },
+        create: { id, userId, name, accountType: "SAVINGS", initialBalance: 100000, currentBalance: 100000 },
+        update: {},
+      });
+    }
+    for (const [id, name] of [
+      [tag.trip, "QA Trip"],
+      [tag.gift, "QA Gift"],
+    ]) {
+      await prisma.tag.upsert({ where: { id }, create: { id, userId, name, color: "teal" }, update: {} });
+    }
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const expenses = [
+      { id: expenseIds[0], name: "QA Lunch", amount: "120.50", accountId: acc.a, expenseTypeId: "expense-type-dining", date: new Date("2025-03-05T00:00:00Z"), tags: [tag.trip] },
+      // cron-shaped timestamp (00:05Z) on the end day of a range must stay included
+      { id: expenseIds[1], name: "QA Market", amount: "300.25", accountId: acc.a, expenseTypeId: "expense-type-groceries", date: new Date("2025-03-15T00:05:00Z"), tags: [tag.gift] },
+      { id: expenseIds[2], name: "QA Bus", amount: "75.00", accountId: acc.b, expenseTypeId: "expense-type-transport", date: new Date("2025-04-10T00:00:00Z"), tags: [] },
+      { id: expenseIds[3], name: "QA Today Snack", amount: "50.00", accountId: acc.b, expenseTypeId: "expense-type-dining", date: today, tags: [tag.trip] },
+    ];
+    for (const { tags, ...row } of expenses) {
+      await prisma.expenseTransaction.upsert({
+        where: { id: row.id },
+        create: { ...row, userId, isInstallment: false, tags: { connect: tags.map((id) => ({ id })) } },
+        update: {},
+      });
+    }
+
+    const incomes = [
+      { id: incomeIds[0], name: "QA Salary", amount: "50000.00", accountId: acc.a, incomeTypeId: "income-type-salary", date: new Date("2025-03-01T00:00:00Z"), tags: [tag.trip] },
+      { id: incomeIds[1], name: "QA Gig", amount: "1500.75", accountId: acc.b, incomeTypeId: "income-type-freelance", date: new Date("2025-03-20T00:00:00Z"), tags: [] },
+    ];
+    for (const { tags, ...row } of incomes) {
+      await prisma.incomeTransaction.upsert({
+        where: { id: row.id },
+        create: { ...row, userId, tags: { connect: tags.map((id) => ({ id })) } },
+        update: {},
+      });
+    }
+
+    const transfers = [
+      { id: transferIds[0], name: "QA Move AB", amount: 1000, fromAccountId: acc.a, toAccountId: acc.b, date: new Date("2025-03-05T00:00:00Z"), tags: [tag.trip] },
+      { id: transferIds[1], name: "QA Move BC", amount: 250.5, fromAccountId: acc.b, toAccountId: acc.c, date: new Date("2025-03-10T00:00:00Z"), tags: [] },
+      { id: transferIds[2], name: "QA Move CA", amount: 99, fromAccountId: acc.c, toAccountId: acc.a, date: new Date("2025-03-25T00:00:00Z"), tags: [tag.gift] },
+    ];
+    for (const { tags, ...row } of transfers) {
+      await prisma.transferTransaction.upsert({
+        where: { id: row.id },
+        create: { ...row, userId, transferTypeId: "transfer-type-internal", tags: { connect: tags.map((id) => ({ id })) } },
+        update: {},
+      });
+    }
+  });
+
+  test.afterAll(async () => {
+    await prisma.transferTransaction.deleteMany({ where: { id: { in: transferIds } } });
+    await prisma.incomeTransaction.deleteMany({ where: { id: { in: incomeIds } } });
+    await prisma.expenseTransaction.deleteMany({ where: { id: { in: expenseIds } } });
+    await prisma.tag.deleteMany({ where: { id: { in: Object.values(tag) } } });
+    await prisma.financialAccount.deleteMany({ where: { id: { in: Object.values(acc) } } });
+    await prisma.$disconnect();
+  });
+
+  test("expense API applies each filter alone and in combination", async ({ page }) => {
+    const both = `accountIds=${acc.a},${acc.b}`;
+
+    let r = await list(page, "expense-transactions", `accountIds=${acc.b}`);
+    expect(names(r.body)).toEqual(["QA Bus", "QA Today Snack"]);
+    expect(r.body?.total).toBe(2);
+    expect(parseFloat(r.body?.totalAmount ?? "")).toBe(125);
+
+    r = await list(page, "expense-transactions", `${both}&categoryIds=expense-type-dining`);
+    expect(names(r.body)).toEqual(["QA Lunch", "QA Today Snack"]);
+
+    // tags match any selected tag
+    r = await list(page, "expense-transactions", `tagIds=${tag.trip},${tag.gift}`);
+    expect(names(r.body)).toEqual(["QA Lunch", "QA Market", "QA Today Snack"]);
+    expect(parseFloat(r.body?.totalAmount ?? "")).toBeCloseTo(470.75, 2);
+
+    // amount bounds are inclusive
+    r = await list(page, "expense-transactions", `${both}&amountMin=120.50&amountMax=300.25`);
+    expect(names(r.body)).toEqual(["QA Lunch", "QA Market"]);
+    r = await list(page, "expense-transactions", `${both}&amountMax=75`);
+    expect(names(r.body)).toEqual(["QA Bus", "QA Today Snack"]);
+
+    // date bounds are inclusive, including a 00:05Z row on the end day
+    r = await list(page, "expense-transactions", `${both}&startDate=2025-03-05&endDate=2025-03-15`);
+    expect(names(r.body)).toEqual(["QA Lunch", "QA Market"]);
+
+    // search ANDs with account and tag filters
+    r = await list(page, "expense-transactions", `search=QA&accountIds=${acc.a}&tagIds=${tag.gift}`);
+    expect(names(r.body)).toEqual(["QA Market"]);
+    expect(r.body?.totalAmount).toBe("300.25");
+
+    // counts and pagination reflect the filtered set
+    r = await list(page, "expense-transactions", `${both}&skip=1&take=2`);
+    expect(r.body?.total).toBe(4);
+    expect(r.body?.transactions).toHaveLength(2);
+    expect(r.body?.hasMore).toBe(true);
+
+    // a filter that matches nothing returns an empty set with a zero total
+    r = await list(page, "expense-transactions", `${both}&amountMin=99999`);
+    expect(r.body?.total).toBe(0);
+    expect(parseFloat(r.body?.totalAmount ?? "")).toBe(0);
+  });
+
+  test("expense API rejects invalid filters with 400", async ({ page }) => {
+    for (const query of [
+      "amountMin=500&amountMax=100",
+      "startDate=2025-03-15&endDate=2025-03-05",
+      "amountMin=abc",
+      "startDate=2025-02-30",
+    ]) {
+      const r = await list(page, "expense-transactions", query);
+      expect(r.status, query).toBe(400);
+    }
+  });
+
+  test("income API filters by account, category, tag, amount and date with a Decimal total", async ({ page }) => {
+    const both = `accountIds=${acc.a},${acc.b}`;
+    let r = await list(page, "income-transactions", both);
+    expect(names(r.body)).toEqual(["QA Gig", "QA Salary"]);
+    expect(r.body?.totalAmount).toBe("51500.75");
+
+    r = await list(page, "income-transactions", `${both}&categoryIds=income-type-freelance`);
+    expect(names(r.body)).toEqual(["QA Gig"]);
+    r = await list(page, "income-transactions", `tagIds=${tag.trip}`);
+    expect(names(r.body)).toEqual(["QA Salary"]);
+    r = await list(page, "income-transactions", `${both}&amountMax=1500.75`);
+    expect(names(r.body)).toEqual(["QA Gig"]);
+    r = await list(page, "income-transactions", `${both}&startDate=2025-03-01&endDate=2025-03-01`);
+    expect(names(r.body)).toEqual(["QA Salary"]);
+    expect(r.body?.total).toBe(1);
+  });
+
+  test("transfer API filters From/To separately and ANDs search with account scope", async ({ page }) => {
+    let r = await list(page, "transfer-transactions", `fromAccountIds=${acc.a}`);
+    expect(names(r.body)).toEqual(["QA Move AB"]);
+    r = await list(page, "transfer-transactions", `toAccountIds=${acc.a}`);
+    expect(names(r.body)).toEqual(["QA Move CA"]);
+    r = await list(page, "transfer-transactions", `fromAccountIds=${acc.b}&toAccountIds=${acc.c}`);
+    expect(names(r.body)).toEqual(["QA Move BC"]);
+    expect(r.body?.total).toBe(1);
+    expect(r.body?.totalAmount).toBeUndefined();
+
+    // Float amount column, inclusive bounds
+    r = await list(page, "transfer-transactions", `fromAccountIds=${acc.a},${acc.b},${acc.c}&amountMin=99&amountMax=250.5`);
+    expect(names(r.body)).toEqual(["QA Move BC", "QA Move CA"]);
+    r = await list(page, "transfer-transactions", `tagIds=${tag.gift}&startDate=2025-03-20&endDate=2025-03-31`);
+    expect(names(r.body)).toEqual(["QA Move CA"]);
+
+    // Regression: account scope + search used to be OR-ed together
+    r = await list(page, "transfer-transactions", `accountId=${acc.b}&search=${encodeURIComponent("QA Move CA")}`);
+    expect(r.body?.total).toBe(0);
+    r = await list(page, "transfer-transactions", `accountId=${acc.a}&search=${encodeURIComponent("QA Move")}`);
+    expect(names(r.body)).toEqual(["QA Move AB", "QA Move CA"]);
+  });
+
+  test("transfer table filters by From and To and shows a count-only total", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/transfers");
+    await page.waitForLoadState("networkidle");
+
+    const rows = page.locator("tbody tr");
+    await expect(rows.filter({ hasText: "QA Move BC" })).toBeVisible({ timeout: 15000 });
+
+    await page.getByRole("button", { name: "Filters" }).click();
+    // From comes first; once it has a selection its label changes, leaving To as the only "Any account"
+    await page.getByRole("button", { name: "Any account" }).first().click();
+    await page.getByRole("option", { name: "QA Account B" }).click();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("button", { name: "Any account" })).toHaveCount(1);
+    await page.getByRole("button", { name: "Any account" }).click();
+    await page.getByRole("option", { name: "QA Account C" }).click();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
+
+    await expect(rows.filter({ hasText: "QA Move BC" })).toBeVisible();
+    await expect(rows.filter({ hasText: "QA Move AB" })).toHaveCount(0);
+    await expect(rows.filter({ hasText: "QA Move CA" })).toHaveCount(0);
+    await expect(page.getByText("1 transfer", { exact: true })).toBeVisible();
+    await expect(page.getByText("From: QA Account B")).toBeVisible();
+    await expect(page.getByText("To: QA Account C")).toBeVisible();
+
+    // removing one side widens the result immediately
+    await page.getByRole("button", { name: "Remove filter To: QA Account C" }).click();
+    await expect(page.getByText("To: QA Account C")).toHaveCount(0);
+    await expect(rows.filter({ hasText: "QA Move BC" })).toBeVisible();
+    await expect(page.getByText(/^\d+ transfers?$/)).toBeVisible();
+  });
+
+  test("mobile expense list: This Week preset, filter sheet, chips and invalid range", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/expenses");
+    await page.waitForLoadState("networkidle");
+
+    const mobile = page.locator("div.md\\:hidden").first();
+    const presetThisWeek = page.getByRole("radio", { name: "This Week" });
+    const summary = mobile.locator("div.inline-flex").filter({ hasText: /across [0-9]+ transactions?/ });
+
+    await presetThisWeek.click();
+    await expect(presetThisWeek).toHaveAttribute("data-state", "on");
+    await expect(mobile.getByText("QA Today Snack")).toBeVisible({ timeout: 15000 });
+    await expect(mobile.getByText("QA Bus")).toHaveCount(0);
+    await expect(summary).toBeVisible();
+
+    // Open the sheet: invalid amount range blocks Apply
+    await page.getByRole("button", { name: "Filters" }).click();
+    const sheet = page.getByRole("dialog");
+    await sheet.getByLabel("Minimum amount").fill("500");
+    await sheet.getByLabel("Maximum amount").fill("100");
+    await expect(sheet.getByRole("alert")).toHaveText("Min must be less than or equal to max");
+    await expect(sheet.getByRole("button", { name: "Apply", exact: true })).toBeDisabled();
+    await sheet.getByLabel("Minimum amount").fill("");
+    await sheet.getByLabel("Maximum amount").fill("");
+
+    // Account dropdown + category chip, then Apply
+    await sheet.getByRole("button", { name: "Any account" }).click();
+    await page.getByRole("option", { name: "QA Account B" }).click();
+    await page.keyboard.press("Escape");
+    await sheet.getByRole("button", { name: "Dining Out" }).click();
+    await sheet.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(sheet).toBeHidden();
+
+    await expect(mobile.getByText("Account: QA Account B")).toBeVisible();
+    await expect(mobile.getByText("Category: Dining Out")).toBeVisible();
+    await expect(mobile.getByText("QA Today Snack")).toBeVisible();
+    await expect(summary).toContainText("₱50.00");
+    await expect(summary).toContainText("across 1 transaction");
+
+    // Removing a chip applies immediately; Clear all resets filters and preset
+    await mobile.getByRole("button", { name: "Remove filter Category: Dining Out" }).click();
+    await expect(mobile.getByText("Category: Dining Out")).toHaveCount(0);
+    await expect(summary).toContainText("₱50.00");
+    await mobile.getByRole("button", { name: "Clear all" }).click();
+    await expect(mobile.getByText("Account: QA Account B")).toHaveCount(0);
+    await expect(page.getByRole("radio", { name: "View All" })).toHaveAttribute("data-state", "on");
+    await expect(summary).toHaveCount(0);
+  });
+});
