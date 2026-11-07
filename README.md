@@ -29,6 +29,7 @@ A single-user personal finance tracker built for one person's actual money: net 
 - [Demo data](#demo-data)
 - [Testing and CI](#testing-and-ci)
 - [Scheduled jobs](#scheduled-jobs)
+- [Backups](#backups)
 - [Design system](#design-system)
 - [Status](#status)
 - [License](#license)
@@ -387,6 +388,91 @@ Two daily jobs run as GitHub Actions workflows that call authenticated API route
 | --- | --- | --- |
 | `process-installments` | 00:00 UTC daily | Generates the next child payment for every active installment plan that is due, deducting from the card in a single transaction. |
 | `process-statements` | 04:00 UTC daily | Rolls credit card statement cycles forward and recalculates statement balances. |
+| `backup-production` | 18:00 UTC daily (02:00 Manila) | Dumps the production database with a read-only login, proves the dump restores, encrypts it and keeps it for 90 days. It does not call the app. See [Backups](#backups). |
+
+## Backups
+
+Production runs on the Supabase free plan, which has no restorable backups. A bad migration or a balance-corrupting bug would be unrecoverable, so a nightly GitHub Action backs the database up.
+
+**What runs.** The `backup-production` workflow runs at 18:00 UTC (02:00 Manila) and can be run by hand from the Actions tab. Each run:
+
+1. Connects as `moneymap_readonly`, a login that can read the `public` schema and nothing else, through the Supabase Session pooler. It re-checks on every run that the login cannot write, and refuses to dump if it can.
+2. Dumps the `public` schema (every app table, including sessions) with a `pg_dump` that matches the server's major version.
+3. Restores the dump into a throwaway Postgres on the runner, to prove it restores, and prints per-table row counts in the job summary.
+4. Encrypts the dump with [age](https://github.com/FiloSottile/age) to the public key in `.github/backup-recipient.txt`.
+5. Uploads the result as the artifact `production-backup-<date>-<run id>`, kept for 90 days. It holds `backup.dump.age` (the encrypted dump) and `manifest.json` (time, checksum, Postgres version, per-table row counts).
+
+**Where.** Actions tab, `backup-production`, a run, then Artifacts. Or `gh run download <run-id> -p "production-backup-*"`.
+
+**What is public.** The repo is public, so any signed-in GitHub user can download an artifact and read a job summary. Artifacts are encrypted, and the private key lives only in Bitwarden, never in GitHub. The job summary and manifest show table names and row counts, never row contents. If you lose the private key, the backups cannot be opened. No production write credential exists in GitHub: the only secret is `BACKUP_DATABASE_URL`, the read-only login.
+
+**Failures.** GitHub emails the person who last edited the workflow schedule when a scheduled run fails. Check Settings, Notifications, Actions on GitHub if you want to be sure those arrive. GitHub also disables scheduled workflows in a public repo after 60 days without repository activity; if the backups stop, open the Actions tab and re-enable the workflow.
+
+**Coverage.** Only the `public` schema is backed up. Anything written after the latest backup is not in it, so the data-loss window for a restore is up to 24 hours.
+
+### First-time setup
+
+Done once, by you. None of these are run by an agent or by the workflow.
+
+1. **Create the read-only login.** Follow the Backup role section of [`scripts/db/README.md`](scripts/db/README.md): run `create-backup-role.sql`, then `verify-backup-role.sql` and expect `ok = true`.
+2. **Generate the key pair.** Install age with `winget install FiloSottile.age`, then run `age-keygen -o "$env:TEMP\moneymap-backup-key.txt"` in PowerShell. It prints `Public key: age1...`. Copy the line starting `AGE-SECRET-KEY-1` from that file into Bitwarden, then delete the file. Put the public key in `.github/backup-recipient.txt` (replacing `REPLACE_WITH_AGE_PUBLIC_KEY`, one line) through a pull request. The workflow refuses to run until that file holds a real key.
+3. **Set the secret.** Run `gh secret set BACKUP_DATABASE_URL` and paste the connection string at the hidden prompt: `postgresql://moneymap_readonly.<project-ref>:<password>@<session-pooler-host>:5432/postgres?sslmode=require`. Use the Session pooler host and port 5432 from Supabase, Connect. The workflow rejects any other user, host, port or database.
+4. **Run it once.** In the Actions tab, run `backup-production` by hand and wait for green. The first run is also the check that the pooler accepts the new login.
+5. **Run the restore drill once** (next section), so you know the key and the process work before you ever need them.
+
+### Restore drill
+
+The drill proves a real backup can be opened and restored. It uses no production credential at any step: it restores into the local Docker database only.
+
+One-time prerequisites: `winget install FiloSottile.age`, `gh auth login`, and `docker compose up -d` so `money_map_postgres` is running.
+
+```bash
+npm run backup:drill                  # latest successful nightly backup
+npm run backup:drill -- --run <id>    # a specific backup-production run
+```
+
+What it does:
+
+1. Downloads the artifact with `gh` into a folder under your OS temp directory (never inside the repo, which OneDrive syncs).
+2. Asks for the age secret key at a hidden prompt. Paste only the `AGE-SECRET-KEY-1...` line from Bitwarden.
+3. Decrypts the dump and checks its checksum against the manifest.
+4. Creates the database `money_map_restore_drill` inside `money_map_postgres` and restores into it, using a `pg_restore` from a `postgres:<major>-alpine` image matching the production major version. Before restoring it checks that the target is exactly that container and database.
+5. Compares every table's row count with the manifest.
+
+`PASS` means the file decrypted, the checksum matched, the dump restored, and every table's row count equals the manifest. `FAIL` lists the tables that differ (counts only). Cleanup is automatic, including on failure: it drops `money_map_restore_drill` and deletes the temp folder holding the key, the ciphertext and the decrypted dump. If the process is killed mid-run, clean up by hand with `docker exec money_map_postgres dropdb -U postgres --if-exists money_map_restore_drill` and delete any `moneymap-drill-*` folder in your temp directory.
+
+### Production restore runbook
+
+Run by you, by hand, only when production data is actually damaged. No agent runs this. It overwrites the production `public` schema, so read all of it first.
+
+**What you lose.** Everything written after the `createdAtUtc` in the chosen backup's `manifest.json`. For last night's backup that is up to 24 hours. Sessions are restored to that point as well, so you may be signed out and old sessions may come back.
+
+1. **Take a fresh backup first.** In the Actions tab, run `backup-production` by hand and wait for green. This records the state production is in right now, so the restore can be undone by restoring this backup the same way.
+2. **Choose the backup to restore.** Download the artifact for the run you want, the latest one from before the damage. Read `createdAtUtc` and `pgMajor` in `manifest.json`.
+3. **Decrypt it outside OneDrive.**
+
+   ```powershell
+   $work = Join-Path $env:TEMP "mm-restore"
+   New-Item -ItemType Directory -Force $work | Out-Null
+   Set-Content "$work\key.txt" (Read-Host -MaskInput "age secret key")
+   age -d -i "$work\key.txt" -o "$work\backup.dump" "<path to>\backup.dump.age"
+   Remove-Item "$work\key.txt"
+   ```
+
+4. **Restore.** Use the `postgres` credential from Bitwarden through the Session pooler, and an image whose major version matches `pgMajor`:
+
+   ```powershell
+   $env:PGURL = Read-Host -MaskInput "postgres Session pooler URL"
+   docker run --rm -e PGURL -v "${work}:/restore:ro" postgres:<pgMajor>-alpine sh -c 'pg_restore --clean --if-exists --single-transaction --exit-on-error --no-owner --no-privileges -d "$PGURL" /restore/backup.dump'
+   Remove-Item Env:PGURL
+   ```
+
+   The URL looks like `postgresql://postgres.<project-ref>:<password>@<session-pooler-host>:5432/postgres`. It is one transaction: if anything errors, nothing changes and production stays as it was. Do not improvise around an error, because the usual cause is something in `public` that the dump does not know about. Stop the app's traffic while it runs, since anything written meanwhile is lost anyway.
+5. **Check the balances.** Run `scripts/db/reconcile-balances.sql` as described in [`scripts/db/README.md`](scripts/db/README.md). `diff` should be 0.00 for your accounts.
+6. **Re-create the backup login's grants.** The restore drops and recreates the `public` schema, which removes the grants `moneymap_readonly` had. Run `drop-backup-role.sql` and then `create-backup-role.sql` (same password as before, so the secret stays valid), then `verify-backup-role.sql` and expect `ok = true`. Until then the nightly backup fails at its read-only check.
+7. **Delete the decrypted file.** `Remove-Item -Recurse -Force $work`.
+
+To undo a restore, repeat steps 3 to 7 with the backup from step 1.
 
 ## Design system
 
