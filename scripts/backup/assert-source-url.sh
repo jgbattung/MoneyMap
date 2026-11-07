@@ -36,4 +36,12 @@ if [ -n "$query" ] && [ "$query" != "?sslmode=require" ]; then
   fail "query (only ?sslmode=require is allowed)"
 fi
 
+# In GitHub Actions only the whole secret is masked automatically, not its
+# parts. The repo is public, so mask the project ref and host too: a failed
+# login prints them in libpq error messages.
+if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+  echo "::add-mask::${user#moneymap_readonly.}"
+  echo "::add-mask::$host"
+fi
+
 echo "assert-source-url: ok"
