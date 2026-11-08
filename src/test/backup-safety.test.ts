@@ -426,7 +426,7 @@ describe("source URL guard (assert-source-url.sh)", () => {
     ["postgresql scheme with sslmode", fakeUrl()],
     ["postgres scheme", fakeUrl({ scheme: "postgres" })],
     ["no query", fakeUrl({ query: "" })],
-    ["percent-encoded password characters", fakeUrl({ password: "abc%2Fdef-ghi_jkl.mno~pqr" })],
+    ["percent-encoded password characters", fakeUrl({ password: "abc%2Fdef-ghi_jkl.mno~pqr" })], // ggignore
   ])("accepts the read-only Session pooler login (%s)", (_name, url) => {
     const r = runShell("assert-source-url.sh", [], { BACKUP_DATABASE_URL: url });
     expect(r.out).toContain("assert-source-url: ok");
@@ -443,7 +443,7 @@ describe("source URL guard (assert-source-url.sh)", () => {
     ["an uppercase project ref", fakeUrl({ user: `moneymap_readonly.${FAKE.ref.toUpperCase()}` }), "user"],
     ["a user with a suffix", fakeUrl({ user: `moneymap_readonly.${FAKE.ref}x.y` }), "user"],
     ["no password", fakeUrl({ password: "" }), "password"],
-    ["a password with symbols", fakeUrl({ password: "abc$def" }), "password"],
+    ["a password with symbols", fakeUrl({ password: "abc$def" }), "password"], // ggignore
     ["the direct host", fakeUrl({ host: `db.${FAKE.ref}.supabase.co` }), "host"],
     ["a host suffix trick", fakeUrl({ host: `${FAKE.host}.evil.example` }), "host"],
     ["a host prefix trick", fakeUrl({ host: `evil.${FAKE.host}` }), "host"],
