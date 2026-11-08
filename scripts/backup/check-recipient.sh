@@ -5,6 +5,8 @@
 #
 # Usage: check-recipient.sh [recipient-file]   (default .github/backup-recipient.txt)
 set -euo pipefail
+# Byte-wise character ranges: in a UTF-8 locale [a-z] can also match uppercase.
+export LC_ALL=C
 
 file="${1:-.github/backup-recipient.txt}"
 

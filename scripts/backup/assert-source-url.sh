@@ -6,6 +6,8 @@
 # The URL is read from the environment, never from argv, and is never printed.
 # On failure only the NAME of the failed check is printed.
 set -euo pipefail
+# Byte-wise character ranges: in a UTF-8 locale [a-z] can also match uppercase.
+export LC_ALL=C
 
 fail() {
   echo "assert-source-url: check failed: $1" >&2
