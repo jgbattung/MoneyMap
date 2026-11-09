@@ -761,6 +761,17 @@ describe("backup docs and wiring", () => {
     expect(text).toContain("| `backup-production` | 18:00 UTC daily");
   });
 
+  it("documents the drill as a throwaway no-network container, not the compose database", () => {
+    const text = readme();
+    const section = text.slice(text.indexOf("### Restore drill"), text.indexOf("### Production restore runbook"));
+    expect(section).toContain("postgres:<major>-alpine");
+    expect(section).toContain("--network none");
+    expect(section).toContain("docker ps -aq --filter label=moneymap.drill");
+    expect(section).toContain("npm.cmd run backup:drill");
+    expect(section).not.toContain("money_map_postgres");
+    expect(section).not.toMatch(/docker compose up -d/);
+  });
+
   it("no backup surface contains age secret key material", () => {
     const files = [
       join(process.cwd(), "README.md"),

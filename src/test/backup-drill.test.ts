@@ -35,7 +35,7 @@ vi.mock("child_process", async () => {
 
 const fs = await import("fs");
 const childProcess = await import("child_process");
-const { runDrill } = await import("../../scripts/backup/restore-drill");
+const { preflight, runDrill } = await import("../../scripts/backup/restore-drill");
 
 const rmSpy = vi.mocked(fs.rmSync);
 const spawnMock = vi.mocked(childProcess.spawn);
@@ -417,5 +417,41 @@ describe("restore drill: orchestration", () => {
     expect(execFileSyncMock).not.toHaveBeenCalled();
     expect(calls).toEqual([]);
     expect(rmSpy).toHaveBeenCalledWith(dir, { recursive: true, force: true });
+  });
+});
+
+describe("restore drill: preflight", () => {
+  let checked: string[];
+  const fakeTools = (failing?: string) => {
+    checked = [];
+    execFileSyncMock.mockImplementation(((command: string, args: string[]) => {
+      const line = [command, ...args].join(" ");
+      checked.push(line);
+      if (line === failing) throw new Error("ENOENT");
+      return Buffer.alloc(0);
+    }) as unknown as typeof childProcess.execFileSync);
+  };
+
+  it("needs only age, docker, gh and a running Docker, never the compose container", () => {
+    fakeTools();
+    expect(() => preflight({ needGh: true })).not.toThrow();
+    expect(checked).toEqual(["age --version", "docker --version", "gh --version", "docker info"]);
+    expect(spawnMock).not.toHaveBeenCalled();
+  });
+
+  it("skips gh when the caller does not need it", () => {
+    fakeTools();
+    preflight({ needGh: false });
+    expect(checked).toEqual(["age --version", "docker --version", "docker info"]);
+  });
+
+  it("names a missing tool", () => {
+    fakeTools("age --version");
+    expect(() => preflight({ needGh: true })).toThrow(/"age" is not installed or not on PATH/);
+  });
+
+  it("asks for Docker Desktop when docker info fails", () => {
+    fakeTools("docker info");
+    expect(() => preflight({ needGh: true })).toThrow(/Docker is not running/);
   });
 });
