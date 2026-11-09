@@ -62,9 +62,10 @@ const shFiles = (): string[] => readdirSync(BACKUP_DIR).filter((f) => f.endsWith
  * returns removed so a CRLF checkout on Windows behaves like the LF file the runner gets.
  */
 const runShell = (script: string, args: string[], env: Record<string, string> = {}) => {
-  const source = readFileSync(join(BACKUP_DIR, script), "utf8").replace(/\r/g, "");
-  const result = spawnSync("bash", ["-s", "--", ...args], {
-    input: source,
+  // Run by path, as the workflow does. Piping the script on stdin (`bash -s`) leaves
+  // BASH_SOURCE unset, which `set -u` scripts trip over on some bash versions (CI).
+  // .gitattributes keeps these scripts LF, so no CR stripping is needed.
+  const result = spawnSync("bash", [`scripts/backup/${script}`, ...args], {
     encoding: "utf8",
     cwd: process.cwd(),
     env: { ...process.env, GITHUB_ACTIONS: "", BACKUP_DATABASE_URL: "", ...env },
