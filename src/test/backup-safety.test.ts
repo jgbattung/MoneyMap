@@ -24,10 +24,13 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "f
 import { tmpdir } from "os";
 import { join } from "path";
 import {
-  DRILL_TARGET,
-  assertDrillTarget,
+  DRILL_CONTAINER_PREFIX,
+  DRILL_DATABASE,
+  DRILL_LABEL,
+  assertDrillContainer,
   assertSha256,
   compareCounts,
+  drillContainerName,
   parseCountsTsv,
   parseManifest,
 } from "../../scripts/backup/drill-lib";
@@ -101,41 +104,73 @@ const validManifest = () => ({
   runId: "1",
 });
 
-describe("restore drill: target guard", () => {
-  it("accepts exactly the pinned local target", () => {
-    expect(() => assertDrillTarget({ ...DRILL_TARGET })).not.toThrow();
+describe("restore drill: throwaway container guard", () => {
+  const NAME = "moneymap-drill-0123456789abcdef";
+  const good = () => ({
+    name: `/${NAME}`,
+    labels: { "moneymap.drill": "1" },
+    networkMode: "none",
+    image: "postgres:17-alpine",
+  });
+  const expected = { name: NAME, major: 17 };
+
+  it("pins the drill database, container prefix and label", () => {
+    expect(DRILL_DATABASE).toBe("money_map_restore_drill");
+    expect(DRILL_CONTAINER_PREFIX).toBe("moneymap-drill-");
+    expect(DRILL_LABEL).toBe("moneymap.drill=1");
   });
 
-  it("pins the local container, in-network port and drill database", () => {
-    expect(DRILL_TARGET).toEqual({
-      container: "money_map_postgres",
-      host: "localhost",
-      port: "5432",
-      database: "money_map_restore_drill",
-      user: "postgres",
-    });
+  it("builds the container name from a short lowercase id", () => {
+    expect(drillContainerName("0123456789abcdef")).toBe(NAME);
+  });
+
+  it.each(["", "short", "UPPERCASE12345678", "has-dash-12345678", "has space 12345", "a".repeat(33), "../etc/passwd"])(
+    "rejects the random id %j",
+    (random) => {
+      expect(() => drillContainerName(random)).toThrow(/random id/);
+    },
+  );
+
+  it("accepts exactly the container the drill started (docker reports a leading slash)", () => {
+    expect(() => assertDrillContainer(good(), expected)).not.toThrow();
+    expect(() => assertDrillContainer({ ...good(), name: NAME }, expected)).not.toThrow();
   });
 
   it.each([
-    ["container", "some_other_container"],
-    ["host", "db.example.supabase.co"],
-    ["port", "5433"],
-    ["port", "6543"],
-    ["database", "money_map_dev"],
-    ["database", "postgres"],
-    ["user", "moneymap_readonly"],
-  ] as const)("rejects a wrong %s (%s)", (field, value) => {
-    expect(() => assertDrillTarget({ ...DRILL_TARGET, [field]: value })).toThrow(/Refusing to restore/);
+    ["name", { name: "/moneymap-drill-ffffffffffffffff" }],
+    ["name", { name: "/money_map_postgres" }],
+    ["name", { name: "/some_other_container" }],
+    ["label", { labels: {} }],
+    ["label", { labels: { "moneymap.drill": "0" } }],
+    ["networkMode", { networkMode: "bridge" }],
+    ["networkMode", { networkMode: "host" }],
+    ["networkMode", { networkMode: "container:money_map_postgres" }],
+    ["image", { image: "postgres:15-alpine" }],
+    ["image", { image: "postgres:17" }],
+  ] as const)("rejects a wrong %s", (field, override) => {
+    expect(() => assertDrillContainer({ ...good(), ...override }, expected)).toThrow(
+      new RegExp(`field "${field}"`),
+    );
+  });
+
+  it("rejects money_map_postgres even if the caller expects it", () => {
+    expect(() =>
+      assertDrillContainer({ ...good(), name: "/money_map_postgres" }, { name: "money_map_postgres", major: 17 }),
+    ).toThrow(/field "name"/);
+  });
+
+  it("rejects an image major that differs from the backup's major", () => {
+    expect(() => assertDrillContainer(good(), { name: NAME, major: 16 })).toThrow(/field "image"/);
   });
 
   it("names the failing field but never echoes the offending value", () => {
     try {
-      assertDrillTarget({ ...DRILL_TARGET, host: "secret-host.example.com" });
+      assertDrillContainer({ ...good(), image: "secret-registry.example.com/postgres:17-alpine" }, expected);
       throw new Error("should have thrown");
     } catch (error) {
       const message = (error as Error).message;
-      expect(message).toContain('"host"');
-      expect(message).not.toContain("secret-host.example.com");
+      expect(message).toContain('"image"');
+      expect(message).not.toContain("secret-registry.example.com");
     }
   });
 });
@@ -240,10 +275,26 @@ describe("backup tooling: source-text safety", () => {
     expect(code).not.toMatch(/shell\s*:\s*true/);
   });
 
-  it("the drill pins the target to the drill-lib literal and joins the local container", () => {
+  it("the drill restores only into its own no-network throwaway container, guarded before the restore", () => {
     const code = stripComments(readFileSync(join(BACKUP_DIR, "restore-drill.ts"), "utf8"));
-    expect(code).toContain("assertDrillTarget(DRILL_TARGET)");
-    expect(code).toContain("container:${t.container}");
+    expect(code).toContain("drillContainerName(");
+    expect(code).toContain("assertDrillContainer(");
+    expect(code.indexOf("assertDrillContainer(")).toBeLessThan(code.indexOf('"pg_restore"'));
+    expect(code).toMatch(/"--network",\s*"none"/);
+    expect(code).toContain("DRILL_LABEL");
+    expect(code).toMatch(/"rm",\s*"-f"/);
+  });
+
+  it("no backup script touches the compose database, joins another container's network, or uses port 5433", () => {
+    for (const file of tsFiles()) {
+      const code = stripComments(readFileSync(join(BACKUP_DIR, file), "utf8"));
+      // The guard in drill-lib may name money_map_postgres only to reject it.
+      const withoutRejection = file === "drill-lib.ts" ? code.replace(/name === "money_map_postgres"/g, "") : code;
+      expect(withoutRejection, `${file} must not reference money_map_postgres`).not.toMatch(/money_map_postgres/);
+      expect(code, `${file} must not use container: networking`).not.toMatch(/container:/);
+      expect(code, `${file} must not reference host port 5433`).not.toMatch(/5433/);
+      expect(code, `${file} must not run dropdb`).not.toMatch(/dropdb/);
+    }
   });
 });
 

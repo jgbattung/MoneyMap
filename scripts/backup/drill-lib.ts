@@ -26,7 +26,7 @@ export const DRILL_LABEL = "moneymap.drill=1";
 /** Name of the throwaway container. `random` is a short lowercase hex/alphanumeric id. */
 export function drillContainerName(random: string): string {
   if (!/^[a-z0-9]{8,32}$/.test(random)) {
-    throw new Error("Refusing to start the drill container: the random id is not 8-32 lowercase letters or digits.");
+    throw new Error("Refusing to start the throwaway container, the random id is not 8-32 lowercase letters or digits.");
   }
   return `${DRILL_CONTAINER_PREFIX}${random}`;
 }

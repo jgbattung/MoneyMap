@@ -4,9 +4,11 @@
  * `child_process` is mocked so no test ever runs `age` or `docker`, and `fs.rmSync` is
  * replaced by a spy so a regression in the "only delete inside the OS temp folder" guard
  * can never delete a real folder while these tests run. What is asserted is the exact
- * sequence of commands the drill would run: every one targets the pinned local
- * container and drill database, the restore never uses --clean, and cleanup (drop the
- * drill database, delete the artifact folder) runs on success and on every failure.
+ * sequence of commands the drill would run: it starts its own `postgres:<major>-alpine`
+ * container with `--network none` and the drill label, runs everything inside it via
+ * `docker exec`, never references `money_map_postgres`, `container:` networking, `dropdb`
+ * or `--clean`, and force-removes the container (and deletes the artifact folder) on
+ * success and on every failure path, including a readiness timeout and a failed guard.
  *
  * Companion to `backup-safety.test.ts`, which holds the source-text invariants.
  */
@@ -81,15 +83,46 @@ const makeArtifact = (manifest: Record<string, unknown> = {}) => {
   return dir;
 };
 
-/** Default fake Postgres: the drill database answers, the restore yields the manifest counts. */
+/** Fake `docker inspect` output for the throwaway container, in the drill's `-f` template shape. */
+const inspectOutput = (name: string, overrides: { network?: string; labels?: Record<string, string>; image?: string } = {}) =>
+  [
+    JSON.stringify(`/${name}`),
+    JSON.stringify(overrides.labels ?? { "moneymap.drill": "1" }),
+    JSON.stringify(overrides.network ?? "none"),
+    JSON.stringify(overrides.image ?? "postgres:17-alpine"),
+  ].join("|") + "\n";
+
+/** Default fake Docker: the container is healthy and the drill database restores the manifest counts. */
 const defaultResponder = (args: string[]) => {
+  if (args[0] === "inspect") return { code: 0, stdout: inspectOutput(args.at(-1)!) };
   if (args.includes("select current_database()")) return { code: 0, stdout: "money_map_restore_drill\n" };
   if (args.includes("-F")) return { code: 0, stdout: "_prisma_migrations\t3\nuser\t1\n" };
   return { code: 0 };
 };
 
-/** The tool part of a docker call, after the image name. */
-const toolOf = (call: SpawnCall) => call.args.slice(call.args.findIndex((a) => a.endsWith("-alpine")) + 1);
+/** What a call does: "run", "inspect", "rm", or for `docker exec` the tool inside the container. */
+const kindOf = (call: SpawnCall) => (call.args[0] === "exec" ? call.args[3] : call.args[0]);
+
+/** Name of the container the drill started (from `docker run --name`). */
+const startedName = () => calls.find((c) => c.args[0] === "run")!.args[calls.find((c) => c.args[0] === "run")!.args.indexOf("--name") + 1];
+
+/** Every path must end by force-removing the container it started, and by deleting the artifact folder. */
+const expectCleanedUp = (dir: string) => {
+  const name = startedName();
+  expect(calls.at(-1)!.args).toEqual(["rm", "-f", name]);
+  expect(rmSpy).toHaveBeenCalledWith(dir, { recursive: true, force: true });
+};
+
+/** Nothing the drill spawns may reference the compose database, another container's network, or dropdb. */
+const expectNoForbiddenCommands = () => {
+  for (const call of calls) {
+    expect(call.command).toBe("docker");
+    expect(call.args.join(" ")).not.toMatch(
+      /money_map_postgres|money_map_dev|money_map_demo|container:|dropdb|--clean|--network host|--network bridge|-p \d|--publish/,
+    );
+  }
+};
+
 
 beforeEach(async () => {
   calls = [];
@@ -163,42 +196,89 @@ describe("restore drill: refuses to work outside the OS temp folder", () => {
 });
 
 describe("restore drill: orchestration", () => {
-  it("passes when every count matches, and runs only against the pinned local target", async () => {
+  const NAME_PATTERN = /^moneymap-drill-[0-9a-f]{16}$/;
+
+  it("passes when every count matches, restoring only into its own no-network container", async () => {
     const dir = makeArtifact();
     const logs: string[] = [];
     const result = await runDrill({ artifactDir: dir, identity: join(dir, "key.txt"), log: (m) => logs.push(m) });
 
     expect(result).toEqual({ pass: true, tableCount: 2, mismatches: [], createdAtUtc: "2026-11-08T18:00:00Z" });
     expect(logs.some((l) => l.startsWith("PASS: 2 tables"))).toBe(true);
+    expect(logs.some((l) => l.includes("removed the throwaway container"))).toBe(true);
+    expectNoForbiddenCommands();
 
-    // Every command is a docker client container joined to the local compose database.
-    for (const call of calls) {
-      expect(call.command).toBe("docker");
-      expect(call.args.slice(0, 6)).toEqual(["run", "--rm", "-i", "--network", "container:money_map_postgres", "postgres:17-alpine"]);
-      expect(call.args).toEqual(expect.arrayContaining(["-h", "localhost", "-p", "5432", "-U", "postgres"]));
-      expect(call.args.join(" ")).not.toMatch(/--clean|money_map_dev|money_map_demo/);
+    expect(calls.map(kindOf)).toEqual([
+      "run",
+      "pg_isready",
+      "inspect",
+      "createdb",
+      "psql",
+      "psql",
+      "pg_restore",
+      "psql",
+      "rm",
+    ]);
+    const [start, ready, inspect, create, who, prepare, restore, count, remove] = calls;
+
+    const name = startedName();
+    expect(name).toMatch(NAME_PATTERN);
+    expect(start.args.slice(0, 9)).toEqual(["run", "-d", "--name", name, "--label", "moneymap.drill=1", "--network", "none", "-e"]);
+    expect(start.args[9]).toMatch(/^POSTGRES_PASSWORD=[0-9a-f]{32}$/);
+    expect(start.args.slice(10)).toEqual(["postgres:17-alpine"]);
+
+    // Everything else runs inside that container, never on the host or another container.
+    for (const call of [ready, create, who, prepare, restore, count]) {
+      expect(call.args.slice(0, 3)).toEqual(["exec", "-i", name]);
     }
-
-    expect(calls.map((c) => toolOf(c)[0])).toEqual(["dropdb", "createdb", "psql", "psql", "pg_restore", "psql", "dropdb"]);
-    const [dropFirst, create, who, prepare, restore, count, dropLast] = calls;
-    expect(toolOf(dropFirst)).toEqual(["dropdb", "--if-exists", "-h", "localhost", "-p", "5432", "-U", "postgres", "money_map_restore_drill"]);
-    expect(toolOf(create).at(-1)).toBe("money_map_restore_drill");
-    expect(toolOf(who)).toEqual(expect.arrayContaining(["-d", "money_map_restore_drill", "select current_database()"]));
-    expect(toolOf(prepare)).toEqual(expect.arrayContaining(["-d", "money_map_restore_drill", "DROP SCHEMA public"]));
-    expect(toolOf(restore)).toEqual(
-      expect.arrayContaining(["--exit-on-error", "--no-owner", "--no-privileges", "-d", "money_map_restore_drill"]),
-    );
+    expect(ready.args.slice(3)).toEqual(["pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-q"]);
+    expect(inspect.args.at(-1)).toBe(name);
+    expect(create.args.slice(3)).toEqual(["createdb", "-U", "postgres", "money_map_restore_drill"]);
+    expect(who.args).toEqual(expect.arrayContaining(["-d", "money_map_restore_drill", "select current_database()"]));
+    expect(prepare.args).toEqual(expect.arrayContaining(["-d", "money_map_restore_drill", "DROP SCHEMA public"]));
+    expect(restore.args.slice(3)).toEqual([
+      "pg_restore",
+      "--exit-on-error",
+      "--no-owner",
+      "--no-privileges",
+      "-U",
+      "postgres",
+      "-d",
+      "money_map_restore_drill",
+    ]);
     expect(restore.piped).toBe(true);
-    expect(toolOf(count)).toEqual(expect.arrayContaining(["-d", "money_map_restore_drill", "-F", "\t"]));
+    expect(count.args).toEqual(expect.arrayContaining(["-d", "money_map_restore_drill", "-F", "\t"]));
     expect(count.piped).toBe(true);
-    expect(dropLast.args).toEqual(dropFirst.args);
+    expect(remove.args).toEqual(["rm", "-f", name]);
 
     // The artifact folder (key, ciphertext, decrypted dump) is deleted, and nothing else.
     expect(rmSpy).toHaveBeenCalledTimes(1);
     expect(rmSpy).toHaveBeenCalledWith(dir, { recursive: true, force: true });
   });
 
-  it("fails with counts-only mismatches and still cleans up", async () => {
+  it.each([15, 16, 17, 18])("starts a server of the backup's own major (%i)", async (major) => {
+    responder = (args) =>
+      args[0] === "inspect" ? { code: 0, stdout: inspectOutput(args.at(-1)!, { image: `postgres:${major}-alpine` }) } : defaultResponder(args);
+    const dir = makeArtifact({ pgMajor: major });
+
+    const result = await runDrill({ artifactDir: dir, identity: "k", log: () => undefined });
+    expect(result.pass).toBe(true);
+    expect(calls[0].args.at(-1)).toBe(`postgres:${major}-alpine`);
+    expectCleanedUp(dir);
+  });
+
+  it("uses a fresh container name and password on every run", async () => {
+    await runDrill({ artifactDir: makeArtifact(), identity: "k", log: () => undefined });
+    const first = calls[0].args;
+    calls.length = 0;
+    await runDrill({ artifactDir: makeArtifact(), identity: "k", log: () => undefined });
+    const second = calls[0].args;
+
+    expect(second[3]).not.toBe(first[3]);
+    expect(second[9]).not.toBe(first[9]);
+  });
+
+  it("fails with counts-only mismatches and still removes the container", async () => {
     const dir = makeArtifact({ tables: { _prisma_migrations: 3, user: 2, ghost: 0 } });
     const logs: string[] = [];
     const result = await runDrill({ artifactDir: dir, identity: "k", log: (m) => logs.push(m) });
@@ -206,88 +286,136 @@ describe("restore drill: orchestration", () => {
     expect(result.pass).toBe(false);
     expect(result.mismatches).toEqual(["ghost: missing from the restore (manifest has 0)", "user: manifest 2, restored 1"]);
     expect(logs.some((l) => l.startsWith("FAIL: 2 difference(s)"))).toBe(true);
-    expect(toolOf(calls.at(-1)!)[0]).toBe("dropdb");
-    expect(rmSpy).toHaveBeenCalledWith(dir, { recursive: true, force: true });
+    expectNoForbiddenCommands();
+    expectCleanedUp(dir);
   });
 
   it("refuses to restore if the connected database is not the drill database", async () => {
     responder = (args) =>
-      args.includes("select current_database()") ? { code: 0, stdout: "money_map_dev\n" } : defaultResponder(args);
+      args.includes("select current_database()") ? { code: 0, stdout: "postgres\n" } : defaultResponder(args);
     const dir = makeArtifact();
 
     await expect(runDrill({ artifactDir: dir, identity: "k", log: () => undefined })).rejects.toThrow(
       /connected database is not the drill database/,
     );
-    expect(calls.some((c) => toolOf(c)[0] === "pg_restore")).toBe(false);
-    expect(toolOf(calls.at(-1)!)[0]).toBe("dropdb");
-    expect(rmSpy).toHaveBeenCalledWith(dir, { recursive: true, force: true });
+    expect(calls.some((c) => kindOf(c) === "pg_restore")).toBe(false);
+    expectCleanedUp(dir);
   });
 
-  it("stops before touching the database when decryption fails", async () => {
+  it("stops before starting any container when decryption fails", async () => {
     execFileSyncMock.mockImplementation(() => {
       throw new Error("age: no identity matched any of the recipients");
     });
     const dir = makeArtifact();
 
     await expect(runDrill({ artifactDir: dir, identity: "k", log: () => undefined })).rejects.toThrow(/Decryption failed/);
-    // Only the cleanup drop runs.
-    expect(calls.map((c) => toolOf(c)[0])).toEqual(["dropdb"]);
+    expect(calls).toEqual([]);
     expect(rmSpy).toHaveBeenCalledWith(dir, { recursive: true, force: true });
   });
 
-  it("stops before touching the database when the checksum does not match", async () => {
+  it("stops before starting any container when the checksum does not match", async () => {
     manifestSha = "f".repeat(64);
     const dir = makeArtifact();
 
     await expect(runDrill({ artifactDir: dir, identity: "k", log: () => undefined })).rejects.toThrow(/checksum/);
-    expect(calls.map((c) => toolOf(c)[0])).toEqual(["dropdb"]);
+    expect(calls).toEqual([]);
     expect(rmSpy).toHaveBeenCalledWith(dir, { recursive: true, force: true });
   });
 
-  it("surfaces a failed pg_restore and still cleans up", async () => {
+  it("removes the container when it never becomes ready", async () => {
+    // Each Date.now() call jumps 40 s, so the 90 s deadline passes after a few real 1 s polls.
+    let clock = 0;
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => (clock += 40_000));
+    try {
+      responder = (args) => (args.includes("pg_isready") ? { code: 2 } : defaultResponder(args));
+      const dir = makeArtifact();
+
+      const outcome = runDrill({ artifactDir: dir, identity: "k", log: () => undefined }).then(
+        () => "resolved",
+        (error: Error) => error.message,
+      );
+
+      expect(await outcome).toMatch(/did not become ready/);
+      expect(calls.filter((c) => kindOf(c) === "pg_isready").length).toBeGreaterThan(1);
+      expect(calls.some((c) => ["inspect", "createdb", "pg_restore"].includes(kindOf(c)!))).toBe(false);
+      expectCleanedUp(dir);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it("removes the container when docker run itself fails", async () => {
+    responder = (args) => (args[0] === "run" ? { code: 125 } : defaultResponder(args));
+    const dir = makeArtifact();
+
+    await expect(runDrill({ artifactDir: dir, identity: "k", log: () => undefined })).rejects.toThrow(
+      /Starting the throwaway container failed/,
+    );
+    expect(calls.map(kindOf)).toEqual(["run", "rm"]);
+    expectCleanedUp(dir);
+  });
+
+  it.each([
+    ["it is attached to a network", { network: "bridge" }, /networkMode/],
+    ["it is on another container's network", { network: "container:money_map_postgres" }, /networkMode/],
+    ["it lacks the drill label", { labels: {} }, /label/],
+    ["it is the wrong image", { image: "postgres:15-alpine" }, /image/],
+  ])("refuses to restore, and removes the container, when %s", async (_why, overrides, message) => {
+    responder = (args) =>
+      args[0] === "inspect" ? { code: 0, stdout: inspectOutput(args.at(-1)!, overrides) } : defaultResponder(args);
+    const dir = makeArtifact();
+
+    await expect(runDrill({ artifactDir: dir, identity: "k", log: () => undefined })).rejects.toThrow(message);
+    expect(calls.some((c) => ["createdb", "psql", "pg_restore"].includes(kindOf(c)!))).toBe(false);
+    expectCleanedUp(dir);
+  });
+
+  it("refuses to restore when docker reports a different container name", async () => {
+    responder = (args) =>
+      args[0] === "inspect" ? { code: 0, stdout: inspectOutput("money_map_postgres") } : defaultResponder(args);
+    const dir = makeArtifact();
+
+    await expect(runDrill({ artifactDir: dir, identity: "k", log: () => undefined })).rejects.toThrow(/field "name"/);
+    expect(calls.some((c) => kindOf(c) === "pg_restore")).toBe(false);
+    expectCleanedUp(dir);
+  });
+
+  it("surfaces a failed pg_restore and still removes the container", async () => {
     responder = (args) => (args.includes("pg_restore") ? { code: 1 } : defaultResponder(args));
     const dir = makeArtifact();
 
     await expect(runDrill({ artifactDir: dir, identity: "k", log: () => undefined })).rejects.toThrow(/pg_restore failed/);
-    expect(calls.some((c) => toolOf(c)[0] === "psql" && c.args.includes("-F"))).toBe(false);
-    expect(toolOf(calls.at(-1)!)[0]).toBe("dropdb");
-    expect(rmSpy).toHaveBeenCalledWith(dir, { recursive: true, force: true });
+    expect(calls.some((c) => kindOf(c) === "psql" && c.args.includes("-F"))).toBe(false);
+    expectCleanedUp(dir);
   });
 
-  it("warns, and still deletes the folder, when the cleanup drop fails", async () => {
-    let drops = 0;
-    responder = (args) => {
-      if (args.includes("dropdb") && ++drops === 2) return { code: 1 };
-      return defaultResponder(args);
-    };
+  it("warns with a manual command, and still deletes the folder, when the container cannot be removed", async () => {
+    responder = (args) => (args[0] === "rm" ? { code: 1 } : defaultResponder(args));
     const dir = makeArtifact();
     const logs: string[] = [];
 
     await runDrill({ artifactDir: dir, identity: "k", log: (m) => logs.push(m) });
-    expect(logs.some((l) => l.startsWith("WARNING: could not drop money_map_restore_drill"))).toBe(true);
+    expect(logs.some((l) => l.startsWith("WARNING: could not remove the throwaway container") && l.includes(`docker rm -f ${startedName()}`))).toBe(true);
     expect(rmSpy).toHaveBeenCalledWith(dir, { recursive: true, force: true });
   });
 
-  it("rejects an artifact without the expected files and still cleans up", async () => {
+  it("rejects an artifact without the expected files before starting anything", async () => {
     const dir = realFs.mkdtempSync(join(tmpdir(), "mm-drill-test-"));
     dirs.push(dir);
 
     await expect(runDrill({ artifactDir: dir, identity: "k", log: () => undefined })).rejects.toThrow(
       /does not contain manifest\.json and backup\.dump\.age/,
     );
-    // No manifest, so cleanup falls back to the local container's major.
-    expect(calls).toHaveLength(1);
-    expect(calls[0].args).toContain("postgres:15-alpine");
-    expect(toolOf(calls[0])[0]).toBe("dropdb");
+    expect(calls).toEqual([]);
     expect(rmSpy).toHaveBeenCalledWith(dir, { recursive: true, force: true });
   });
 
-  it("rejects an invalid manifest before decrypting", async () => {
+  it("rejects an invalid manifest before decrypting or starting anything", async () => {
     const dir = makeArtifact({ pgMajor: 14 });
 
     await expect(runDrill({ artifactDir: dir, identity: "k", log: () => undefined })).rejects.toThrow(/pgMajor/);
     expect(execFileSyncMock).not.toHaveBeenCalled();
+    expect(calls).toEqual([]);
     expect(rmSpy).toHaveBeenCalledWith(dir, { recursive: true, force: true });
   });
 });
-
