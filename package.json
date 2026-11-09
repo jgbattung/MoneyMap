@@ -17,6 +17,7 @@
     "demo:marker": "tsx scripts/demo/create-marker.ts",
     "seed:demo": "tsx scripts/demo/seed.ts",
     "screenshots": "tsx scripts/demo/screenshots.ts",
+    "backup:drill": "tsx scripts/backup/restore-drill.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
