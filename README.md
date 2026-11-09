@@ -422,24 +422,26 @@ Done once, by you. None of these are run by an agent or by the workflow.
 
 ### Restore drill
 
-The drill proves a real backup can be opened and restored. It uses no production credential at any step: it restores into the local Docker database only.
+The drill proves a real backup can be opened and restored. It uses no production credential at any step: it restores into a throwaway Postgres container that has no network access.
 
-One-time prerequisites: `winget install FiloSottile.age`, `gh auth login`, and `docker compose up -d` so `money_map_postgres` is running.
+One-time prerequisites: `winget install FiloSottile.age`, `gh auth login`, and Docker Desktop running. You do not need `docker compose up`: the drill does not use or touch your local dev database.
 
 ```bash
 npm run backup:drill                  # latest successful nightly backup
 npm run backup:drill -- --run <id>    # a specific backup-production run
 ```
 
+In Windows PowerShell, if the execution policy blocks `npm`, use `npm.cmd run backup:drill` instead.
+
 What it does:
 
 1. Downloads the artifact with `gh` into a folder under your OS temp directory (never inside the repo, which OneDrive syncs).
 2. Asks for the age secret key at a hidden prompt. Paste only the `AGE-SECRET-KEY-1...` line from Bitwarden.
 3. Decrypts the dump and checks its checksum against the manifest.
-4. Creates the database `money_map_restore_drill` inside `money_map_postgres` and restores into it, using a `pg_restore` from a `postgres:<major>-alpine` image matching the production major version. Before restoring it checks that the target is exactly that container and database.
+4. Starts its own throwaway `postgres:<major>-alpine` container (the major version from the manifest, so a Postgres 17 backup restores into a Postgres 17 server) with `--network none`, so it cannot reach any network, production included. It creates the database `money_map_restore_drill` in it and restores there. Before restoring it checks that the container is the one it just started: its name, the `moneymap.drill=1` label, no network, and the expected image.
 5. Compares every table's row count with the manifest.
 
-`PASS` means the file decrypted, the checksum matched, the dump restored, and every table's row count equals the manifest. `FAIL` lists the tables that differ (counts only). Cleanup is automatic, including on failure: it drops `money_map_restore_drill` and deletes the temp folder holding the key, the ciphertext and the decrypted dump. If the process is killed mid-run, clean up by hand with `docker exec money_map_postgres dropdb -U postgres --if-exists money_map_restore_drill` and delete any `moneymap-drill-*` folder in your temp directory.
+`PASS` means the file decrypted, the checksum matched, the dump restored, and every table's row count equals the manifest. `FAIL` lists the tables that differ (counts only). Cleanup is automatic, including on failure: it removes the throwaway container and deletes the temp folder holding the key, the ciphertext and the decrypted dump. If the process is killed mid-run, clean up by hand: list leftovers with `docker ps -aq --filter label=moneymap.drill`, remove each with `docker rm -f <id>`, and delete any `moneymap-drill-*` folder in your temp directory.
 
 ### Production restore runbook
 

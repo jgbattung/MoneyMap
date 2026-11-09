@@ -5,20 +5,23 @@
  *   npm run backup:drill -- --run <id>    restore a specific backup-production run
  *
  * It downloads the artifact with `gh`, decrypts it with the age secret key you type at a
- * hidden prompt, checks the checksum, restores into the LOCAL Docker Postgres
- * (`money_map_postgres`, database `money_map_restore_drill`), compares row counts with
- * the manifest, and always cleans up (drops the database, deletes the temp folder with
+ * hidden prompt, checks the checksum, restores into its OWN throwaway
+ * `postgres:<major>-alpine` container (same major as the backup, started with
+ * `--network none`, database `money_map_restore_drill`), compares row counts with the
+ * manifest, and always cleans up (removes the container, deletes the temp folder with
  * the key, the ciphertext and the decrypted dump).
  *
  * SAFETY: this script needs no production credential and has none. The restore target is
- * the literal in `drill-lib.ts`. It reads no environment variable, loads no env file and
- * uses no Prisma client. Everything is written under the OS temp folder, never inside the
- * repository (the repo is synced by OneDrive). `runDrill` takes the artifact folder and
- * key as arguments so tests can drive it without `gh`; the CLI always downloads via `gh`.
+ * a container it just created with no network at all, so it cannot reach production, and
+ * it never touches `money_map_postgres` or any other existing container (see
+ * `drill-lib.ts`). It reads no environment variable, loads no env file and uses no Prisma
+ * client. Everything is written under the OS temp folder, never inside the repository
+ * (the repo is synced by OneDrive). `runDrill` takes the artifact folder and key as
+ * arguments so tests can drive it without `gh`; the CLI always downloads via `gh`.
  */
 
 import { execFileSync, spawn } from "child_process";
-import { createHash } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import {
   createReadStream,
   existsSync,
@@ -34,11 +37,12 @@ import {
 import { tmpdir } from "os";
 import { join, resolve, sep } from "path";
 import {
-  DRILL_HOST_PORT,
-  DRILL_TARGET,
-  assertDrillTarget,
+  DRILL_DATABASE,
+  DRILL_LABEL,
+  assertDrillContainer,
   assertSha256,
   compareCounts,
+  drillContainerName,
   parseCountsTsv,
   parseManifest,
 } from "./drill-lib";
@@ -65,6 +69,8 @@ interface CommandResult {
 }
 
 const ROW_COUNTS_SQL = join(__dirname, "row-counts.sql");
+const READY_TIMEOUT_MS = 90_000;
+const READY_POLL_MS = 1_000;
 
 function tail(text: string, lines = 15): string {
   return text.trim().split(/\r?\n/).slice(-lines).join("\n");
@@ -118,27 +124,9 @@ function run(command: string, args: string[], stdinFile?: string): Promise<Comma
   });
 }
 
-/** Runs a Postgres client tool from a matching-major image inside the container's network. */
-function postgresTool(major: number, tool: string[], stdinFile?: string): Promise<CommandResult> {
-  const t = DRILL_TARGET;
-  return run(
-    "docker",
-    [
-      "run",
-      "--rm",
-      "-i",
-      "--network",
-      `container:${t.container}`,
-      `postgres:${major}-alpine`,
-      ...tool,
-    ],
-    stdinFile,
-  );
-}
-
-function connectionFlags(): string[] {
-  const t = DRILL_TARGET;
-  return ["-h", t.host, "-p", t.port, "-U", t.user];
+/** Runs a command inside the throwaway drill container. Optionally pipes a file to stdin. */
+function dockerExec(name: string, args: string[], stdinFile?: string): Promise<CommandResult> {
+  return run("docker", ["exec", "-i", name, ...args], stdinFile);
 }
 
 async function mustSucceed(what: string, result: Promise<CommandResult>): Promise<CommandResult> {
@@ -163,30 +151,10 @@ export function preflight(options: { needGh: boolean }): void {
     }
   }
 
-  const running = (() => {
-    try {
-      return execFileSync("docker", ["inspect", "-f", "{{.State.Running}}", DRILL_TARGET.container], {
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"],
-      }).trim();
-    } catch {
-      return "";
-    }
-  })();
-  if (running !== "true") {
-    throw new Error(`Container ${DRILL_TARGET.container} is not running. Start it with: docker compose up -d`);
-  }
-
-  const published = execFileSync(
-    "docker",
-    ["inspect", "-f", '{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}', DRILL_TARGET.container],
-    { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
-  ).trim();
-  if (published !== DRILL_HOST_PORT) {
-    throw new Error(
-      `Container ${DRILL_TARGET.container} does not publish 5432 on host port ${DRILL_HOST_PORT}. ` +
-        "This is not the local compose database, so the drill will not run.",
-    );
+  try {
+    execFileSync("docker", ["info"], { stdio: "ignore" });
+  } catch {
+    throw new Error("Docker is not running. Start Docker Desktop and try again.");
   }
 }
 
@@ -198,6 +166,7 @@ export async function runDrill(options: DrillOptions): Promise<DrillResult> {
   }
 
   const cleaned: string[] = [];
+  let containerName: string | undefined;
   try {
     const manifestPath = findFile(artifactDir, "manifest.json");
     const cipherPath = findFile(artifactDir, "backup.dump.age");
@@ -220,20 +189,66 @@ export async function runDrill(options: DrillOptions): Promise<DrillResult> {
     assertSha256(await sha256File(dumpPath), manifest.sha256);
     log("Checksum matches the manifest.");
 
-    assertDrillTarget(DRILL_TARGET);
-    const db = DRILL_TARGET.database;
+    const db = DRILL_DATABASE;
     const major = manifest.pgMajor;
-    const flags = connectionFlags();
+    const name = drillContainerName(randomBytes(8).toString("hex"));
+    containerName = name;
 
+    log(`Starting a throwaway postgres:${major}-alpine container with no network...`);
     await mustSucceed(
-      "Dropping any previous drill database",
-      postgresTool(major, ["dropdb", "--if-exists", ...flags, db]),
+      "Starting the throwaway container",
+      run("docker", [
+        "run",
+        "-d",
+        "--name",
+        name,
+        "--label",
+        DRILL_LABEL,
+        "--network",
+        "none",
+        "-e",
+        `POSTGRES_PASSWORD=${randomBytes(16).toString("hex")}`,
+        `postgres:${major}-alpine`,
+      ]),
     );
-    await mustSucceed("Creating the drill database", postgresTool(major, ["createdb", ...flags, db]));
+
+    // The image's init server listens only on the unix socket, so wait on TCP loopback
+    // (as restore-check.sh does) to be sure the final server is the one accepting.
+    const deadline = Date.now() + READY_TIMEOUT_MS;
+    for (;;) {
+      const ready = await dockerExec(name, ["pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-q"]);
+      if (ready.code === 0) break;
+      if (Date.now() >= deadline) {
+        throw new Error("The throwaway Postgres container did not become ready in time.");
+      }
+      await new Promise((r) => setTimeout(r, READY_POLL_MS));
+    }
+
+    const inspected = await mustSucceed(
+      "Inspecting the throwaway container",
+      run("docker", [
+        "inspect",
+        "-f",
+        "{{json .Name}}|{{json .Config.Labels}}|{{json .HostConfig.NetworkMode}}|{{json .Config.Image}}",
+        name,
+      ]),
+    );
+    const [rawName, rawLabels, rawNetwork, rawImage] = inspected.stdout.trim().split("|");
+    assertDrillContainer(
+      {
+        name: JSON.parse(rawName) as string,
+        labels: (JSON.parse(rawLabels) ?? {}) as Record<string, string>,
+        networkMode: JSON.parse(rawNetwork) as string,
+        image: JSON.parse(rawImage) as string,
+      },
+      { name, major },
+    );
+
+    await mustSucceed("Creating the drill database", dockerExec(name, ["createdb", "-U", "postgres", db]));
 
     const who = await mustSucceed(
       "Checking the target database",
-      postgresTool(major, ["psql", ...flags, "-d", db, "-v", "ON_ERROR_STOP=1", "-tA", "-c", "select current_database()"]),
+      dockerExec(name, ["psql", "-U", "postgres", "-d", db, "-v", "ON_ERROR_STOP=1", "-tA", "-c", "select current_database()"]),
     );
     if (who.stdout.trim() !== db) {
       throw new Error("Refusing to restore: connected database is not the drill database.");
@@ -242,18 +257,18 @@ export async function runDrill(options: DrillOptions): Promise<DrillResult> {
     // The dump contains CREATE SCHEMA public; the new database already has an empty one.
     await mustSucceed(
       "Preparing the drill database",
-      postgresTool(major, ["psql", ...flags, "-d", db, "-v", "ON_ERROR_STOP=1", "-q", "-c", "DROP SCHEMA public"]),
+      dockerExec(name, ["psql", "-U", "postgres", "-d", db, "-v", "ON_ERROR_STOP=1", "-q", "-c", "DROP SCHEMA public"]),
     );
 
     log("Restoring...");
     await mustSucceed(
       "pg_restore",
-      postgresTool(major, ["pg_restore", "--exit-on-error", "--no-owner", "--no-privileges", ...flags, "-d", db], dumpPath),
+      dockerExec(name, ["pg_restore", "--exit-on-error", "--no-owner", "--no-privileges", "-U", "postgres", "-d", db], dumpPath),
     );
 
     const counted = await mustSucceed(
       "Counting rows",
-      postgresTool(major, ["psql", ...flags, "-d", db, "-v", "ON_ERROR_STOP=1", "-tA", "-F", "\t"], ROW_COUNTS_SQL),
+      dockerExec(name, ["psql", "-U", "postgres", "-d", db, "-v", "ON_ERROR_STOP=1", "-tA", "-F", "\t"], ROW_COUNTS_SQL),
     );
     const actual = parseCountsTsv(counted.stdout);
     const mismatches = compareCounts(manifest.tables, actual);
@@ -268,24 +283,18 @@ export async function runDrill(options: DrillOptions): Promise<DrillResult> {
     return { pass: mismatches.length === 0, tableCount, mismatches, createdAtUtc: manifest.createdAtUtc };
   } finally {
     // Cleanup runs on success and on every failure above.
-    try {
-      assertDrillTarget(DRILL_TARGET);
-      const major = (() => {
-        const m = findFile(artifactDir, "manifest.json");
-        try {
-          return m ? parseManifest(readFileSync(m, "utf8")).pgMajor : 15;
-        } catch {
-          return 15;
+    if (containerName) {
+      const byHand = `WARNING: could not remove the throwaway container. Remove it by hand: docker rm -f ${containerName}`;
+      try {
+        const removed = await run("docker", ["rm", "-f", containerName]);
+        if (removed.code === 0) {
+          cleaned.push("removed the throwaway container");
+        } else {
+          log(byHand);
         }
-      })();
-      const dropped = await postgresTool(major, ["dropdb", "--if-exists", ...connectionFlags(), DRILL_TARGET.database]);
-      if (dropped.code === 0) {
-        cleaned.push(`dropped database ${DRILL_TARGET.database}`);
-      } else {
-        log(`WARNING: could not drop ${DRILL_TARGET.database}. Drop it by hand: docker exec ${DRILL_TARGET.container} dropdb -U ${DRILL_TARGET.user} --if-exists ${DRILL_TARGET.database}`);
+      } catch {
+        log(byHand);
       }
-    } catch {
-      log(`WARNING: could not drop ${DRILL_TARGET.database}. Drop it by hand: docker exec ${DRILL_TARGET.container} dropdb -U ${DRILL_TARGET.user} --if-exists ${DRILL_TARGET.database}`);
     }
     rmSync(artifactDir, { recursive: true, force: true });
     cleaned.push("deleted the downloaded backup and the decrypted dump");

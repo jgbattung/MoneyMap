@@ -3,53 +3,54 @@
  * spawning, no environment access - everything here is unit-tested in
  * `src/test/backup-safety.test.ts`.
  *
- * SAFETY - the drill restores into ONE place only: the local Docker Postgres
- * `money_map_postgres`, database `money_map_restore_drill`. The target is a
- * literal. There is no input that can change it, no environment variable, no
+ * SAFETY - the drill restores into ONE kind of place only: a throwaway
+ * `postgres:<major>-alpine` container that the drill itself starts with
+ * `--network none` (no network at all, production included), database
+ * `money_map_restore_drill`, removed when the drill ends. It never touches
+ * `money_map_postgres` or any other existing container. There is no input that can
+ * change the database name or the container prefix, no environment variable, no
  * env-file loader, and no production credential anywhere in the drill.
- * `assertDrillTarget` positively checks every field before a restore starts.
+ * `assertDrillContainer` positively checks the started container before a restore.
  *
  * INVARIANTS - do not break these:
  *   - No environment variable may be read in `scripts/backup/*.ts`.
  *   - No env-file loader, no Prisma client.
- *   - `DRILL_TARGET` stays a literal; nothing may construct a target from input.
+ *   - The restore target is always a container the drill just created, started with
+ *     `--network none`; nothing may point the restore at an existing container.
  */
 
-export interface DrillTarget {
-  container: string;
-  host: string;
-  port: string;
-  database: string;
-  user: string;
+export const DRILL_DATABASE = "money_map_restore_drill";
+export const DRILL_CONTAINER_PREFIX = "moneymap-drill-";
+export const DRILL_LABEL = "moneymap.drill=1";
+
+/** Name of the throwaway container. `random` is a short lowercase hex/alphanumeric id. */
+export function drillContainerName(random: string): string {
+  if (!/^[a-z0-9]{8,32}$/.test(random)) {
+    throw new Error("Refusing to start the throwaway container, the random id is not 8-32 lowercase letters or digits.");
+  }
+  return `${DRILL_CONTAINER_PREFIX}${random}`;
 }
 
-/**
- * Inside the container's own network namespace Postgres listens on 5432. From the
- * Windows host the same server is on 5433 (`docker-compose.yml`). The drill joins the
- * container's network so it can use a `pg_restore` matching the production major.
- */
-export const DRILL_TARGET: DrillTarget = {
-  container: "money_map_postgres",
-  host: "localhost",
-  port: "5432",
-  database: "money_map_restore_drill",
-  user: "postgres",
-};
-
-/** The host port compose publishes the container's 5432 on. Checked in preflight. */
-export const DRILL_HOST_PORT = "5433";
+export interface DrillContainerInfo {
+  name: string;
+  labels: Record<string, string>;
+  networkMode: string;
+  image: string;
+}
 
 /** Names the failing field only. Never echoes the offending value back. */
-export function assertDrillTarget(target: DrillTarget): void {
-  const fields: (keyof DrillTarget)[] = ["container", "host", "port", "database", "user"];
-  for (const field of fields) {
-    if (target[field] !== DRILL_TARGET[field]) {
-      throw new Error(
-        `Refusing to restore: drill target field "${field}" is not the expected value. ` +
-          `The drill only ever restores into ${DRILL_TARGET.database} in ${DRILL_TARGET.container}.`,
-      );
-    }
-  }
+export function assertDrillContainer(info: DrillContainerInfo, expected: { name: string; major: number }): void {
+  const fail = (field: string): never => {
+    throw new Error(
+      `Refusing to restore: drill container field "${field}" is not the expected value. ` +
+        `The drill only ever restores into ${DRILL_DATABASE} in a throwaway container it started itself.`,
+    );
+  };
+  const name = info.name.replace(/^\//, "");
+  if (name !== expected.name || !name.startsWith(DRILL_CONTAINER_PREFIX) || name === "money_map_postgres") fail("name");
+  if (info.labels?.["moneymap.drill"] !== "1") fail("label");
+  if (info.networkMode !== "none") fail("networkMode");
+  if (info.image !== `postgres:${expected.major}-alpine`) fail("image");
 }
 
 export interface Manifest {

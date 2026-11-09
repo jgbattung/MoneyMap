@@ -1,0 +1,5 @@
+# Backup scripts and the recipient key run or are validated byte-for-byte on Linux;
+# keep them LF even on Windows checkouts with core.autocrlf=true.
+*.sh                         text eol=lf
+scripts/backup/*.sql         text eol=lf
+.github/backup-recipient.txt text eol=lf
