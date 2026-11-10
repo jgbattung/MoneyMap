@@ -383,3 +383,120 @@ describe('useEventLedgerTag', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Date-range mode and Tag all
+// ---------------------------------------------------------------------------
+
+describe('useEventLedger - range params', () => {
+  it('omits tagIds and sends date-only params when no tags are given', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => mockLedgerResponse });
+
+    const { result } = renderHook(
+      () => useEventLedger({ tagIds: [], startDate: '2026-11-03', endDate: '2026-11-09' }),
+      { wrapper: createWrapper() }
+    );
+    await result.current.refetch();
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    const url = new URL(mockFetch.mock.calls[0][0] as string, 'http://localhost');
+    expect(url.searchParams.has('tagIds')).toBe(false);
+    expect(url.searchParams.get('startDate')).toBe('2026-11-03');
+    expect(url.searchParams.get('endDate')).toBe('2026-11-09');
+  });
+});
+
+describe('useEventLedgerTag - tagAll and invalidation', () => {
+  function createClientWrapper() {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children);
+    return { queryClient, wrapper };
+  }
+
+  const expectedKeys = [
+    ['tags'],
+    ['eventLedger'],
+    ['expenseTransactions'],
+    ['incomeTransactions'],
+    ['transfers'],
+    ['recentTransactions'],
+    ['calendarDay'],
+  ];
+
+  it('tagAll sends the exact filter body once and resolves tagged', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: true, tagged: 7 }),
+    });
+    const { wrapper } = createClientWrapper();
+    const { result } = renderHook(() => useEventLedgerTag(), { wrapper });
+    const onSuccess = vi.fn();
+
+    result.current.tagAll(
+      { filter: { startDate: '2026-11-03', endDate: '2026-11-09', accountId: 'acc-1' }, tagIds: ['t1'] },
+      { onSuccess }
+    );
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith('/api/reports/event-ledger/tag', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filter: { startDate: '2026-11-03', endDate: '2026-11-09', accountId: 'acc-1' },
+        tagIds: ['t1'],
+      }),
+    });
+    expect(onSuccess.mock.calls[0][0]).toEqual({ success: true, tagged: 7 });
+  });
+
+  it('tagAll success invalidates the tag-write keys', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, tagged: 1 }) });
+    const { queryClient, wrapper } = createClientWrapper();
+    const spy = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(() => useEventLedgerTag(), { wrapper });
+
+    result.current.tagAll({
+      filter: { startDate: '2026-11-03', endDate: '2026-11-09' },
+      tagIds: ['t1'],
+    });
+
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    expect(spy.mock.calls.map(([a]) => (a as { queryKey: unknown }).queryKey)).toEqual(expectedKeys);
+  });
+
+  it('tagTransactions success invalidates the tag-write keys', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, tagged: 1 }) });
+    const { queryClient, wrapper } = createClientWrapper();
+    const spy = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(() => useEventLedgerTag(), { wrapper });
+
+    result.current.tagTransactions({
+      transactionIds: ['tx-1'],
+      transactionType: 'expense',
+      tagIds: ['t1'],
+    });
+
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    expect(spy.mock.calls.map(([a]) => (a as { queryKey: unknown }).queryKey)).toEqual(expectedKeys);
+  });
+
+  it('tagAll does not invalidate when the request fails', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+    const { queryClient, wrapper } = createClientWrapper();
+    const spy = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(() => useEventLedgerTag(), { wrapper });
+    const onError = vi.fn();
+
+    result.current.tagAll(
+      { filter: { startDate: '2026-11-03', endDate: '2026-11-09' }, tagIds: ['t1'] },
+      { onError }
+    );
+
+    await waitFor(() => expect(onError).toHaveBeenCalled());
+    expect(spy).not.toHaveBeenCalled();
+  });
+});

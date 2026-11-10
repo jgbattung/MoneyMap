@@ -1246,5 +1246,20 @@ describe('TransactionAnalyzer', () => {
         screen.queryByText('End date cannot be before start date')
       ).toBeNull();
     });
+
+    it('sends date-only YYYY-MM-DD params, not ISO timestamps', async () => {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      const { fromCalendar, toCalendar } = getCalendars();
+
+      pickDay(fromCalendar, '2024-01-05');
+      pickDay(toCalendar, '2024-01-20');
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+
+      await waitFor(() => expect(mockRefetch).toHaveBeenCalled());
+      const calls = vi.mocked(useTransactionAnalysis).mock.calls;
+      const lastParams = calls[calls.length - 1][0] as { startDate?: string; endDate?: string };
+      expect(lastParams.startDate).toBe('2024-01-05');
+      expect(lastParams.endDate).toBe('2024-01-20');
+    });
   });
 });

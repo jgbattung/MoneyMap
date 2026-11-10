@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { invalidateAfterTagWrite } from "./transactionInvalidations";
 
 export type Tag = {
   id: string;
@@ -49,9 +50,7 @@ export const useTagsQuery = () => {
 
   const deleteTagMutation = useMutation({
     mutationFn: deleteTagRequest,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tags });
-    },
+    onSuccess: () => invalidateAfterTagWrite(queryClient),
   });
 
   // Returns the optimistic tag immediately so the caller can add it to selection

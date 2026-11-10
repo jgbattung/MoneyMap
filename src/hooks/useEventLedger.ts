@@ -2,8 +2,11 @@ import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-q
 import {
   EventLedgerParams,
   EventLedgerResponse,
+  EventLedgerTagAllParams,
   EventLedgerTagParams,
+  EventLedgerTagResponse,
 } from "@/types/event-ledger";
+import { invalidateAfterTagWrite } from "./transactionInvalidations";
 
 const PAGE_SIZE = 10;
 
@@ -14,7 +17,9 @@ async function fetchEventLedger(
 ): Promise<EventLedgerResponse> {
   const searchParams = new URLSearchParams();
 
-  searchParams.set("tagIds", params.tagIds.join(","));
+  if (params.tagIds.length > 0) {
+    searchParams.set("tagIds", params.tagIds.join(","));
+  }
 
   if (params.startDate) searchParams.set("startDate", params.startDate);
   if (params.endDate) searchParams.set("endDate", params.endDate);
@@ -33,7 +38,9 @@ async function fetchEventLedger(
   return response.json();
 }
 
-async function tagTransactions(params: EventLedgerTagParams): Promise<void> {
+async function tagTransactions(
+  params: EventLedgerTagParams
+): Promise<EventLedgerTagResponse> {
   const response = await fetch("/api/reports/event-ledger/tag", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -43,6 +50,24 @@ async function tagTransactions(params: EventLedgerTagParams): Promise<void> {
   if (!response.ok) {
     throw new Error("Failed to add tag to transaction");
   }
+
+  return response.json();
+}
+
+async function tagAllRequest(
+  params: EventLedgerTagAllParams
+): Promise<EventLedgerTagResponse> {
+  const response = await fetch("/api/reports/event-ledger/tag", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filter: params.filter, tagIds: params.tagIds }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to tag transactions");
+  }
+
+  return response.json();
 }
 
 export const useEventLedger = (params: EventLedgerParams) => {
@@ -97,13 +122,18 @@ export const useEventLedgerTag = () => {
 
   const { mutate, isPending } = useMutation({
     mutationFn: tagTransactions,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["eventLedger"] });
-    },
+    onSuccess: () => invalidateAfterTagWrite(queryClient),
+  });
+
+  const { mutate: tagAll, isPending: isTaggingAll } = useMutation({
+    mutationFn: tagAllRequest,
+    onSuccess: () => invalidateAfterTagWrite(queryClient),
   });
 
   return {
     tagTransactions: mutate,
     isAdding: isPending,
+    tagAll,
+    isTaggingAll,
   };
 };

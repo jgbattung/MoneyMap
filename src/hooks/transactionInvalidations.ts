@@ -64,3 +64,27 @@ export function invalidateAfterTransactionWrite(
     queryClient.invalidateQueries({ queryKey: key, refetchType: 'none' });
   }
 }
+
+/**
+ * Invalidates everything that renders tags after a tag write (batch tagging
+ * or deleting a tag): the tag list, the Event Ledger, the three transaction
+ * lists, recent transactions and the calendar day detail.
+ *
+ * Tag writes change no balances, so this intentionally does NOT touch the
+ * EAGER/DEFERRED balance keys - use invalidateAfterTransactionWrite for
+ * writes that move money.
+ */
+export function invalidateAfterTagWrite(queryClient: QueryClient): void {
+  const keys: readonly (readonly unknown[])[] = [
+    ['tags'],
+    ['eventLedger'],
+    ['expenseTransactions'],
+    ['incomeTransactions'],
+    ['transfers'],
+    RECENT_TRANSACTION_QUERY_KEYS.recentTransactions,
+    ['calendarDay'],
+  ];
+  for (const key of keys) {
+    queryClient.invalidateQueries({ queryKey: key });
+  }
+}

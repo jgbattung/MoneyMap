@@ -3,7 +3,8 @@
 import { useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { toast } from "sonner";
 import {
   ChevronDownIcon,
   SearchX,
@@ -16,7 +17,7 @@ import {
   eventLedgerFormSchema,
   EventLedgerFormValues,
 } from "@/lib/validations/event-ledger";
-import { EventLedgerParams } from "@/types/event-ledger";
+import { EventLedgerParams, EventLedgerTagAllParams } from "@/types/event-ledger";
 import { TransactionAnalysisParams } from "@/types/transaction-analysis";
 import { useEventLedger, useEventLedgerTag } from "@/hooks/useEventLedger";
 import { useTransactionAnalysis } from "@/hooks/useTransactionAnalysis";
@@ -62,11 +63,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { MultiSelectPopover } from "@/components/shared/MultiSelectPopover";
-import { cn } from "@/lib/utils";
+import { TagInput } from "@/components/shared/TagInput";
+import { cn, formatDateForAPI } from "@/lib/utils";
 
 const ALL_VALUE = "__all__";
 
 const DEFAULT_FORM_VALUES: EventLedgerFormValues = {
+  mode: "tag",
   tagIds: [],
   startDate: null,
   endDate: null,
@@ -103,6 +106,10 @@ export function EventLedger() {
     useEventLedger(ledgerParams);
 
   const selectedTagIds = form.watch("tagIds") ?? [];
+  const mode = form.watch("mode");
+  const watchedStartDate = form.watch("startDate");
+  const watchedEndDate = form.watch("endDate");
+  const isRange = mode === "range";
 
   const toggleTag = (tagId: string) => {
     const current = form.getValues("tagIds") ?? [];
@@ -115,26 +122,55 @@ export function EventLedger() {
   const buildParams = useCallback(
     (values: EventLedgerFormValues): EventLedgerParams => {
       const params: EventLedgerParams = {
-        tagIds: values.tagIds,
+        tagIds: values.mode === "range" ? [] : values.tagIds,
       };
-      if (values.startDate) params.startDate = values.startDate.toISOString();
-      if (values.endDate) params.endDate = values.endDate.toISOString();
+      if (values.startDate) params.startDate = formatDateForAPI(values.startDate);
+      if (values.endDate) params.endDate = formatDateForAPI(values.endDate);
       if (values.accountId) params.accountId = values.accountId;
       return params;
     },
     []
   );
 
-  const handleAnalyze = useCallback(() => {
-    const values = form.getValues();
-    const params = buildParams(values);
-    setLedgerParams(params);
-    setHasAnalyzed(true);
-    setTimeout(() => refetch(), 0);
-  }, [form, buildParams, refetch]);
+  const runLedger = useCallback(
+    (params: EventLedgerParams) => {
+      setLedgerParams(params);
+      setHasAnalyzed(true);
+      setTimeout(() => refetch(), 0);
+    },
+    [refetch]
+  );
+
+  const handleAnalyze = useCallback(async () => {
+    if (!(await form.trigger())) return;
+    runLedger(buildParams(form.getValues()));
+  }, [form, buildParams, runLedger]);
+
+  const handleModeChange = useCallback(
+    (value: string) => {
+      // Radix single toggles emit "" when the active item is clicked again
+      if (value !== "tag" && value !== "range") return;
+      if (value === form.getValues("mode")) return;
+      form.setValue("mode", value);
+      form.clearErrors();
+      setHasAnalyzed(false);
+      setLedgerParams({ tagIds: [] });
+      setAddPanelOpen(false);
+    },
+    [form]
+  );
+
+  const handleViewTagLedger = useCallback(
+    (tagIds: string[]) => {
+      form.reset({ ...DEFAULT_FORM_VALUES, mode: "tag", tagIds });
+      setAddPanelOpen(false);
+      runLedger({ tagIds });
+    },
+    [form, runLedger]
+  );
 
   const handleClear = useCallback(() => {
-    form.reset(DEFAULT_FORM_VALUES);
+    form.reset({ ...DEFAULT_FORM_VALUES, mode: form.getValues("mode") });
     setLedgerParams({ tagIds: [] });
     setHasAnalyzed(false);
     setAddPanelOpen(false);
@@ -147,7 +183,7 @@ export function EventLedger() {
   const hasActiveFilters = () => {
     const values = form.getValues();
     return (
-      (values.tagIds && values.tagIds.length > 0) ||
+      (values.mode === "tag" && values.tagIds && values.tagIds.length > 0) ||
       values.startDate ||
       values.endDate ||
       values.accountId
@@ -175,7 +211,25 @@ export function EventLedger() {
             onSubmit={(e) => e.preventDefault()}
             className="space-y-3 md:space-y-4"
           >
+            {/* Mode */}
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              value={mode}
+              onValueChange={handleModeChange}
+              className="w-full"
+              aria-label="Ledger mode"
+            >
+              <ToggleGroupItem value="tag" className="flex-1">
+                By tag
+              </ToggleGroupItem>
+              <ToggleGroupItem value="range" className="flex-1">
+                By date range
+              </ToggleGroupItem>
+            </ToggleGroup>
+
             {/* Tag Selection */}
+            {!isRange && (
             <FormField
               control={form.control}
               name="tagIds"
@@ -215,9 +269,10 @@ export function EventLedger() {
                 </FormItem>
               )}
             />
+            )}
 
             {/* Optional Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 items-start">
               {/* Start Date */}
               <FormField
                 control={form.control}
@@ -361,7 +416,11 @@ export function EventLedger() {
               <Button
                 type="button"
                 onClick={handleAnalyze}
-                disabled={selectedTagIds.length === 0 || isFetching}
+                disabled={
+                  (isRange
+                    ? !watchedStartDate || !watchedEndDate
+                    : selectedTagIds.length === 0) || isFetching
+                }
               >
                 {isFetching ? (
                   <>
@@ -392,6 +451,19 @@ export function EventLedger() {
         {/* Results Panel */}
         {hasAnalyzed && data && (
           <div className="rounded-lg bg-muted/20 p-3 md:p-4 space-y-4 md:space-y-6">
+            {/* Range summary line (submitted params) */}
+            {isRange && ledgerParams.startDate && ledgerParams.endDate && (
+              <p className="text-xs text-muted-foreground">
+                {`${format(parseISO(ledgerParams.startDate), "MMM d")} - ${format(
+                  parseISO(ledgerParams.endDate),
+                  "MMM d, yyyy"
+                )} · ${
+                  accounts.find((a) => a.id === ledgerParams.accountId)?.name ??
+                  "All accounts"
+                }`}
+              </p>
+            )}
+
             {/* Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-lg border p-3 md:p-4 text-center">
@@ -445,17 +517,48 @@ export function EventLedger() {
               </p>
             )}
 
+            {/* Tag all (range mode) */}
+            {isRange &&
+              totalTransactions > 0 &&
+              ledgerParams.startDate &&
+              ledgerParams.endDate && (
+                <TagAllBar
+                  key={JSON.stringify([
+                    ledgerParams.startDate,
+                    ledgerParams.endDate,
+                    ledgerParams.accountId,
+                  ])}
+                  filter={{
+                    startDate: ledgerParams.startDate,
+                    endDate: ledgerParams.endDate,
+                    ...(ledgerParams.accountId
+                      ? { accountId: ledgerParams.accountId }
+                      : {}),
+                  }}
+                  count={totalTransactions}
+                  onViewTagLedger={handleViewTagLedger}
+                />
+              )}
+
             {/* Transaction List or Empty State */}
             {totalTransactions === 0 ? (
               <EmptyState
                 variant="widget"
                 icon={SearchX}
                 title="No transactions found"
-                description="No transactions have these tags yet. Search your history and tag them below."
-                action={{
-                  label: "Find & tag transactions",
-                  onClick: () => setAddPanelOpen(true),
-                }}
+                description={
+                  isRange
+                    ? "No income or expense transactions in this range."
+                    : "No transactions have these tags yet. Search your history and tag them below."
+                }
+                action={
+                  isRange
+                    ? undefined
+                    : {
+                        label: "Find & tag transactions",
+                        onClick: () => setAddPanelOpen(true),
+                      }
+                }
               />
             ) : (
               <div>
@@ -535,6 +638,7 @@ export function EventLedger() {
             )}
 
             {/* Add Transactions Button */}
+            {!isRange && (
             <div>
               {!addPanelOpen ? (
                 totalTransactions > 0 && (
@@ -558,10 +662,77 @@ export function EventLedger() {
                 />
               )}
             </div>
+            )}
           </div>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// --- Tag all (date-range mode) ---
+
+function TagAllBar({
+  filter,
+  count,
+  onViewTagLedger,
+}: {
+  filter: EventLedgerTagAllParams["filter"];
+  count: number;
+  onViewTagLedger: (tagIds: string[]) => void;
+}) {
+  const [tagIds, setTagIds] = useState<string[]>([]);
+  const { tags } = useTagsQuery();
+  const { tagAll, isTaggingAll } = useEventLedgerTag();
+
+  // A freshly created tag has a placeholder id until the server responds
+  const hasPendingTag = tagIds.some((id) => id.startsWith("optimistic-"));
+
+  const handleTagAll = () => {
+    const names = tagIds
+      .map((id) => tags.find((t) => t.id === id)?.name)
+      .filter(Boolean);
+    tagAll(
+      { filter, tagIds },
+      {
+        onSuccess: ({ tagged }) => {
+          toast.success(
+            `Tagged ${tagged} transaction${tagged === 1 ? "" : "s"} as ${names.join(", ")}`,
+            {
+              action: {
+                label: "View tag ledger",
+                onClick: () => onViewTagLedger(tagIds),
+              },
+            }
+          );
+          setTagIds([]);
+        },
+        onError: () => toast.error("Failed to tag transactions"),
+      }
+    );
+  };
+
+  return (
+    <div className="rounded-lg border p-3 flex flex-wrap items-center gap-2">
+      <span className="text-sm text-muted-foreground">Tag all {count} as</span>
+      <div className="flex-1 min-w-[200px]">
+        <TagInput selectedTagIds={tagIds} onChange={setTagIds} />
+      </div>
+      <Button
+        size="sm"
+        onClick={handleTagAll}
+        disabled={tagIds.length === 0 || hasPendingTag || isTaggingAll}
+      >
+        {isTaggingAll ? (
+          <>
+            <Spinner className="mr-2" />
+            Tagging...
+          </>
+        ) : (
+          `Tag all ${count}`
+        )}
+      </Button>
+    </div>
   );
 }
 
@@ -611,8 +782,8 @@ function AddTransactionsPanel({
     const params: TransactionAnalysisParams = {
       type: searchType,
     };
-    if (searchStartDate) params.startDate = searchStartDate.toISOString();
-    if (searchEndDate) params.endDate = searchEndDate.toISOString();
+    if (searchStartDate) params.startDate = formatDateForAPI(searchStartDate);
+    if (searchEndDate) params.endDate = formatDateForAPI(searchEndDate);
     if (searchCategoryId) params.categoryIds = [searchCategoryId];
     if (searchAccountId) params.accountId = searchAccountId;
     if (searchName) params.search = searchName;

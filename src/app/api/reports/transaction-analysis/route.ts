@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/prisma";
+import { buildDateRange } from "@/lib/report-date-range";
 import { transactionAnalysisQuerySchema } from "@/lib/validations/transaction-analysis";
 import { TransactionAnalysisResponse } from "@/types/transaction-analysis";
 
@@ -70,13 +71,9 @@ export async function GET(req: NextRequest) {
       where.isInstallment = false;
     }
 
-    if (startDate) {
-      where.date = { ...where.date, gte: new Date(startDate) };
-    }
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      where.date = { ...where.date, lte: end };
+    const date = buildDateRange(startDate, endDate);
+    if (date) {
+      where.date = date;
     }
 
     if (categoryIdArray.length > 0) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/prisma";
+import { buildLedgerWhere } from "@/lib/event-ledger-where";
 import { eventLedgerTagSchema } from "@/lib/validations/event-ledger";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,42 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    if ("filter" in parsed.data) {
+      const { filter, tagIds } = parsed.data;
+      const { expenseWhere, incomeWhere } = buildLedgerWhere({ userId, ...filter });
+
+      const [expenses, incomes] = await Promise.all([
+        db.expenseTransaction.findMany({ where: expenseWhere, select: { id: true } }),
+        db.incomeTransaction.findMany({ where: incomeWhere, select: { id: true } }),
+      ]);
+
+      if (expenses.length === 0 && incomes.length === 0) {
+        return NextResponse.json({ success: true, tagged: 0 });
+      }
+
+      const expenseConnect = expenses.map(({ id }) => ({ id }));
+      const incomeConnect = incomes.map(({ id }) => ({ id }));
+
+      // Connect from the Tag side: one operation per tag regardless of row
+      // count. `userId` in the where makes tag ownership a hard requirement.
+      await db.$transaction(
+        tagIds.map((tagId) =>
+          db.tag.update({
+            where: { id: tagId, userId },
+            data: {
+              expenseTransactions: { connect: expenseConnect },
+              incomeTransactions: { connect: incomeConnect },
+            },
+          })
+        )
+      );
+
+      return NextResponse.json({
+        success: true,
+        tagged: expenseConnect.length + incomeConnect.length,
+      });
+    }
+
     const { transactionIds, transactionType, tagIds } = parsed.data;
 
     const data = { tags: { connect: tagIds.map((id) => ({ id })) } };
@@ -45,7 +82,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, tagged: transactionIds.length });
   } catch (error) {
     console.error("Error adding tag to transaction:", error);
 
@@ -56,7 +93,7 @@ export async function PATCH(req: NextRequest) {
       (error as { code: string }).code === "P2025"
     ) {
       return NextResponse.json(
-        { error: "Transaction not found" },
+        { error: "Tag or transaction not found" },
         { status: 404 }
       );
     }

@@ -3,7 +3,8 @@
 import { useState, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format, startOfMonth, startOfYear, subMonths } from "date-fns";
+import { format, parseISO, startOfMonth, startOfYear, subMonths } from "date-fns";
+import { formatDateForAPI } from "@/lib/utils";
 import { Search, ChevronDownIcon, ChevronUp, SearchX } from "lucide-react";
 
 import {
@@ -170,8 +171,8 @@ export function TransactionAnalyzer() {
         type: values.type,
       };
       if (values.startDate)
-        params.startDate = values.startDate.toISOString();
-      if (values.endDate) params.endDate = values.endDate.toISOString();
+        params.startDate = formatDateForAPI(values.startDate);
+      if (values.endDate) params.endDate = formatDateForAPI(values.endDate);
       if (values.categoryIds && values.categoryIds.length > 0)
         params.categoryIds = values.categoryIds;
       if (values.subcategoryIds && values.subcategoryIds.length > 0)
@@ -394,7 +395,7 @@ export function TransactionAnalyzer() {
             </div>
 
             {/* Tier 1 Filters — always visible */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 items-start">
               {/* Start Date */}
               <FormField
                 control={form.control}
@@ -733,13 +734,13 @@ export function TransactionAnalyzer() {
                     </>
                   )}
                   {analysisParams.startDate && analysisParams.endDate && (
-                    <>{" "}from <span className="font-medium text-foreground">{format(new Date(analysisParams.startDate), "MMM d, yyyy")}</span> to <span className="font-medium text-foreground">{format(new Date(analysisParams.endDate), "MMM d, yyyy")}</span></>
+                    <>{" "}from <span className="font-medium text-foreground">{format(parseISO(analysisParams.startDate), "MMM d, yyyy")}</span> to <span className="font-medium text-foreground">{format(parseISO(analysisParams.endDate), "MMM d, yyyy")}</span></>
                   )}
                   {analysisParams.startDate && !analysisParams.endDate && (
-                    <>{" "}since <span className="font-medium text-foreground">{format(new Date(analysisParams.startDate), "MMM d, yyyy")}</span></>
+                    <>{" "}since <span className="font-medium text-foreground">{format(parseISO(analysisParams.startDate), "MMM d, yyyy")}</span></>
                   )}
                   {!analysisParams.startDate && analysisParams.endDate && (
-                    <>{" "}up to <span className="font-medium text-foreground">{format(new Date(analysisParams.endDate), "MMM d, yyyy")}</span></>
+                    <>{" "}up to <span className="font-medium text-foreground">{format(parseISO(analysisParams.endDate), "MMM d, yyyy")}</span></>
                   )}
                 </p>
 

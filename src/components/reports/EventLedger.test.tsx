@@ -87,11 +87,54 @@ vi.mock('@/components/ui/popover', () => ({
     React.createElement('div', { 'data-testid': 'popover-content' }, children),
 }));
 
+const CALENDAR_DAY_OPTIONS = ['2026-11-03', '2026-11-09'];
+
 vi.mock('@/components/ui/calendar', () => ({
-  Calendar: () => React.createElement('div', { 'data-testid': 'calendar' }),
+  Calendar: ({ onDayClick }: { onDayClick?: (date: Date) => void }) =>
+    React.createElement(
+      'div',
+      { 'data-testid': 'calendar' },
+      CALENDAR_DAY_OPTIONS.map((dateStr) =>
+        React.createElement(
+          'button',
+          {
+            key: dateStr,
+            type: 'button',
+            'data-testid': `calendar-day-${dateStr}`,
+            // local-noon avoids any timezone shifting the calendar day
+            onClick: () => onDayClick?.(new Date(`${dateStr}T12:00:00`)),
+          },
+          dateStr
+        )
+      )
+    ),
 }));
 
-vi.mock('@/components/ui/select', () => ({
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
+
+// TagInput is mocked but forwards onChange so selection can be driven
+vi.mock('@/components/shared/TagInput', () => ({
+  TagInput: ({
+    selectedTagIds,
+    onChange,
+  }: {
+    selectedTagIds: string[];
+    onChange: (ids: string[]) => void;
+  }) =>
+    React.createElement(
+      'div',
+      { 'data-testid': 'tag-input', 'data-selected': selectedTagIds.join(',') },
+      React.createElement('button', { onClick: () => onChange(['tag-1']) }, 'pick-trip'),
+      React.createElement('button', { onClick: () => onChange(['optimistic-123']) }, 'pick-optimistic')
+    ),
+}));
+
+vi.mock('@/components/ui/select', () => {
+  // SelectItem clicks forward to the parent Select's onValueChange
+  const SelectContext = React.createContext<((v: string) => void) | undefined>(undefined);
+  return {
   Select: ({
     children,
     value,
@@ -102,15 +145,9 @@ vi.mock('@/components/ui/select', () => ({
     onValueChange?: (v: string) => void;
   }) =>
     React.createElement(
-      'div',
-      {
-        'data-testid': 'select',
-        'data-value': value,
-        onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
-          if (onValueChange) onValueChange(e.target.value);
-        },
-      },
-      children
+      SelectContext.Provider,
+      { value: onValueChange },
+      React.createElement('div', { 'data-testid': 'select', 'data-value': value }, children)
     ),
   SelectTrigger: ({ children }: { children: React.ReactNode }) =>
     React.createElement('button', { 'data-testid': 'select-trigger' }, children),
@@ -124,13 +161,20 @@ vi.mock('@/components/ui/select', () => ({
   }: {
     children: React.ReactNode;
     value: string;
-  }) =>
-    React.createElement(
+  }) => {
+    const onValueChange = React.useContext(SelectContext);
+    return React.createElement(
       'div',
-      { 'data-testid': `select-item-${value}`, role: 'option' },
+      {
+        'data-testid': `select-item-${value}`,
+        role: 'option',
+        onClick: () => onValueChange?.(value),
+      },
       children
-    ),
-}));
+    );
+  },
+  };
+});
 
 vi.mock('@/components/ui/command', () => ({
   Command: ({ children }: { children: React.ReactNode }) =>
@@ -210,6 +254,7 @@ vi.mock('@/components/shared/EmptyState', () => ({
 // ---------------------------------------------------------------------------
 
 import { useEventLedger, useEventLedgerTag } from '@/hooks/useEventLedger';
+import { toast } from 'sonner';
 import { useTagsQuery } from '@/hooks/useTagsQuery';
 import { useAccountsQuery } from '@/hooks/useAccountsQuery';
 import { useTransactionAnalysis } from '@/hooks/useTransactionAnalysis';
@@ -232,6 +277,7 @@ const mockAccounts = [
 const mockRefetch = vi.fn();
 const mockFetchNextPage = vi.fn();
 const mockAddTag = vi.fn();
+const mockTagAll = vi.fn();
 
 const mockLedgerData = {
   totalExpenses: 5000,
@@ -334,6 +380,8 @@ function setupDefaultMocks() {
   vi.mocked(useEventLedgerTag).mockReturnValue({
     tagTransactions: mockAddTag,
     isAdding: false,
+    tagAll: mockTagAll,
+    isTaggingAll: false,
   });
 
   vi.mocked(useTransactionAnalysis).mockReturnValue({
@@ -926,6 +974,231 @@ describe('EventLedger', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Search' }));
 
       expect(screen.getByRole('button', { name: 'Tag selected (0)' })).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('date-range mode (MM-012)', () => {
+    function pickDay(index: number, dateStr: string) {
+      const calendars = screen.getAllByTestId('calendar');
+      fireEvent.click(within(calendars[index]).getByTestId(`calendar-day-${dateStr}`));
+    }
+
+    function switchToRange() {
+      fireEvent.click(screen.getByTestId('toggle-item-range'));
+    }
+
+    function lastLedgerParams() {
+      const calls = vi.mocked(useEventLedger).mock.calls;
+      return calls[calls.length - 1][0];
+    }
+
+    function mockRangeResults(overrides: Partial<typeof mockLedgerData> = {}) {
+      vi.mocked(useEventLedger).mockImplementation((params) => ({
+        data: params.startDate ? { ...mockLedgerData, ...overrides } : null,
+        isFetching: false,
+        isFetchingMore: false,
+        error: null as string | null,
+        refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
+      }));
+    }
+
+    async function analyzeRange(accountId?: string) {
+      render(React.createElement(EventLedger), { wrapper: createWrapper() });
+      switchToRange();
+      pickDay(0, '2026-11-03');
+      pickDay(1, '2026-11-09');
+      if (accountId) {
+        fireEvent.click(screen.getByTestId(`select-item-${accountId}`));
+      }
+      fireEvent.click(screen.getByRole('button', { name: 'View Ledger' }));
+      await waitFor(() => expect(screen.getByText('Expenses')).toBeTruthy());
+    }
+
+    it('defaults to tag mode with the tag field visible', () => {
+      render(React.createElement(EventLedger), { wrapper: createWrapper() });
+      expect(screen.getByText('Select Tags')).toBeTruthy();
+      expect(screen.getByTestId('toggle-group').getAttribute('data-value')).toBe('tag');
+    });
+
+    it('toggle hides the tag field and keeps From, To and Account', () => {
+      render(React.createElement(EventLedger), { wrapper: createWrapper() });
+      switchToRange();
+      expect(screen.queryByText('Select Tags')).toBeNull();
+      expect(screen.getByText('From')).toBeTruthy();
+      expect(screen.getByText('To')).toBeTruthy();
+      expect(screen.getByText('Account')).toBeTruthy();
+    });
+
+    it('View Ledger is disabled until both dates are set in range mode', () => {
+      render(React.createElement(EventLedger), { wrapper: createWrapper() });
+      switchToRange();
+      const button = screen.getByRole('button', { name: 'View Ledger' }) as HTMLButtonElement;
+      expect(button.disabled).toBe(true);
+      pickDay(0, '2026-11-03');
+      expect(button.disabled).toBe(true);
+      pickDay(1, '2026-11-09');
+      expect(button.disabled).toBe(false);
+    });
+
+    it('shows the inline error and does not fetch for a reversed range', async () => {
+      render(React.createElement(EventLedger), { wrapper: createWrapper() });
+      switchToRange();
+      pickDay(0, '2026-11-09');
+      pickDay(1, '2026-11-03');
+      fireEvent.click(screen.getByRole('button', { name: 'View Ledger' }));
+
+      expect(await screen.findByText('End date cannot be before start date')).toBeTruthy();
+      await new Promise((r) => setTimeout(r, 20));
+      expect(mockRefetch).not.toHaveBeenCalled();
+    });
+
+    it('also validates a reversed range in tag mode', async () => {
+      render(React.createElement(EventLedger), { wrapper: createWrapper() });
+      fireEvent.click(screen.getAllByTestId('command-item')[0]);
+      pickDay(0, '2026-11-09');
+      pickDay(1, '2026-11-03');
+      fireEvent.click(screen.getByRole('button', { name: 'View Ledger' }));
+
+      expect(await screen.findByText('End date cannot be before start date')).toBeTruthy();
+      expect(mockRefetch).not.toHaveBeenCalled();
+    });
+
+    it('sends date-only range params with no tags, then refetches', async () => {
+      mockRangeResults();
+      await analyzeRange();
+      expect(lastLedgerParams()).toEqual({
+        tagIds: [],
+        startDate: '2026-11-03',
+        endDate: '2026-11-09',
+      });
+      await waitFor(() => expect(mockRefetch).toHaveBeenCalledTimes(1));
+    });
+
+    it('includes the selected account in the params', async () => {
+      mockRangeResults();
+      await analyzeRange('acc-1');
+      expect(lastLedgerParams()).toEqual({
+        tagIds: [],
+        startDate: '2026-11-03',
+        endDate: '2026-11-09',
+        accountId: 'acc-1',
+      });
+    });
+
+    it('shows the submitted range and account in a summary line', async () => {
+      mockRangeResults();
+      await analyzeRange('acc-1');
+      expect(screen.getByText('Nov 3 - Nov 9, 2026 · BPI Checking')).toBeTruthy();
+    });
+
+    it('says All accounts when no account is chosen', async () => {
+      mockRangeResults();
+      await analyzeRange();
+      expect(screen.getByText('Nov 3 - Nov 9, 2026 · All accounts')).toBeTruthy();
+    });
+
+    it('does not render Add Transactions in range mode', async () => {
+      mockRangeResults();
+      await analyzeRange();
+      expect(screen.queryByRole('button', { name: /Add Transactions/ })).toBeNull();
+    });
+
+    it('range empty state has the range description and no tag CTA', async () => {
+      mockRangeResults({ expenseCount: 0, incomeCount: 0, transactions: [], totalExpenses: 0, totalIncome: 0, netAmount: 0 });
+      await analyzeRange();
+      expect(screen.getByText('No income or expense transactions in this range.')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Find & tag transactions' })).toBeNull();
+      expect(screen.queryByRole('button', { name: /^Tag all/ })).toBeNull();
+    });
+
+    it('switching modes hides previous results', async () => {
+      mockRangeResults();
+      await analyzeRange();
+      expect(screen.getByText('Expenses')).toBeTruthy();
+      fireEvent.click(screen.getByTestId('toggle-item-tag'));
+      await waitFor(() => expect(screen.queryByText('Expenses')).toBeNull());
+    });
+
+    // ----- Tag all -----
+    it('Tag all shows the total count (not the loaded rows) and is disabled without a tag', async () => {
+      mockRangeResults({ expenseCount: 60, incomeCount: 5 });
+      await analyzeRange();
+      const button = screen.getByRole('button', { name: 'Tag all 65' }) as HTMLButtonElement;
+      expect(button.disabled).toBe(true);
+      expect(screen.getByText('Tag all 65 as')).toBeTruthy();
+    });
+
+    it('Tag all is disabled while an optimistic tag id is selected', async () => {
+      mockRangeResults();
+      await analyzeRange();
+      fireEvent.click(screen.getByText('pick-optimistic'));
+      expect((screen.getByRole('button', { name: 'Tag all 4' }) as HTMLButtonElement).disabled).toBe(true);
+      fireEvent.click(screen.getByText('pick-trip'));
+      expect((screen.getByRole('button', { name: 'Tag all 4' }) as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('Tag all sends the SUBMITTED filter exactly once, even if the form dates change afterwards', async () => {
+      mockRangeResults();
+      await analyzeRange('acc-1');
+      // change form dates after View Ledger
+      pickDay(0, '2026-11-09');
+      pickDay(1, '2026-11-09');
+
+      fireEvent.click(screen.getByText('pick-trip'));
+      fireEvent.click(screen.getByRole('button', { name: 'Tag all 4' }));
+
+      expect(mockTagAll).toHaveBeenCalledTimes(1);
+      expect(mockTagAll.mock.calls[0][0]).toEqual({
+        filter: { startDate: '2026-11-03', endDate: '2026-11-09', accountId: 'acc-1' },
+        tagIds: ['tag-1'],
+      });
+    });
+
+    it('success toast reports the count and tag names; its action switches to tag mode and fetches', async () => {
+      mockRangeResults();
+      await analyzeRange();
+      fireEvent.click(screen.getByText('pick-trip'));
+      fireEvent.click(screen.getByRole('button', { name: 'Tag all 4' }));
+
+      const options = mockTagAll.mock.calls[0][1] as { onSuccess: (r: { tagged: number }) => void };
+      options.onSuccess({ tagged: 4 });
+
+      expect(toast.success).toHaveBeenCalledTimes(1);
+      const [message, toastOptions] = vi.mocked(toast.success).mock.calls[0] as [
+        string,
+        { action: { label: string; onClick: () => void } },
+      ];
+      expect(message).toBe('Tagged 4 transactions as Trip');
+      expect(toastOptions.action.label).toBe('View tag ledger');
+
+      mockRefetch.mockClear();
+      toastOptions.action.onClick();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('toggle-group').getAttribute('data-value')).toBe('tag');
+      });
+      expect(lastLedgerParams()).toEqual({ tagIds: ['tag-1'] });
+      await waitFor(() => expect(mockRefetch).toHaveBeenCalledTimes(1));
+    });
+
+    it('uses the singular form for one transaction', async () => {
+      mockRangeResults();
+      await analyzeRange();
+      fireEvent.click(screen.getByText('pick-trip'));
+      fireEvent.click(screen.getByRole('button', { name: 'Tag all 4' }));
+      (mockTagAll.mock.calls[0][1] as { onSuccess: (r: { tagged: number }) => void }).onSuccess({ tagged: 1 });
+      expect(vi.mocked(toast.success).mock.calls[0][0]).toBe('Tagged 1 transaction as Trip');
+    });
+
+    it('shows an error toast when Tag all fails', async () => {
+      mockRangeResults();
+      await analyzeRange();
+      fireEvent.click(screen.getByText('pick-trip'));
+      fireEvent.click(screen.getByRole('button', { name: 'Tag all 4' }));
+      (mockTagAll.mock.calls[0][1] as { onError: () => void }).onError();
+      expect(toast.error).toHaveBeenCalledWith('Failed to tag transactions');
     });
   });
 });
