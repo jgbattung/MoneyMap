@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { dateOnlySchema } from "@/lib/report-date-range";
 
 // Server-side schema for API query param validation
 export const transactionAnalysisQuerySchema = z.object({
   type: z.enum(["expense", "income"]),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
+  startDate: dateOnlySchema.optional(),
+  endDate: dateOnlySchema.optional(),
   categoryIds: z.string().optional(),
   subcategoryIds: z.string().optional(),
   tagIds: z.string().optional(),
