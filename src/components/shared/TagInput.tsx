@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
   Popover,
@@ -15,7 +16,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { useTagsQuery } from "@/hooks/useTagsQuery";
+import DeleteDialog from "@/components/shared/DeleteDialog";
+import { useTagsQuery, type Tag } from "@/hooks/useTagsQuery";
 
 interface TagInputProps {
   selectedTagIds: string[];
@@ -26,9 +28,11 @@ interface TagInputProps {
 const MAX_TAGS = 10;
 
 export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) {
-  const { tags, createTagOptimistic, isCreating } = useTagsQuery();
+  const { tags, createTagOptimistic, isCreating, deleteTag, isDeleting } =
+    useTagsQuery();
   const [inputValue, setInputValue] = useState("");
   const [open, setOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Tag | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -82,6 +86,21 @@ export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) 
     }
   };
 
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    const deletedId = pendingDelete.id;
+    try {
+      await deleteTag(deletedId);
+      if (selectedTagIds.includes(deletedId)) {
+        onChange(selectedTagIds.filter((id) => id !== deletedId));
+      }
+      toast.success("Tag deleted");
+      setPendingDelete(null);
+    } catch {
+      toast.error("Failed to delete tag");
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
     if (e.target.value.length > 0) {
@@ -131,6 +150,7 @@ export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) 
   };
 
   return (
+    <>
     <Popover open={open} onOpenChange={(nextOpen) => {
         if (!nextOpen && containerRef.current?.contains(document.activeElement)) {
           return;
@@ -215,6 +235,23 @@ export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) 
                       style={{ backgroundColor: tag.color }}
                     />
                     {tag.name}
+                    {!tag.id.startsWith("optimistic-") && (
+                      <button
+                        type="button"
+                        aria-label={`Delete tag ${tag.name}`}
+                        className="ml-auto rounded p-0.5 text-muted-foreground hover:text-text-error"
+                        // keep focus in the input so the popover is not closed by a blur
+                        onPointerDown={(e) => e.preventDefault()}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPendingDelete(tag);
+                          setOpen(false);
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -237,5 +274,16 @@ export function TagInput({ selectedTagIds, onChange, disabled }: TagInputProps) 
         </Command>
       </PopoverContent>
     </Popover>
+    <DeleteDialog
+      open={!!pendingDelete}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) setPendingDelete(null);
+      }}
+      title={`Delete tag "${pendingDelete?.name ?? ""}"?`}
+      description="It will be removed from every transaction that has it. The transactions themselves are not changed."
+      isDeleting={isDeleting}
+      onConfirm={handleConfirmDelete}
+    />
+    </>
   );
 }

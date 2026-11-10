@@ -76,10 +76,43 @@ vi.mock('@/components/ui/command', () => ({
 // Mock lucide-react X icon
 vi.mock('lucide-react', () => ({
   X: () => React.createElement('svg', { 'data-testid': 'icon-x' }),
+  Trash2: () => React.createElement('svg', { 'data-testid': 'icon-trash' }),
+}));
+
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
+
+// DeleteDialog mock forwards its callbacks so confirm/cancel are exercised
+vi.mock('@/components/shared/DeleteDialog', () => ({
+  default: ({
+    open,
+    onOpenChange,
+    onConfirm,
+    title,
+    description,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void;
+    title?: string;
+    description?: React.ReactNode;
+  }) =>
+    open
+      ? React.createElement(
+          'div',
+          { role: 'alertdialog' },
+          React.createElement('h2', null, title),
+          React.createElement('p', null, description),
+          React.createElement('button', { onClick: () => onOpenChange(false) }, 'Cancel'),
+          React.createElement('button', { onClick: onConfirm }, 'Delete')
+        )
+      : null,
 }));
 
 import { TagInput } from './TagInput';
 import { useTagsQuery } from '@/hooks/useTagsQuery';
+import { toast } from 'sonner';
 
 const mockTag1 = { id: 'tag-1', name: 'Food', color: 'hsl(0, 65%, 60%)', createdAt: '', updatedAt: '' };
 const mockTag2 = { id: 'tag-2', name: 'Travel', color: 'hsl(90, 65%, 60%)', createdAt: '', updatedAt: '' };
@@ -546,6 +579,90 @@ describe('TagInput', () => {
       fireEvent.keyDown(input, { key: 'Enter' });
 
       await waitFor(() => expect(createTagOptimistic).toHaveBeenCalledWith('Foo'));
+    });
+  });
+
+  describe('tag deletion', () => {
+    function renderInput(onChange = vi.fn(), selectedTagIds: string[] = []) {
+      render(React.createElement(TagInput, { selectedTagIds, onChange }));
+      return onChange;
+    }
+
+    it('renders a Delete button for each existing suggestion', () => {
+      renderInput();
+      expect(screen.getByLabelText('Delete tag Food')).toBeTruthy();
+      expect(screen.getByLabelText('Delete tag Travel')).toBeTruthy();
+      expect(screen.getByLabelText('Delete tag Shopping')).toBeTruthy();
+    });
+
+    it('renders no Delete button for an optimistic tag id', () => {
+      vi.mocked(useTagsQuery).mockReturnValue(
+        makeDefaultHook({
+          tags: [mockTag1, { ...mockTag2, id: 'optimistic-999' }],
+        }) as any
+      );
+      renderInput();
+      expect(screen.getByLabelText('Delete tag Food')).toBeTruthy();
+      expect(screen.queryByLabelText('Delete tag Travel')).toBeNull();
+    });
+
+    it('clicking Delete opens the dialog with the tag name and does NOT select the tag', () => {
+      const onChange = renderInput();
+      fireEvent.click(screen.getByLabelText('Delete tag Food'));
+
+      expect(screen.getByRole('alertdialog')).toBeTruthy();
+      expect(screen.getByText('Delete tag "Food"?')).toBeTruthy();
+      expect(
+        screen.getByText(
+          'It will be removed from every transaction that has it. The transactions themselves are not changed.'
+        )
+      ).toBeTruthy();
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('prevents default on pointer and mouse down so the input keeps focus', () => {
+      renderInput();
+      const button = screen.getByLabelText('Delete tag Food');
+      expect(fireEvent.pointerDown(button)).toBe(false);
+      expect(fireEvent.mouseDown(button)).toBe(false);
+    });
+
+    it('Cancel closes the dialog without calling deleteTag', () => {
+      const deleteTag = vi.fn();
+      vi.mocked(useTagsQuery).mockReturnValue(makeDefaultHook({ deleteTag }) as any);
+      renderInput();
+      fireEvent.click(screen.getByLabelText('Delete tag Food'));
+      fireEvent.click(screen.getByText('Cancel'));
+
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+      expect(deleteTag).not.toHaveBeenCalled();
+    });
+
+    it('Delete calls deleteTag(id) exactly once, toasts, and closes the dialog', async () => {
+      const deleteTag = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(useTagsQuery).mockReturnValue(makeDefaultHook({ deleteTag }) as any);
+      const onChange = renderInput();
+      fireEvent.click(screen.getByLabelText('Delete tag Travel'));
+      fireEvent.click(screen.getByText('Delete'));
+
+      await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Tag deleted'));
+      expect(deleteTag).toHaveBeenCalledTimes(1);
+      expect(deleteTag).toHaveBeenCalledWith('tag-2');
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+      // not selected in this input, so selection is left alone
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('a failing deleteTag shows the error toast and keeps the dialog open', async () => {
+      const deleteTag = vi.fn().mockRejectedValue(new Error('boom'));
+      vi.mocked(useTagsQuery).mockReturnValue(makeDefaultHook({ deleteTag }) as any);
+      renderInput();
+      fireEvent.click(screen.getByLabelText('Delete tag Food'));
+      fireEvent.click(screen.getByText('Delete'));
+
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Failed to delete tag'));
+      expect(screen.getByRole('alertdialog')).toBeTruthy();
+      expect(toast.success).not.toHaveBeenCalled();
     });
   });
 });
