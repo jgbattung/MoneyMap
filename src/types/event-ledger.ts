@@ -32,3 +32,17 @@ export interface EventLedgerTagParams {
   transactionType: "expense" | "income";
   tagIds: string[];
 }
+
+export interface EventLedgerTagAllParams {
+  filter: {
+    startDate: string;
+    endDate: string;
+    accountId?: string;
+  };
+  tagIds: string[];
+}
+
+export interface EventLedgerTagResponse {
+  success: true;
+  tagged: number;
+}
