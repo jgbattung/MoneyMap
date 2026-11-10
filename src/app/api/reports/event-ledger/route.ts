@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/prisma";
+import { buildLedgerWhere } from "@/lib/event-ledger-where";
 import { eventLedgerQuerySchema } from "@/lib/validations/event-ledger";
 import { EventLedgerResponse, EventLedgerTransaction } from "@/types/event-ledger";
 
@@ -35,33 +36,19 @@ export async function GET(req: NextRequest) {
 
     const { tagIds, startDate, endDate, accountId, skip, take } = parsed.data;
 
-    const tagIdArray = tagIds.split(",").filter((id) => id.trim().length > 0);
-    if (tagIdArray.length === 0) {
-      return NextResponse.json(
-        { error: "At least one tag is required" },
-        { status: 400 }
-      );
-    }
+    const tagIdArray =
+      tagIds
+        ?.split(",")
+        .map((id) => id.trim())
+        .filter(Boolean) ?? [];
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sharedWhere: any = {
+    const { expenseWhere, incomeWhere } = buildLedgerWhere({
       userId,
-      tags: { some: { id: { in: tagIdArray } } },
-    };
-
-    if (startDate) {
-      sharedWhere.date = { ...sharedWhere.date, gte: new Date(startDate) };
-    }
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      sharedWhere.date = { ...sharedWhere.date, lte: end };
-    }
-    if (accountId) {
-      sharedWhere.accountId = accountId;
-    }
-
-    const expenseWhere = { ...sharedWhere, isInstallment: false };
+      tagIds: tagIdArray,
+      startDate,
+      endDate,
+      accountId,
+    });
 
     const [expenseAgg, incomeAgg, expenseRows, incomeRows] = await Promise.all([
       db.expenseTransaction.aggregate({
@@ -70,7 +57,7 @@ export async function GET(req: NextRequest) {
         _count: true,
       }),
       db.incomeTransaction.aggregate({
-        where: sharedWhere,
+        where: incomeWhere,
         _sum: { amount: true },
         _count: true,
       }),
@@ -86,7 +73,7 @@ export async function GET(req: NextRequest) {
         },
       }),
       db.incomeTransaction.findMany({
-        where: sharedWhere,
+        where: incomeWhere,
         orderBy: { date: "desc" },
         take: skip + take + 1,
         include: {
