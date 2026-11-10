@@ -395,7 +395,7 @@ export function TransactionAnalyzer() {
             </div>
 
             {/* Tier 1 Filters — always visible */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 items-start">
               {/* Start Date */}
               <FormField
                 control={form.control}

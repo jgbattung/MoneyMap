@@ -272,7 +272,7 @@ export function EventLedger() {
             )}
 
             {/* Optional Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 items-start">
               {/* Start Date */}
               <FormField
                 control={form.control}
