@@ -516,3 +516,33 @@ describe('useTagsQuery', () => {
     });
   });
 });
+
+describe('deleteTag - broader invalidation', () => {
+  it('invalidates every tag-rendering key after a successful delete', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [mockTag] });
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+    mockFetch.mockResolvedValue({ ok: true, json: async () => [] });
+
+    const { queryClient, wrapper } = createWrapperWithClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    const { result } = renderHook(() => useTagsQuery(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.deleteTag('tag-1');
+    });
+
+    const keys = invalidateSpy.mock.calls.map((c) => (c[0] as any)?.queryKey);
+    for (const key of [
+      ['tags'],
+      ['eventLedger'],
+      ['expenseTransactions'],
+      ['incomeTransactions'],
+      ['transfers'],
+      ['calendarDay'],
+    ]) {
+      expect(keys).toContainEqual(key);
+    }
+  });
+});
