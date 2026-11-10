@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient } from '@tanstack/react-query';
-import { invalidateAfterTransactionWrite, DEFERRED_KEYS, EAGER_KEYS } from './transactionInvalidations';
+import { invalidateAfterTransactionWrite, invalidateAfterTagWrite, DEFERRED_KEYS, EAGER_KEYS } from './transactionInvalidations';
 
 vi.mock('./useRecentTransactions', () => ({
   RECENT_TRANSACTION_QUERY_KEYS: {
@@ -98,5 +98,28 @@ describe('invalidateAfterTransactionWrite', () => {
     });
 
     expect(wrongCalls).toHaveLength(0);
+  });
+});
+
+describe('invalidateAfterTagWrite', () => {
+  it('invalidates exactly the tag-rendering keys and no balance keys', () => {
+    const queryClient = createMockQueryClient();
+    invalidateAfterTagWrite(queryClient);
+
+    const keys = vi.mocked(queryClient.invalidateQueries).mock.calls.map(
+      ([arg]) => (arg as { queryKey: unknown }).queryKey
+    );
+    expect(keys).toEqual([
+      ['tags'],
+      ['eventLedger'],
+      ['expenseTransactions'],
+      ['incomeTransactions'],
+      ['transfers'],
+      ['recentTransactions'],
+      ['calendarDay'],
+    ]);
+    for (const [arg] of vi.mocked(queryClient.invalidateQueries).mock.calls) {
+      expect((arg as { refetchType?: string }).refetchType).toBeUndefined();
+    }
   });
 });
