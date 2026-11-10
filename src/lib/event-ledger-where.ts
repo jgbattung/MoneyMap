@@ -26,16 +26,18 @@ export function buildLedgerWhere({
 } {
   const date = buildDateRange(startDate, endDate);
 
-  const incomeWhere: Prisma.IncomeTransactionWhereInput = {
+  const shared = {
     userId,
     ...(tagIds?.length ? { tags: { some: { id: { in: tagIds } } } } : {}),
     ...(date ? { date } : {}),
     ...(accountId ? { accountId } : {}),
   };
 
+  const incomeWhere: Prisma.IncomeTransactionWhereInput = shared;
+
   // Installment parents would double-count against their generated children.
   const expenseWhere: Prisma.ExpenseTransactionWhereInput = {
-    ...incomeWhere,
+    ...shared,
     isInstallment: false,
   };
 
