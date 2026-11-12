@@ -169,4 +169,18 @@ describe('PayPlanList', () => {
     fireEvent.click(screen.getByRole('button', { name: /Broken/ }));
     expect(onSelect).toHaveBeenCalledWith(incomplete);
   });
+
+  it('marks a plan with a deleted transfer type as Incomplete and says so', () => {
+    const noType: PayPlan = { ...basePlan, transferTypeId: null, transferType: null };
+    render(<PayPlanList plans={[noType]} onSelect={vi.fn()} />);
+    expect(screen.getByText('Incomplete')).toBeTruthy();
+    expect(screen.getByText(/no transfer type/)).toBeTruthy();
+  });
+
+  it.each(['sourceAccount', 'spendAccount'] as const)('marks a plan with a deleted %s as Incomplete', (field) => {
+    const broken: PayPlan = { ...basePlan, [`${field}Id`]: null, [field]: null };
+    render(<PayPlanList plans={[broken]} onSelect={vi.fn()} />);
+    expect(screen.getByText('Incomplete')).toBeTruthy();
+    expect(screen.getByText(/missing account/)).toBeTruthy();
+  });
 });

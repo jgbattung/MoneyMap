@@ -172,6 +172,67 @@ describe('POST /api/pay-divisions', () => {
     expect(children.every((c: any) => c.kind === 'EARMARK' && c.transferTypeId === null)).toBe(true);
   });
 
+  it('makes every line a top-level earmark and skips the child batch when save equals source', async () => {
+    vi.mocked(db.payPlan.findFirst as any).mockResolvedValue({ ...plan, saveAccountId: 'src' });
+    const res = await POST(req('POST', validBody));
+    expect(res.status).toBe(201);
+    const ops = vi.mocked(db.$transaction).mock.calls[0][0] as unknown as any[];
+    expect(ops).toHaveLength(1);
+    expect(db.payDivisionItem.createMany).not.toHaveBeenCalled();
+    const parents = ops[0].args.data.items.create;
+    expect(parents.map((p: any) => p.label)).toEqual(['EF', 'Gotrade', 'MP2', 'Sinking', 'Papa TW', 'Spending']);
+    expect(parents.filter((p: any) => p.kind === 'TRANSFER').map((p: any) => p.label)).toEqual(['Spending']);
+    expect(parents.every((p: any) => p.parentItemId === null)).toBe(true);
+    expect(parents.map((p: any) => p.sortOrder)).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+
+  it('creates no transfer rows when both save and spend equal the source', async () => {
+    vi.mocked(db.payPlan.findFirst as any).mockResolvedValue({ ...plan, saveAccountId: 'src', spendAccountId: 'src' });
+    await POST(req('POST', validBody));
+    const ops = vi.mocked(db.$transaction).mock.calls[0][0] as unknown as any[];
+    const parents = ops[0].args.data.items.create;
+    expect(parents.every((p: any) => p.kind === 'EARMARK')).toBe(true);
+  });
+
+  it('stores the linked income transaction and snapshots the plan', async () => {
+    const res = await POST(req('POST', { ...validBody, incomeTransactionId: 'inc-1' }));
+    expect(res.status).toBe(201);
+    expect(vi.mocked(db.incomeTransaction.findFirst).mock.calls[0][0]).toMatchObject({
+      where: { id: 'inc-1', userId: 'user-123' },
+    });
+    const ops = vi.mocked(db.$transaction).mock.calls[0][0] as unknown as any[];
+    expect(ops[0].args.data).toMatchObject({
+      incomeTransactionId: 'inc-1',
+      planName: 'Jun plan',
+      savePercent: '30',
+    });
+    expect(await res.json()).toEqual({ id: ops[0].args.data.id });
+  });
+
+  it('scopes the plan lookup by user and does not look up income when none is given', async () => {
+    await POST(req('POST', validBody));
+    expect(vi.mocked(db.payPlan.findFirst).mock.calls[0][0]).toMatchObject({
+      where: { id: 'plan-1', userId: 'user-123' },
+    });
+    expect(db.incomeTransaction.findFirst).not.toHaveBeenCalled();
+    const ops = vi.mocked(db.$transaction).mock.calls[0][0] as unknown as any[];
+    expect(ops[0].args.data.incomeTransactionId).toBeNull();
+  });
+
+  it('returns 400 when the stored plan lines are malformed', async () => {
+    vi.mocked(db.payPlan.findFirst as any).mockResolvedValue({ ...plan, lines: [{ name: '', kind: 'X' }] });
+    const res = await POST(req('POST', validBody));
+    expect(res.status).toBe(400);
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('returns 500 on an unexpected database error', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(db.$transaction as any).mockRejectedValue(new Error('connection lost'));
+    expect((await POST(req('POST', validBody))).status).toBe(500);
+    consoleSpy.mockRestore();
+  });
+
   it('returns 409 when the income transaction is already divided', async () => {
     vi.mocked(db.$transaction as any).mockRejectedValue(
       Object.assign(new Error('unique'), { code: 'P2002' })
@@ -220,6 +281,15 @@ describe('PATCH /api/pay-divisions/[id]/items/[itemId]', () => {
     expect(vi.mocked(db.payDivisionItem.findFirst).mock.calls[0][0]).toMatchObject({
       where: { id: 'item-1', divisionId: 'div-1', division: { userId: 'user-123' } },
     });
+    expect(db.payDivisionItem.update).not.toHaveBeenCalled();
+  });
+
+  it('updates only the checked item by id after the ownership check', async () => {
+    vi.mocked(db.payDivisionItem.findFirst as any).mockResolvedValue({ id: 'item-1', kind: 'EARMARK' });
+    vi.mocked(db.payDivisionItem.update as any).mockResolvedValue({ id: 'item-1' });
+    await PATCH(req('PATCH', { done: true }), params);
+    expect(vi.mocked(db.payDivisionItem.update).mock.calls[0][0].where).toEqual({ id: 'item-1' });
+    expect(Object.keys(vi.mocked(db.payDivisionItem.update).mock.calls[0][0].data)).toEqual(['completedAt']);
   });
 
   it('rejects a TRANSFER item', async () => {

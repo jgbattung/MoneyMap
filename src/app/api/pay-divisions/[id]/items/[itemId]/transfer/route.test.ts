@@ -173,4 +173,32 @@ describe('POST /api/pay-divisions/[id]/items/[itemId]/transfer', () => {
       'SAVINGS'
     );
   });
+
+  it('still returns 201 when the deferred recalculation fails', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(onTransferTransactionChange).mockRejectedValueOnce(new Error('recalc failed'));
+    const res = await POST(req(validBody), params);
+    expect(res.status).toBe(201);
+    await vi.waitFor(() =>
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('deferred onTransferTransactionChange'),
+        expect.any(Error)
+      )
+    );
+    consoleSpy.mockRestore();
+  });
+
+  it('returns 500 and skips the recalculation when the transaction fails for another reason', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(db.$transaction as any).mockRejectedValue(new Error('connection lost'));
+    const res = await POST(req(validBody), params);
+    expect(res.status).toBe(500);
+    expect(onTransferTransactionChange).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it('returns the updated item with its linked transfer', async () => {
+    const res = await POST(req(validBody), params);
+    expect(await res.json()).toEqual({ id: 'item-1', transferTransaction: { id: 'tr-1' } });
+  });
 });

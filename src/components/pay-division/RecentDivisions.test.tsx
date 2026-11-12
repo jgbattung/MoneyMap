@@ -209,6 +209,44 @@ describe('RecentDivisions checklist', () => {
     expect(await screen.findByRole('checkbox', { name: 'Undo Old bucket' })).toBeTruthy();
   });
 
+  it('cancelling the undo prompt keeps the transfer', async () => {
+    render(<RecentDivisions />);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Undo Spending' }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText(/₱23,000.00/)).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(undoTransfer).not.toHaveBeenCalled();
+  });
+
+  it('shows the recorded date on a done transfer row', () => {
+    render(<RecentDivisions />);
+    expect(screen.getByText(/sent Jun 17/)).toBeTruthy();
+  });
+
+  it('renders a transfer row whose accounts were deleted as Unknown account', () => {
+    hookState.payDivisions = [
+      {
+        ...openDivision,
+        items: [{ ...openDivision.items[0], fromAccount: null, toAccount: null, fromAccountId: null, toAccountId: null }],
+      },
+    ];
+    render(<RecentDivisions />);
+    const route = screen.getByText(/Unknown account/);
+    expect(route.textContent?.match(/Unknown account/g)).toHaveLength(2);
+    expect(screen.getByRole('checkbox', { name: 'Mark Savings as done' })).toBeTruthy();
+  });
+
+  it('shows the loading skeleton and the error text', () => {
+    hookState.isLoading = true;
+    const { unmount } = render(<RecentDivisions />);
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    unmount();
+    hookState = { ...hookState, isLoading: false, error: 'Failed to fetch pay divisions', payDivisions: [] };
+    render(<RecentDivisions />);
+    expect(screen.getByText(/Failed to fetch pay divisions/)).toBeTruthy();
+  });
+
   it('shows an empty state when there are no divisions', () => {
     hookState.payDivisions = [];
     render(<RecentDivisions />);
