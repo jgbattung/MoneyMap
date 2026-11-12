@@ -3,7 +3,7 @@ import { navRoutes, mobileNavRoutes, navGroups } from './navigation';
 
 describe('navigation constants', () => {
   it('every navRoute with a filled variant has a distinct activeIcon', () => {
-    const exceptions = ['Accounts', 'More'];
+    const exceptions = ['Accounts', 'Pay Division', 'More'];
     const routesWithFilledPairs = navRoutes.filter(r => !exceptions.includes(r.name));
     for (const route of routesWithFilledPairs) {
       expect(route.icon, `${route.name} should have distinct icon/activeIcon`).not.toBe(route.activeIcon);
@@ -13,6 +13,11 @@ describe('navigation constants', () => {
   it('navRoutes includes all routes from navGroups plus dashboard', () => {
     const groupRouteCount = navGroups.reduce((sum, g) => sum + g.routes.length, 0);
     expect(navRoutes.length).toBe(groupRouteCount + 1);
+  });
+
+  it('lists Pay Division in the Planning group so it also appears under More', () => {
+    const planning = navGroups.find(g => g.key === 'planning');
+    expect(planning?.routes.map(r => r.path)).toContain('/pay-division');
   });
 
   it('mobileNavRoutes has expected entries', () => {
