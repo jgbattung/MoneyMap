@@ -62,6 +62,12 @@ describe('invalidateAfterTransactionWrite', () => {
     }
   });
 
+  it('marks the pay division checklists stale without an immediate refetch', () => {
+    expect(DEFERRED_KEYS).toContainEqual(['payDivisions']);
+    invalidateAfterTransactionWrite(queryClient, ['transfers']);
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['payDivisions'], refetchType: 'none' });
+  });
+
   it('invalidates the calendar keys eagerly after a transaction write', () => {
     invalidateAfterTransactionWrite(queryClient, ['expenseTransactions']);
 

@@ -27,6 +27,7 @@ export const DEFERRED_KEYS = [
   ['annualSummary'],
   ['expenseBreakdown'],
   ['incomeBreakdown'],
+  ['payDivisions'],
 ] as const;
 
 /**
