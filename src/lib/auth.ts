@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { mcp } from "better-auth/plugins";
 import { db } from "./prisma";
 
 if (!process.env.BETTER_AUTH_SECRET) {
@@ -37,4 +38,19 @@ export const auth = betterAuth({
         clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     },
   },
+  plugins: [
+    mcp({
+      loginPage: "/sign-in",
+      oidcConfig: {
+        loginPage: "/sign-in",
+        // Claude registers itself unauthenticated (Dynamic Client Registration).
+        allowDynamicClientRegistration: true,
+        // Public clients: PKCE is mandatory and only S256 is accepted.
+        requirePKCE: true,
+        allowPlainCodeChallengeMethod: false,
+        // 30 days so a daily scheduled run keeps the connection alive.
+        refreshTokenExpiresIn: 2592000,
+      },
+    }),
+  ],
 })
