@@ -6,7 +6,7 @@ MoneyMap: single-user personal finance tracker (net worth, accounts, cards, tran
 
 ## CRITICAL: Database Safety
 
-`.env` points at the **live production DB** with real financial data. NEVER run `prisma migrate`, `db push`, or `db seed` - write migrations but have the user run them manually. Safe: `prisma generate/validate/format`. Exception: E2E tests use an isolated local Postgres (`docker-compose.yml`, port 5433 via `playwright/.env.test`) where Playwright setup/CI applies migrations automatically.
+The **production DB** holds real financial data. Its URL is NOT in any local file - it lives only in the user's password manager and Vercel. Local `.env` points at the Docker Postgres (`docker-compose.yml`, `localhost:5433`). Never run `prisma migrate`, `db push`, or `db seed` against production - write migrations and have the user apply them. Before any command that writes to a DB, confirm the target is `localhost:5433` (Prisma prints the datasource); if a `.env` ever contains a supabase host, stop. Safe anywhere: `prisma generate/validate/format`. Playwright CI applies migrations to its own DB; local runs do not (see `.gsd/project-context.md`).
 
 ## Commands
 
