@@ -229,6 +229,14 @@ describe('middleware', () => {
       expect(config.matcher[0]).toContain('screenshots')
     })
 
+    it('exempts the .well-known discovery paths so signed-out OAuth clients are not redirected', async () => {
+      const { config } = await import('./middleware')
+      const pattern = new RegExp(`^${config.matcher[0]}$`)
+      for (const path of ['/.well-known/oauth-protected-resource', '/.well-known/oauth-authorization-server']) {
+        expect(pattern.test(path), `${path} must be exempt`).toBe(false)
+      }
+    })
+
     it('still matches application routes', async () => {
       const { config } = await import('./middleware')
       const pattern = new RegExp(`^${config.matcher[0]}$`)
