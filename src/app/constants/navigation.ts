@@ -17,6 +17,7 @@ import {
   IconExchangeFilled,
   IconReportAnalytics,
   IconReportAnalyticsFilled,
+  IconArrowsSplit,
   IconDots,
 } from "@tabler/icons-react";
 
@@ -65,6 +66,7 @@ export const navGroups: NavGroup[] = [
     routes: [
       { name: "Budgets", path: "/budgets", icon: IconPig, activeIcon: IconPigFilled },
       { name: "Reports", path: "/reports", icon: IconReportAnalytics, activeIcon: IconReportAnalyticsFilled },
+      { name: "Pay Division", path: "/pay-division", icon: IconArrowsSplit, activeIcon: IconArrowsSplit },
     ],
   },
 ];

@@ -29,6 +29,8 @@ model User {
   tags                 Tag[]
   transferTransactions TransferTransaction[]
   transferTypes        TransferType[]
+  payPlans             PayPlan[]
+  payDivisions         PayDivision[]
 
   @@map("user")
 }
@@ -78,26 +80,31 @@ model Verification {
 }
 
 model FinancialAccount {
-  id                  String                @id @default(cuid())
-  userId              String                @map("user_id")
-  name                String
-  accountType         AccountType           @map("account_type")
-  initialBalance      Decimal               @map("initial_balance") @db.Decimal(15, 2)
-  currentBalance      Decimal               @map("current_balance") @db.Decimal(15, 2)
-  addToNetWorth       Boolean               @default(true) @map("add_to_net_worth")
-  statementDate       Int?                  @map("statement_date")
-  dueDate             Int?                  @map("due_date")
-  cardGroup                    String?      @map("card_group")
-  statementBalance             Decimal?     @map("statement_balance") @db.Decimal(15, 2)
-  previousStatementBalance     Decimal?     @map("previous_statement_balance") @db.Decimal(15, 2)
-  lastStatementCalculationDate DateTime?    @map("last_statement_calculation_date") @db.Timestamp(6)
-  createdAt           DateTime              @default(now()) @map("created_at")
-  updatedAt           DateTime              @updatedAt @map("updated_at")
-  expenseTransactions ExpenseTransaction[]
-  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  incomeTransactions  IncomeTransaction[]
-  transfersFrom       TransferTransaction[] @relation("TransferFrom")
-  transfersTo         TransferTransaction[] @relation("TransferTo")
+  id                           String                @id @default(cuid())
+  userId                       String                @map("user_id")
+  name                         String
+  accountType                  AccountType           @map("account_type")
+  initialBalance               Decimal               @map("initial_balance") @db.Decimal(15, 2)
+  currentBalance               Decimal               @map("current_balance") @db.Decimal(15, 2)
+  addToNetWorth                Boolean               @default(true) @map("add_to_net_worth")
+  statementDate                Int?                  @map("statement_date")
+  dueDate                      Int?                  @map("due_date")
+  cardGroup                    String?               @map("card_group")
+  statementBalance             Decimal?              @map("statement_balance") @db.Decimal(15, 2)
+  previousStatementBalance     Decimal?              @map("previous_statement_balance") @db.Decimal(15, 2)
+  lastStatementCalculationDate DateTime?             @map("last_statement_calculation_date") @db.Timestamp(6)
+  createdAt                    DateTime              @default(now()) @map("created_at")
+  updatedAt                    DateTime              @updatedAt @map("updated_at")
+  expenseTransactions          ExpenseTransaction[]
+  user                         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  incomeTransactions           IncomeTransaction[]
+  transfersFrom                TransferTransaction[] @relation("TransferFrom")
+  transfersTo                  TransferTransaction[] @relation("TransferTo")
+  payPlansAsSource             PayPlan[]             @relation("PayPlanSource")
+  payPlansAsSave               PayPlan[]             @relation("PayPlanSave")
+  payPlansAsSpend              PayPlan[]             @relation("PayPlanSpend")
+  payItemsFrom                 PayDivisionItem[]     @relation("PayDivisionItemFrom")
+  payItemsTo                   PayDivisionItem[]     @relation("PayDivisionItemTo")
 
   @@map("financial_accounts")
 }
@@ -195,6 +202,7 @@ model IncomeTransaction {
   incomeType   IncomeType       @relation(fields: [incomeTypeId], references: [id], onDelete: Cascade)
   user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   tags         Tag[]
+  payDivision  PayDivision?
 
   @@index([accountId, date])
   @@index([userId, date])
@@ -208,6 +216,8 @@ model TransferType {
   createdAt            DateTime              @default(now()) @map("created_at")
   updatedAt            DateTime              @updatedAt @map("updated_at")
   transferTransactions TransferTransaction[]
+  payPlans             PayPlan[]
+  payDivisionItems     PayDivisionItem[]
   user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, name])
@@ -215,25 +225,26 @@ model TransferType {
 }
 
 model TransferTransaction {
-  id             String              @id @default(cuid())
-  userId         String              @map("user_id")
-  amount         Float
-  fromAccountId  String              @map("from_account_id")
-  toAccountId    String              @map("to_account_id")
-  transferTypeId String              @map("transfer_type_id")
-  date           DateTime            @db.Timestamp(6)
-  notes          String?
-  createdAt      DateTime            @default(now()) @map("created_at")
-  updatedAt      DateTime            @updatedAt @map("updated_at")
-  name           String              @db.VarChar(100)
-  feeAmount      Decimal?            @map("fee_amount") @db.Decimal(15, 2)
-  feeExpenseId   String?             @unique @map("fee_expense_id")
-  feeExpense     ExpenseTransaction? @relation("TransferFee", fields: [feeExpenseId], references: [id])
-  fromAccount    FinancialAccount    @relation("TransferFrom", fields: [fromAccountId], references: [id], onDelete: Cascade)
-  toAccount      FinancialAccount    @relation("TransferTo", fields: [toAccountId], references: [id], onDelete: Cascade)
-  transferType   TransferType        @relation(fields: [transferTypeId], references: [id])
-  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tags           Tag[]
+  id              String              @id @default(cuid())
+  userId          String              @map("user_id")
+  amount          Float
+  fromAccountId   String              @map("from_account_id")
+  toAccountId     String              @map("to_account_id")
+  transferTypeId  String              @map("transfer_type_id")
+  date            DateTime            @db.Timestamp(6)
+  notes           String?
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  name            String              @db.VarChar(100)
+  feeAmount       Decimal?            @map("fee_amount") @db.Decimal(15, 2)
+  feeExpenseId    String?             @unique @map("fee_expense_id")
+  feeExpense      ExpenseTransaction? @relation("TransferFee", fields: [feeExpenseId], references: [id])
+  fromAccount     FinancialAccount    @relation("TransferFrom", fields: [fromAccountId], references: [id], onDelete: Cascade)
+  toAccount       FinancialAccount    @relation("TransferTo", fields: [toAccountId], references: [id], onDelete: Cascade)
+  transferType    TransferType        @relation(fields: [transferTypeId], references: [id])
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags            Tag[]
+  payDivisionItem PayDivisionItem?
 
   @@index([fromAccountId, date])
   @@index([toAccountId, date])
@@ -269,4 +280,80 @@ enum AccountType {
   OTHER
   PAYROLL
   E_WALLET
+}
+
+enum PayDivisionItemKind {
+  TRANSFER
+  EARMARK
+}
+
+model PayPlan {
+  id              String            @id @default(cuid())
+  userId          String            @map("user_id")
+  name            String            @db.VarChar(50)
+  savePercent     Decimal           @map("save_percent") @db.Decimal(5, 2)
+  sourceAccountId String?           @map("source_account_id")
+  saveAccountId   String?           @map("save_account_id")
+  spendAccountId  String?           @map("spend_account_id")
+  transferTypeId  String?           @map("transfer_type_id")
+  lines           Json
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceAccount   FinancialAccount? @relation("PayPlanSource", fields: [sourceAccountId], references: [id], onDelete: SetNull)
+  saveAccount     FinancialAccount? @relation("PayPlanSave", fields: [saveAccountId], references: [id], onDelete: SetNull)
+  spendAccount    FinancialAccount? @relation("PayPlanSpend", fields: [spendAccountId], references: [id], onDelete: SetNull)
+  transferType    TransferType?     @relation(fields: [transferTypeId], references: [id], onDelete: SetNull)
+  divisions       PayDivision[]
+
+  @@unique([userId, name])
+  @@map("pay_plans")
+}
+
+model PayDivision {
+  id                  String             @id @default(cuid())
+  userId              String             @map("user_id")
+  planId              String?            @map("plan_id")
+  planName            String             @map("plan_name") @db.VarChar(50)
+  savePercent         Decimal            @map("save_percent") @db.Decimal(5, 2)
+  payAmount           Decimal            @map("pay_amount") @db.Decimal(15, 2)
+  saveAmount          Decimal            @map("save_amount") @db.Decimal(15, 2)
+  spendAmount         Decimal            @map("spend_amount") @db.Decimal(15, 2)
+  payDate             DateTime           @map("pay_date") @db.Timestamp(6)
+  incomeTransactionId String?            @unique @map("income_transaction_id")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                PayPlan?           @relation(fields: [planId], references: [id], onDelete: SetNull)
+  incomeTransaction   IncomeTransaction? @relation(fields: [incomeTransactionId], references: [id], onDelete: SetNull)
+  items               PayDivisionItem[]
+
+  @@index([userId, payDate])
+  @@map("pay_divisions")
+}
+
+model PayDivisionItem {
+  id                    String               @id @default(cuid())
+  divisionId            String               @map("division_id")
+  kind                  PayDivisionItemKind
+  label                 String               @db.VarChar(100)
+  detail                String?              @db.VarChar(50)
+  amount                Decimal              @db.Decimal(15, 2)
+  sortOrder             Int                  @map("sort_order")
+  parentItemId          String?              @map("parent_item_id")
+  fromAccountId         String?              @map("from_account_id")
+  toAccountId           String?              @map("to_account_id")
+  transferTypeId        String?              @map("transfer_type_id")
+  transferTransactionId String?              @unique @map("transfer_transaction_id")
+  completedAt           DateTime?            @map("completed_at") @db.Timestamp(6)
+  division              PayDivision          @relation(fields: [divisionId], references: [id], onDelete: Cascade)
+  parentItem            PayDivisionItem?     @relation("PayDivisionItemChildren", fields: [parentItemId], references: [id], onDelete: Cascade)
+  children              PayDivisionItem[]    @relation("PayDivisionItemChildren")
+  fromAccount           FinancialAccount?    @relation("PayDivisionItemFrom", fields: [fromAccountId], references: [id], onDelete: SetNull)
+  toAccount             FinancialAccount?    @relation("PayDivisionItemTo", fields: [toAccountId], references: [id], onDelete: SetNull)
+  transferType          TransferType?        @relation(fields: [transferTypeId], references: [id], onDelete: SetNull)
+  transferTransaction   TransferTransaction? @relation(fields: [transferTransactionId], references: [id], onDelete: SetNull)
+
+  @@index([divisionId])
+  @@map("pay_division_items")
 }
