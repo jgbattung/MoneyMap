@@ -2,11 +2,15 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { mcp } from "better-auth/plugins";
 import { mcpCompatibility } from "./mcp/public-client";
+import { installPluginLogFilter } from "./mcp/plugin-log-filter";
 import { db } from "./prisma";
 
 if (!process.env.BETTER_AUTH_SECRET) {
   throw new Error('BETTER_AUTH_SECRET environment variable is required');
 }
+
+// The mcp plugin console.logs client secrets and the raw authorize query; drop just those lines.
+installPluginLogFilter();
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
