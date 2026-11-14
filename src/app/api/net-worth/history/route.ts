@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { db } from "@/lib/prisma";
-import { computeCumulativeNetWorth } from "@/lib/net-worth-history";
+import { computeCumulativeNetWorth, getMonthlyFlowAggregates } from "@/lib/net-worth-history";
 
 export const dynamic = 'force-dynamic';
-
-interface MonthlyAggregate {
-  year: number;
-  month: number;
-  total: number;
-}
 
 export async function GET(_req: NextRequest) {
   try {
@@ -27,56 +20,13 @@ export async function GET(_req: NextRequest) {
 
     const userId = session.user.id;
 
-    // Get all accounts with initialBalance
-    const accounts = await db.financialAccount.findMany({
-      where: {
-        userId,
-        addToNetWorth: true,
-      },
-      select: {
-        id: true,
-        initialBalance: true,
-      }
-    });
+    const flows = await getMonthlyFlowAggregates(userId);
 
-    if (accounts.length === 0) {
+    if (!flows) {
       return NextResponse.json({ history: [] });
     }
 
-    const accountIds = accounts.map(a => a.id);
-
-    // Calculate total initial balance across all accounts
-    const totalInitialBalance = accounts.reduce(
-      (sum, account) => sum + parseFloat(account.initialBalance.toString()),
-      0
-    );
-
-    // Aggregate monthly income and expenses via SQL GROUP BY (no unbounded row scan in JS)
-    const [incomeRows, expenseRows] = await Promise.all([
-      db.$queryRaw<MonthlyAggregate[]>`
-        SELECT
-          EXTRACT(YEAR FROM date)::int  AS year,
-          EXTRACT(MONTH FROM date)::int AS month,
-          SUM(amount)::float            AS total
-        FROM income_transactions
-        WHERE user_id = ${userId}
-          AND account_id = ANY(${accountIds}::text[])
-        GROUP BY year, month
-        ORDER BY year ASC, month ASC
-      `,
-      db.$queryRaw<MonthlyAggregate[]>`
-        SELECT
-          EXTRACT(YEAR FROM date)::int  AS year,
-          EXTRACT(MONTH FROM date)::int AS month,
-          SUM(amount)::float            AS total
-        FROM expense_transactions
-        WHERE user_id = ${userId}
-          AND account_id = ANY(${accountIds}::text[])
-          AND is_installment = false
-        GROUP BY year, month
-        ORDER BY year ASC, month ASC
-      `,
-    ]);
+    const { totalInitialBalance, incomeRows, expenseRows } = flows;
 
     // Build the full-history window (oldest data month -> current month, oldest first).
     // The client slices this to the user-selected range (3M / 6M / 1Y / All).

@@ -44,6 +44,8 @@ export const config = {
     // image optimizer, which fetches the upstream file over HTTP and cannot follow
     // the redirect. Only this one public asset directory is exempted; every
     // application route still runs the guard above.
-    "/((?!api|_next/static|_next/image|favicon.ico|screenshots).*)",
+    // `.well-known` is excluded so signed-out OAuth clients can read the MCP discovery
+    // metadata instead of being redirected to /sign-in.
+    "/((?!api|_next/static|_next/image|favicon.ico|screenshots|\\.well-known).*)",
   ],
 };

@@ -357,3 +357,49 @@ model PayDivisionItem {
   @@index([divisionId])
   @@map("pay_division_items")
 }
+
+// better-auth `mcp` plugin tables (OAuth provider for the MCP connector).
+// The plugin stores userId as a plain string, so there are no relations here.
+model OauthApplication {
+  id           String   @id
+  name         String
+  icon         String?
+  metadata     String?
+  clientId     String   @unique
+  clientSecret String
+  redirectURLs String
+  type         String
+  disabled     Boolean? @default(false)
+  userId       String?
+  createdAt    DateTime
+  updatedAt    DateTime
+
+  @@map("oauthApplication")
+}
+
+model OauthAccessToken {
+  id                    String   @id
+  accessToken           String   @unique
+  refreshToken          String   @unique
+  accessTokenExpiresAt  DateTime
+  refreshTokenExpiresAt DateTime
+  clientId              String
+  userId                String?
+  scopes                String
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("oauthAccessToken")
+}
+
+model OauthConsent {
+  id           String   @id
+  clientId     String
+  userId       String
+  scopes       String
+  createdAt    DateTime
+  updatedAt    DateTime
+  consentGiven Boolean
+
+  @@map("oauthConsent")
+}
