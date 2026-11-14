@@ -11,7 +11,17 @@ const discovery = oAuthDiscoveryMetadata(auth);
 // `mcpCompatibility`. Clients read this document to decide how to call the token endpoint.
 export async function GET(request: Request) {
   const response = await discovery(request);
-  const metadata = await response.json();
+  const metadata = await response.json().catch(() => null);
+
+  // better-auth returns `null` (after logging the cause) when the issuer cannot be built, which
+  // happens when BETTER_AUTH_URL is unset. Do not invent an issuer from the request.
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    console.error("OAuth discovery failed: better-auth returned no metadata. Is BETTER_AUTH_URL set?");
+    return Response.json(
+      { error: "server_error", error_description: "OAuth issuer is not configured (BETTER_AUTH_URL)." },
+      { status: 500 }
+    );
+  }
 
   const withValues = (list: unknown, ...extra: string[]) =>
     Array.from(new Set([...(Array.isArray(list) ? list : []), ...extra]));

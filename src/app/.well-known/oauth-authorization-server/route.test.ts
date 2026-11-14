@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 
 const metadataHandler = vi.hoisted(() =>
   vi.fn(async (req: Request) =>
@@ -46,5 +46,43 @@ describe('GET /.well-known/oauth-authorization-server', () => {
 
   it('is never statically cached', () => {
     expect(dynamic).toBe('force-dynamic')
+  })
+
+  describe('when better-auth cannot build the metadata (BETTER_AUTH_URL unset)', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it.each([
+      ['null', null],
+      ['a string', 'nope'],
+      ['an array', []],
+    ])('returns a 500 JSON error instead of throwing when the metadata is %s', async (_label, value) => {
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      metadataHandler.mockResolvedValueOnce(Response.json(value))
+
+      const res = await GET(new Request('https://money.example.com/.well-known/oauth-authorization-server'))
+
+      expect(res.status).toBe(500)
+      expect(await res.json()).toEqual({
+        error: 'server_error',
+        error_description: 'OAuth issuer is not configured (BETTER_AUTH_URL).',
+      })
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not invent an issuer from the request origin', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      metadataHandler.mockResolvedValueOnce(Response.json(null))
+      const body = await (await GET(new Request('https://evil.example.com/x'))).json()
+      expect(JSON.stringify(body)).not.toContain('evil.example.com')
+      expect(body.issuer).toBeUndefined()
+    })
+
+    it('returns a 500 when the response body is not JSON', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      metadataHandler.mockResolvedValueOnce(new Response('oops', { status: 200 }))
+      expect((await GET(new Request('https://money.example.com/x'))).status).toBe(500)
+    })
   })
 })
