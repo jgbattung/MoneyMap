@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { mcp } from "better-auth/plugins";
+import { mcpCompatibility } from "./mcp/public-client";
 import { db } from "./prisma";
 
 if (!process.env.BETTER_AUTH_SECRET) {
@@ -52,5 +53,6 @@ export const auth = betterAuth({
         refreshTokenExpiresIn: 2592000,
       },
     }),
+    mcpCompatibility,
   ],
 })
