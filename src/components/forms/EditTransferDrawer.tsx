@@ -292,7 +292,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                     </div>
 
                     {/* Side-by-side From and To Accounts */}
-                    <div className="flex items-center gap-3 p-4">
+                    <div className="flex items-start gap-3 p-4">
                       <FormField
                         control={form.control}
                         name="fromAccountId"
@@ -325,7 +325,7 @@ const EditTransferDrawer = ({ open, onOpenChange, className, transferId }: EditT
                         )}
                       />
 
-                      <ArrowRight className="h-5 w-5 text-muted-foreground mt-8 flex-shrink-0" />
+                      <ArrowRight className="h-5 w-5 text-muted-foreground mt-7.5 flex-shrink-0" />
 
                       <FormField
                         control={form.control}
