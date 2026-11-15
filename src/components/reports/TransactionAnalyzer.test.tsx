@@ -196,6 +196,27 @@ vi.mock('@/components/ui/separator', () => ({
     React.createElement('hr', { 'data-testid': 'separator', 'data-orientation': orientation }),
 }));
 
+vi.mock('framer-motion', () => ({
+  useReducedMotion: vi.fn(() => false),
+}));
+
+vi.mock('recharts', () => ({
+  BarChart: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', { 'data-testid': 'bar-chart' }, children),
+  Bar: () => null,
+  CartesianGrid: () => null,
+  XAxis: () => null,
+  YAxis: () => null,
+  ReferenceLine: () => null,
+}));
+
+vi.mock('@/components/ui/chart', () => ({
+  ChartContainer: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', { 'data-testid': 'chart-container' }, children),
+  ChartTooltip: () => null,
+  ChartTooltipContent: () => null,
+}));
+
 vi.mock('@/components/shared/EmptyState', () => ({
   EmptyState: ({
     title,
@@ -283,6 +304,12 @@ const mockAccounts = [
 const mockRefetch = vi.fn();
 const mockFetchNextPage = vi.fn();
 
+const THREE_MONTHS = [
+  { month: '2024-01', amount: 1000, count: 1 },
+  { month: '2024-02', amount: 0, count: 0 },
+  { month: '2024-03', amount: 4000, count: 2 },
+];
+
 const mockAnalysisData = {
   type: 'expense' as const,
   totalAmount: 5000,
@@ -320,6 +347,7 @@ const mockAnalysisData = {
     },
   ],
   hasMore: false,
+  monthly: THREE_MONTHS,
 };
 
 // ---------------------------------------------------------------------------
@@ -746,6 +774,41 @@ describe('TransactionAnalyzer', () => {
       await renderAndAnalyze();
       // McDonald's has subcategoryName: 'Dining'
       expect(screen.getByText(/Dining/)).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('monthly trend', () => {
+    it('renders after the summary stats and before the breakdown', async () => {
+      await renderAndAnalyze();
+      const stats = screen.getByText('Total Amount');
+      const trend = screen.getByText('Monthly Trend');
+      const breakdown = screen.getByText(/Breakdown by/);
+      expect(stats.compareDocumentPosition(trend) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(trend.compareDocumentPosition(breakdown) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('does not render for a single-month series', async () => {
+      await renderAndAnalyze({ ...mockAnalysisData, monthly: [THREE_MONTHS[0]] });
+      expect(screen.queryByText('Monthly Trend')).toBeNull();
+    });
+
+    it('does not render in the empty results state', async () => {
+      vi.mocked(useTransactionAnalysis).mockReturnValue({
+        data: { ...mockAnalysisData, transactionCount: 0, transactions: [], breakdown: [], hasMore: false },
+        isLoading: false,
+        isFetching: false,
+        isFetchingMore: false,
+        error: null,
+        refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
+      });
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+      await waitFor(() => {
+        expect(screen.getByTestId('empty-state')).toBeTruthy();
+      });
+      expect(screen.queryByText('Monthly Trend')).toBeNull();
     });
   });
 

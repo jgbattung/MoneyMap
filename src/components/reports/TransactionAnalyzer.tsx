@@ -57,6 +57,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { MultiSelectPopover } from "@/components/shared/MultiSelectPopover";
 import { FilterBadge } from "@/components/shared/FilterBadge";
 import { getCategoryColorMap } from "@/lib/chart-colors";
+import AnalyzerMonthlyTrend from "./AnalyzerMonthlyTrend";
 
 
 const ALL_VALUE = "__all__";
@@ -760,6 +761,8 @@ export function TransactionAnalyzer() {
                     </p>
                   </div>
                 </div>
+
+                <AnalyzerMonthlyTrend data={data.monthly} totalAmount={data.totalAmount} />
 
                 {/* Breakdown Section */}
                 {data.breakdown.length > 0 && (
