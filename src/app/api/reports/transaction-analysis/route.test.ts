@@ -142,4 +142,99 @@ describe('GET /api/reports/transaction-analysis monthly series', () => {
     expect(dateCall[0].where).toEqual(m.aggregate.mock.calls[0][0].where);
     expect(dateCall[0].where.isInstallment).toBeUndefined();
   });
+
+  it('still returns monthly when exactly one subcategory gives no breakdown', async () => {
+    setupModel('expenseTransaction', 'expenseSubcategoryId');
+    const response = await GET(
+      makeRequest({
+        type: 'expense',
+        startDate: '2026-01-01',
+        endDate: '2026-03-31',
+        subcategoryIds: 'sub-electricity',
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.breakdownBy).toBeNull();
+    expect(data.breakdown).toEqual([]);
+    expect(data.monthly.map((r: any) => r.month)).toEqual(['2026-01', '2026-02', '2026-03']);
+    const m = db.expenseTransaction as any;
+    const dateCall = m.groupBy.mock.calls.find((c: any[]) => c[0].by[0] === 'date');
+    expect(dateCall[0].where.expenseSubcategoryId).toEqual({ in: ['sub-electricity'] });
+  });
+
+  it('returns the full monthly series on later pages too', async () => {
+    setupModel('expenseTransaction', 'expenseTypeId');
+    const response = await GET(
+      makeRequest({ type: 'expense', startDate: '2026-01-01', endDate: '2026-03-31', skip: '10', take: '10' })
+    );
+    const data = await response.json();
+
+    expect(data.monthly).toHaveLength(3);
+    const m = db.expenseTransaction as any;
+    expect(m.findMany.mock.calls[0][0].skip).toBe(10);
+    const dateCall = m.groupBy.mock.calls.find((c: any[]) => c[0].by[0] === 'date');
+    expect(dateCall[0].skip).toBeUndefined();
+    expect(dateCall[0].take).toBeUndefined();
+  });
+
+  it('treats a null date-group sum as zero', async () => {
+    setupModel('expenseTransaction', 'expenseTypeId');
+    const m = db.expenseTransaction as any;
+    m.groupBy.mockImplementation(async (args: any) =>
+      args.by[0] === 'date'
+        ? [
+            { date: new Date('2026-01-10T00:00:00.000Z'), _sum: { amount: null }, _count: 1 },
+            { date: new Date('2026-02-10T00:00:00.000Z'), _sum: { amount: '5.25' }, _count: 1 },
+          ]
+        : []
+    );
+    const response = await GET(makeRequest({ type: 'expense' }));
+    const data = await response.json();
+
+    expect(data.monthly).toEqual([
+      { month: '2026-01', amount: 0, count: 1 },
+      { month: '2026-02', amount: 5.25, count: 1 },
+    ]);
+  });
+
+  it('spans earliest to latest matching month with no date bounds (All time)', async () => {
+    setupModel('expenseTransaction', 'expenseTypeId');
+    const response = await GET(makeRequest({ type: 'expense' }));
+    const data = await response.json();
+
+    expect(data.monthly.map((r: any) => r.month)).toEqual(['2026-01', '2026-02', '2026-03']);
+    const m = db.expenseTransaction as any;
+    const dateCall = m.groupBy.mock.calls.find((c: any[]) => c[0].by[0] === 'date');
+    expect(dateCall[0].where.date).toBeUndefined();
+  });
+
+  it('uses the From month and the latest match with only startDate', async () => {
+    setupModel('expenseTransaction', 'expenseTypeId');
+    const response = await GET(makeRequest({ type: 'expense', startDate: '2025-12-15' }));
+    const data = await response.json();
+
+    expect(data.monthly.map((r: any) => r.month)).toEqual([
+      '2025-12',
+      '2026-01',
+      '2026-02',
+      '2026-03',
+    ]);
+    const m = db.expenseTransaction as any;
+    const dateCall = m.groupBy.mock.calls.find((c: any[]) => c[0].by[0] === 'date');
+    expect(dateCall[0].where.date).toEqual({ gte: new Date('2025-12-15T00:00:00.000Z') });
+  });
+
+  it('returns an empty monthly series when nothing matches and no bounds are set', async () => {
+    setupModel('expenseTransaction', 'expenseTypeId');
+    const m = db.expenseTransaction as any;
+    m.aggregate.mockResolvedValue({ _sum: { amount: null }, _count: 0 });
+    m.groupBy.mockImplementation(async () => []);
+    const response = await GET(makeRequest({ type: 'expense' }));
+    const data = await response.json();
+
+    expect(data.totalAmount).toBe(0);
+    expect(data.monthly).toEqual([]);
+  });
 });

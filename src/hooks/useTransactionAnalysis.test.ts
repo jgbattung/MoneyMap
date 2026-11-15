@@ -416,5 +416,37 @@ describe('useTransactionAnalysis', () => {
       // Summary fields still come from the first page
       expect(result.current.data?.transactionCount).toBe(3);
     });
+
+    it('keeps the monthly series from the first page after Load More', async () => {
+      const firstMonthly = [
+        { month: '2024-01', amount: 100, count: 1 },
+        { month: '2024-02', amount: 0, count: 0 },
+      ];
+      const firstPage = { ...mockAnalysisResponse, hasMore: true, monthly: firstMonthly };
+      const secondPage = {
+        ...mockAnalysisResponse,
+        transactions: [
+          { id: 'tx-2', name: 'Grab', amount: 150, date: '2024-03-02T00:00:00Z', categoryName: 'Transport', accountName: 'GCash' },
+        ],
+        hasMore: false,
+        monthly: [{ month: '1999-01', amount: 999, count: 9 }],
+      };
+
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => firstPage });
+      const { result } = renderHook(() => useTransactionAnalysis(mockParams), {
+        wrapper: createWrapper(),
+      });
+      await result.current.refetch();
+      await waitFor(() => {
+        expect(result.current.data?.monthly).toEqual(firstMonthly);
+      });
+
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => secondPage });
+      await result.current.fetchNextPage();
+      await waitFor(() => {
+        expect(result.current.data?.transactions.length).toBe(2);
+      });
+      expect(result.current.data?.monthly).toEqual(firstMonthly);
+    });
   });
 });
