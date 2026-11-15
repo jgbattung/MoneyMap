@@ -26,6 +26,12 @@ export interface TransactionAnalysisTransaction {
   accountName: string;
 }
 
+export interface TransactionAnalysisMonth {
+  month: string; // YYYY-MM
+  amount: number;
+  count: number;
+}
+
 export interface TransactionAnalysisResponse {
   type: "expense" | "income";
   totalAmount: number;
@@ -34,4 +40,5 @@ export interface TransactionAnalysisResponse {
   breakdownBy: "category" | "subcategory" | null;
   transactions: TransactionAnalysisTransaction[];
   hasMore: boolean;
+  monthly: TransactionAnalysisMonth[];
 }
