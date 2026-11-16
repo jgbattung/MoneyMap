@@ -19,11 +19,12 @@ vi.mock('recharts', () => ({
   CartesianGrid: () => null,
   XAxis: () => null,
   YAxis: () => null,
-  ReferenceLine: ({ y, label }: { y: number; label?: { value: string } }) =>
+  ReferenceLine: ({ y, label }: { y: number; label?: { value: string; fill?: string } }) =>
     React.createElement('div', {
       'data-testid': 'reference-line',
       'data-y': y,
       'data-label': label?.value,
+      'data-label-fill': label?.fill,
     }),
 }));
 
@@ -97,6 +98,11 @@ describe('AnalyzerMonthlyTrend', () => {
   it('labels the reference line with avg and the formatted amount', () => {
     render(<AnalyzerMonthlyTrend data={THREE} totalAmount={150} />);
     expect(screen.getByTestId('reference-line').getAttribute('data-label')).toBe('avg ₱50.00');
+  });
+
+  it('draws the avg label in the foreground token so it stays legible over bars', () => {
+    render(<AnalyzerMonthlyTrend data={THREE} totalAmount={150} />);
+    expect(screen.getByTestId('reference-line').getAttribute('data-label-fill')).toBe('var(--foreground)');
   });
 
   it('fills bars with the chart-1 token', () => {

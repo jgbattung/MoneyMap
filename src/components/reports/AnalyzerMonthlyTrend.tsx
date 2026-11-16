@@ -95,7 +95,8 @@ const AnalyzerMonthlyTrend = ({ data, totalAmount }: AnalyzerMonthlyTrendProps) 
             label={{
               value: `avg ${formatCurrency(avg)}`,
               position: 'insideTopRight',
-              fill: 'var(--chart-2)',
+              // Brass (chart-2) matches the teal bars' lightness and vanishes over them.
+              fill: 'var(--foreground)',
               fontSize: 11,
             }}
           />
