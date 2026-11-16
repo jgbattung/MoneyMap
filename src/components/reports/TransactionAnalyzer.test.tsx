@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { TransactionAnalyzer } from './TransactionAnalyzer';
 import type { TransactionAnalysisResponse } from '@/types/transaction-analysis';
+import { buildMonthlySeries } from '@/lib/report-monthly-series';
 
 // ---------------------------------------------------------------------------
 // Hook mocks
@@ -196,6 +197,27 @@ vi.mock('@/components/ui/separator', () => ({
     React.createElement('hr', { 'data-testid': 'separator', 'data-orientation': orientation }),
 }));
 
+vi.mock('framer-motion', () => ({
+  useReducedMotion: vi.fn(() => false),
+}));
+
+vi.mock('recharts', () => ({
+  BarChart: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', { 'data-testid': 'bar-chart' }, children),
+  Bar: () => null,
+  CartesianGrid: () => null,
+  XAxis: () => null,
+  YAxis: () => null,
+  ReferenceLine: () => null,
+}));
+
+vi.mock('@/components/ui/chart', () => ({
+  ChartContainer: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', { 'data-testid': 'chart-container' }, children),
+  ChartTooltip: () => null,
+  ChartTooltipContent: () => null,
+}));
+
 vi.mock('@/components/shared/EmptyState', () => ({
   EmptyState: ({
     title,
@@ -283,6 +305,12 @@ const mockAccounts = [
 const mockRefetch = vi.fn();
 const mockFetchNextPage = vi.fn();
 
+const THREE_MONTHS = [
+  { month: '2024-01', amount: 1000, count: 1 },
+  { month: '2024-02', amount: 0, count: 0 },
+  { month: '2024-03', amount: 4000, count: 2 },
+];
+
 const mockAnalysisData = {
   type: 'expense' as const,
   totalAmount: 5000,
@@ -320,6 +348,7 @@ const mockAnalysisData = {
     },
   ],
   hasMore: false,
+  monthly: THREE_MONTHS,
 };
 
 // ---------------------------------------------------------------------------
@@ -746,6 +775,110 @@ describe('TransactionAnalyzer', () => {
       await renderAndAnalyze();
       // McDonald's has subcategoryName: 'Dining'
       expect(screen.getByText(/Dining/)).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('monthly trend', () => {
+    it('renders after the summary stats and before the breakdown', async () => {
+      await renderAndAnalyze();
+      const stats = screen.getByText('Total Amount');
+      const trend = screen.getByText('Monthly Trend');
+      const breakdown = screen.getByText(/Breakdown by/);
+      expect(stats.compareDocumentPosition(trend) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(trend.compareDocumentPosition(breakdown) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('does not render for a single-month series', async () => {
+      await renderAndAnalyze({ ...mockAnalysisData, monthly: [THREE_MONTHS[0]] });
+      expect(screen.queryByText('Monthly Trend')).toBeNull();
+    });
+
+    it('does not render in the empty results state', async () => {
+      vi.mocked(useTransactionAnalysis).mockReturnValue({
+        data: { ...mockAnalysisData, transactionCount: 0, transactions: [], breakdown: [], hasMore: false },
+        isLoading: false,
+        isFetching: false,
+        isFetchingMore: false,
+        error: null,
+        refetch: mockRefetch,
+        fetchNextPage: mockFetchNextPage,
+      });
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+      await waitFor(() => {
+        expect(screen.getByTestId('empty-state')).toBeTruthy();
+      });
+      expect(screen.queryByText('Monthly Trend')).toBeNull();
+    });
+
+    it('renders when the breakdown section is absent (single subcategory)', async () => {
+      await renderAndAnalyze({ ...mockAnalysisData, breakdown: [], breakdownBy: null });
+      expect(screen.queryByText(/Breakdown by/)).toBeNull();
+      const stats = screen.getByText('Total Amount');
+      const trend = screen.getByText('Monthly Trend');
+      expect(stats.compareDocumentPosition(trend) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('renders before the matching transactions list', async () => {
+      await renderAndAnalyze();
+      const trend = screen.getByText('Monthly Trend');
+      const firstTxn = screen.getByText(mockAnalysisData.transactions[0].name);
+      expect(trend.compareDocumentPosition(firstTxn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Preset -> request params -> month count, pinned to a fixed "today" so the
+  // spec's range table (This month = 1, This year = Jan..now, Last 12 = 13,
+  // All time = no bounds) is asserted end to end with buildMonthlySeries.
+  describe('date presets feed the monthly series range', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      // Noon UTC: the same calendar day in every timezone from UTC-11 to UTC+11.
+      vi.setSystemTime(new Date('2026-11-15T12:00:00.000Z'));
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    async function analyzeWithPreset(preset: string) {
+      render(React.createElement(TransactionAnalyzer), { wrapper: createWrapper() });
+      fireEvent.click(screen.getByRole('button', { name: preset }));
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+      await waitFor(() => expect(mockRefetch).toHaveBeenCalled());
+      const calls = vi.mocked(useTransactionAnalysis).mock.calls;
+      return calls[calls.length - 1][0] as { startDate?: string; endDate?: string };
+    }
+
+    it('This month sends the 1st to today, a single month (trend hidden)', async () => {
+      const params = await analyzeWithPreset('This month');
+      expect(params.startDate).toBe('2026-11-01');
+      expect(params.endDate).toBe('2026-11-15');
+      expect(buildMonthlySeries([], params.startDate, params.endDate)).toHaveLength(1);
+    });
+
+    it('This year sends Jan 1 to today, Jan through the current month', async () => {
+      const params = await analyzeWithPreset('This year');
+      expect(params.startDate).toBe('2026-01-01');
+      expect(params.endDate).toBe('2026-11-15');
+      const months = buildMonthlySeries([], params.startDate, params.endDate).map((m) => m.month);
+      expect(months).toHaveLength(11);
+      expect(months[0]).toBe('2026-01');
+      expect(months[10]).toBe('2026-11');
+    });
+
+    it('Last 12 months sends a range covering 13 calendar months', async () => {
+      const params = await analyzeWithPreset('Last 12 months');
+      expect(params.startDate).toBe('2025-11-15');
+      expect(params.endDate).toBe('2026-11-15');
+      expect(buildMonthlySeries([], params.startDate, params.endDate)).toHaveLength(13);
+    });
+
+    it('All time sends no date bounds', async () => {
+      const params = await analyzeWithPreset('All time');
+      expect(params.startDate).toBeUndefined();
+      expect(params.endDate).toBeUndefined();
     });
   });
 

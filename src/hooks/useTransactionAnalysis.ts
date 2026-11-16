@@ -84,6 +84,7 @@ export const useTransactionAnalysis = (
         transactionCount: firstPage.transactionCount,
         breakdown: firstPage.breakdown,
         breakdownBy: firstPage.breakdownBy,
+        monthly: firstPage.monthly,
         transactions: pages.flatMap((page) => page.transactions),
         hasMore: lastPage.hasMore,
       }

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/prisma";
 import { buildDateRange } from "@/lib/report-date-range";
+import { buildMonthlySeries } from "@/lib/report-monthly-series";
 import { transactionAnalysisQuerySchema } from "@/lib/validations/transaction-analysis";
 import { TransactionAnalysisResponse } from "@/types/transaction-analysis";
 
@@ -103,7 +104,7 @@ export async function GET(req: NextRequest) {
     const model = isExpense ? db.expenseTransaction : db.incomeTransaction;
 
     // Run aggregate, breakdown, and transaction list queries in parallel
-    const [aggregateResult, breakdownResult, transactionResults] =
+    const [aggregateResult, breakdownResult, transactionResults, dateGroups] =
       await Promise.all([
         // 1. Aggregate: total + count
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -141,6 +142,15 @@ export async function GET(req: NextRequest) {
                 }),
           },
         }),
+
+        // 4. Per-date totals, re-bucketed into months below
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (model as any).groupBy({
+          by: ["date"],
+          where,
+          _sum: { amount: true },
+          _count: true,
+        }),
       ]);
 
     const totalAmount =
@@ -177,6 +187,19 @@ export async function GET(req: NextRequest) {
       accountName: t.account.name,
     }));
 
+    const monthly = buildMonthlySeries(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      dateGroups.map((row: any) => ({
+        date: row.date,
+        amountCents: Math.round(
+          parseFloat(row._sum.amount?.toString() ?? "0") * 100
+        ),
+        count: row._count,
+      })),
+      startDate,
+      endDate
+    );
+
     const response: TransactionAnalysisResponse = {
       type,
       totalAmount,
@@ -185,6 +208,7 @@ export async function GET(req: NextRequest) {
       breakdownBy: breakdownResult.breakdownBy,
       transactions,
       hasMore,
+      monthly,
     };
 
     return NextResponse.json(response);
