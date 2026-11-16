@@ -19,12 +19,23 @@ vi.mock('recharts', () => ({
   CartesianGrid: () => null,
   XAxis: () => null,
   YAxis: () => null,
-  ReferenceLine: ({ y, label }: { y: number; label?: { value: string; fill?: string } }) =>
+  ReferenceLine: ({
+    y,
+    stroke,
+    label,
+  }: {
+    y: number;
+    stroke?: string;
+    label?: { value: string; fill?: string; stroke?: string; paintOrder?: string };
+  }) =>
     React.createElement('div', {
       'data-testid': 'reference-line',
       'data-y': y,
+      'data-stroke': stroke,
       'data-label': label?.value,
       'data-label-fill': label?.fill,
+      'data-label-halo': label?.stroke,
+      'data-label-paint-order': label?.paintOrder,
     }),
 }));
 
@@ -100,9 +111,13 @@ describe('AnalyzerMonthlyTrend', () => {
     expect(screen.getByTestId('reference-line').getAttribute('data-label')).toBe('avg ₱50.00');
   });
 
-  it('draws the avg label in the foreground token so it stays legible over bars', () => {
+  it('colors the avg label like its line, with a card-colored knockout behind the glyphs', () => {
     render(<AnalyzerMonthlyTrend data={THREE} totalAmount={150} />);
-    expect(screen.getByTestId('reference-line').getAttribute('data-label-fill')).toBe('var(--foreground)');
+    const line = screen.getByTestId('reference-line');
+    expect(line.getAttribute('data-label-fill')).toBe(line.getAttribute('data-stroke'));
+    expect(line.getAttribute('data-label-fill')).toBe('var(--chart-2)');
+    expect(line.getAttribute('data-label-halo')).toBe('var(--card)');
+    expect(line.getAttribute('data-label-paint-order')).toBe('stroke');
   });
 
   it('fills bars with the chart-1 token', () => {

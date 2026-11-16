@@ -95,9 +95,14 @@ const AnalyzerMonthlyTrend = ({ data, totalAmount }: AnalyzerMonthlyTrendProps) 
             label={{
               value: `avg ${formatCurrency(avg)}`,
               position: 'insideTopRight',
-              // Brass (chart-2) matches the teal bars' lightness and vanishes over them.
-              fill: 'var(--foreground)',
+              // Brass sits at the teal bars' lightness, so a card-colored knockout
+              // stroke behind the glyphs keeps it legible where it crosses a bar.
+              fill: 'var(--chart-2)',
+              stroke: 'var(--card)',
+              strokeWidth: 3,
+              paintOrder: 'stroke',
               fontSize: 11,
+              fontWeight: 500,
             }}
           />
         </BarChart>
