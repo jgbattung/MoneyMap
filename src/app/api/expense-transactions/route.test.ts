@@ -287,14 +287,20 @@ describe('POST /api/expense-transactions', () => {
     expect(callArg).toHaveLength(2);
   });
 
-  it('batch contains only expenseTransaction.create when isSystemGenerated=true (no balance change)', async () => {
-    const body = { ...validPostBody, isSystemGenerated: true };
+  it('ignores client-sent isSystemGenerated and parentInstallmentId: balance still decrements and flags are saved as false/null', async () => {
+    const body = { ...validPostBody, isSystemGenerated: true, parentInstallmentId: 'x' };
     vi.mocked(db.$transaction).mockResolvedValue([mockTransaction] as any);
 
     await POST(makePostRequest(body));
 
     const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
-    expect(callArg).toHaveLength(1);
+    expect(callArg).toHaveLength(2);
+    expect(db.financialAccount.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { currentBalance: { decrement: 50 } } })
+    );
+    const data = vi.mocked(db.expenseTransaction.create).mock.calls[0][0].data as any;
+    expect(data.isSystemGenerated).toBe(false);
+    expect(data.parentInstallmentId).toBeNull();
   });
 
   it('returns 400 when name is missing', async () => {

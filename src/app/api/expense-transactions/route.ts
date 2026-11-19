@@ -28,8 +28,6 @@ const ServerPostExpenseSchema = z.object({
   isInstallment: z.boolean(),
   installmentDuration: z.coerce.number().int().positive().optional().nullable(),
   installmentStartDate: z.string().optional().nullable(),
-  isSystemGenerated: z.boolean().optional(),
-  parentInstallmentId: z.string().optional(),
   tagIds: z.array(z.string()).max(10).optional(),
 });
 
@@ -137,8 +135,6 @@ export async function POST(request: NextRequest) {
       isInstallment,
       installmentDuration,
       installmentStartDate,
-      isSystemGenerated,
-      parentInstallmentId,
       tagIds,
     } = parseResult.data;
 
@@ -212,8 +208,8 @@ export async function POST(request: NextRequest) {
           remainingInstallments: remainingInstallments,
           installmentStartDate: installmentStartDate ? new Date(installmentStartDate) : null,
           monthlyAmount,
-          isSystemGenerated: isSystemGenerated || false,
-          parentInstallmentId: parentInstallmentId || null,
+          isSystemGenerated: false,
+          parentInstallmentId: null,
           ...(tagIds && tagIds.length > 0 && {
             tags: { connect: tagIds.map((id) => ({ id })) },
           }),
@@ -221,8 +217,28 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    if (!isSystemGenerated) {
-      if (!isInstallment) {
+    if (!isInstallment) {
+      operations.push(
+        db.financialAccount.update({
+          where: {
+            id: accountId,
+            userId: session.user.id,
+          },
+          data: {
+            currentBalance: {
+              decrement: parsedAmount,
+            },
+          },
+        })
+      );
+    } else {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const startDate = new Date(installmentStartDate!);
+      startDate.setHours(0, 0, 0, 0);
+
+      if (startDate <= today) {
         operations.push(
           db.financialAccount.update({
             where: {
@@ -231,66 +247,44 @@ export async function POST(request: NextRequest) {
             },
             data: {
               currentBalance: {
-                decrement: parsedAmount,
+                decrement: monthlyAmount!,
               },
             },
           })
         );
-      } else {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
 
-        const startDate = new Date(installmentStartDate!);
-        startDate.setHours(0, 0, 0, 0);
+        operations.push(
+          db.expenseTransaction.update({
+            where: {
+              id: expenseTransactionId,
+            },
+            data: {
+              lastProcessedDate: startDate,
+              remainingInstallments: {
+                decrement: 1,
+              }
+            },
+          })
+        );
 
-        if (startDate <= today) {
-          operations.push(
-            db.financialAccount.update({
-              where: {
-                id: accountId,
-                userId: session.user.id,
-              },
-              data: {
-                currentBalance: {
-                  decrement: monthlyAmount!,
-                },
-              },
-            })
-          );
-
-          operations.push(
-            db.expenseTransaction.update({
-              where: {
-                id: expenseTransactionId,
-              },
-              data: {
-                lastProcessedDate: startDate,
-                remainingInstallments: {
-                  decrement: 1,
-                }
-              },
-            })
-          );
-
-          operations.push(
-            db.expenseTransaction.create({
-              data: {
-                userId: session.user.id,
-                accountId,
-                expenseTypeId,
-                expenseSubcategoryId: expenseSubcategoryId || null,
-                name: `${name} (Payment 1/${installmentDuration})`,
-                amount: monthlyAmount!,
-                date: startDate,
-                description: `Installment payment 1 of ${installmentDuration}`,
-                isInstallment: false,
-                isSystemGenerated: true,
-                parentInstallmentId: expenseTransactionId,
-                installmentStatus: isInstallment ? INSTALLMENT_STATUS.active : null,
-              },
-            })
-          );
-        }
+        operations.push(
+          db.expenseTransaction.create({
+            data: {
+              userId: session.user.id,
+              accountId,
+              expenseTypeId,
+              expenseSubcategoryId: expenseSubcategoryId || null,
+              name: `${name} (Payment 1/${installmentDuration})`,
+              amount: monthlyAmount!,
+              date: startDate,
+              description: `Installment payment 1 of ${installmentDuration}`,
+              isInstallment: false,
+              isSystemGenerated: true,
+              parentInstallmentId: expenseTransactionId,
+              installmentStatus: isInstallment ? INSTALLMENT_STATUS.active : null,
+            },
+          })
+        );
       }
     }
 
