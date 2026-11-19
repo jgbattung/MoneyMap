@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { isMoneyString, MONEY_MESSAGE } from "../money";
+import { isMoneyString } from "../money";
+import { createExpenseTransactionSchema } from "../expense-transactions";
+import { IncomeTransactionValidation } from "../income-transactions";
+import { TransferTransactionValidation } from "../transfer-transactions";
+import { updateInstallmentSchema } from "../installments";
 
 describe("isMoneyString", () => {
   it.each(["5", "5.5", "5.55", "5.", ".5", ".55", "0", "0.00", "1000000.99"])(
@@ -45,10 +49,22 @@ describe("isMoneyString", () => {
   );
 });
 
-describe("MONEY_MESSAGE", () => {
-  it("names the field and the 2 decimal limit", () => {
-    expect(MONEY_MESSAGE("Amount")).toBe(
-      "Amount must be a number with at most 2 decimals"
-    );
+// AC6: the client form schemas reject a 3rd decimal (the resolvers of the
+// expense, income, transfer and installment forms).
+describe("client form schemas reject more than 2 decimals", () => {
+  it.each([
+    ["createExpenseTransactionSchema", createExpenseTransactionSchema, "amount", "Amount"],
+    ["IncomeTransactionValidation", IncomeTransactionValidation, "amount", "Amount"],
+    ["TransferTransactionValidation", TransferTransactionValidation, "amount", "Amount"],
+    ["TransferTransactionValidation", TransferTransactionValidation, "feeAmount", "Fee amount"],
+    ["updateInstallmentSchema", updateInstallmentSchema, "amount", "Amount"],
+  ] as const)("%s rejects %s \"100.125\" with the money message", (_name, schema, field, label) => {
+    const result = schema.safeParse({ [field]: "100.125" });
+
+    expect(result.success).toBe(false);
+    const messages = result.success
+      ? []
+      : result.error.issues.filter((i) => i.path[0] === field).map((i) => i.message);
+    expect(messages).toContain(`${label} must be a number with at most 2 decimals`);
   });
 });

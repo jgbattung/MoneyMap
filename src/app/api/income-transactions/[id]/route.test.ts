@@ -346,6 +346,8 @@ describe('PATCH /api/income-transactions/[id] - money validation', () => {
     const response = await PATCH(makePatchRequest({ amount }), makeParams());
 
     expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.details.fieldErrors.amount).toContain('Amount must be a number with at most 2 decimals');
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 });

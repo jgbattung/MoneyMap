@@ -246,6 +246,8 @@ describe('POST /api/accounts - money validation', () => {
     const response = await POST(makePostRequest({ ...body, initialBalance }));
 
     expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.details.fieldErrors.initialBalance).toContain('Initial balance must be a number with at most 2 decimals');
     expect(db.financialAccount.create).not.toHaveBeenCalled();
   });
 });

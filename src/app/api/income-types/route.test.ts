@@ -50,6 +50,8 @@ describe('POST /api/income-types - money validation', () => {
     const response = await POST(makePostRequest({ name: 'Salary', monthlyTarget }));
 
     expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.details.fieldErrors.monthlyTarget).toContain('Monthly target must be a number with at most 2 decimals');
     expect(db.incomeType.create).not.toHaveBeenCalled();
   });
 

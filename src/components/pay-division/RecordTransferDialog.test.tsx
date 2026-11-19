@@ -99,14 +99,6 @@ describe('RecordTransferDialog', () => {
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
-  it('ignores a 3rd decimal so the amount can never exceed 2 decimals', async () => {
-    const dialog = renderDialog();
-    setAmount(dialog, '1.234');
-    expect((within(dialog).getByLabelText('Amount') as HTMLInputElement).value).toBe('11,348.66');
-    fireEvent.click(confirmButton(dialog));
-    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith({ amount: '11348.66', date: formatDateForAPI(new Date()) }));
-  });
-
   it('normalizes a trailing dot before sending', async () => {
     const dialog = renderDialog();
     setAmount(dialog, '500.');

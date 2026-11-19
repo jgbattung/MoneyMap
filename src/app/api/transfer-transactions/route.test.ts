@@ -470,13 +470,15 @@ describe('POST /api/transfer-transactions', () => {
 
 describe('POST /api/transfer-transactions - money validation', () => {
   it.each([
-    ['amount', '100.125'],
-    ['amount', '1e3'],
-    ['feeAmount', '1.234'],
-  ])('returns 400 and writes nothing for %s %j', async (field, value) => {
+    ['amount', 'Amount', '100.125'],
+    ['amount', 'Amount', '1e3'],
+    ['feeAmount', 'Fee amount', '1.234'],
+  ])('returns 400 and writes nothing for %s (%s) %j', async (field, label, value) => {
     const response = await POST(makePostRequest({ ...validPostBody, [field]: value }));
 
     expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.details.fieldErrors[field]).toContain(`${label} must be a number with at most 2 decimals`);
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 });
