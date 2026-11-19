@@ -361,3 +361,12 @@ describe('DELETE /api/installments/[id]', () => {
     expect(onExpenseTransactionChange).toHaveBeenCalledWith('acc-1', mockInstallment.date);
   });
 });
+
+describe('PATCH /api/installments/[id] - money validation', () => {
+  it.each(['100.125', '1e3', ' '])('returns 400 and writes nothing for amount %j', async (amount) => {
+    const response = await PATCH(makePatchRequest({ amount }), makeParams());
+
+    expect(response.status).toBe(400);
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});

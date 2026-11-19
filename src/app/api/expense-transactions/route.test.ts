@@ -414,3 +414,12 @@ describe('POST /api/expense-transactions', () => {
     expect(data.error).toBe('Internal server error');
   });
 });
+
+describe('POST /api/expense-transactions - money validation', () => {
+  it.each(['100.125', '1e3', ' ', '1,000'])('returns 400 and writes nothing for amount %j', async (amount) => {
+    const response = await POST(makePostRequest({ ...validPostBody, amount }));
+
+    expect(response.status).toBe(400);
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});

@@ -250,3 +250,12 @@ describe('POST /api/cards', () => {
     expect(data.error).toBe('Internal server error');
   });
 });
+
+describe('POST /api/cards - money validation', () => {
+  it.each(['100.125', '   ', '1e3'])('returns 400 (not 500) for initialBalance %j', async (initialBalance) => {
+    const response = await POST(makePostRequest({ name: 'My Visa', initialBalance }));
+
+    expect(response.status).toBe(400);
+    expect(db.financialAccount.create).not.toHaveBeenCalled();
+  });
+});

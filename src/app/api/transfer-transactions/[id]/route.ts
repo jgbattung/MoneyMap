@@ -7,10 +7,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { PrismaPromise } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { z } from "zod";
+import { isMoneyString, MONEY_MESSAGE } from "@/lib/validations/money";
 
 const ServerPatchTransferSchema = z.object({
   name: z.string().min(1, "Name is required").max(100).optional(),
   amount: z.coerce.string().min(1, "Amount is required").refine(
+    (val) => isMoneyString(val),
+    { message: MONEY_MESSAGE("Amount") }
+  ).refine(
     (val) => !isNaN(Number(val)) && Number(val) > 0,
     { message: "Amount must be a positive number" }
   ).optional(),
@@ -20,6 +24,9 @@ const ServerPatchTransferSchema = z.object({
   date: z.string().min(1, "Date is required").optional(),
   notes: z.string().nullable().optional(),
   feeAmount: z.string().nullable().optional().refine(
+    (val) => !val || isMoneyString(val),
+    { message: MONEY_MESSAGE("Fee amount") }
+  ).refine(
     (val) => !val || (!isNaN(Number(val)) && Number(val) > 0),
     { message: "Fee amount must be a positive number" }
   ),

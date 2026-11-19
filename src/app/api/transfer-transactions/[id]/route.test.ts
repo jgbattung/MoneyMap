@@ -435,3 +435,16 @@ describe('DELETE /api/transfer-transactions/[id]', () => {
     expect(data.error).toBe('Internal server error');
   });
 });
+
+describe('PATCH /api/transfer-transactions/[id] - money validation', () => {
+  it.each([
+    ['amount', '100.125'],
+    ['amount', 100.125],
+    ['feeAmount', '1.234'],
+  ])('returns 400 and writes nothing for %s %j', async (field, value) => {
+    const response = await PATCH(makePatchRequest({ [field]: value }), makeParams());
+
+    expect(response.status).toBe(400);
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});

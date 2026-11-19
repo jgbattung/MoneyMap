@@ -9,10 +9,14 @@ import { PrismaPromise } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { onExpenseTransactionChange } from "@/lib/statement-recalculator";
 import { z } from "zod";
+import { isMoneyString, MONEY_MESSAGE } from "@/lib/validations/money";
 
 const ServerPostExpenseSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long"),
   amount: z.string().min(1, "Amount is required").refine(
+    (val) => isMoneyString(val),
+    { message: MONEY_MESSAGE("Amount") }
+  ).refine(
     (val) => !isNaN(Number(val)) && Number(val) > 0,
     { message: "Amount must be a positive number" }
   ),

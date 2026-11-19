@@ -6,10 +6,14 @@ import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaPromise } from "@prisma/client";
 import { z } from "zod";
+import { isMoneyString, MONEY_MESSAGE } from "@/lib/validations/money";
 
 const ServerPatchExpenseSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   amount: z.string().refine(
+    (val) => isMoneyString(val),
+    { message: MONEY_MESSAGE("Amount") }
+  ).refine(
     (val) => !isNaN(Number(val)) && Number(val) > 0,
     { message: "Amount must be a positive number" }
   ).optional(),

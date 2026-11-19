@@ -331,3 +331,12 @@ describe('DELETE /api/income-transactions/[id]', () => {
     expect(data.error).toBe('Internal server error');
   });
 });
+
+describe('PATCH /api/income-transactions/[id] - money validation', () => {
+  it.each(['100.125', '1e3', ' '])('returns 400 and writes nothing for amount %j', async (amount) => {
+    const response = await PATCH(makePatchRequest({ amount }), makeParams());
+
+    expect(response.status).toBe(400);
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});

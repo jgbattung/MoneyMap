@@ -244,3 +244,13 @@ describe('POST /api/expense-types', () => {
     expect(data.error).toBe('Internal server error');
   });
 });
+
+describe('POST /api/expense-types - money validation', () => {
+  it.each(['100.125', '1e3', '-5'])('returns 400 and writes nothing for monthlyBudget %j', async (monthlyBudget) => {
+    const response = await POST(makePostRequest({ name: 'Food', monthlyBudget }));
+
+    expect(response.status).toBe(400);
+    expect(db.expenseType.create).not.toHaveBeenCalled();
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});

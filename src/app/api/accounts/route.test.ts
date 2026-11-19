@@ -238,3 +238,14 @@ describe('POST /api/accounts', () => {
     expect(data.error).toBe('Internal server error');
   });
 });
+
+describe('POST /api/accounts - money validation', () => {
+  const body = { name: 'My Checking', accountType: 'CHECKING', addToNetWorth: true };
+
+  it.each(['100.125', '   ', '1e3'])('returns 400 (not 500) for initialBalance %j', async (initialBalance) => {
+    const response = await POST(makePostRequest({ ...body, initialBalance }));
+
+    expect(response.status).toBe(400);
+    expect(db.financialAccount.create).not.toHaveBeenCalled();
+  });
+});
