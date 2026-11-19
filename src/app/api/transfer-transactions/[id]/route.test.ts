@@ -30,6 +30,7 @@ vi.mock('@/lib/prisma', () => ({
       delete: vi.fn(),
     },
     financialAccount: {
+      count: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
     },
@@ -39,9 +40,13 @@ vi.mock('@/lib/prisma', () => ({
       delete: vi.fn(),
     },
     expenseType: {
+      count: vi.fn(),
       findFirst: vi.fn(),
       create: vi.fn(),
     },
+    incomeType: { count: vi.fn() },
+    transferType: { count: vi.fn() },
+    tag: { count: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
@@ -119,6 +124,10 @@ function makeBatchResult(transferOverrides: Record<string, any> = {}, extraOps =
 
 beforeEach(() => {
   vi.resetAllMocks();
+  // Ownership pre-check: every referenced id belongs to the user by default
+  for (const model of [db.financialAccount, db.expenseType, db.incomeType, db.transferType, db.tag]) {
+    vi.mocked(model.count).mockImplementation(((args: any) => Promise.resolve(args.where.id.in.length)) as any);
+  }
   vi.mocked(auth.api.getSession).mockResolvedValue(mockSession as any);
   vi.mocked(db.transferTransaction.findUnique).mockResolvedValue(mockExistingTransfer as any);
 });
@@ -445,6 +454,25 @@ describe('PATCH /api/transfer-transactions/[id] - money validation', () => {
     const response = await PATCH(makePatchRequest({ [field]: value }), makeParams());
 
     expect(response.status).toBe(400);
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+// Protected Behavior 8 (MM-033): ownership pre-check
+describe('PATCH /api/transfer-transactions/[id] - ownership', () => {
+  it.each([
+    ['Account not found', 'financialAccount'],
+    ['Transfer type not found', 'transferType'],
+    ['Tag not found', 'tag'],
+  ])('returns 404 "%s" and writes nothing when the %s is not owned by the user', async (message, model) => {
+    vi.mocked(db.transferTransaction.findUnique).mockResolvedValue(mockExistingTransfer as any);
+    vi.mocked((db as any)[model].count).mockResolvedValue(0);
+
+    const response = await PATCH(makePatchRequest({ fromAccountId: 'acc-x', toAccountId: 'acc-y', transferTypeId: 'ttype-2', tagIds: ['tag-1'] }), makeParams());
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe(message);
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 });

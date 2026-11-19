@@ -6,6 +6,7 @@ import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaPromise } from "@prisma/client";
 import { z } from "zod";
+import { findUnownedRef } from "@/lib/ownership";
 import { isMoneyString, MONEY_MESSAGE } from "@/lib/validations/money";
 
 const ServerPatchExpenseSchema = z.object({
@@ -120,12 +121,28 @@ export async function PATCH(
       tagIds,
     } = parseResult.data;
 
-    const existingExpense = await db.expenseTransaction.findUnique({
-      where: {
-        id: id,
-        userId: session.user.id,
-      },
-    });
+    // Independent reads run together: the record, ownership of every supplied id, the subcategory
+    const [existingExpense, unownedRef, subcategory] = await Promise.all([
+      db.expenseTransaction.findUnique({
+        where: {
+          id: id,
+          userId: session.user.id,
+        },
+      }),
+      findUnownedRef(session.user.id, {
+        accountIds: [accountId],
+        expenseTypeId,
+        tagIds,
+      }),
+      expenseSubcategoryId
+        ? db.expenseSubcategory.findUnique({
+            where: {
+              id: expenseSubcategoryId,
+              userId: session.user.id,
+            },
+          })
+        : Promise.resolve(null),
+    ]);
 
     if (!existingExpense) {
       return NextResponse.json(
@@ -134,16 +151,13 @@ export async function PATCH(
       );
     }
 
+    if (unownedRef) {
+      return NextResponse.json({ error: unownedRef }, { status: 404 });
+    }
+
     // Validate subcategory belongs to expense type if provided
     if (expenseSubcategoryId !== undefined) {
       if (expenseSubcategoryId !== null) {
-        const subcategory = await db.expenseSubcategory.findUnique({
-          where: {
-            id: expenseSubcategoryId,
-            userId: session.user.id,
-          },
-        });
-
         if (!subcategory) {
           return NextResponse.json(
             { error: 'Subcategory not found' },

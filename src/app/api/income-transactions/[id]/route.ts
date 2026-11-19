@@ -6,6 +6,7 @@ import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaPromise } from "@prisma/client";
 import { z } from "zod";
+import { findUnownedRef } from "@/lib/ownership";
 import { isMoneyString, MONEY_MESSAGE } from "@/lib/validations/money";
 
 const ServerPatchIncomeSchema = z.object({
@@ -106,18 +107,29 @@ export async function PATCH(
       tagIds,
     } = parseResult.data;
 
-    const existingTransaction = await db.incomeTransaction.findUnique({
-      where: {
-        id: id,
-        userId: session.user.id,
-      },
-    });
+    const [existingTransaction, unownedRef] = await Promise.all([
+      db.incomeTransaction.findUnique({
+        where: {
+          id: id,
+          userId: session.user.id,
+        },
+      }),
+      findUnownedRef(session.user.id, {
+        accountIds: [accountId],
+        incomeTypeId,
+        tagIds,
+      }),
+    ]);
 
     if (!existingTransaction) {
       return NextResponse.json(
         { error: 'Income transaction not found' },
         { status: 404 }
       );
+    }
+
+    if (unownedRef) {
+      return NextResponse.json({ error: unownedRef }, { status: 404 });
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -7,6 +7,7 @@ import { buildIncomeWhere, parseListParams } from "@/lib/transaction-where";
 import { PrismaPromise } from "@prisma/client";
 import { onIncomeTransactionChange } from "@/lib/statement-recalculator";
 import { z } from "zod";
+import { findUnownedRef } from "@/lib/ownership";
 import { isMoneyString, MONEY_MESSAGE } from "@/lib/validations/money";
 
 const ServerPostIncomeSchema = z.object({
@@ -119,6 +120,15 @@ export async function POST(request: NextRequest) {
     }
 
     const { name, amount, accountId, incomeTypeId, date, description, tagIds } = parseResult.data;
+
+    const unownedRef = await findUnownedRef(session.user.id, {
+      accountIds: [accountId],
+      incomeTypeId,
+      tagIds,
+    });
+    if (unownedRef) {
+      return NextResponse.json({ error: unownedRef }, { status: 404 });
+    }
 
     const operations: PrismaPromise<unknown>[] = [
       db.financialAccount.update({

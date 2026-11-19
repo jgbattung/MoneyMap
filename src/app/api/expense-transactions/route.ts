@@ -9,6 +9,7 @@ import { PrismaPromise } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { onExpenseTransactionChange } from "@/lib/statement-recalculator";
 import { z } from "zod";
+import { findUnownedRef } from "@/lib/ownership";
 import { isMoneyString, MONEY_MESSAGE } from "@/lib/validations/money";
 
 const ServerPostExpenseSchema = z.object({
@@ -152,15 +153,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Independent reads run together: ownership of every referenced id and the subcategory
+    const [unownedRef, subcategory] = await Promise.all([
+      findUnownedRef(session.user.id, {
+        accountIds: [accountId],
+        expenseTypeId,
+        tagIds,
+      }),
+      expenseSubcategoryId
+        ? db.expenseSubcategory.findUnique({
+            where: {
+              id: expenseSubcategoryId,
+              userId: session.user.id,
+            },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    if (unownedRef) {
+      return NextResponse.json({ error: unownedRef }, { status: 404 });
+    }
+
     // Validate subcategory belongs to expense type if provided
     if (expenseSubcategoryId) {
-      const subcategory = await db.expenseSubcategory.findUnique({
-        where: {
-          id: expenseSubcategoryId,
-          userId: session.user.id,
-        },
-      });
-
       if (!subcategory) {
         return NextResponse.json(
           { error: 'Subcategory not found' },

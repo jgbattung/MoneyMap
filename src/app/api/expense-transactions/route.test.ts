@@ -35,8 +35,13 @@ vi.mock('@/lib/prisma', () => ({
       findUnique: vi.fn(),
     },
     financialAccount: {
+      count: vi.fn(),
       update: vi.fn(),
     },
+    expenseType: { count: vi.fn() },
+    incomeType: { count: vi.fn() },
+    transferType: { count: vi.fn() },
+    tag: { count: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
@@ -89,6 +94,10 @@ const mockTransaction = {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  // Ownership pre-check: every referenced id belongs to the user by default
+  for (const model of [db.financialAccount, db.expenseType, db.incomeType, db.transferType, db.tag]) {
+    vi.mocked(model.count).mockImplementation(((args: any) => Promise.resolve(args.where.id.in.length)) as any);
+  }
   vi.mocked(auth.api.getSession).mockResolvedValue(mockSession as any);
 });
 
@@ -461,5 +470,23 @@ describe('POST /api/expense-transactions - installment first payment', () => {
     expect(child.parentInstallmentId).toBe(parent.id);
     const counter = vi.mocked(db.expenseTransaction.update).mock.calls[0][0] as any;
     expect(counter.data.remainingInstallments).toEqual({ decrement: 1 });
+  });
+});
+
+// Protected Behavior 8 (MM-033): ownership pre-check
+describe('POST /api/expense-transactions - ownership', () => {
+  it.each([
+    ['Account not found', 'financialAccount'],
+    ['Expense type not found', 'expenseType'],
+    ['Tag not found', 'tag'],
+  ])('returns 404 "%s" and writes nothing when the %s is not owned by the user', async (message, model) => {
+    vi.mocked((db as any)[model].count).mockResolvedValue(0);
+
+    const response = await POST(makePostRequest({ ...validPostBody, tagIds: ['tag-1'] }));
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe(message);
+    expect(db.$transaction).not.toHaveBeenCalled();
   });
 });

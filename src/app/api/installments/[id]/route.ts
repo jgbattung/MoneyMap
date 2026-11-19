@@ -6,6 +6,7 @@ import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaPromise } from "@prisma/client";
 import { z } from "zod";
+import { findUnownedRef } from "@/lib/ownership";
 import { isMoneyString, MONEY_MESSAGE } from "@/lib/validations/money";
 
 export const dynamic = 'force-dynamic';
@@ -109,9 +110,17 @@ export async function PATCH(
 
     const { name, amount, installmentStartDate, expenseTypeId, expenseSubcategoryId } = parseResult.data;
 
-    const existing = await db.expenseTransaction.findUnique({
-      where: { id, userId: session.user.id },
-    });
+    const [existing, unownedRef, subcategory] = await Promise.all([
+      db.expenseTransaction.findUnique({
+        where: { id, userId: session.user.id },
+      }),
+      findUnownedRef(session.user.id, { expenseTypeId }),
+      expenseSubcategoryId !== undefined && expenseSubcategoryId !== null
+        ? db.expenseSubcategory.findUnique({
+            where: { id: expenseSubcategoryId, userId: session.user.id },
+          })
+        : Promise.resolve(null),
+    ]);
 
     if (!existing) {
       return NextResponse.json({ error: 'Installment not found' }, { status: 404 });
@@ -125,12 +134,12 @@ export async function PATCH(
       return NextResponse.json({ error: 'Installment not found' }, { status: 404 });
     }
 
+    if (unownedRef) {
+      return NextResponse.json({ error: unownedRef }, { status: 404 });
+    }
+
     // Validate subcategory if provided
     if (expenseSubcategoryId !== undefined && expenseSubcategoryId !== null) {
-      const subcategory = await db.expenseSubcategory.findUnique({
-        where: { id: expenseSubcategoryId, userId: session.user.id },
-      });
-
       if (!subcategory) {
         return NextResponse.json({ error: 'Subcategory not found' }, { status: 404 });
       }
