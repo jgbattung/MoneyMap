@@ -463,7 +463,6 @@ describe('PATCH /api/transfer-transactions/[id] - money validation', () => {
 // Protected Behavior 8 (MM-033): ownership pre-check
 describe('PATCH /api/transfer-transactions/[id] - ownership', () => {
   it.each([
-    ['Account not found', 'financialAccount'],
     ['Transfer type not found', 'transferType'],
     ['Tag not found', 'tag'],
   ])('returns 404 "%s" and writes nothing when the %s is not owned by the user', async (message, model) => {
@@ -475,6 +474,25 @@ describe('PATCH /api/transfer-transactions/[id] - ownership', () => {
 
     expect(response.status).toBe(404);
     expect(data.error).toBe(message);
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+// Protected Behavior 8 (MM-033): both sides of a transfer are checked, not just one
+describe('PATCH /api/transfer-transactions/[id] - ownership of each account', () => {
+  it.each([
+    ['fromAccountId', 'acc-x'],
+    ['toAccountId', 'acc-y'],
+  ])('returns 404 "Account not found" and writes nothing when only %s (%s) is not owned by the user', async (_side, foreignId) => {
+    vi.mocked(db.transferTransaction.findUnique).mockResolvedValue(mockExistingTransfer as any);
+    vi.mocked(db.financialAccount.count).mockImplementation(((args: any) =>
+      Promise.resolve(args.where.id.in.filter((id: string) => id !== foreignId).length)) as any);
+
+    const response = await PATCH(makePatchRequest({ fromAccountId: 'acc-x', toAccountId: 'acc-y' }), makeParams());
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe('Account not found');
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 });
