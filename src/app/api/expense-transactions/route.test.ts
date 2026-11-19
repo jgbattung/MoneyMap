@@ -423,3 +423,37 @@ describe('POST /api/expense-transactions - money validation', () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 });
+
+// AC7 / Protected Behavior 9 (MM-033): the installment create keeps writing the
+// system-generated "Payment 1/N" child. Written before the server-owned fields change.
+describe('POST /api/expense-transactions - installment first payment', () => {
+  beforeEach(() => {
+    vi.mocked(db.$transaction).mockResolvedValue([mockTransaction] as any);
+  });
+
+  it('creates the system-generated Payment 1/N child linked to the parent for a started installment', async () => {
+    await POST(
+      makePostRequest({
+        ...validPostBody,
+        amount: '1200',
+        isInstallment: true,
+        installmentDuration: 12,
+        installmentStartDate: '2026-01-15',
+      })
+    );
+
+    const ops = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    expect(ops).toHaveLength(4);
+    const creates = vi.mocked(db.expenseTransaction.create).mock.calls.map((c) => (c[0] as any).data);
+    const parent = creates[0];
+    const child = creates[1];
+    expect(parent.isInstallment).toBe(true);
+    expect(parent.remainingInstallments).toBe(12);
+    expect(child.name).toBe('Groceries (Payment 1/12)');
+    expect(child.amount).toBe(100);
+    expect(child.isSystemGenerated).toBe(true);
+    expect(child.parentInstallmentId).toBe(parent.id);
+    const counter = vi.mocked(db.expenseTransaction.update).mock.calls[0][0] as any;
+    expect(counter.data.remainingInstallments).toEqual({ decrement: 1 });
+  });
+});

@@ -198,3 +198,39 @@ describe('POST /api/cron/process-installments — outer error', () => {
     expect(data.error).toBe('Failed to process installments');
   });
 });
+
+// -----------------------------------------------------------------------
+// AC7 characterization (MM-033): the cron owns the remainingInstallments counter.
+// Written and passing before the PATCH schema drops the field.
+// -----------------------------------------------------------------------
+describe('POST /api/cron/process-installments - counter characterization', () => {
+  beforeEach(() => {
+    vi.mocked(db.$transaction).mockResolvedValue([{}, {}, {}] as any);
+  });
+
+  it('decrements the counter by 1, keeps it ACTIVE and names the child payment N/duration', async () => {
+    vi.mocked(db.expenseTransaction.findMany).mockResolvedValue([mockInstallment] as any);
+
+    await POST(makePostRequest(VALID_SECRET));
+
+    const update = vi.mocked(db.expenseTransaction.update).mock.calls[0][0] as any;
+    expect(update.data.remainingInstallments).toEqual({ decrement: 1 });
+    expect(update.data.installmentStatus).toBe('ACTIVE');
+    const create = vi.mocked(db.expenseTransaction.create).mock.calls[0][0] as any;
+    expect(create.data.name).toBe('Laptop Payment (Payment 3/12)');
+    expect(create.data.isSystemGenerated).toBe(true);
+    expect(create.data.parentInstallmentId).toBe('install-1');
+  });
+
+  it('completes the installment on the last payment', async () => {
+    vi.mocked(db.expenseTransaction.findMany).mockResolvedValue([
+      { ...mockInstallment, remainingInstallments: 1 },
+    ] as any);
+
+    await POST(makePostRequest(VALID_SECRET));
+
+    const update = vi.mocked(db.expenseTransaction.update).mock.calls[0][0] as any;
+    expect(update.data.remainingInstallments).toEqual({ decrement: 1 });
+    expect(update.data.installmentStatus).toBe('COMPLETED');
+  });
+});

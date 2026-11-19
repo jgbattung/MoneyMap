@@ -325,3 +325,58 @@ describe('PATCH /api/expense-transactions/[id] - money validation', () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 });
+
+// -----------------------------------------------------------------------
+// AC7 characterization (MM-033): written and passing BEFORE remainingInstallments
+// is dropped from the PATCH schema. The only intended post-change difference is
+// that a non-installment row no longer gets remainingInstallments written as 0.
+// -----------------------------------------------------------------------
+describe('PATCH /api/expense-transactions/[id] - characterization of inline-table saves', () => {
+  const tablePayload = {
+    id: 'exp-1',
+    name: 'Groceries',
+    amount: '150',
+    accountId: 'account-a',
+    expenseTypeId: 'type-1',
+    expenseSubcategoryId: null,
+    date: '2026-01-15',
+    description: null,
+    isInstallment: false,
+    installmentDuration: null,
+    installmentStartDate: null,
+    remainingInstallments: null,
+    tagIds: [] as string[],
+  };
+
+  it('updates the amount and the balance and never turns the row into an installment', async () => {
+    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ amount: 150 }) as any);
+
+    const response = await PATCH(makePatchRequest(tablePayload), makeParams());
+
+    expect(response.status).toBe(200);
+    expect(db.financialAccount.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { currentBalance: { decrement: 50 } } })
+    );
+    const data = vi.mocked(db.expenseTransaction.update).mock.calls[0][0].data as any;
+    expect(data.amount).toBe(150);
+    expect(data.isInstallment).toBe(false);
+    expect(data.installmentDuration).toBeUndefined();
+    expect(data.monthlyAmount).toBeUndefined();
+    // Today the null is coerced to 0; after the change the key is absent.
+    expect([0, undefined]).toContain(data.remainingInstallments);
+  });
+
+  it('a regular edit with isInstallment:true and a duration still resets the counter to the duration', async () => {
+    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult() as any);
+
+    await PATCH(
+      makePatchRequest({ amount: '1200', isInstallment: true, installmentDuration: 12 }),
+      makeParams()
+    );
+
+    const data = vi.mocked(db.expenseTransaction.update).mock.calls[0][0].data as any;
+    expect(data.remainingInstallments).toBe(12);
+    expect(data.installmentDuration).toBe(12);
+    expect(data.monthlyAmount).toBe(100);
+  });
+});
