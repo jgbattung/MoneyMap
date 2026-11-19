@@ -25,7 +25,6 @@ const ServerPatchExpenseSchema = z.object({
   isInstallment: z.boolean().optional(),
   installmentDuration: z.coerce.number().int().positive().nullable().optional(),
   installmentStartDate: z.string().nullable().optional(),
-  remainingInstallments: z.coerce.number().int().optional(),
   tagIds: z.array(z.string()).max(10).optional(),
 });
 
@@ -118,7 +117,6 @@ export async function PATCH(
       isInstallment,
       installmentDuration,
       installmentStartDate,
-      remainingInstallments,
       tagIds,
     } = parseResult.data;
 
@@ -176,7 +174,6 @@ export async function PATCH(
     if (description !== undefined) updateData.description = description || null;
     if (isInstallment !== undefined) updateData.isInstallment = isInstallment;
     if (installmentStartDate !== undefined) updateData.installmentStartDate = installmentStartDate ? new Date(installmentStartDate) : null;
-    if (remainingInstallments !== undefined) updateData.remainingInstallments = remainingInstallments;
 
     if (amount !== undefined) {
       const parsedAmount = parseFloat(amount);
@@ -189,9 +186,7 @@ export async function PATCH(
         updateData.installmentDuration = installmentDuration;
         updateData.monthlyAmount = monthlyAmount;
 
-        if (remainingInstallments === undefined) {
-          updateData.remainingInstallments = installmentDuration;
-        }
+        updateData.remainingInstallments = installmentDuration;
       }
 
       const oldAmount = existingExpense.isInstallment && existingExpense.monthlyAmount

@@ -380,3 +380,19 @@ describe('PATCH /api/expense-transactions/[id] - characterization of inline-tabl
     expect(data.monthlyAmount).toBe(100);
   });
 });
+
+// Protected Behavior 6 (MM-033)
+describe('PATCH /api/expense-transactions/[id] - server-owned remainingInstallments', () => {
+  it('ignores a client-sent remainingInstallments and never writes it for a non-installment row', async () => {
+    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ amount: 150 }) as any);
+
+    const response = await PATCH(
+      makePatchRequest({ amount: '150', isInstallment: false, remainingInstallments: 99 }),
+      makeParams()
+    );
+
+    expect(response.status).toBe(200);
+    const data = vi.mocked(db.expenseTransaction.update).mock.calls[0][0].data as any;
+    expect(data).not.toHaveProperty('remainingInstallments');
+  });
+});
