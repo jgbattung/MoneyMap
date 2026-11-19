@@ -90,13 +90,21 @@ describe('RecordTransferDialog', () => {
     expect(within(dialog).queryByText(/Enter a positive amount/)).toBeNull();
   });
 
-  it.each(['0', '1.234'])('disables Confirm and shows an error for %s', (value) => {
+  it.each(['0'])('disables Confirm and shows an error for %s', (value) => {
     const dialog = renderDialog();
     setAmount(dialog, value);
     expect(confirmButton(dialog).disabled).toBe(true);
     expect(within(dialog).getByText('Enter a positive amount with at most 2 decimals')).toBeTruthy();
     fireEvent.click(confirmButton(dialog));
     expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('ignores a 3rd decimal so the amount can never exceed 2 decimals', async () => {
+    const dialog = renderDialog();
+    setAmount(dialog, '1.234');
+    expect((within(dialog).getByLabelText('Amount') as HTMLInputElement).value).toBe('11,348.66');
+    fireEvent.click(confirmButton(dialog));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith({ amount: '11348.66', date: formatDateForAPI(new Date()) }));
   });
 
   it('normalizes a trailing dot before sending', async () => {

@@ -53,8 +53,8 @@ describe("CurrencyInput", () => {
     it("allows only one decimal point", () => {
       const onValueChange = vi.fn()
       render(<CurrencyInput value={0} onValueChange={onValueChange} />)
-      fireEvent.change(screen.getByRole("textbox"), { target: { value: "12.34.56" } })
-      expect(onValueChange).toHaveBeenCalledWith("12.3456")
+      fireEvent.change(screen.getByRole("textbox"), { target: { value: "12.3.4" } })
+      expect(onValueChange).toHaveBeenCalledWith("12.34")
     })
   })
 
@@ -121,6 +121,43 @@ describe("CurrencyInput", () => {
 
       rerender(<CurrencyInput value={1234567.89} onValueChange={onValueChange} />)
       expect(getInputValue()).toBe("1,234,567.89")
+    })
+  })
+
+  describe("2-decimal cap", () => {
+    it("keeps the previous value when a 3rd decimal is typed", () => {
+      const onValueChange = vi.fn()
+      render(<CurrencyInput value={0} onValueChange={onValueChange} />)
+      const input = screen.getByRole("textbox")
+      fireEvent.change(input, { target: { value: "12.34" } })
+      onValueChange.mockClear()
+
+      fireEvent.change(input, { target: { value: "12.345" } })
+
+      expect(getInputValue()).toBe("12.34")
+      expect(onValueChange).not.toHaveBeenCalled()
+    })
+
+    it("rejects a pasted value with 3 decimals instead of truncating it", () => {
+      const onValueChange = vi.fn()
+      render(<CurrencyInput value={0} onValueChange={onValueChange} />)
+
+      fireEvent.change(screen.getByRole("textbox"), { target: { value: "1,234.567" } })
+
+      expect(getInputValue()).toBe("")
+      expect(onValueChange).not.toHaveBeenCalled()
+    })
+
+    it("still accepts exactly 2 decimals and a trailing dot", () => {
+      const onValueChange = vi.fn()
+      render(<CurrencyInput value={0} onValueChange={onValueChange} />)
+      const input = screen.getByRole("textbox")
+
+      fireEvent.change(input, { target: { value: "5." } })
+      expect(onValueChange).toHaveBeenLastCalledWith("5.")
+      fireEvent.change(input, { target: { value: "5.55" } })
+      expect(onValueChange).toHaveBeenLastCalledWith("5.55")
+      expect(getInputValue()).toBe("5.55")
     })
   })
 })
