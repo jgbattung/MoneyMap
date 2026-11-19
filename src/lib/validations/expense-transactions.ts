@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isMoneyString, MONEY_MESSAGE } from "./money";
 
 export const ExpenseTransactionValidation = z.object({
   accountId: z.string().min(1, "Account is required"),
@@ -7,6 +8,7 @@ export const ExpenseTransactionValidation = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long"),
   amount: z.string()
     .min(1, "Amount is required")
+    .refine((val) => isMoneyString(val), { message: MONEY_MESSAGE("Amount") })
     .refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
       message: "Amount must be a positive number",
     }),

@@ -1,4 +1,5 @@
 import * as z from "zod"
+import { isMoneyString, MONEY_MESSAGE } from "./money";
 
 export const IncomeTransactionValidation = z.object({
   name: z.string()
@@ -7,6 +8,7 @@ export const IncomeTransactionValidation = z.object({
 
   amount: z.string()
     .min(1, "Amount is required")
+    .refine((val) => isMoneyString(val), { message: MONEY_MESSAGE("Amount") })
     .refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
       message: "Amount must be a valid positive number"
     }),
