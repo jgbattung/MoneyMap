@@ -31,8 +31,13 @@ vi.mock('@/lib/prisma', () => ({
       create: vi.fn(),
     },
     financialAccount: {
+      count: vi.fn(),
       update: vi.fn(),
     },
+    expenseType: { count: vi.fn() },
+    incomeType: { count: vi.fn() },
+    transferType: { count: vi.fn() },
+    tag: { count: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
@@ -83,6 +88,10 @@ const validPostBody = {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  // Ownership pre-check: every referenced id belongs to the user by default
+  for (const model of [db.financialAccount, db.expenseType, db.incomeType, db.transferType, db.tag]) {
+    vi.mocked(model.count).mockImplementation(((args: any) => Promise.resolve(args.where.id.in.length)) as any);
+  }
   vi.mocked(auth.api.getSession).mockResolvedValue(mockSession as any);
 });
 
@@ -388,5 +397,34 @@ describe('POST /api/income-transactions', () => {
 
     expect(response.status).toBe(500);
     expect(data.error).toBe('Internal server error');
+  });
+});
+
+describe('POST /api/income-transactions - money validation', () => {
+  it.each(['100.125', '1e3', ' '])('returns 400 and writes nothing for amount %j', async (amount) => {
+    const response = await POST(makePostRequest({ ...validPostBody, amount }));
+
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.details.fieldErrors.amount).toContain('Amount must be a number with at most 2 decimals');
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+// Protected Behavior 8 (MM-033): ownership pre-check
+describe('POST /api/income-transactions - ownership', () => {
+  it.each([
+    ['Account not found', 'financialAccount'],
+    ['Income type not found', 'incomeType'],
+    ['Tag not found', 'tag'],
+  ])('returns 404 "%s" and writes nothing when the %s is not owned by the user', async (message, model) => {
+    vi.mocked((db as any)[model].count).mockResolvedValue(0);
+
+    const response = await POST(makePostRequest({ ...validPostBody, tagIds: ['tag-1'] }));
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe(message);
+    expect(db.$transaction).not.toHaveBeenCalled();
   });
 });

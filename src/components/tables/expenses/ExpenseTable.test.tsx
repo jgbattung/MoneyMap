@@ -1215,3 +1215,53 @@ describe('ExpenseTable date presets and custom range', () => {
     expect(lastParams().startDate).toBeUndefined();
   });
 });
+
+// AC7 characterization (MM-033): written and passing BEFORE remainingInstallments
+// is dropped from the inline-save payload. The table only ever lists
+// isInstallment:false rows, so a save must never send isInstallment:true.
+describe('ExpenseTable inline save payload (characterization)', () => {
+  const regularRow = makeExpense('exp-reg', 'Regular lunch', { amount: '120.00' });
+  const childRow = makeExpense('exp-child', 'Phone (Payment 1/12)', {
+    amount: '999.00',
+    isSystemGenerated: true,
+    parentInstallmentId: 'parent-1',
+    isInstallment: false,
+    remainingInstallments: null,
+  } as Partial<ExpenseTransaction>);
+
+  async function saveFirstRowAndGetPayload(rows: ExpenseTransaction[]) {
+    setupAllMocks(rows);
+    const update = vi.fn().mockResolvedValue({});
+    const base = vi.mocked(useExpenseTransactionsQuery).getMockImplementation()!;
+    vi.mocked(useExpenseTransactionsQuery).mockImplementation(
+      (opts?: any) => ({ ...base(opts), updateExpenseTransaction: update }) as any
+    );
+    renderExpenseTable();
+
+    const actionCell = () => {
+      const cells = within(screen.getAllByRole('row')[1]).getAllByRole('cell');
+      return cells[cells.length - 1];
+    };
+    fireEvent.click(within(actionCell()).getByRole('button'));
+    await waitFor(() => expect(within(actionCell()).getAllByRole('button').length).toBe(3));
+    fireEvent.click(within(actionCell()).getAllByRole('button')[0]);
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    return update.mock.calls[0][0];
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    ['a regular expense', regularRow],
+    ['a system-generated child payment', childRow],
+  ])('saving %s sends isInstallment:false and the row id', async (_label, row) => {
+    const payload = await saveFirstRowAndGetPayload([row]);
+
+    expect(payload.id).toBe(row.id);
+    expect(payload.isInstallment).toBe(false);
+    expect(payload.installmentDuration).toBeNull();
+    expect(payload.installmentStartDate).toBeNull();
+  });
+});

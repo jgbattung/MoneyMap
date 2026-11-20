@@ -313,7 +313,6 @@ const EditCell = ({ row, table }: any) => {
         isInstallment: updatedRow.isInstallment,
         installmentDuration: updatedRow.installmentDuration,
         installmentStartDate: updatedRow.installmentStartDate,
-        remainingInstallments: updatedRow.remainingInstallments,
         tagIds: Array.isArray(updatedRow.tags)
           ? typeof updatedRow.tags[0] === 'string'
             ? updatedRow.tags

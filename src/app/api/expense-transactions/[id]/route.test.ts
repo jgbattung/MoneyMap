@@ -33,8 +33,13 @@ vi.mock('@/lib/prisma', () => ({
       findUnique: vi.fn(),
     },
     financialAccount: {
+      count: vi.fn(),
       update: vi.fn(),
     },
+    expenseType: { count: vi.fn() },
+    incomeType: { count: vi.fn() },
+    transferType: { count: vi.fn() },
+    tag: { count: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
@@ -104,6 +109,10 @@ function makeBatchResult(overrides: Record<string, any> = {}) {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  // Ownership pre-check: every referenced id belongs to the user by default
+  for (const model of [db.financialAccount, db.expenseType, db.incomeType, db.transferType, db.tag]) {
+    vi.mocked(model.count).mockImplementation(((args: any) => Promise.resolve(args.where.id.in.length)) as any);
+  }
   vi.mocked(auth.api.getSession).mockResolvedValue(mockSession as any);
   vi.mocked(db.expenseTransaction.findUnique).mockResolvedValue(mockExistingExpense as any);
 });
@@ -314,5 +323,105 @@ describe('DELETE /api/expense-transactions/[id]', () => {
 
     expect(response.status).toBe(500);
     expect(data.error).toBe('Internal server error');
+  });
+});
+
+describe('PATCH /api/expense-transactions/[id] - money validation', () => {
+  it.each(['100.125', '1e3', ' '])('returns 400 and writes nothing for amount %j', async (amount) => {
+    const response = await PATCH(makePatchRequest({ amount }), makeParams());
+
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.details.fieldErrors.amount).toContain('Amount must be a number with at most 2 decimals');
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+// -----------------------------------------------------------------------
+// AC7 characterization (MM-033): written and passing BEFORE remainingInstallments
+// is dropped from the PATCH schema. The only intended post-change difference is
+// that a non-installment row no longer gets remainingInstallments written as 0.
+// -----------------------------------------------------------------------
+describe('PATCH /api/expense-transactions/[id] - characterization of inline-table saves', () => {
+  const tablePayload = {
+    id: 'exp-1',
+    name: 'Groceries',
+    amount: '150',
+    accountId: 'account-a',
+    expenseTypeId: 'type-1',
+    expenseSubcategoryId: null,
+    date: '2026-01-15',
+    description: null,
+    isInstallment: false,
+    installmentDuration: null,
+    installmentStartDate: null,
+    remainingInstallments: null,
+    tagIds: [] as string[],
+  };
+
+  it('updates the amount and the balance and never turns the row into an installment', async () => {
+    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ amount: 150 }) as any);
+
+    const response = await PATCH(makePatchRequest(tablePayload), makeParams());
+
+    expect(response.status).toBe(200);
+    expect(db.financialAccount.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { currentBalance: { decrement: 50 } } })
+    );
+    const data = vi.mocked(db.expenseTransaction.update).mock.calls[0][0].data as any;
+    expect(data.amount).toBe(150);
+    expect(data.isInstallment).toBe(false);
+    expect(data.installmentDuration).toBeUndefined();
+    expect(data.monthlyAmount).toBeUndefined();
+    // Today the null is coerced to 0; after the change the key is absent.
+    expect([0, undefined]).toContain(data.remainingInstallments);
+  });
+
+  it('a regular edit with isInstallment:true and a duration still resets the counter to the duration', async () => {
+    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult() as any);
+
+    await PATCH(
+      makePatchRequest({ amount: '1200', isInstallment: true, installmentDuration: 12 }),
+      makeParams()
+    );
+
+    const data = vi.mocked(db.expenseTransaction.update).mock.calls[0][0].data as any;
+    expect(data.remainingInstallments).toBe(12);
+    expect(data.installmentDuration).toBe(12);
+    expect(data.monthlyAmount).toBe(100);
+  });
+});
+
+// Protected Behavior 6 (MM-033)
+describe('PATCH /api/expense-transactions/[id] - server-owned remainingInstallments', () => {
+  it('ignores a client-sent remainingInstallments and never writes it for a non-installment row', async () => {
+    vi.mocked(db.$transaction).mockResolvedValue(makeBatchResult({ amount: 150 }) as any);
+
+    const response = await PATCH(
+      makePatchRequest({ amount: '150', isInstallment: false, remainingInstallments: 99 }),
+      makeParams()
+    );
+
+    expect(response.status).toBe(200);
+    const data = vi.mocked(db.expenseTransaction.update).mock.calls[0][0].data as any;
+    expect(data).not.toHaveProperty('remainingInstallments');
+  });
+});
+
+// Protected Behavior 8 (MM-033): ownership pre-check
+describe('PATCH /api/expense-transactions/[id] - ownership', () => {
+  it.each([
+    ['Account not found', 'financialAccount'],
+    ['Expense type not found', 'expenseType'],
+    ['Tag not found', 'tag'],
+  ])('returns 404 "%s" and writes nothing when the %s is not owned by the user', async (message, model) => {
+    vi.mocked((db as any)[model].count).mockResolvedValue(0);
+
+    const response = await PATCH(makePatchRequest({ accountId: 'account-b', expenseTypeId: 'type-2', tagIds: ['tag-1'] }), makeParams());
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe(message);
+    expect(db.$transaction).not.toHaveBeenCalled();
   });
 });

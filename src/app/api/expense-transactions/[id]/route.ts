@@ -6,10 +6,15 @@ import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaPromise } from "@prisma/client";
 import { z } from "zod";
+import { findUnownedRef } from "@/lib/ownership";
+import { isMoneyString, MONEY_MESSAGE } from "@/lib/validations/money";
 
 const ServerPatchExpenseSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   amount: z.string().refine(
+    (val) => isMoneyString(val),
+    { message: MONEY_MESSAGE("Amount") }
+  ).refine(
     (val) => !isNaN(Number(val)) && Number(val) > 0,
     { message: "Amount must be a positive number" }
   ).optional(),
@@ -21,7 +26,6 @@ const ServerPatchExpenseSchema = z.object({
   isInstallment: z.boolean().optional(),
   installmentDuration: z.coerce.number().int().positive().nullable().optional(),
   installmentStartDate: z.string().nullable().optional(),
-  remainingInstallments: z.coerce.number().int().optional(),
   tagIds: z.array(z.string()).max(10).optional(),
 });
 
@@ -114,16 +118,31 @@ export async function PATCH(
       isInstallment,
       installmentDuration,
       installmentStartDate,
-      remainingInstallments,
       tagIds,
     } = parseResult.data;
 
-    const existingExpense = await db.expenseTransaction.findUnique({
-      where: {
-        id: id,
-        userId: session.user.id,
-      },
-    });
+    // Independent reads run together: the record, ownership of every supplied id, the subcategory
+    const [existingExpense, unownedRef, subcategory] = await Promise.all([
+      db.expenseTransaction.findUnique({
+        where: {
+          id: id,
+          userId: session.user.id,
+        },
+      }),
+      findUnownedRef(session.user.id, {
+        accountIds: [accountId],
+        expenseTypeId,
+        tagIds,
+      }),
+      expenseSubcategoryId
+        ? db.expenseSubcategory.findUnique({
+            where: {
+              id: expenseSubcategoryId,
+              userId: session.user.id,
+            },
+          })
+        : Promise.resolve(null),
+    ]);
 
     if (!existingExpense) {
       return NextResponse.json(
@@ -132,16 +151,13 @@ export async function PATCH(
       );
     }
 
+    if (unownedRef) {
+      return NextResponse.json({ error: unownedRef }, { status: 404 });
+    }
+
     // Validate subcategory belongs to expense type if provided
     if (expenseSubcategoryId !== undefined) {
       if (expenseSubcategoryId !== null) {
-        const subcategory = await db.expenseSubcategory.findUnique({
-          where: {
-            id: expenseSubcategoryId,
-            userId: session.user.id,
-          },
-        });
-
         if (!subcategory) {
           return NextResponse.json(
             { error: 'Subcategory not found' },
@@ -172,7 +188,6 @@ export async function PATCH(
     if (description !== undefined) updateData.description = description || null;
     if (isInstallment !== undefined) updateData.isInstallment = isInstallment;
     if (installmentStartDate !== undefined) updateData.installmentStartDate = installmentStartDate ? new Date(installmentStartDate) : null;
-    if (remainingInstallments !== undefined) updateData.remainingInstallments = remainingInstallments;
 
     if (amount !== undefined) {
       const parsedAmount = parseFloat(amount);
@@ -185,9 +200,7 @@ export async function PATCH(
         updateData.installmentDuration = installmentDuration;
         updateData.monthlyAmount = monthlyAmount;
 
-        if (remainingInstallments === undefined) {
-          updateData.remainingInstallments = installmentDuration;
-        }
+        updateData.remainingInstallments = installmentDuration;
       }
 
       const oldAmount = existingExpense.isInstallment && existingExpense.monthlyAmount

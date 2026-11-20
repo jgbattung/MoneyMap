@@ -66,6 +66,9 @@ const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
           cleaned.slice(dotIndex + 1).replace(/\./g, "")
       }
 
+      // Reject (never truncate) a value that would have a 3rd decimal
+      if (dotIndex !== -1 && cleaned.length - dotIndex - 1 > 2) return
+
       const commasBefore = (raw.slice(0, cursorPos).match(/,/g) || []).length
       const newDisplay = formatForDisplay(cleaned)
       const commasAfter = (

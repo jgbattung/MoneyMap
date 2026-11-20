@@ -35,8 +35,13 @@ vi.mock('@/lib/prisma', () => ({
       findUnique: vi.fn(),
     },
     financialAccount: {
+      count: vi.fn(),
       update: vi.fn(),
     },
+    expenseType: { count: vi.fn() },
+    incomeType: { count: vi.fn() },
+    transferType: { count: vi.fn() },
+    tag: { count: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
@@ -89,6 +94,10 @@ const mockTransaction = {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  // Ownership pre-check: every referenced id belongs to the user by default
+  for (const model of [db.financialAccount, db.expenseType, db.incomeType, db.transferType, db.tag]) {
+    vi.mocked(model.count).mockImplementation(((args: any) => Promise.resolve(args.where.id.in.length)) as any);
+  }
   vi.mocked(auth.api.getSession).mockResolvedValue(mockSession as any);
 });
 
@@ -287,14 +296,20 @@ describe('POST /api/expense-transactions', () => {
     expect(callArg).toHaveLength(2);
   });
 
-  it('batch contains only expenseTransaction.create when isSystemGenerated=true (no balance change)', async () => {
-    const body = { ...validPostBody, isSystemGenerated: true };
+  it('ignores client-sent isSystemGenerated and parentInstallmentId: balance still decrements and flags are saved as false/null', async () => {
+    const body = { ...validPostBody, isSystemGenerated: true, parentInstallmentId: 'x' };
     vi.mocked(db.$transaction).mockResolvedValue([mockTransaction] as any);
 
     await POST(makePostRequest(body));
 
     const callArg: any[] = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
-    expect(callArg).toHaveLength(1);
+    expect(callArg).toHaveLength(2);
+    expect(db.financialAccount.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { currentBalance: { decrement: 50 } } })
+    );
+    const data = vi.mocked(db.expenseTransaction.create).mock.calls[0][0].data as any;
+    expect(data.isSystemGenerated).toBe(false);
+    expect(data.parentInstallmentId).toBeNull();
   });
 
   it('returns 400 when name is missing', async () => {
@@ -412,5 +427,68 @@ describe('POST /api/expense-transactions', () => {
 
     expect(response.status).toBe(500);
     expect(data.error).toBe('Internal server error');
+  });
+});
+
+describe('POST /api/expense-transactions - money validation', () => {
+  it.each(['100.125', '1e3', ' ', '1,000'])('returns 400 and writes nothing for amount %j', async (amount) => {
+    const response = await POST(makePostRequest({ ...validPostBody, amount }));
+
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.details.fieldErrors.amount).toContain('Amount must be a number with at most 2 decimals');
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+// AC7 / Protected Behavior 9 (MM-033): the installment create keeps writing the
+// system-generated "Payment 1/N" child. Written before the server-owned fields change.
+describe('POST /api/expense-transactions - installment first payment', () => {
+  beforeEach(() => {
+    vi.mocked(db.$transaction).mockResolvedValue([mockTransaction] as any);
+  });
+
+  it('creates the system-generated Payment 1/N child linked to the parent for a started installment', async () => {
+    await POST(
+      makePostRequest({
+        ...validPostBody,
+        amount: '1200',
+        isInstallment: true,
+        installmentDuration: 12,
+        installmentStartDate: '2026-01-15',
+      })
+    );
+
+    const ops = vi.mocked(db.$transaction).mock.calls[0][0] as any[];
+    expect(ops).toHaveLength(4);
+    const creates = vi.mocked(db.expenseTransaction.create).mock.calls.map((c) => (c[0] as any).data);
+    const parent = creates[0];
+    const child = creates[1];
+    expect(parent.isInstallment).toBe(true);
+    expect(parent.remainingInstallments).toBe(12);
+    expect(child.name).toBe('Groceries (Payment 1/12)');
+    expect(child.amount).toBe(100);
+    expect(child.isSystemGenerated).toBe(true);
+    expect(child.parentInstallmentId).toBe(parent.id);
+    const counter = vi.mocked(db.expenseTransaction.update).mock.calls[0][0] as any;
+    expect(counter.data.remainingInstallments).toEqual({ decrement: 1 });
+  });
+});
+
+// Protected Behavior 8 (MM-033): ownership pre-check
+describe('POST /api/expense-transactions - ownership', () => {
+  it.each([
+    ['Account not found', 'financialAccount'],
+    ['Expense type not found', 'expenseType'],
+    ['Tag not found', 'tag'],
+  ])('returns 404 "%s" and writes nothing when the %s is not owned by the user', async (message, model) => {
+    vi.mocked((db as any)[model].count).mockResolvedValue(0);
+
+    const response = await POST(makePostRequest({ ...validPostBody, tagIds: ['tag-1'] }));
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe(message);
+    expect(db.$transaction).not.toHaveBeenCalled();
   });
 });

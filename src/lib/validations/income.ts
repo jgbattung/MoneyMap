@@ -1,4 +1,5 @@
 import * as z from "zod"
+import { isMoneyString, MONEY_MESSAGE } from "./money";
 
 export const IncomeTypeValidation = z.object({
   name: z.string()
@@ -7,7 +8,7 @@ export const IncomeTypeValidation = z.object({
 
   monthlyTarget: z.string()
     .optional()
-    .refine((val) => !val || !isNaN(Number(val)), {
-      message: "Monthly target must be a valid number"
+    .refine((val) => !val || isMoneyString(val), {
+      message: MONEY_MESSAGE("Monthly target")
     })
 });

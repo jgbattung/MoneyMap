@@ -30,6 +30,7 @@ vi.mock('@/lib/prisma', () => ({
       delete: vi.fn(),
     },
     financialAccount: {
+      count: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
     },
@@ -39,9 +40,13 @@ vi.mock('@/lib/prisma', () => ({
       delete: vi.fn(),
     },
     expenseType: {
+      count: vi.fn(),
       findFirst: vi.fn(),
       create: vi.fn(),
     },
+    incomeType: { count: vi.fn() },
+    transferType: { count: vi.fn() },
+    tag: { count: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
@@ -119,6 +124,10 @@ function makeBatchResult(transferOverrides: Record<string, any> = {}, extraOps =
 
 beforeEach(() => {
   vi.resetAllMocks();
+  // Ownership pre-check: every referenced id belongs to the user by default
+  for (const model of [db.financialAccount, db.expenseType, db.incomeType, db.transferType, db.tag]) {
+    vi.mocked(model.count).mockImplementation(((args: any) => Promise.resolve(args.where.id.in.length)) as any);
+  }
   vi.mocked(auth.api.getSession).mockResolvedValue(mockSession as any);
   vi.mocked(db.transferTransaction.findUnique).mockResolvedValue(mockExistingTransfer as any);
 });
@@ -433,5 +442,57 @@ describe('DELETE /api/transfer-transactions/[id]', () => {
 
     expect(response.status).toBe(500);
     expect(data.error).toBe('Internal server error');
+  });
+});
+
+describe('PATCH /api/transfer-transactions/[id] - money validation', () => {
+  it.each([
+    ['amount', 'Amount', '100.125'],
+    ['amount', 'Amount', 100.125],
+    ['feeAmount', 'Fee amount', '1.234'],
+  ])('returns 400 and writes nothing for %s (%s) %j', async (field, label, value) => {
+    const response = await PATCH(makePatchRequest({ [field]: value }), makeParams());
+
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.details.fieldErrors[field]).toContain(`${label} must be a number with at most 2 decimals`);
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+// Protected Behavior 8 (MM-033): ownership pre-check
+describe('PATCH /api/transfer-transactions/[id] - ownership', () => {
+  it.each([
+    ['Transfer type not found', 'transferType'],
+    ['Tag not found', 'tag'],
+  ])('returns 404 "%s" and writes nothing when the %s is not owned by the user', async (message, model) => {
+    vi.mocked(db.transferTransaction.findUnique).mockResolvedValue(mockExistingTransfer as any);
+    vi.mocked((db as any)[model].count).mockResolvedValue(0);
+
+    const response = await PATCH(makePatchRequest({ fromAccountId: 'acc-x', toAccountId: 'acc-y', transferTypeId: 'ttype-2', tagIds: ['tag-1'] }), makeParams());
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe(message);
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+// Protected Behavior 8 (MM-033): both sides of a transfer are checked, not just one
+describe('PATCH /api/transfer-transactions/[id] - ownership of each account', () => {
+  it.each([
+    ['fromAccountId', 'acc-x'],
+    ['toAccountId', 'acc-y'],
+  ])('returns 404 "Account not found" and writes nothing when only %s (%s) is not owned by the user', async (_side, foreignId) => {
+    vi.mocked(db.transferTransaction.findUnique).mockResolvedValue(mockExistingTransfer as any);
+    vi.mocked(db.financialAccount.count).mockImplementation(((args: any) =>
+      Promise.resolve(args.where.id.in.filter((id: string) => id !== foreignId).length)) as any);
+
+    const response = await PATCH(makePatchRequest({ fromAccountId: 'acc-x', toAccountId: 'acc-y' }), makeParams());
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe('Account not found');
+    expect(db.$transaction).not.toHaveBeenCalled();
   });
 });

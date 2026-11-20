@@ -8,10 +8,15 @@ import { PrismaPromise } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { onTransferTransactionChange } from "@/lib/statement-recalculator";
 import { z } from "zod";
+import { findUnownedRef } from "@/lib/ownership";
+import { isMoneyString, MONEY_MESSAGE } from "@/lib/validations/money";
 
 const ServerPostTransferSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   amount: z.string().min(1, "Amount is required").refine(
+    (val) => isMoneyString(val),
+    { message: MONEY_MESSAGE("Amount") }
+  ).refine(
     (val) => !isNaN(Number(val)) && Number(val) > 0,
     { message: "Amount must be a positive number" }
   ),
@@ -21,6 +26,9 @@ const ServerPostTransferSchema = z.object({
   date: z.string().min(1, "Date is required"),
   notes: z.string().optional(),
   feeAmount: z.string().optional().refine(
+    (val) => !val || isMoneyString(val),
+    { message: MONEY_MESSAGE("Fee amount") }
+  ).refine(
     (val) => !val || (!isNaN(Number(val)) && Number(val) > 0),
     { message: "Fee amount must be a positive number" }
   ),
@@ -125,9 +133,16 @@ export async function POST(request: NextRequest) {
     let feeExpenseId: string | null = null;
     let transferIndex = 0;
 
+    const ownershipCheck = findUnownedRef(session.user.id, {
+      accountIds: [fromAccountId, toAccountId],
+      transferTypeId,
+      tagIds,
+    });
+
     if (feeAmount && parseFloat(feeAmount) > 0) {
-      // Parallelize the two independent pre-transaction read lookups
-      const [foundFeeType, fromAccount] = await Promise.all([
+      // Parallelize the independent pre-transaction reads (ownership included)
+      const [unownedRef, foundFeeType, fromAccount] = await Promise.all([
+        ownershipCheck,
         db.expenseType.findFirst({
           where: {
             userId: session.user.id,
@@ -139,6 +154,11 @@ export async function POST(request: NextRequest) {
           select: { name: true },
         }),
       ]);
+
+      if (unownedRef) {
+        return NextResponse.json({ error: unownedRef }, { status: 404 });
+      }
+
       let transferFeeType = foundFeeType;
 
       if (!transferFeeType) {
@@ -177,6 +197,11 @@ export async function POST(request: NextRequest) {
       );
 
       transferIndex = 2;
+    } else {
+      const unownedRef = await ownershipCheck;
+      if (unownedRef) {
+        return NextResponse.json({ error: unownedRef }, { status: 404 });
+      }
     }
 
     // Create the transfer transaction

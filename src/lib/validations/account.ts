@@ -1,4 +1,5 @@
 import * as z from "zod"
+import { isMoneyString, MONEY_MESSAGE } from "./money";
 
 export const AccountValidation = z.object({
   name: z.string()
@@ -23,8 +24,8 @@ export const AccountValidation = z.object({
 
   initialBalance: z.string()
     .min(1, "Initial balance is required")
-    .refine((val) => !isNaN(Number(val)), {
-      message: "Initial balance must be a valid number"
+    .refine((val) => isMoneyString(val, { allowNegative: true }), {
+      message: MONEY_MESSAGE("Initial balance")
     }),
 
   addToNetWorth: z.boolean(),
@@ -47,8 +48,8 @@ export const CardValidation = z.object({
 
   initialBalance: z.string()
     .min(1, "Initial balance is required")
-    .refine((val) => !isNaN(Number(val)), {
-      message: "Initial balance must be a valid number"
+    .refine((val) => isMoneyString(val, { allowNegative: true }), {
+      message: MONEY_MESSAGE("Initial balance")
     }),
   
   statementDate: z.number()

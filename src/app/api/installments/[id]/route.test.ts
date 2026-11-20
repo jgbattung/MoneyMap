@@ -36,8 +36,13 @@ vi.mock('@/lib/prisma', () => ({
       findUnique: vi.fn(),
     },
     financialAccount: {
+      count: vi.fn(),
       update: vi.fn(),
     },
+    expenseType: { count: vi.fn() },
+    incomeType: { count: vi.fn() },
+    transferType: { count: vi.fn() },
+    tag: { count: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
@@ -104,6 +109,10 @@ function makeParams(id = 'inst-1') {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  // Ownership pre-check: every referenced id belongs to the user by default
+  for (const model of [db.financialAccount, db.expenseType, db.incomeType, db.transferType, db.tag]) {
+    vi.mocked(model.count).mockImplementation(((args: any) => Promise.resolve(args.where.id.in.length)) as any);
+  }
   vi.mocked(auth.api.getSession).mockResolvedValue(mockSession as any);
   vi.mocked(db.expenseTransaction.findUnique).mockResolvedValue(mockInstallment as any);
   vi.mocked(db.expenseTransaction.findMany).mockResolvedValue([mockChild] as any);
@@ -359,5 +368,33 @@ describe('DELETE /api/installments/[id]', () => {
     await Promise.resolve();
 
     expect(onExpenseTransactionChange).toHaveBeenCalledWith('acc-1', mockInstallment.date);
+  });
+});
+
+describe('PATCH /api/installments/[id] - money validation', () => {
+  it.each(['100.125', '1e3', ' '])('returns 400 and writes nothing for amount %j', async (amount) => {
+    const response = await PATCH(makePatchRequest({ amount }), makeParams());
+
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.details.fieldErrors.amount).toContain('Amount must be a number with at most 2 decimals');
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+// Protected Behavior 8 (MM-033): ownership pre-check
+describe('PATCH /api/installments/[id] - ownership', () => {
+  it.each([
+    ['Expense type not found', 'expenseType'],
+  ])('returns 404 "%s" and writes nothing when the %s is not owned by the user', async (message, model) => {
+    vi.mocked(db.expenseTransaction.findUnique).mockResolvedValue(mockInstallment as any);
+    vi.mocked((db as any)[model].count).mockResolvedValue(0);
+
+    const response = await PATCH(makePatchRequest({ expenseTypeId: 'type-2' }), makeParams());
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe(message);
+    expect(db.$transaction).not.toHaveBeenCalled();
   });
 });
